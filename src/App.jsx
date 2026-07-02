@@ -19,6 +19,9 @@ import Home from '@/pages/Home';
 import Alerts from '@/pages/Alerts';
 import AlertDetail from '@/pages/AlertDetail';
 import Family from '@/pages/Family';
+import Pricing from '@/pages/Pricing';
+import Extension from '@/pages/Extension';
+import AgentChat from '@/pages/AgentChat';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -52,9 +55,12 @@ const AuthenticatedApp = () => {
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/agent" element={<AgentChat />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/alerts/:id" element={<AlertDetail />} />
           <Route path="/family" element={<Family />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/extension" element={<Extension />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

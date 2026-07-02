@@ -7,6 +7,34 @@
         "admin",
         "user"
       ]
+    },
+    "subscription_plan": {
+      "type": "string",
+      "enum": [
+        "free",
+        "premium"
+      ],
+      "default": "free",
+      "description": "The user's subscription plan"
+    },
+    "subscription_status": {
+      "type": "string",
+      "enum": [
+        "inactive",
+        "active",
+        "canceled"
+      ],
+      "default": "inactive",
+      "description": "Current subscription status"
+    },
+    "credits_used": {
+      "type": "number",
+      "default": 0,
+      "description": "AI credits used this month"
+    },
+    "credits_reset_month": {
+      "type": "string",
+      "description": "Month when credits were last reset (YYYY-MM format)"
     }
   },
   "required": [

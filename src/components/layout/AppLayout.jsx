@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { Shield, Search, Users, Bell, Menu, X, LogOut, ChevronRight } from "lucide-react";
+import { Shield, Search, Users, Bell, Menu, X, LogOut, ChevronRight, Bot, Puzzle, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
-  { path: "/", label: "Check Message", icon: Search },
-  { path: "/alerts", label: "Guardian Alerts", icon: Bell },
-  { path: "/family", label: "My Family", icon: Users },
+  { path: "/", label: "Check", icon: Search },
+  { path: "/agent", label: "AI Chat", icon: Bot },
+  { path: "/alerts", label: "Alerts", icon: Bell },
+  { path: "/family", label: "Family", icon: Users },
+  { path: "/extension", label: "Extension", icon: Puzzle },
 ];
 
 export default function AppLayout() {
@@ -20,7 +22,6 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top Nav */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
@@ -38,7 +39,7 @@ export default function AppLayout() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive
                       ? "bg-blue-50 text-blue-600"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -49,7 +50,18 @@ export default function AppLayout() {
                 </Link>
               );
             })}
-            <div className="ml-2 pl-2 border-l border-border">
+            <Link
+              to="/pricing"
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium ml-1 transition-all ${
+                location.pathname === "/pricing"
+                  ? "bg-blue-500 text-white"
+                  : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+              }`}
+            >
+              <Crown className="w-4 h-4" />
+              Upgrade
+            </Link>
+            <div className="ml-1 pl-1 border-l border-border">
               <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground">
                 <LogOut className="w-4 h-4" />
               </Button>
@@ -91,6 +103,17 @@ export default function AppLayout() {
                 </Link>
               );
             })}
+            <Link
+              to="/pricing"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center justify-between px-3 py-3 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 text-white"
+            >
+              <div className="flex items-center gap-3">
+                <Crown className="w-4 h-4" />
+                Upgrade to Premium
+              </div>
+              <ChevronRight className="w-4 h-4" />
+            </Link>
             <button
               onClick={handleLogout}
               className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted w-full"
@@ -102,7 +125,6 @@ export default function AppLayout() {
         )}
       </header>
 
-      {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <Outlet />
       </main>
