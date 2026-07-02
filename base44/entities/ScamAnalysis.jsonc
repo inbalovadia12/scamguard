@@ -1,0 +1,94 @@
+{
+  "name": "ScamAnalysis",
+  "type": "object",
+  "properties": {
+    "message_text": {
+      "type": "string",
+      "description": "The suspicious message submitted for analysis"
+    },
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "sms",
+        "email",
+        "job_offer",
+        "marketplace",
+        "romance",
+        "tech_support",
+        "bank_government",
+        "other"
+      ],
+      "description": "Type of suspicious message"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Overall scam risk level"
+    },
+    "risk_score": {
+      "type": "number",
+      "description": "Numeric risk score 0-100"
+    },
+    "explanation": {
+      "type": "string",
+      "description": "Plain-English explanation of why this is suspicious"
+    },
+    "tactics_detected": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of manipulation tactics detected"
+    },
+    "next_steps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Recommended actions for the user"
+    },
+    "why_scammers_do_this": {
+      "type": "string",
+      "description": "Educational explanation of the scam tactic"
+    },
+    "what_they_want": {
+      "type": "string",
+      "description": "What the scammer is trying to get"
+    },
+    "what_to_say": {
+      "type": "string",
+      "description": "Suggested response if contacted again"
+    },
+    "submitted_by_senior": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this was submitted by a protected senior"
+    },
+    "senior_id": {
+      "type": "string",
+      "description": "ID of the senior who submitted (if applicable)"
+    },
+    "guardian_status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "reviewed",
+        "handled"
+      ],
+      "default": "new",
+      "description": "Status for guardian tracking"
+    },
+    "guardian_notes": {
+      "type": "string",
+      "description": "Notes from the guardian"
+    }
+  },
+  "required": [
+    "message_text",
+    "risk_level"
+  ]
+}

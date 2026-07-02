@@ -1,0 +1,41 @@
+{
+  "name": "ProtectedSenior",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Senior's display name"
+    },
+    "email": {
+      "type": "string",
+      "description": "Senior's email for their account"
+    },
+    "guardian_id": {
+      "type": "string",
+      "description": "User ID of the guardian/family member"
+    },
+    "consent_given": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the senior has given consent for monitoring"
+    },
+    "alert_preference": {
+      "type": "string",
+      "enum": [
+        "all",
+        "high_risk_only",
+        "financial_only"
+      ],
+      "default": "all",
+      "description": "What types of alerts the guardian receives"
+    },
+    "senior_user_id": {
+      "type": "string",
+      "description": "The senior's user ID once they create an account"
+    }
+  },
+  "required": [
+    "name",
+    "guardian_id"
+  ]
+}
