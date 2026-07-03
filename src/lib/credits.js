@@ -21,31 +21,40 @@ export const PLAN_NAMES = {
   elite: "Elite",
 };
 
-export const PREMIUM_FEATURES = [
-  "100 AI scam analyses per month (vs 10 on free)",
-  "ScamGuard Chrome Extension access",
-  "Image upload & screenshot analysis",
-  "AI Agent chat for real-time help",
-  "Up to 5 protected family members",
-  "Real-time guardian alerts",
-  "Priority scam pattern updates",
-  "Detailed educational content",
-  "Auto-redaction of phone numbers & wallets",
-  "Personalized risk profiles",
-];
-
-export const ELITE_FEATURES = [
-  "250 AI scam analyses per month",
-  "Everything in Premium, plus:",
-  "Unlimited protected family members",
-  "Advanced analytics dashboard",
-  "Priority support (under 4hr response)",
-  "Early access to experimental AI tools",
-  "Advanced family collaboration features",
-  "Unlimited CSV/PDF exports",
-  "Custom risk thresholds & rules",
-  "Exclusive scam trend reports",
-];
+export const PLAN_FEATURES = {
+  free: [
+    "10 AI scam analyses per month",
+    "Text message analysis",
+    "Risk score & explanation",
+    "Basic next steps",
+    "1 protected family member",
+  ],
+  plus: [
+    "Everything in Free, plus:",
+    "100 AI analyses per month",
+    "Chrome Extension access",
+    "Image upload & screenshots",
+    "AI Agent chat",
+    "5 protected family members",
+    "Real-time guardian alerts",
+  ],
+  premium: [
+    "Everything in Plus, plus:",
+    "Auto-redaction of phone numbers & wallets",
+    "Personalized risk profile summary",
+    "Detailed educational content per analysis",
+    "CSV export of analysis history",
+  ],
+  elite: [
+    "Everything in Premium, plus:",
+    "250 AI analyses per month",
+    "Unlimited protected family members",
+    "Advanced analytics dashboard",
+    "Scam trend reports & insights",
+    "Priority support",
+    "Unlimited CSV/PDF exports",
+  ],
+};
 
 export async function getCreditStatus() {
   const user = await base44.auth.me();
@@ -95,15 +104,18 @@ export async function incrementCreditUsage() {
   return creditsUsed;
 }
 
-export async function activatePlan(planName) {
-  await base44.auth.updateMe({
-    subscription_plan: planName,
-    subscription_status: "active",
-    credits_used: 0,
-    credits_reset_month: new Date().toISOString().slice(0, 7),
-  });
+export async function startPaypalCheckout(planName) {
+  const response = await base44.functions.invoke("createPaypalSubscription", { plan: planName });
+  if (response.data?.error) {
+    throw new Error(response.data.error);
+  }
+  const approvalUrl = response.data?.approval_url;
+  if (!approvalUrl) {
+    throw new Error("No approval URL received from PayPal");
+  }
+  window.location.href = approvalUrl;
 }
 
 export async function activatePremium() {
-  await activatePlan("premium");
+  await startPaypalCheckout("premium");
 }

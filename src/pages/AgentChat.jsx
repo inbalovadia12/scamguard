@@ -115,8 +115,8 @@ export default function AgentChat() {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center py-12 space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-amber-500" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-warning/10 flex items-center justify-center">
+            <Lock className="w-8 h-8 text-warning" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Premium Feature</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
@@ -139,8 +139,8 @@ export default function AgentChat() {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center py-12 space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-amber-500" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-warning/10 flex items-center justify-center">
+            <Lock className="w-8 h-8 text-warning" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Out of AI Credits</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
@@ -172,7 +172,7 @@ export default function AgentChat() {
           </div>
         </div>
         {credits && (
-          <div className="text-xs text-muted-foreground bg-slate-100 px-3 py-1.5 rounded-full">
+          <div className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full">
             {credits.remaining} / {credits.limit} credits left
           </div>
         )}
@@ -182,8 +182,8 @@ export default function AgentChat() {
       <div className="flex-1 overflow-y-auto space-y-4 pb-4">
         {messages.length === 0 && (
           <div className="text-center py-16 space-y-3">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 flex items-center justify-center">
-              <Bot className="w-7 h-7 text-blue-400" />
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Bot className="w-7 h-7 text-primary" />
             </div>
             <h2 className="font-semibold text-lg">Ask ScamGuard AI</h2>
             <p className="text-muted-foreground text-sm max-w-sm mx-auto">
@@ -211,7 +211,7 @@ export default function AgentChat() {
             </button>
           </div>
         )}
-        <div className="flex items-end gap-2 bg-white rounded-2xl border border-border/50 p-2">
+        <div className="flex items-end gap-2 bg-card rounded-2xl border border-border/50 p-2">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}

@@ -1,9 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-const PAYPAL_MODE = Deno.env.get("PAYPAL_MODE") || "live";
-const PAYPAL_API_BASE = PAYPAL_MODE === "sandbox"
-  ? "https://api-m.sandbox.paypal.com"
-  : "https://api-m.paypal.com";
+const PAYPAL_API_BASE = "https://api-m.paypal.com";
 
 const PAYPAL_CLIENT_ID = Deno.env.get("PAYPAL_CLIENT_ID");
 const PAYPAL_CLIENT_SECRET = Deno.env.get("PAYPAL_CLIENT_SECRET");

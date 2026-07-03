@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Check, X, Sparkles, Shield, Loader2, Crown, Zap, Star } from "lucide-react";
-import { PREMIUM_FEATURES, ELITE_FEATURES, getCreditStatus, activatePlan, PLAN_PRICES } from "@/lib/credits";
+import { Check, X, Shield, Loader2, Crown, Zap, Sparkles, BarChart3 } from "lucide-react";
+import { getCreditStatus, startPaypalCheckout, PLAN_FEATURES, PLAN_PRICES } from "@/lib/credits";
 
 const plans = [
   {
@@ -12,14 +12,8 @@ const plans = [
     period: "/month",
     description: "For occasional checks",
     credits: "10 credits/month",
-    features: [
-      "10 AI scam analyses per month",
-      "Text message analysis",
-      "Risk score & explanation",
-      "Basic next steps",
-      "1 protected family member",
-    ],
-    notIncluded: ["Chrome extension", "Image upload", "AI Agent chat", "Advanced analytics"],
+    features: PLAN_FEATURES.free,
+    notIncluded: [],
     icon: Shield,
     color: "from-slate-400 to-slate-500",
   },
@@ -30,16 +24,8 @@ const plans = [
     period: "/year",
     description: "For individuals who want more",
     credits: "100 credits/month",
-    features: [
-      "Everything in Free, plus:",
-      "100 AI analyses per month",
-      "Chrome Extension access",
-      "Image upload & screenshots",
-      "AI Agent chat",
-      "5 protected family members",
-      "Real-time guardian alerts",
-    ],
-    notIncluded: ["Bank account monitoring", "Advanced analytics", "Priority support"],
+    features: PLAN_FEATURES.plus,
+    notIncluded: [],
     icon: Zap,
     color: "from-blue-400 to-blue-500",
   },
@@ -50,16 +36,8 @@ const plans = [
     period: "/year",
     description: "Complete family protection",
     credits: "100 credits/month",
-    features: [
-      "Everything in Plus, plus:",
-      "100 AI analyses per month",
-      "Bank account monitoring",
-      "Priority scam pattern updates",
-      "Auto-redaction of sensitive data",
-      "Personalized risk profiles",
-      "Detailed educational content",
-    ],
-    notIncluded: ["Unlimited family members", "Advanced analytics", "Custom rules"],
+    features: PLAN_FEATURES.premium,
+    notIncluded: [],
     icon: Sparkles,
     color: "from-primary to-primary/80",
     highlighted: true,
@@ -71,7 +49,7 @@ const plans = [
     period: "/year",
     description: "Maximum protection & insights",
     credits: "250 credits/month",
-    features: ELITE_FEATURES,
+    features: PLAN_FEATURES.elite,
     notIncluded: [],
     icon: Crown,
     color: "from-amber-400 to-orange-500",
@@ -81,17 +59,33 @@ const plans = [
 export default function Pricing() {
   const [credits, setCredits] = useState(null);
   const [subscribing, setSubscribing] = useState(null);
+  const [paypalStatus, setPaypalStatus] = useState(null);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paypalParam = params.get("paypal");
+    if (paypalParam === "approved") {
+      setPaypalStatus("approved");
+    } else if (paypalParam === "cancelled") {
+      setPaypalStatus("cancelled");
+    }
+    // Clean URL
+    if (paypalParam) {
+      window.history.replaceState({}, "", "/pricing");
+    }
     getCreditStatus().then(setCredits);
   }, []);
 
   const handleSubscribe = async (planName) => {
+    if (planName === "free") return;
     setSubscribing(planName);
-    await activatePlan(planName);
-    const updated = await getCreditStatus();
-    setCredits(updated);
-    setSubscribing(null);
+    try {
+      await startPaypalCheckout(planName);
+      // Page will redirect to PayPal — code below won't execute
+    } catch (error) {
+      setSubscribing(null);
+      setPaypalStatus("error");
+    }
   };
 
   return (
@@ -105,6 +99,29 @@ export default function Pricing() {
           Choose the plan that keeps your loved ones safe from scams.
         </p>
       </div>
+
+      {/* PayPal status messages */}
+      {paypalStatus === "approved" && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+          <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            ✓ Payment approved! Your subscription is being activated. This may take a few moments.
+          </p>
+        </div>
+      )}
+      {paypalStatus === "cancelled" && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center">
+          <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+            Payment cancelled. No charge was made.
+          </p>
+        </div>
+      )}
+      {paypalStatus === "error" && (
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-center">
+          <p className="text-sm font-medium text-red-600 dark:text-red-400">
+            Something went wrong with PayPal checkout. Please try again.
+          </p>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
         {plans.map((plan) => {
@@ -135,19 +152,19 @@ export default function Pricing() {
               <p className="text-xs font-medium text-primary mt-1">{plan.credits}</p>
               <Button
                 onClick={() => handleSubscribe(plan.id)}
-                disabled={subscribing !== null || isCurrent}
+                disabled={subscribing !== null || isCurrent || plan.id === "free"}
                 variant={plan.highlighted ? "default" : "outline"}
                 className={`w-full mt-5 ${plan.highlighted ? "bg-gradient-to-r from-primary to-primary/80" : ""}`}
               >
                 {subscribing === plan.id ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                    Processing...
+                    Redirecting to PayPal...
                   </>
                 ) : isCurrent ? (
                   "✓ Current Plan"
                 ) : plan.id === "free" ? (
-                  "Downgrade"
+                  "Free Plan"
                 ) : (
                   "Choose " + plan.name
                 )}
@@ -157,12 +174,6 @@ export default function Pricing() {
                   <div key={i} className="flex items-start gap-2">
                     <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
                     <span className="text-xs">{feature}</span>
-                  </div>
-                ))}
-                {plan.notIncluded.map((feature, i) => (
-                  <div key={i} className="flex items-start gap-2 opacity-40">
-                    <X className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <span className="text-xs text-muted-foreground">{feature}</span>
                   </div>
                 ))}
               </div>
@@ -178,8 +189,8 @@ export default function Pricing() {
       )}
 
       <div className="text-center text-xs text-muted-foreground space-y-1">
-        <p>All plans include a 7-day money-back guarantee.</p>
-        <p>Cancel anytime — your subscription remains active until the end of the billing period.</p>
+        <p>All paid plans are billed annually via PayPal. Cancel anytime.</p>
+        <p>Your subscription remains active until the end of the billing period.</p>
       </div>
     </div>
   );

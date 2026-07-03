@@ -24,6 +24,7 @@ import Extension from '@/pages/Extension';
 import AgentChat from '@/pages/AgentChat';
 import Landing from '@/pages/Landing';
 import Onboarding from '@/pages/Onboarding';
+import Analytics from '@/pages/Analytics';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -67,6 +68,7 @@ const AuthenticatedApp = () => {
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/alerts/:id" element={<AlertDetail />} />
           <Route path="/family" element={<Family />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/extension" element={<Extension />} />
         </Route>

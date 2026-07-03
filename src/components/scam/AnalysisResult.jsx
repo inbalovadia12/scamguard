@@ -45,7 +45,7 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
           <span className="text-muted-foreground">Risk Score</span>
           <span className="font-semibold">{analysis.risk_score}/100</span>
         </div>
-        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-1000 ${
               analysis.risk_score >= 70 ? "bg-red-500" : analysis.risk_score >= 40 ? "bg-amber-500" : "bg-emerald-500"
@@ -56,15 +56,15 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
       </div>
 
       {/* Explanation */}
-      <div className="bg-slate-50 rounded-2xl p-5 space-y-3">
-        <h3 className="font-semibold text-sm text-slate-500 uppercase tracking-wider">What we found</h3>
+      <div className="bg-muted rounded-2xl p-5 space-y-3">
+        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">What we found</h3>
         <p className="text-base leading-relaxed">{analysis.explanation}</p>
       </div>
 
       {/* Tactics */}
       {analysis.tactics_detected?.length > 0 && (
         <div className="space-y-3">
-          <h3 className="font-semibold text-sm text-slate-500 uppercase tracking-wider">Manipulation tactics detected</h3>
+          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Manipulation tactics detected</h3>
           <div className="flex flex-wrap gap-2">
             {analysis.tactics_detected.map((tactic) => (
               <TacticTag key={tactic} tactic={tactic} />
@@ -76,14 +76,14 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
       {/* Next Steps */}
       {analysis.next_steps?.length > 0 && (
         <div className="space-y-3">
-          <h3 className="font-semibold text-sm text-slate-500 uppercase tracking-wider">What to do next</h3>
+          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">What to do next</h3>
           <div className="space-y-2">
             {analysis.next_steps.map((step, i) => {
               const Icon = stepIcons[step] || Flag;
               return (
-                <div key={i} className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                  <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-4 h-4 text-blue-600" />
+                <div key={i} className="flex items-center gap-3 p-3 bg-primary/5 rounded-xl border border-primary/10">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-primary" />
                   </div>
                   <span className="text-sm font-medium">{step}</span>
                 </div>
@@ -98,10 +98,10 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
         <div className="border border-border rounded-2xl overflow-hidden">
           <button
             onClick={() => setEduOpen(!eduOpen)}
-            className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+            className="w-full flex items-center justify-between p-4 hover:bg-muted transition-colors"
           >
             <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-blue-500" />
+              <BookOpen className="w-4 h-4 text-primary" />
               <span className="font-semibold text-sm">Learn more about this scam</span>
             </div>
             {eduOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -109,19 +109,19 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
           {eduOpen && (
             <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
               <div>
-                <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">Why scammers use this tactic</h4>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">Why scammers use this tactic</h4>
                 <p className="text-sm leading-relaxed">{analysis.why_scammers_do_this}</p>
               </div>
               {analysis.what_they_want && (
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">What they want from you</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">What they want from you</h4>
                   <p className="text-sm leading-relaxed">{analysis.what_they_want}</p>
                 </div>
               )}
               {analysis.what_to_say && (
                 <div>
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase mb-1">What to say if contacted again</h4>
-                  <p className="text-sm leading-relaxed italic bg-slate-50 p-3 rounded-xl">&ldquo;{analysis.what_to_say}&rdquo;</p>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">What to say if contacted again</h4>
+                  <p className="text-sm leading-relaxed italic bg-muted p-3 rounded-xl">&ldquo;{analysis.what_to_say}&rdquo;</p>
                 </div>
               )}
             </div>

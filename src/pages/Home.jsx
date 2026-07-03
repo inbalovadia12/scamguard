@@ -10,6 +10,7 @@ import {
 import { Link } from "react-router-dom";
 import AnalysisResult from "@/components/scam/AnalysisResult";
 import { getCreditStatus, incrementCreditUsage } from "@/lib/credits";
+import { redactMessage } from "@/lib/redact";
 
 const messageTypes = [
   { value: "sms", label: "SMS / Text", icon: MessageSquare },
@@ -84,7 +85,7 @@ Add more specific next_steps as needed.`;
     });
 
     await base44.entities.ScamAnalysis.create({
-      message_text: messageText,
+      message_text: redactMessage(messageText),
       message_type: messageType,
       ...llmResult,
     });
