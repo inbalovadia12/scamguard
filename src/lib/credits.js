@@ -2,20 +2,49 @@ import { base44 } from "@/api/base44Client";
 
 export const PLAN_LIMITS = {
   free: 10,
+  plus: 100,
   premium: 100,
+  elite: 250,
+};
+
+export const PLAN_PRICES = {
+  free: 0,
+  plus: 40,
+  premium: 80,
+  elite: 120,
+};
+
+export const PLAN_NAMES = {
+  free: "Free",
+  plus: "Plus",
+  premium: "Premium",
+  elite: "Elite",
 };
 
 export const PREMIUM_FEATURES = [
-  "100 AI analyses per month (vs 10 on free)",
+  "100 AI scam analyses per month (vs 10 on free)",
   "ScamGuard Chrome Extension access",
   "Image upload & screenshot analysis",
   "AI Agent chat for real-time help",
-  "Unlimited family members protected",
+  "Up to 5 protected family members",
   "Real-time guardian alerts",
   "Priority scam pattern updates",
   "Detailed educational content",
   "Auto-redaction of phone numbers & wallets",
   "Personalized risk profiles",
+];
+
+export const ELITE_FEATURES = [
+  "250 AI scam analyses per month",
+  "Everything in Premium, plus:",
+  "Unlimited protected family members",
+  "Advanced analytics dashboard",
+  "Priority support (under 4hr response)",
+  "Early access to experimental AI tools",
+  "Advanced family collaboration features",
+  "Unlimited CSV/PDF exports",
+  "Custom risk thresholds & rules",
+  "Exclusive scam trend reports",
 ];
 
 export async function getCreditStatus() {
@@ -43,7 +72,8 @@ export async function getCreditStatus() {
     limit,
     remaining,
     canAnalyze: remaining > 0,
-    isPremium: plan === "premium",
+    isPremium: plan === "premium" || plan === "elite" || plan === "plus",
+    isElite: plan === "elite",
   };
 }
 
@@ -65,11 +95,15 @@ export async function incrementCreditUsage() {
   return creditsUsed;
 }
 
-export async function activatePremium() {
+export async function activatePlan(planName) {
   await base44.auth.updateMe({
-    subscription_plan: "premium",
+    subscription_plan: planName,
     subscription_status: "active",
     credits_used: 0,
     credits_reset_month: new Date().toISOString().slice(0, 7),
   });
+}
+
+export async function activatePremium() {
+  await activatePlan("premium");
 }

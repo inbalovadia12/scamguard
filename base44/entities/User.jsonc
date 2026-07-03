@@ -12,7 +12,9 @@
       "type": "string",
       "enum": [
         "free",
-        "premium"
+        "plus",
+        "premium",
+        "elite"
       ],
       "default": "free",
       "description": "The user's subscription plan"
@@ -35,6 +37,19 @@
     "credits_reset_month": {
       "type": "string",
       "description": "Month when credits were last reset (YYYY-MM format)"
+    },
+    "onboarding_completed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user has completed onboarding"
+    },
+    "onboarding_goals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Goals selected during onboarding"
     }
   },
   "required": [

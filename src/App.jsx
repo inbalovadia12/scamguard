@@ -22,6 +22,8 @@ import Family from '@/pages/Family';
 import Pricing from '@/pages/Pricing';
 import Extension from '@/pages/Extension';
 import AgentChat from '@/pages/AgentChat';
+import Landing from '@/pages/Landing';
+import Onboarding from '@/pages/Onboarding';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -31,8 +33,8 @@ const AuthenticatedApp = () => {
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -48,10 +50,16 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
+      {/* Public routes */}
+      <Route path="/landing" element={<Landing />} />
+
+      {/* Auth routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* Protected routes */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Home />} />
@@ -62,6 +70,7 @@ const AuthenticatedApp = () => {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/extension" element={<Extension />} />
         </Route>
+        <Route path="/onboarding" element={<Onboarding />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
