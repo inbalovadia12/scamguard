@@ -98,6 +98,14 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
       setAuthChecked(true);
+
+      // Redirect to onboarding if the user hasn't completed it yet
+      if (currentUser && currentUser.onboarding_completed === false) {
+        const currentPath = window.location.pathname;
+        if (currentPath !== "/onboarding" && !currentPath.startsWith("/login") && !currentPath.startsWith("/register") && !currentPath.startsWith("/reset-password")) {
+          window.location.href = "/onboarding";
+        }
+      }
     } catch (error) {
       console.error('User auth check failed:', error);
       setIsLoadingAuth(false);

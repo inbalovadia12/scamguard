@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, UserPlus } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
   const [name, setName] = useState("");
@@ -16,20 +17,40 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
   const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
-    const user = await base44.auth.me();
-    await base44.entities.ProtectedSenior.create({
-      name: name.trim(),
-      email: email.trim() || undefined,
-      guardian_id: user.id,
-      consent_given: false,
-      alert_preference: alertPref,
-    });
-    setSaving(false);
-    setName("");
-    setEmail("");
-    setAlertPref("all");
-    onAdded();
-    onOpenChange(false);
+    try {
+      const user = await base44.auth.me();
+      await base44.entities.ProtectedSenior.create({
+        name: name.trim(),
+        email: email.trim() || undefined,
+        guardian_id: user.id,
+        consent_given: false,
+        alert_preference: alertPref,
+      });
+
+      // Send invite email if an address was provided
+      if (email.trim()) {
+        try {
+          await base44.integrations.Core.SendEmail({
+            to: email.trim(),
+            subject: `${user.full_name || "Someone"} invited you to join Vardin`,
+            body: `Hi ${name.trim()},\n\n${user.full_name || "Your family member"} has added you to their Vardin family protection circle. Vardin is an AI-powered scam detection tool that helps you know what's real before you click.\n\nTo accept this invitation and start protecting each other from scams, create your free Vardin account at ${window.location.origin}/register\n\nStay safe,\nThe Vardin Team`,
+          });
+        } catch (emailErr) {
+          console.error("Failed to send invite email:", emailErr);
+        }
+      }
+
+      toast({ title: "Added!", description: email.trim() ? `${name.trim()} has been added and an invite email was sent.` : `${name.trim()} has been added to your family.` });
+      setName("");
+      setEmail("");
+      setAlertPref("all");
+      onAdded();
+      onOpenChange(false);
+    } catch (err) {
+      toast({ title: "Something went wrong", description: err.message || "Could not add family member.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
