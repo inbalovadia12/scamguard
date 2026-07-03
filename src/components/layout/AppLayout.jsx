@@ -3,13 +3,14 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Puzzle, Crown, Menu, X, LogOut, ChevronRight,
-  BarChart3,
+  BarChart3, History,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const navItems = [
-  { path: "/", label: "Check", icon: Search },
+  { path: "/dashboard", label: "Check", icon: Search },
+  { path: "/history", label: "History", icon: History },
   { path: "/agent", label: "AI Chat", icon: Bot },
   { path: "/alerts", label: "Alerts", icon: Bell },
   { path: "/family", label: "Family", icon: Users },
@@ -31,7 +32,7 @@ export default function AppLayout() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-50 glass border-b border-border/50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5 group">
+          <Link to="/dashboard" className="flex items-center gap-2.5 group">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20 transition-transform group-hover:scale-105">
               <ShieldCheck className="w-5 h-5 text-primary-foreground" />
             </div>
@@ -134,7 +135,7 @@ export default function AppLayout() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
           <p>© 2026 Vardin. Stay safe out there.</p>
           <div className="flex items-center gap-4">
-            <Link to="/landing" className="hover:text-foreground transition-colors">About</Link>
+            <Link to="/" className="hover:text-foreground transition-colors">About</Link>
             <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
           </div>
         </div>

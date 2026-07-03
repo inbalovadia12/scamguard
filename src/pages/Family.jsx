@@ -4,14 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Users, Plus, ShieldCheck, ShieldAlert, Mail, Settings, Trash2, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AddSeniorDialog from "@/components/family/AddSeniorDialog";
+import { PLAN_FAMILY_LIMITS } from "@/lib/credits";
+import { Link } from "react-router-dom";
 
 export default function Family() {
   const [seniors, setSeniors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [familyLimit, setFamilyLimit] = useState(1);
 
   const loadSeniors = async () => {
     const user = await base44.auth.me();
+    let plan = user.subscription_plan || "starter";
+    if (plan === "free") plan = "starter";
+    if (plan === "elite") plan = "premium";
+    setFamilyLimit(PLAN_FAMILY_LIMITS[plan] ?? PLAN_FAMILY_LIMITS.starter);
     const data = await base44.entities.ProtectedSenior.filter({ guardian_id: user.id });
     setSeniors(data);
     setLoading(false);
@@ -42,13 +49,32 @@ export default function Family() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight font-heading">My Family</h1>
-          <p className="text-muted-foreground mt-1">Manage the loved ones you're helping protect.</p>
+          <p className="text-muted-foreground mt-1">
+            {seniors.length} / {familyLimit === Infinity ? "∞" : familyLimit} members
+          </p>
         </div>
-        <Button onClick={() => setShowAdd(true)} className="gap-2 bg-gradient-to-r from-primary to-primary/80">
+        <Button
+          onClick={() => setShowAdd(true)}
+          disabled={familyLimit !== Infinity && seniors.length >= familyLimit}
+          className="gap-2 bg-gradient-to-r from-primary to-primary/80"
+        >
           <Plus className="w-4 h-4" />
           Add Person
         </Button>
       </div>
+
+      {familyLimit !== Infinity && seniors.length >= familyLimit && (
+        <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 text-center space-y-2">
+          <p className="text-sm text-muted-foreground">
+            You've reached your plan's family member limit ({familyLimit}). Upgrade to protect more loved ones.
+          </p>
+          <Link to="/pricing">
+            <Button size="sm" className="gap-2 bg-gradient-to-r from-primary to-primary/80">
+              Upgrade Plan
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {seniors.length === 0 ? (
         <div className="text-center py-16 space-y-4">

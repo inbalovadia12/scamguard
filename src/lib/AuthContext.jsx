@@ -100,9 +100,9 @@ export const AuthProvider = ({ children }) => {
       setAuthChecked(true);
 
       // Redirect to onboarding if the user hasn't completed it yet
-      if (currentUser && currentUser.onboarding_completed === false) {
+      if (currentUser && !currentUser.onboarding_completed) {
         const currentPath = window.location.pathname;
-        if (currentPath !== "/onboarding" && !currentPath.startsWith("/login") && !currentPath.startsWith("/register") && !currentPath.startsWith("/reset-password")) {
+        if (currentPath !== "/onboarding" && !currentPath.startsWith("/login") && !currentPath.startsWith("/register") && !currentPath.startsWith("/reset-password") && currentPath !== "/") {
           window.location.href = "/onboarding";
         }
       }

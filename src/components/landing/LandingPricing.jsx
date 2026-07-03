@@ -11,7 +11,7 @@ const plans = [
     credits: "10 analyses/month",
     icon: Shield,
     color: "from-muted-foreground/40 to-muted-foreground/20",
-    features: ["10 AI analyses per month", "Basic risk scores", "Community reports", "Individual use only"],
+    features: ["10 AI analyses per month", "Basic risk scores", "Community reports", "1 protected family member"],
     highlighted: false,
   },
   {

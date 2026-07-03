@@ -25,6 +25,7 @@ import AgentChat from '@/pages/AgentChat';
 import Landing from '@/pages/Landing';
 import Onboarding from '@/pages/Onboarding';
 import Analytics from '@/pages/Analytics';
+import History from '@/pages/History';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -52,7 +53,7 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/landing" element={<Landing />} />
+      <Route path="/" element={<Landing />} />
 
       {/* Auth routes */}
       <Route path="/login" element={<Login />} />
@@ -63,7 +64,8 @@ const AuthenticatedApp = () => {
       {/* Protected routes */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Home />} />
+          <Route path="/dashboard" element={<Home />} />
+          <Route path="/history" element={<History />} />
           <Route path="/agent" element={<AgentChat />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/alerts/:id" element={<AlertDetail />} />

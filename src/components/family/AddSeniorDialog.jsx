@@ -44,8 +44,8 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
       setName("");
       setEmail("");
       setAlertPref("all");
-      onAdded();
       onOpenChange(false);
+      if (onAdded) await onAdded();
     } catch (err) {
       toast({ title: "Something went wrong", description: err.message || "Could not add family member.", variant: "destructive" });
     } finally {

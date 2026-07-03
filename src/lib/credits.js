@@ -18,12 +18,18 @@ export const PLAN_NAMES = {
   premium: "Premium",
 };
 
+export const PLAN_FAMILY_LIMITS = {
+  starter: 1,
+  plus: 5,
+  premium: Infinity,
+};
+
 export const PLAN_FEATURES = {
   starter: [
     "10 AI analyses per month",
     "Basic risk scores",
     "Community reports access",
-    "Individual use only",
+    "1 protected family member",
   ],
   plus: [
     "Everything in Starter, plus:",
@@ -84,6 +90,21 @@ export async function getCreditStatus() {
     isPaid: plan === "plus" || plan === "premium",
     isPremium: plan === "plus" || plan === "premium",
     isPremiumPlan: plan === "premium",
+  };
+}
+
+export async function getFamilyStatus() {
+  const user = await base44.auth.me();
+  let plan = user.subscription_plan || "starter";
+  if (plan === "free") plan = "starter";
+  if (plan === "elite") plan = "premium";
+  const seniors = await base44.entities.ProtectedSenior.filter({ guardian_id: user.id });
+  const limit = PLAN_FAMILY_LIMITS[plan] ?? PLAN_FAMILY_LIMITS.starter;
+  return {
+    plan,
+    count: seniors.length,
+    limit,
+    canAddMore: seniors.length < limit,
   };
 }
 
