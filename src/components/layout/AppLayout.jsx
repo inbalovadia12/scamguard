@@ -3,14 +3,14 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Puzzle, Crown, Menu, X, LogOut, ChevronRight,
-  BarChart3, History,
+  BarChart3, MessageSquare,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const navItems = [
   { path: "/dashboard", label: "Check", icon: Search },
-  { path: "/history", label: "History", icon: History },
+  { path: "/feedback", label: "Feedback", icon: MessageSquare },
   { path: "/agent", label: "AI Chat", icon: Bot },
   { path: "/alerts", label: "Alerts", icon: Bell },
   { path: "/family", label: "Family", icon: Users },

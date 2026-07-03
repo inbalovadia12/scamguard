@@ -1,0 +1,50 @@
+{
+  "name": "Feedback",
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "The feedback text submitted by the user"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "bug",
+        "feature_request",
+        "general",
+        "praise"
+      ],
+      "default": "general",
+      "description": "Type of feedback"
+    },
+    "rating": {
+      "type": "number",
+      "description": "Optional 1-5 star rating"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user who submitted feedback"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Name of the user who submitted feedback"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "reviewed",
+        "resolved"
+      ],
+      "default": "new",
+      "description": "Admin-managed status"
+    },
+    "admin_response": {
+      "type": "string",
+      "description": "Optional admin response to the feedback"
+    }
+  },
+  "required": [
+    "content"
+  ]
+}
