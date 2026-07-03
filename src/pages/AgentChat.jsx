@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Loader2, Bot, Shield, Lock, X } from "lucide-react";
+import { Send, Loader2, Bot, ShieldCheck, Lock, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import MessageBubble from "@/components/agent/MessageBubble";
 import ImageUpload from "@/components/scam/ImageUpload";
@@ -37,7 +37,7 @@ export default function AgentChat() {
       } else {
         const conv = await base44.agents.createConversation({
           agent_name: "scam_analyzer",
-          metadata: { name: "Scam Analysis Chat" },
+          metadata: { name: "Vardin AI Chat" },
         });
         setConversation(conv);
       }
@@ -110,7 +110,6 @@ export default function AgentChat() {
     );
   }
 
-  // Premium paywall
   if (credits && !credits.isPremium) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
@@ -118,15 +117,15 @@ export default function AgentChat() {
           <div className="w-16 h-16 mx-auto rounded-2xl bg-warning/10 flex items-center justify-center">
             <Lock className="w-8 h-8 text-warning" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Premium Feature</h1>
+          <h1 className="text-2xl font-bold tracking-tight font-heading">Premium Feature</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
-            The AI Agent Chat with image upload is a premium feature. Upgrade to chat with
-            ScamGuard's AI, upload suspicious screenshots, and get real-time analysis.
+            The AI Agent Chat with image upload is a paid feature. Upgrade to chat with
+            Vardin's AI, upload suspicious screenshots, and get real-time analysis.
           </p>
           <Link to="/pricing">
-            <Button className="gap-2 bg-gradient-to-r from-blue-500 to-blue-600">
-              <Shield className="w-4 h-4" />
-              Upgrade to Premium
+            <Button className="gap-2 bg-gradient-to-r from-primary to-primary/80">
+              <ShieldCheck className="w-4 h-4" />
+              Upgrade Now
             </Button>
           </Link>
         </div>
@@ -134,7 +133,6 @@ export default function AgentChat() {
     );
   }
 
-  // Out of credits paywall
   if (credits && !credits.canAnalyze) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
@@ -142,14 +140,13 @@ export default function AgentChat() {
           <div className="w-16 h-16 mx-auto rounded-2xl bg-warning/10 flex items-center justify-center">
             <Lock className="w-8 h-8 text-warning" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Out of AI Credits</h1>
+          <h1 className="text-2xl font-bold tracking-tight font-heading">Out of AI Credits</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
-            You've used all {credits.limit} of your monthly AI credits. Your credits reset next month,
-            or upgrade for more.
+            You've used all {credits.limit} of your monthly AI credits. Your credits reset next month, or upgrade for more.
           </p>
           <Link to="/pricing">
-            <Button className="gap-2 bg-gradient-to-r from-blue-500 to-blue-600">
-              <Shield className="w-4 h-4" />
+            <Button className="gap-2 bg-gradient-to-r from-primary to-primary/80">
+              <ShieldCheck className="w-4 h-4" />
               Manage Subscription
             </Button>
           </Link>
@@ -160,14 +157,13 @@ export default function AgentChat() {
 
   return (
     <div className="max-w-2xl mx-auto h-[calc(100vh-8rem)] flex flex-col space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-            <Bot className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+            <Bot className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="font-bold tracking-tight">ScamGuard AI</h1>
+            <h1 className="font-bold tracking-tight font-heading">Vardin AI</h1>
             <p className="text-xs text-muted-foreground">Powered by built-in AI agent</p>
           </div>
         </div>
@@ -178,14 +174,13 @@ export default function AgentChat() {
         )}
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 pb-4">
         {messages.length === 0 && (
           <div className="text-center py-16 space-y-3">
             <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
               <Bot className="w-7 h-7 text-primary" />
             </div>
-            <h2 className="font-semibold text-lg">Ask ScamGuard AI</h2>
+            <h2 className="font-semibold text-lg font-heading">Ask Vardin AI</h2>
             <p className="text-muted-foreground text-sm max-w-sm mx-auto">
               Paste a suspicious message, upload a screenshot, or ask a question about scams.
               I'll analyze it and explain what to do.
@@ -198,14 +193,13 @@ export default function AgentChat() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
       <div className="flex-shrink-0 space-y-2">
         {imagePreview && (
           <div className="relative inline-block">
             <img src={imagePreview} alt="Preview" className="rounded-xl max-h-24" />
             <button
               onClick={() => handleImageSelect(null)}
-              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600"
+              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -226,7 +220,7 @@ export default function AgentChat() {
               onClick={handleSend}
               disabled={(!input.trim() && !selectedImage) || sending}
               size="icon"
-              className="rounded-xl bg-gradient-to-r from-blue-500 to-blue-600"
+              className="rounded-xl bg-gradient-to-r from-primary to-primary/80"
             >
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>

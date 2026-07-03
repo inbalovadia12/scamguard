@@ -9,7 +9,7 @@ export default function MessageBubble({ message }) {
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
       <div
         className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-          isUser ? "bg-blue-500" : "bg-gradient-to-br from-blue-400 to-blue-600"
+          isUser ? "bg-primary" : "bg-gradient-to-br from-primary to-primary/80"
         }`}
       >
         {isUser ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
@@ -17,7 +17,7 @@ export default function MessageBubble({ message }) {
       <div className={`flex flex-col max-w-[80%] ${isUser ? "items-end" : "items-start"}`}>
         <div
           className={`rounded-2xl px-4 py-3 ${
-            isUser ? "bg-blue-500 text-white" : "bg-slate-100 text-foreground"
+            isUser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
           }`}
         >
           {message.file_urls?.length > 0 && (

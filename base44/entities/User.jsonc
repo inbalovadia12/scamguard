@@ -1,4 +1,6 @@
 {
+  "name": "User",
+  "type": "object",
   "properties": {
     "role": {
       "type": "string",
@@ -6,17 +8,17 @@
       "enum": [
         "admin",
         "user"
-      ]
+      ],
+      "default": "user"
     },
     "subscription_plan": {
       "type": "string",
       "enum": [
-        "free",
+        "starter",
         "plus",
-        "premium",
-        "elite"
+        "premium"
       ],
-      "default": "free",
+      "default": "starter",
       "description": "The user's subscription plan"
     },
     "subscription_status": {
@@ -50,11 +52,29 @@
       },
       "default": [],
       "description": "Goals selected during onboarding"
+    },
+    "alert_preference": {
+      "type": "string",
+      "enum": [
+        "all",
+        "high_risk_only",
+        "financial_only"
+      ],
+      "default": "all",
+      "description": "User's alert preference from onboarding"
+    },
+    "notify_email": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to send email notifications for family alerts"
+    },
+    "privacy_auto_redact": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to auto-redact PII in stored messages"
     }
   },
   "required": [
     "role"
-  ],
-  "name": "User",
-  "type": "object"
+  ]
 }

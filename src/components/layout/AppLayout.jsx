@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Shield, Search, Users, Bell, Bot, Puzzle, Crown, Menu, X, LogOut, ChevronRight,
+  ShieldCheck, Search, Users, Bell, Bot, Puzzle, Crown, Menu, X, LogOut, ChevronRight,
   BarChart3,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -33,9 +33,9 @@ export default function AppLayout() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20 transition-transform group-hover:scale-105">
-              <Shield className="w-5 h-5 text-primary-foreground" />
+              <ShieldCheck className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg tracking-tight">ScamGuard</span>
+            <span className="font-bold text-lg tracking-tight font-heading">Vardin</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
@@ -132,7 +132,7 @@ export default function AppLayout() {
 
       <footer className="border-t border-border/50 py-6 px-4">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
-          <p>© 2026 ScamGuard. Stay safe out there.</p>
+          <p>© 2026 Vardin. Stay safe out there.</p>
           <div className="flex items-center gap-4">
             <Link to="/landing" className="hover:text-foreground transition-colors">About</Link>
             <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>

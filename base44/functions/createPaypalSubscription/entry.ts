@@ -5,13 +5,12 @@ const PAYPAL_API_BASE = "https://api-m.paypal.com";
 const PAYPAL_CLIENT_ID = Deno.env.get("PAYPAL_CLIENT_ID");
 const PAYPAL_CLIENT_SECRET = Deno.env.get("PAYPAL_CLIENT_SECRET");
 
-const PRODUCT_NAME = "ScamGuard Subscription";
+const PRODUCT_NAME = "Vardin Subscription";
 const PRODUCT_DESC = "AI-powered scam detection and family protection";
 
 const PLAN_CONFIGS = {
-  plus: { name: "ScamGuard Plus", price: "40.00", credits: "100 credits/month" },
-  premium: { name: "ScamGuard Premium", price: "80.00", credits: "100 credits/month + advanced features" },
-  elite: { name: "ScamGuard Elite", price: "120.00", credits: "250 credits/month + all features" },
+  plus: { name: "Vardin Plus", price: "40.00", credits: "100 credits/month" },
+  premium: { name: "Vardin Premium", price: "80.00", credits: "250 credits/month + all features" },
 };
 
 async function getAccessToken() {
@@ -131,7 +130,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: `Invalid plan: ${planKey}` }, { status: 400 });
     }
 
-    const origin = req.headers.get("origin") || "https://verinta.base44.app";
+    const origin = req.headers.get("origin") || "https://vardin.app";
     const returnUrl = `${origin}/pricing?paypal=approved`;
     const cancelUrl = `${origin}/pricing?paypal=cancelled`;
 
@@ -149,7 +148,7 @@ Deno.serve(async (req) => {
         plan_id: planId,
         custom_id: user.id,
         application_context: {
-          brand_name: "ScamGuard",
+          brand_name: "Vardin",
           user_action: "SUBSCRIBE_NOW",
           shipping_preference: "NO_SHIPPING",
           return_url: returnUrl,

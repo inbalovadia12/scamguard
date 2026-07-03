@@ -5,7 +5,7 @@ const ThemeContext = createContext({ theme: "light", toggleTheme: () => {} });
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     if (typeof window === "undefined") return "light";
-    const stored = localStorage.getItem("scamguard-theme");
+    const stored = localStorage.getItem("vardin-theme");
     if (stored) return stored;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
@@ -17,7 +17,7 @@ export function ThemeProvider({ children }) {
     } else {
       root.classList.remove("dark");
     }
-    localStorage.setItem("scamguard-theme", theme);
+    localStorage.setItem("vardin-theme", theme);
   }, [theme]);
 
   const toggleTheme = () => {

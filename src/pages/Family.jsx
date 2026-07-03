@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Users, Plus, Shield, ShieldCheck, ShieldAlert, Mail, Settings, Trash2, Loader2 } from "lucide-react";
+import { Users, Plus, ShieldCheck, ShieldAlert, Mail, Settings, Trash2, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AddSeniorDialog from "@/components/family/AddSeniorDialog";
 
@@ -41,10 +41,10 @@ export default function Family() {
     <div className="max-w-2xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Family</h1>
+          <h1 className="text-2xl font-bold tracking-tight font-heading">My Family</h1>
           <p className="text-muted-foreground mt-1">Manage the loved ones you're helping protect.</p>
         </div>
-        <Button onClick={() => setShowAdd(true)} className="gap-2 bg-gradient-to-r from-blue-500 to-blue-600">
+        <Button onClick={() => setShowAdd(true)} className="gap-2 bg-gradient-to-r from-primary to-primary/80">
           <Plus className="w-4 h-4" />
           Add Person
         </Button>
@@ -52,8 +52,8 @@ export default function Family() {
 
       {seniors.length === 0 ? (
         <div className="text-center py-16 space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 flex items-center justify-center">
-            <Users className="w-8 h-8 text-blue-400" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Users className="w-8 h-8 text-primary" />
           </div>
           <h2 className="text-lg font-semibold">No one added yet</h2>
           <p className="text-muted-foreground max-w-sm mx-auto">
@@ -67,12 +67,9 @@ export default function Family() {
       ) : (
         <div className="space-y-3">
           {seniors.map((senior) => (
-            <div
-              key={senior.id}
-              className="bg-white rounded-2xl border border-border/50 p-5 flex items-start gap-4"
-            >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center flex-shrink-0">
-                <Shield className="w-6 h-6 text-blue-500" />
+            <div key={senior.id} className="bg-card rounded-2xl border border-border/50 p-5 flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck className="w-6 h-6 text-primary" />
               </div>
               <div className="flex-1 min-w-0 space-y-3">
                 <div className="flex items-start justify-between">
@@ -87,12 +84,12 @@ export default function Family() {
                   </div>
                   <div className="flex items-center gap-1">
                     {senior.consent_given ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-success bg-success/10 px-2.5 py-1 rounded-full">
                         <ShieldCheck className="w-3.5 h-3.5" />
                         Consent given
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full">
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-warning bg-warning/10 px-2.5 py-1 rounded-full">
                         <ShieldAlert className="w-3.5 h-3.5" />
                         Pending consent
                       </span>
@@ -102,10 +99,7 @@ export default function Family() {
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2 flex-1">
                     <Settings className="w-3.5 h-3.5 text-muted-foreground" />
-                    <Select
-                      value={senior.alert_preference || "all"}
-                      onValueChange={(val) => handleUpdatePref(senior.id, val)}
-                    >
+                    <Select value={senior.alert_preference || "all"} onValueChange={(val) => handleUpdatePref(senior.id, val)}>
                       <SelectTrigger className="h-8 text-xs w-auto">
                         <SelectValue />
                       </SelectTrigger>
@@ -116,12 +110,7 @@ export default function Family() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(senior.id)}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(senior.id)} className="text-muted-foreground hover:text-destructive">
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>

@@ -5,9 +5,9 @@ import RiskBadge from "@/components/scam/RiskBadge";
 import moment from "moment";
 
 const statusConfig = {
-  new: { label: "New", icon: Clock, color: "text-blue-600" },
-  reviewed: { label: "Reviewed", icon: Eye, color: "text-amber-600" },
-  handled: { label: "Handled", icon: CheckCircle, color: "text-emerald-600" },
+  new: { label: "New", icon: Clock, color: "text-primary" },
+  reviewed: { label: "Reviewed", icon: Eye, color: "text-warning" },
+  handled: { label: "Handled", icon: CheckCircle, color: "text-success" },
 };
 
 export default function AlertCard({ analysis, seniorName }) {
@@ -17,7 +17,7 @@ export default function AlertCard({ analysis, seniorName }) {
   return (
     <Link
       to={`/alerts/${analysis.id}`}
-      className="block bg-white rounded-2xl border border-border/50 p-5 hover:shadow-md hover:border-blue-200 transition-all group"
+      className="block bg-card rounded-2xl border border-border/50 p-5 hover:shadow-md hover:border-primary/30 transition-all group"
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">

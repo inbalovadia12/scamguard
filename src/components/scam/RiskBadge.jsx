@@ -4,21 +4,21 @@ import { ShieldCheck, ShieldAlert, ShieldX } from "lucide-react";
 const riskConfig = {
   low: {
     label: "Low Risk",
-    color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    color: "bg-success/10 text-success border-success/20",
     icon: ShieldCheck,
-    dot: "bg-emerald-500",
+    dot: "bg-success",
   },
   medium: {
     label: "Caution",
-    color: "bg-amber-50 text-amber-700 border-amber-200",
+    color: "bg-warning/10 text-warning border-warning/20",
     icon: ShieldAlert,
-    dot: "bg-amber-500",
+    dot: "bg-warning",
   },
   high: {
     label: "High Risk",
-    color: "bg-red-50 text-red-700 border-red-200",
+    color: "bg-destructive/10 text-destructive border-destructive/20",
     icon: ShieldX,
-    dot: "bg-red-500",
+    dot: "bg-destructive",
   },
 };
 

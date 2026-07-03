@@ -65,6 +65,37 @@ function extractUserId(event) {
   return resource.custom_id || resource.subscriber?.custom_id || null;
 }
 
+async function determinePlanKey(accessToken, event) {
+  const resource = event.resource || {};
+  const subId = resource.id || resource.billing_agreement_id || resource.subscription_id;
+
+  if (!subId) return "premium";
+
+  try {
+    const subRes = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${subId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!subRes.ok) return "premium";
+    const sub = await subRes.json();
+    const planId = sub.plan_id;
+    if (!planId) return "premium";
+
+    const planRes = await fetch(`${PAYPAL_API_BASE}/v1/billing/plans/${planId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!planRes.ok) return "premium";
+    const plan = await planRes.json();
+    const planName = plan.name || "";
+
+    if (planName.includes("Premium")) return "premium";
+    if (planName.includes("Plus")) return "plus";
+    return "premium";
+  } catch (e) {
+    console.log("Error determining plan:", e.message);
+    return "premium";
+  }
+}
+
 async function processEvent(base44, event) {
   const userId = extractUserId(event);
   if (!userId) {
@@ -75,18 +106,22 @@ async function processEvent(base44, event) {
   const eventType = event.event_type;
   console.log(`Processing event: ${eventType} for user: ${userId}`);
 
+  const accessToken = await getPayPalAccessToken();
+
   switch (eventType) {
     case "BILLING.SUBSCRIPTION.ACTIVATED":
     case "BILLING.SUBSCRIPTION.UPDATED":
-    case "PAYMENT.SALE.COMPLETED":
+    case "PAYMENT.SALE.COMPLETED": {
+      const planKey = await determinePlanKey(accessToken, event);
       await base44.asServiceRole.entities.User.update(userId, {
-        subscription_plan: "premium",
+        subscription_plan: planKey,
         subscription_status: "active",
         credits_used: 0,
         credits_reset_month: new Date().toISOString().slice(0, 7),
       });
-      console.log(`User ${userId} upgraded to premium (event: ${eventType})`);
+      console.log(`User ${userId} upgraded to ${planKey} (event: ${eventType})`);
       break;
+    }
 
     case "BILLING.SUBSCRIPTION.CANCELLED":
       await base44.asServiceRole.entities.User.update(userId, {
@@ -99,10 +134,10 @@ async function processEvent(base44, event) {
     case "BILLING.SUBSCRIPTION.SUSPENDED":
     case "PAYMENT.SALE.DENIED":
       await base44.asServiceRole.entities.User.update(userId, {
-        subscription_plan: "free",
+        subscription_plan: "starter",
         subscription_status: "inactive",
       });
-      console.log(`User ${userId} downgraded to free (event: ${eventType})`);
+      console.log(`User ${userId} downgraded to starter (event: ${eventType})`);
       break;
 
     default:

@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CheckCircle, Eye, Loader2, Phone } from "lucide-react";
+import { ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 import AnalysisResult from "@/components/scam/AnalysisResult";
 
 export default function AlertDetail() {
@@ -18,7 +18,6 @@ export default function AlertDetail() {
       const data = await base44.entities.ScamAnalysis.get(id);
       setAnalysis(data);
       setNotes(data.guardian_notes || "");
-      // Mark as reviewed if new
       if (data.guardian_status === "new") {
         await base44.entities.ScamAnalysis.update(id, { guardian_status: "reviewed" });
       }
@@ -55,7 +54,7 @@ export default function AlertDetail() {
     return (
       <div className="text-center py-20">
         <p className="text-muted-foreground">Alert not found.</p>
-        <Link to="/alerts" className="text-blue-500 hover:underline mt-2 inline-block">Back to alerts</Link>
+        <Link to="/alerts" className="text-primary hover:underline mt-2 inline-block">Back to alerts</Link>
       </div>
     );
   }
@@ -68,23 +67,20 @@ export default function AlertDetail() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">Alert Detail</h1>
+        <h1 className="text-2xl font-bold tracking-tight font-heading">Alert Detail</h1>
       </div>
 
-      {/* Original message */}
-      <div className="bg-white rounded-2xl border border-border/50 p-5">
-        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Original message</h3>
+      <div className="bg-card rounded-2xl border border-border/50 p-5">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Original message</h3>
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{analysis.message_text}</p>
       </div>
 
-      {/* Analysis */}
-      <div className="bg-white rounded-3xl border border-border/50 shadow-sm p-6">
+      <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-6">
         <AnalysisResult analysis={analysis} />
       </div>
 
-      {/* Guardian Actions */}
-      <div className="bg-white rounded-2xl border border-border/50 p-5 space-y-4">
-        <h3 className="font-semibold">Guardian Actions</h3>
+      <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-4">
+        <h3 className="font-semibold font-heading">Guardian Actions</h3>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Notes</label>
@@ -99,11 +95,7 @@ export default function AlertDetail() {
 
         <div className="flex gap-2">
           {analysis.guardian_status !== "handled" && (
-            <Button
-              onClick={handleMarkHandled}
-              disabled={saving}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-            >
+            <Button onClick={handleMarkHandled} disabled={saving} className="gap-2 bg-success hover:bg-success/90">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
               Mark as Handled
             </Button>

@@ -37,7 +37,7 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-blue-500" />
+            <UserPlus className="w-5 h-5 text-primary" />
             Add a Loved One
           </DialogTitle>
           <DialogDescription>
@@ -47,30 +47,17 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label>Name</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Mom, Dad, Grandma Rose"
-              className="h-11"
-            />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Mom, Dad, Grandma Rose" className="h-11" />
           </div>
           <div className="space-y-2">
             <Label>Email (optional)</Label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Their email address"
-              className="h-11"
-            />
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their email address" className="h-11" />
             <p className="text-xs text-muted-foreground">We'll send them an invite to connect their account.</p>
           </div>
           <div className="space-y-2">
             <Label>Alert me for</Label>
             <Select value={alertPref} onValueChange={setAlertPref}>
-              <SelectTrigger className="h-11">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All messages checked</SelectItem>
                 <SelectItem value="high_risk_only">High risk only</SelectItem>
@@ -78,11 +65,7 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
               </SelectContent>
             </Select>
           </div>
-          <Button
-            onClick={handleSave}
-            disabled={!name.trim() || saving}
-            className="w-full h-11 bg-gradient-to-r from-blue-500 to-blue-600"
-          >
+          <Button onClick={handleSave} disabled={!name.trim() || saving} className="w-full h-11 bg-gradient-to-r from-primary to-primary/80">
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             Add to My Family
           </Button>

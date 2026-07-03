@@ -1,64 +1,64 @@
 import { base44 } from "@/api/base44Client";
 
 export const PLAN_LIMITS = {
-  free: 10,
+  starter: 10,
   plus: 100,
-  premium: 100,
-  elite: 250,
+  premium: 250,
 };
 
 export const PLAN_PRICES = {
-  free: 0,
+  starter: 0,
   plus: 40,
   premium: 80,
-  elite: 120,
 };
 
 export const PLAN_NAMES = {
-  free: "Free",
+  starter: "Starter",
   plus: "Plus",
   premium: "Premium",
-  elite: "Elite",
 };
 
 export const PLAN_FEATURES = {
-  free: [
-    "10 AI scam analyses per month",
-    "Text message analysis",
-    "Risk score & explanation",
-    "Basic next steps",
-    "1 protected family member",
+  starter: [
+    "10 AI analyses per month",
+    "Basic risk scores",
+    "Community reports access",
+    "Individual use only",
   ],
   plus: [
-    "Everything in Free, plus:",
+    "Everything in Starter, plus:",
     "100 AI analyses per month",
+    "AI explanations & tactic breakdowns",
+    "Advanced scam detection engine",
+    "Email & SMS analysis",
+    "Marketplace protection checks",
     "Chrome Extension access",
-    "Image upload & screenshots",
+    "Image upload & screenshot analysis",
     "AI Agent chat",
     "5 protected family members",
-    "Real-time guardian alerts",
+    "Priority support",
   ],
   premium: [
     "Everything in Plus, plus:",
-    "Auto-redaction of phone numbers & wallets",
-    "Personalized risk profile summary",
-    "Detailed educational content per analysis",
-    "CSV export of analysis history",
-  ],
-  elite: [
-    "Everything in Premium, plus:",
     "250 AI analyses per month",
-    "Unlimited protected family members",
-    "Advanced analytics dashboard",
-    "Scam trend reports & insights",
-    "Priority support",
-    "Unlimited CSV/PDF exports",
+    "Complete family protection system",
+    "Shared family scam alerts",
+    "Unlimited family members",
+    "Advanced AI models",
+    "Screenshot & QR code analysis",
+    "Early access to new features",
+    "Premium analytics dashboard",
+    "Faster processing priority",
+    "Unlimited CSV exports",
   ],
 };
 
 export async function getCreditStatus() {
   const user = await base44.auth.me();
-  const plan = user.subscription_plan || "free";
+  let plan = user.subscription_plan || "starter";
+  // Migrate old plan names
+  if (plan === "free") plan = "starter";
+  if (plan === "elite") plan = "premium";
   const currentMonth = new Date().toISOString().slice(0, 7);
 
   let creditsUsed = user.credits_used || 0;
@@ -72,7 +72,7 @@ export async function getCreditStatus() {
     });
   }
 
-  const limit = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+  const limit = PLAN_LIMITS[plan] || PLAN_LIMITS.starter;
   const remaining = Math.max(0, limit - creditsUsed);
 
   return {
@@ -81,8 +81,9 @@ export async function getCreditStatus() {
     limit,
     remaining,
     canAnalyze: remaining > 0,
-    isPremium: plan === "premium" || plan === "elite" || plan === "plus",
-    isElite: plan === "elite",
+    isPaid: plan === "plus" || plan === "premium",
+    isPremium: plan === "plus" || plan === "premium",
+    isPremiumPlan: plan === "premium",
   };
 }
 
@@ -114,8 +115,4 @@ export async function startPaypalCheckout(planName) {
     throw new Error("No approval URL received from PayPal");
   }
   window.location.href = approvalUrl;
-}
-
-export async function activatePremium() {
-  await startPaypalCheckout("premium");
 }

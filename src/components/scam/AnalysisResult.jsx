@@ -48,7 +48,7 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
         <div className="h-2.5 bg-muted rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-1000 ${
-              analysis.risk_score >= 70 ? "bg-red-500" : analysis.risk_score >= 40 ? "bg-amber-500" : "bg-emerald-500"
+              analysis.risk_score >= 70 ? "bg-destructive" : analysis.risk_score >= 40 ? "bg-warning" : "bg-success"
             }`}
             style={{ width: `${analysis.risk_score}%` }}
           />

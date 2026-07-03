@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Bell, Loader2, Shield } from "lucide-react";
+import { Bell, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AlertCard from "@/components/alerts/AlertCard";
 
@@ -19,7 +19,6 @@ export default function Alerts() {
       ]);
       setSeniors(seniorData);
 
-      // Show all analyses - both user's own and from their seniors
       const seniorUserIds = seniorData.map((s) => s.senior_user_id).filter(Boolean);
       const relevant = analysisData.filter(
         (a) => a.created_by_id === user.id || seniorUserIds.includes(a.created_by_id)
@@ -48,12 +47,12 @@ export default function Alerts() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Guardian Alerts</h1>
+        <h1 className="text-2xl font-bold tracking-tight font-heading">Guardian Alerts</h1>
         <p className="text-muted-foreground mt-1">Review messages checked by you and your protected family members.</p>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="bg-white border border-border/50">
+        <TabsList className="bg-card border border-border/50">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="new">New</TabsTrigger>
           <TabsTrigger value="reviewed">Reviewed</TabsTrigger>
@@ -63,8 +62,8 @@ export default function Alerts() {
 
       {filtered.length === 0 ? (
         <div className="text-center py-16 space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 flex items-center justify-center">
-            <Bell className="w-8 h-8 text-blue-400" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Bell className="w-8 h-8 text-primary" />
           </div>
           <h2 className="text-lg font-semibold">No alerts yet</h2>
           <p className="text-muted-foreground max-w-sm mx-auto">
@@ -74,11 +73,7 @@ export default function Alerts() {
       ) : (
         <div className="space-y-3">
           {filtered.map((analysis) => (
-            <AlertCard
-              key={analysis.id}
-              analysis={analysis}
-              seniorName={getSeniorName(analysis)}
-            />
+            <AlertCard key={analysis.id} analysis={analysis} seniorName={getSeniorName(analysis)} />
           ))}
         </div>
       )}
