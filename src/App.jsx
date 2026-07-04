@@ -26,6 +26,7 @@ import Landing from '@/pages/Landing';
 import Onboarding from '@/pages/Onboarding';
 import Analytics from '@/pages/Analytics';
 import Feedback from '@/pages/Feedback';
+import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
 
 // Layout
@@ -72,6 +73,7 @@ const AuthenticatedApp = () => {
           <Route path="/alerts/:id" element={<AlertDetail />} />
           <Route path="/family" element={<Family />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/extension" element={<Extension />} />
           <Route path="/admin" element={<Admin />} />
