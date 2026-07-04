@@ -27,20 +27,30 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
         alert_preference: alertPref,
       });
 
-      // Send invite email if an address was provided
+      // Send platform invite if an address was provided
       if (email.trim()) {
         try {
+          await base44.users.inviteUser(email.trim(), "user");
           await base44.integrations.Core.SendEmail({
             to: email.trim(),
             subject: `${user.full_name || "Someone"} invited you to join Vardin`,
-            body: `Hi ${name.trim()},\n\n${user.full_name || "Your family member"} has added you to their Vardin family protection circle. Vardin is an AI-powered scam detection tool that helps you know what's real before you click.\n\nTo accept this invitation and start protecting each other from scams, create your free Vardin account at ${window.location.origin}/register\n\nStay safe,\nThe Vardin Team`,
+            body: `Hi ${name.trim()},\n\n${user.full_name || "Your family member"} has added you to their Vardin family protection circle. Vardin is an AI-powered scam detection tool that helps you know what's real before you click.\n\nYou've been invited to join Vardin. Check your email for the invitation to create your account.\n\nStay safe,\nThe Vardin Team`,
           });
-        } catch (emailErr) {
-          console.error("Failed to send invite email:", emailErr);
+        } catch (inviteErr) {
+          // If invite fails (e.g. already invited), still send the email
+          try {
+            await base44.integrations.Core.SendEmail({
+              to: email.trim(),
+              subject: `${user.full_name || "Someone"} invited you to join Vardin`,
+              body: `Hi ${name.trim()},\n\n${user.full_name || "Your family member"} has added you to their Vardin family protection circle. Vardin is an AI-powered scam detection tool that helps you know what's real before you click.\n\nTo accept this invitation and start protecting each other from scams, create your free Vardin account at ${window.location.origin}/register\n\nStay safe,\nThe Vardin Team`,
+            });
+          } catch (emailErr) {
+            console.error("Failed to send invite:", emailErr);
+          }
         }
       }
 
-      toast({ title: "Added!", description: email.trim() ? `${name.trim()} has been added and an invite email was sent.` : `${name.trim()} has been added to your family.` });
+      toast({ title: "Added!", description: email.trim() ? `${name.trim()} has been added and an invite was sent.` : `${name.trim()} has been added to your family.` });
       setName("");
       setEmail("");
       setAlertPref("all");

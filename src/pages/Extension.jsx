@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Lock, Download, Puzzle, Chrome, Loader2, ShieldCheck } from "lucide-react";
+import { Lock, Download, Puzzle, Chrome, Loader2, ShieldCheck, FlaskConical } from "lucide-react";
 import { getCreditStatus } from "@/lib/credits";
 import { Link } from "react-router-dom";
 
@@ -61,7 +61,13 @@ export default function Extension() {
         <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
           <Puzzle className="w-8 h-8 text-primary-foreground" />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight font-heading">Vardin Chrome Extension</h1>
+        <div className="flex items-center justify-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight font-heading">Vardin Chrome Extension</h1>
+          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-warning/15 text-warning">
+            <FlaskConical className="w-3 h-3" />
+            Beta
+          </span>
+        </div>
         <p className="text-muted-foreground">Real-time scam protection right in your browser.</p>
       </div>
 
