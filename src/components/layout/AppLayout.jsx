@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Puzzle, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight,
+  BarChart3, MessageSquare, User, ChevronRight, Globe,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -15,6 +15,7 @@ const navGroups = [
     items: [
       { path: "/dashboard", label: "Home", icon: ShieldCheck },
       { path: "/check", label: "Check", icon: Search },
+      { path: "/url-scanner", label: "URL Scan", icon: Globe },
       { path: "/agent", label: "AI Chat", icon: Bot },
     ],
   },
@@ -224,7 +225,7 @@ export default function AppLayout() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 md:ml-64 flex flex-col min-h-screen overflow-x-hidden">
         <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-8 pt-20 pb-6 md:py-12">
           <Outlet />
         </main>

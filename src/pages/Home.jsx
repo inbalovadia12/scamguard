@@ -74,12 +74,8 @@ export default function Home() {
 
     let llmResult;
     if (mode === "url") {
-      llmResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Scam detection expert: assess this URL for phishing/scam risk using current web information: "${input}". Check domain legitimacy, typosquatting, suspicious TLDs, and known scam reports. Never say "definitely a scam" — use "likely" language. Be educational and plain-English. Include concrete next steps (e.g. "Do not visit", "Do not enter credentials").`,
-        add_context_from_internet: true,
-        model: "gemini_3_flash",
-        response_json_schema: RESPONSE_SCHEMA,
-      });
+      const response = await base44.functions.invoke("scanUrl", { url: input });
+      llmResult = response.data;
     } else {
       llmResult = await base44.integrations.Core.InvokeLLM({
         prompt: `Scam detection expert: analyze this ${messageType} message for scam risk.\nMessage: "${input}"\nRules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics when applicable (e.g. Urgency, Authority Impersonation, Scarcity, Love Bombing, Payment Red Flags) and concrete next steps (e.g. Do not reply, Block sender, Report to carrier).`,

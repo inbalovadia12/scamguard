@@ -183,7 +183,7 @@ export default function AgentChat() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)] flex overflow-hidden rounded-2xl border border-border/50 bg-background">
+    <div className="max-w-4xl mx-auto h-[calc(100vh-12rem)] md:h-[calc(100vh-8rem)] flex overflow-hidden rounded-2xl border border-border/50 bg-background">
       {/* Sidebar - desktop */}
       <div className="hidden md:flex">
         <ConversationSidebar
