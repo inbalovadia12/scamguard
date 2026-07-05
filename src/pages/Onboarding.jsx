@@ -89,7 +89,7 @@ export default function Onboarding() {
     { component: <PreferencesStep alertPref={alertPref} setAlertPref={setAlertPref} notifyEmail={notifyEmail} setNotifyEmail={setNotifyEmail} privacyAutoRedact={privacyAutoRedact} setPrivacyAutoRedact={setPrivacyAutoRedact} onNext={() => setStep(3)} onBack={() => setStep(1)} />, canSkip: true },
     { component: <InviteFamilyStep emails={familyEmails} setEmails={setFamilyEmails} onNext={handleInviteFamily} onBack={() => setStep(2)} inviting={inviting} />, canSkip: true },
     { component: <ChoosePlanStep onComplete={handleComplete} onBack={() => setStep(3)} />, canSkip: true },
-    { component: <CompletionStep onDone={() => navigate("/dashboard")} />, canSkip: false },
+    { component: <CompletionStep onDone={() => navigate("/check")} />, canSkip: false },
   ];
 
   const progress = ((step + 1) / steps.length) * 100;

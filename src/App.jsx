@@ -15,6 +15,7 @@ import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 
 // App pages
+import Dashboard from '@/pages/Dashboard';
 import Home from '@/pages/Home';
 import Alerts from '@/pages/Alerts';
 import AlertDetail from '@/pages/AlertDetail';
@@ -66,7 +67,8 @@ const AuthenticatedApp = () => {
       {/* Protected routes */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppLayout />}>
-          <Route path="/dashboard" element={<Home />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/check" element={<Home />} />
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/agent" element={<AgentChat />} />
           <Route path="/alerts" element={<Alerts />} />

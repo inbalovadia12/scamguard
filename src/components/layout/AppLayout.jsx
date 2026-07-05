@@ -13,7 +13,8 @@ const navGroups = [
   {
     label: "Tools",
     items: [
-      { path: "/dashboard", label: "Check", icon: Search },
+      { path: "/dashboard", label: "Home", icon: ShieldCheck },
+      { path: "/check", label: "Check", icon: Search },
       { path: "/agent", label: "AI Chat", icon: Bot },
     ],
   },
