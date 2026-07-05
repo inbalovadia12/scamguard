@@ -93,16 +93,16 @@ export default function AppLayout() {
         </nav>
 
         <div className="px-4 pb-4 pt-2 space-y-3">
-          {plan !== "premium" && (
+          {plan !== "premium" && plan !== "plus" && (
             <Link
               to="/pricing"
               className="block rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 p-4 hover:border-primary/40 transition-all"
             >
-              <div className="flex items-center gap-2 mb-1">
-                <Crown className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold text-primary">Upgrade</span>
+              <div className="flex items-center gap-2 mb-2">
+                <Crown className="w-4 h-4 text-primary flex-shrink-0" />
+                <span className="text-sm font-semibold text-primary">Upgrade Plan</span>
               </div>
-              <p className="text-xs text-muted-foreground">Unlock more credits & features</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">Unlock more credits & family protection features.</p>
             </Link>
           )}
 
@@ -197,17 +197,17 @@ export default function AppLayout() {
                 </div>
                 <ChevronRight className="w-4 h-4 opacity-40" />
               </Link>
-              {plan !== "premium" && (
+              {plan !== "premium" && plan !== "plus" && (
                 <Link
                   to="/pricing"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium bg-gradient-to-r from-primary to-primary/80 text-primary-foreground"
+                  className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium bg-gradient-to-r from-primary to-primary/80 text-primary-foreground"
                 >
-                  <div className="flex items-center gap-3">
-                    <Crown className="w-4 h-4" />
+                  <div className="flex items-center gap-2.5">
+                    <Crown className="w-4 h-4 flex-shrink-0" />
                     Upgrade Plan
                   </div>
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4 flex-shrink-0" />
                 </Link>
               )}
               <button
