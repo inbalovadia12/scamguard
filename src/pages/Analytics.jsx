@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Loader2, BarChart3, TrendingUp, AlertTriangle, ShieldCheck, Download,
   Lock, MessageSquare, Mail, Briefcase, ShoppingCart, Heart, Landmark,
-  HelpCircle, Sparkles,
+  HelpCircle, Sparkles, Link2, Package, Gift, HeartHandshake,
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
@@ -17,6 +17,7 @@ const RISK_COLORS = { low: "hsl(var(--success))", medium: "hsl(var(--warning))",
 const MESSAGE_TYPE_ICONS = {
   sms: MessageSquare, email: Mail, job_offer: Briefcase, marketplace: ShoppingCart,
   romance: Heart, bank_government: Landmark, tech_support: HelpCircle, other: ShieldCheck,
+  url: Link2, crypto_investment: TrendingUp, delivery: Package, lottery_prize: Gift, charity: HeartHandshake,
 };
 
 export default function Analytics() {

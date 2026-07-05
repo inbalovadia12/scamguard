@@ -25,11 +25,11 @@ export default function LandingHero() {
             Know What's Real{" "}
             <span className="gradient-text">Before You Click.</span>
           </h1>
-          <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto text-balance animate-slide-up">
+          <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto text-balance animate-slide-up anim-delay-1">
             AI-powered scam detection for individuals and families. Paste any message, link, or
             phone number and get an instant risk assessment.
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 animate-slide-up">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 animate-slide-up anim-delay-2">
             <Link to="/register">
               <Button size="lg" className="w-full sm:w-auto h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20">
                 Try Free — 10 Credits
@@ -46,7 +46,7 @@ export default function LandingHero() {
           <p className="mt-4 text-sm text-muted-foreground">
             No credit card required • Cancel anytime
           </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground animate-slide-up anim-delay-3">
             <span className="flex items-center gap-1.5"><ScanLine className="w-4 h-4 text-primary" /> SMS & Email</span>
             <span className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-primary" /> Link Verification</span>
             <span className="flex items-center gap-1.5"><Bot className="w-4 h-4 text-primary" /> AI Analysis</span>

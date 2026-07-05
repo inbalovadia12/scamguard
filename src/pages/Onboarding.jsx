@@ -63,6 +63,8 @@ export default function Onboarding() {
           name: email.split("@")[0],
           email: email.trim(),
           guardian_id: user.id,
+          guardian_email: user.email,
+          guardian_name: user.full_name,
           consent_given: false,
           alert_preference: alertPref,
         });

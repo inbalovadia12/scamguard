@@ -106,12 +106,12 @@ export default function Pricing() {
       )}
 
       <div className="grid md:grid-cols-3 gap-5">
-        {plans.map((plan) => {
+        {plans.map((plan, i) => {
           const isCurrent = credits?.plan === plan.id;
           return (
             <div
               key={plan.id}
-              className={`relative rounded-2xl p-6 border transition-all duration-300 ${
+              className={`relative rounded-2xl p-6 border transition-all duration-300 animate-slide-up ${i === 1 ? "anim-delay-1" : i === 2 ? "anim-delay-2" : ""} ${
                 plan.highlighted
                   ? "border-primary bg-gradient-to-b from-primary/10 to-transparent shadow-lg shadow-primary/10 lg:scale-[1.03]"
                   : "border-border/50 bg-card hover:border-border hover:shadow-md"

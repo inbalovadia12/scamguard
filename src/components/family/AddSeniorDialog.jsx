@@ -23,6 +23,8 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
         name: name.trim(),
         email: email.trim() || undefined,
         guardian_id: user.id,
+        guardian_email: user.email,
+        guardian_name: user.full_name,
         consent_given: false,
         alert_preference: alertPref,
       });

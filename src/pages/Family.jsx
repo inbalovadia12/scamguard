@@ -92,8 +92,8 @@ export default function Family() {
         </div>
       ) : (
         <div className="space-y-3">
-          {seniors.map((senior) => (
-            <div key={senior.id} className="bg-card rounded-2xl border border-border/50 p-5 flex items-start gap-4">
+          {seniors.map((senior, i) => (
+            <div key={senior.id} className={`bg-card rounded-2xl border border-border/50 p-5 flex items-start gap-4 animate-slide-up ${i === 1 ? "anim-delay-1" : i >= 2 ? "anim-delay-2" : ""}`}>
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <ShieldCheck className="w-6 h-6 text-primary" />
               </div>
@@ -109,15 +109,15 @@ export default function Family() {
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    {senior.consent_given ? (
+                    {senior.consent_given && senior.senior_user_id ? (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-success bg-success/10 px-2.5 py-1 rounded-full">
                         <ShieldCheck className="w-3.5 h-3.5" />
-                        Consent given
+                        Connected & protected
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-warning bg-warning/10 px-2.5 py-1 rounded-full">
                         <ShieldAlert className="w-3.5 h-3.5" />
-                        Pending consent
+                        Invite pending
                       </span>
                     )}
                   </div>
