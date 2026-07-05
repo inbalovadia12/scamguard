@@ -4,9 +4,10 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Loader2, BarChart3, TrendingUp, AlertTriangle, ShieldCheck, Download,
-  Lock, MessageSquare, Mail, Briefcase, ShoppingCart, Heart, Landmark,
-  HelpCircle, Sparkles, Link2, Package, Gift, HeartHandshake,
+  MessageSquare, Mail, Briefcase, ShoppingCart, Heart, Landmark,
+  HelpCircle, Link2, Package, Gift, HeartHandshake,
 } from "lucide-react";
+import LockedFeature from "@/components/LockedFeature";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   Tooltip, ResponsiveContainer, Legend,
@@ -72,24 +73,11 @@ export default function Analytics() {
 
   if (!credits?.isPremiumPlan) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-center py-12 space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-warning/10 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-warning" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">Premium Feature</h1>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            The Advanced Analytics Dashboard is a Premium plan feature. Upgrade to access scam trend
-            analysis, risk distribution charts, and CSV exports.
-          </p>
-          <Link to="/pricing">
-            <Button className="gap-2 bg-gradient-to-r from-primary to-primary/80">
-              <Sparkles className="w-4 h-4" />
-              Upgrade to Premium
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <LockedFeature
+        title="Premium Feature"
+        description="The Advanced Analytics Dashboard is a Premium plan feature. Upgrade to access scam trend analysis, risk distribution charts, and CSV exports."
+        buttonLabel="Upgrade to Premium"
+      />
     );
   }
 

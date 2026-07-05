@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Lock, Download, Puzzle, Chrome, Loader2, ShieldCheck, FlaskConical } from "lucide-react";
+import { Download, Puzzle, Chrome, Loader2, FlaskConical } from "lucide-react";
 import { getCreditStatus } from "@/lib/credits";
-import { Link } from "react-router-dom";
+import LockedFeature from "@/components/LockedFeature";
 
 const EXTENSION_URL = "https://media.base44.com/files/public/6a46a8e315996af6f0443792/5b46f19dc_verinta_extension1.zip";
 
@@ -34,24 +34,11 @@ export default function Extension() {
 
   if (!credits?.isPremium) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-center py-12 space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-warning/10 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-warning" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">Premium Feature</h1>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            The Vardin Chrome Extension is available for paid plan subscribers.
-            Upgrade to download the extension and protect yourself in real-time.
-          </p>
-          <Link to="/pricing">
-            <Button className="gap-2 bg-gradient-to-r from-primary to-primary/80">
-              <ShieldCheck className="w-4 h-4" />
-              Upgrade Now
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <LockedFeature
+        title="Premium Feature"
+        description="The Vardin Chrome Extension is available for paid plan subscribers. Upgrade to download the extension and protect yourself in real-time."
+        buttonLabel="Upgrade Now"
+      />
     );
   }
 

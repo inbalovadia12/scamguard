@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Loader2, Bot, ShieldCheck, Lock, X, Menu } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Send, Loader2, Bot, X, Menu } from "lucide-react";
 import MessageBubble from "@/components/agent/MessageBubble";
 import ImageUpload from "@/components/scam/ImageUpload";
 import ConversationSidebar from "@/components/agent/ConversationSidebar";
+import LockedFeature from "@/components/LockedFeature";
 import { getCreditStatus, incrementCreditUsage } from "@/lib/credits";
 import { toast } from "@/components/ui/use-toast";
 
@@ -164,46 +164,21 @@ export default function AgentChat() {
 
   if (credits && !credits.isPremium) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-center py-12 space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-warning/10 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-warning" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">Premium Feature</h1>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            The AI Agent Chat with image upload is a paid feature. Upgrade to chat with
-            Vardin's AI, upload suspicious screenshots, and get real-time analysis.
-          </p>
-          <Link to="/pricing">
-            <Button className="gap-2 bg-gradient-to-r from-primary to-primary/80">
-              <ShieldCheck className="w-4 h-4" />
-              Upgrade Now
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <LockedFeature
+        title="Premium Feature"
+        description="The AI Agent Chat with image upload is a paid feature. Upgrade to chat with Vardin's AI, upload suspicious screenshots, and get real-time analysis."
+        buttonLabel="Upgrade Now"
+      />
     );
   }
 
   if (credits && !credits.canAnalyze) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-center py-12 space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-warning/10 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-warning" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">Out of AI Credits</h1>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            You've used all {credits.limit} of your monthly AI credits. Your credits reset next month, or upgrade for more.
-          </p>
-          <Link to="/pricing">
-            <Button className="gap-2 bg-gradient-to-r from-primary to-primary/80">
-              <ShieldCheck className="w-4 h-4" />
-              Manage Subscription
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <LockedFeature
+        title="Out of AI Credits"
+        description={`You've used all ${credits.limit} of your monthly AI credits. Your credits reset next month, or upgrade for more.`}
+        buttonLabel="Manage Subscription"
+      />
     );
   }
 

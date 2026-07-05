@@ -135,12 +135,14 @@ export default function Home() {
       )}
 
       {outOfCredits && !result && (
-        <div className="mb-6 p-6 rounded-2xl bg-warning/10 border border-warning/20 text-center space-y-3 animate-scale-in">
-          <Lock className="w-8 h-8 text-warning mx-auto" />
-          <h3 className="font-semibold">You're out of AI credits</h3>
-          <p className="text-sm text-muted-foreground">
-            You've used all {credits.limit} of your monthly credits. Upgrade for more analyses, URL scanning, AI chat, and family protection.
-          </p>
+        <div className="mb-6 p-6 rounded-2xl bg-warning/10 border border-warning/20 text-center space-y-5 animate-scale-in">
+          <div className="space-y-3">
+            <Lock className="w-8 h-8 text-warning mx-auto" />
+            <h3 className="font-semibold">You're out of AI credits</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              You've used all {credits.limit} of your monthly credits. Upgrade for more analyses, URL scanning, AI chat, and family protection.
+            </p>
+          </div>
           <Link to="/pricing">
             <Button className="gap-2 bg-gradient-to-r from-primary to-primary/80">
               <ShieldCheck className="w-4 h-4" />
