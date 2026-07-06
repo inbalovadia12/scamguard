@@ -11,7 +11,7 @@ import {
 import { Link } from "react-router-dom";
 import AnalysisResult from "@/components/scam/AnalysisResult";
 import ConsentBanner from "@/components/family/ConsentBanner";
-import { getCreditStatus, incrementCreditUsage } from "@/lib/credits";
+import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
 import { redactMessage } from "@/lib/redact";
 import { getSeniorLink, shouldNotifyGuardian, notifyGuardian } from "@/lib/guardianAlerts";
 
@@ -67,7 +67,8 @@ export default function Home() {
   const handleAnalyze = async () => {
     const input = mode === "url" ? urlText.trim() : messageText.trim();
     if (!input) return;
-    if (credits && !credits.canAnalyze) return;
+    const cost = mode === "url" ? CREDIT_COSTS.URL_SCAN : CREDIT_COSTS.MESSAGE;
+    if (credits && credits.remaining < cost) return;
 
     setAnalyzing(true);
     setResult(null);
@@ -100,7 +101,7 @@ export default function Home() {
       }
     }
 
-    await incrementCreditUsage();
+    await incrementCreditUsage(cost);
     setCredits(await getCreditStatus());
     setResult(llmResult);
     setAnalyzing(false);
@@ -114,6 +115,7 @@ export default function Home() {
 
   const outOfCredits = credits && !credits.canAnalyze;
   const urlLocked = credits && !credits.isPaid;
+  const urlCost = CREDIT_COSTS.URL_SCAN;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -245,8 +247,8 @@ export default function Home() {
                   disabled={outOfCredits}
                 />
                 <p className="text-xs text-muted-foreground">
-                  We check the domain against live web data for phishing patterns and scam reports.
-                </p>
+                   We fetch the actual website content and analyze it for scams. Uses {urlCost} credits.
+                 </p>
               </div>
             )}
 

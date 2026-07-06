@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Send, Loader2, Globe, Link2 } from "lucide-react";
 import MessageBubble from "@/components/agent/MessageBubble";
 import LockedFeature from "@/components/LockedFeature";
-import { getCreditStatus, incrementCreditUsage } from "@/lib/credits";
+import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
 
 export default function UrlScanner() {
   const [conversation, setConversation] = useState(null);
@@ -47,7 +47,7 @@ export default function UrlScanner() {
 
   const handleScan = async () => {
     if (!urlInput.trim() || sending) return;
-    if (!credits?.canAnalyze) return;
+    if (credits && credits.remaining < CREDIT_COSTS.URL_SCAN) return;
 
     setSending(true);
     const url = urlInput.trim();
@@ -67,7 +67,7 @@ export default function UrlScanner() {
       content: url,
     });
 
-    await incrementCreditUsage();
+    await incrementCreditUsage(CREDIT_COSTS.URL_SCAN);
     const updated = await getCreditStatus();
     setCredits(updated);
     setSending(false);
@@ -99,11 +99,11 @@ export default function UrlScanner() {
     );
   }
 
-  if (credits && !credits.canAnalyze) {
+  if (credits && credits.remaining < CREDIT_COSTS.URL_SCAN) {
     return (
       <LockedFeature
-        title="Out of AI Credits"
-        description={`You've used all ${credits.limit} of your monthly AI credits. Your credits reset next month, or upgrade for more.`}
+        title="Not Enough Credits"
+        description={`URL scans use ${CREDIT_COSTS.URL_SCAN} credits each. You have ${credits.remaining} / ${credits.limit} credits left. Your credits reset next month, or upgrade for more.`}
         buttonLabel="Manage Subscription"
       />
     );

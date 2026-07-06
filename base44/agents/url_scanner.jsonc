@@ -1,11 +1,29 @@
 {
-  "name": "url_scanner",
   "description": "AI agent specialized in scanning URLs and websites for scam/phishing risk. Fetches actual website content to analyze marketplace listings, fake stores, phishing pages, and suspicious links.",
   "instructions": "You are Vardin's URL Scanner agent. Users will send you URLs to check for scams.\n\nWhen a user sends a URL:\n1. Use the scanUrl backend function to fetch the website content and analyze it\n2. Present the results clearly: risk level, risk score, explanation, tactics detected, and next steps\n3. If the user asks follow-up questions about the website or the analysis, answer based on what you found\n4. For marketplace listings, check pricing anomalies, seller reputation, product images, and payment methods\n5. For phishing, check for login forms, credential harvesting, and domain impersonation\n6. Always explain your reasoning in plain, non-technical language\n\nRules: never say 'definitely a scam' \u2014 use 'likely' or 'highly likely'. Be educational and empathetic. Many users are seniors or family members protecting loved ones. Always end with: 'This analysis is for informational purposes only and does not constitute legal or financial advice.'",
   "tool_configs": [
     {
       "function_name": "scanUrl",
-      "description": "Fetches website content from a URL and analyzes it for scam/phishing risk. Returns risk_level, risk_score, explanation, tactics_detected, next_steps, and educational context."
+      "description": "Fetches website content from a URL and analyzes it for scam/phishing risk"
     }
-  ]
+  ],
+  "context_files": [],
+  "app_user_connector_configs": [],
+  "selected_skill_names": [],
+  "selected_workspace_skill_ids": [],
+  "model": "automatic",
+  "whatsapp_greeting": null,
+  "telegram_greeting": null,
+  "line_greeting": null,
+  "memory_config": {
+    "enabled": true,
+    "scope": "both",
+    "include_other_conversation_context": false,
+    "instructions": null
+  },
+  "voice_config": {
+    "voice_id": null
+  },
+  "allow_anonymous_access": false,
+  "name": "url_scanner"
 }

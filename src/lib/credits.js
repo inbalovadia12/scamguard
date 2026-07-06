@@ -1,5 +1,11 @@
 import { base44 } from "@/api/base44Client";
 
+export const CREDIT_COSTS = {
+  MESSAGE: 1,
+  URL_SCAN: 5,
+  IMAGE_UPLOAD: 3,
+};
+
 export const PLAN_LIMITS = {
   starter: 10,
   plus: 100,
@@ -103,14 +109,14 @@ export async function getFamilyStatus() {
   };
 }
 
-export async function incrementCreditUsage() {
+export async function incrementCreditUsage(amount = 1) {
   const user = await base44.auth.me();
   const currentMonth = new Date().toISOString().slice(0, 7);
-  let creditsUsed = (user.credits_used || 0) + 1;
+  let creditsUsed = (user.credits_used || 0) + amount;
   const resetMonth = user.credits_reset_month;
 
   if (resetMonth !== currentMonth) {
-    creditsUsed = 1;
+    creditsUsed = amount;
   }
 
   await base44.auth.updateMe({

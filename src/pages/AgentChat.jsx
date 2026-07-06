@@ -7,7 +7,7 @@ import MessageBubble from "@/components/agent/MessageBubble";
 import ImageUpload from "@/components/scam/ImageUpload";
 import ConversationSidebar from "@/components/agent/ConversationSidebar";
 import LockedFeature from "@/components/LockedFeature";
-import { getCreditStatus, incrementCreditUsage } from "@/lib/credits";
+import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
 import { toast } from "@/components/ui/use-toast";
 
 export default function AgentChat() {
@@ -112,7 +112,8 @@ export default function AgentChat() {
 
   const handleSend = async () => {
     if ((!input.trim() && !selectedImage) || sending) return;
-    if (!credits?.canAnalyze) return;
+    const cost = CREDIT_COSTS.MESSAGE + (selectedImage ? CREDIT_COSTS.IMAGE_UPLOAD : 0);
+    if (credits && credits.remaining < cost) return;
 
     setSending(true);
     const messageContent = input.trim();
@@ -141,7 +142,7 @@ export default function AgentChat() {
       } catch {}
     }
 
-    await incrementCreditUsage();
+    await incrementCreditUsage(cost);
     const updated = await getCreditStatus();
     setCredits(updated);
     setSending(false);
@@ -172,7 +173,7 @@ export default function AgentChat() {
     );
   }
 
-  if (credits && !credits.canAnalyze) {
+  if (credits && credits.remaining < 1) {
     return (
       <LockedFeature
         title="Out of AI Credits"
