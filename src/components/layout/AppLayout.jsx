@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  ShieldCheck, Search, Users, Bell, Bot, Puzzle, Crown, Menu, X, LogOut,
+  ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
   BarChart3, MessageSquare, User, ChevronRight, Globe,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -30,7 +30,6 @@ const navGroups = [
     label: "More",
     items: [
       { path: "/analytics", label: "Analytics", icon: BarChart3 },
-      { path: "/extension", label: "Extension", icon: Puzzle },
       { path: "/feedback", label: "Feedback", icon: MessageSquare },
     ],
   },

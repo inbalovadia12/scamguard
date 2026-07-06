@@ -21,7 +21,6 @@ import Alerts from '@/pages/Alerts';
 import AlertDetail from '@/pages/AlertDetail';
 import Family from '@/pages/Family';
 import Pricing from '@/pages/Pricing';
-import Extension from '@/pages/Extension';
 import AgentChat from '@/pages/AgentChat';
 import UrlScanner from '@/pages/UrlScanner';
 import Landing from '@/pages/Landing';
@@ -79,7 +78,6 @@ const AuthenticatedApp = () => {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/pricing" element={<Pricing />} />
-          <Route path="/extension" element={<Extension />} />
           <Route path="/admin" element={<Admin />} />
         </Route>
         <Route path="/onboarding" element={<Onboarding />} />
