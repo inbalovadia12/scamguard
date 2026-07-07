@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ShieldCheck, Loader2, ArrowRight, MessageSquare, Mail, Briefcase, ShoppingCart,
   Heart, Landmark, HelpCircle, Lock, Link2, TrendingUp, Package, Gift, HeartHandshake, Globe,
+  AlertTriangle, Crown,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AnalysisResult from "@/components/scam/AnalysisResult";
 import ConsentBanner from "@/components/family/ConsentBanner";
-import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
+import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS, getCachedAnalysis, cacheAnalysis } from "@/lib/credits";
 import { redactMessage } from "@/lib/redact";
 import { getSeniorLink, shouldNotifyGuardian, notifyGuardian } from "@/lib/guardianAlerts";
 
@@ -70,6 +71,13 @@ export default function Home() {
     const cost = mode === "url" ? CREDIT_COSTS.URL_SCAN : CREDIT_COSTS.MESSAGE;
     if (credits && credits.remaining < cost) return;
 
+    // Check cache first
+    const cached = getCachedAnalysis(input);
+    if (cached) {
+      setResult(cached);
+      return;
+    }
+
     setAnalyzing(true);
     setResult(null);
 
@@ -101,6 +109,7 @@ export default function Home() {
       }
     }
 
+    cacheAnalysis(input, llmResult);
     await incrementCreditUsage(cost);
     setCredits(await getCreditStatus());
     setResult(llmResult);
@@ -115,6 +124,8 @@ export default function Home() {
 
   const outOfCredits = credits && !credits.canAnalyze;
   const urlLocked = credits && !credits.isPaid;
+  const currentCost = mode === "url" ? CREDIT_COSTS.URL_SCAN : CREDIT_COSTS.MESSAGE;
+  const insufficientCredits = credits && credits.remaining > 0 && credits.remaining < currentCost;
   const urlCost = CREDIT_COSTS.URL_SCAN;
 
   return (
@@ -129,6 +140,40 @@ export default function Home() {
           <span className="text-sm font-medium">
             {credits.remaining} / {credits.limit} credits left
           </span>
+        </div>
+      )}
+
+      {credits?.lowCredit && !outOfCredits && !result && (
+        <div className="mb-4 sm:mb-6 flex items-center gap-3 px-4 py-3 bg-warning/10 border border-warning/20 rounded-xl animate-fade-in">
+          <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-warning">Running low on credits</p>
+            <p className="text-xs text-muted-foreground">Only {credits.remaining} credits left. Consider upgrading for more analyses.</p>
+          </div>
+          <Link to="/pricing" className="flex-shrink-0">
+            <Button size="sm" variant="outline" className="gap-1.5 border-warning/30 text-warning hover:bg-warning/10">
+              <Crown className="w-3.5 h-3.5" />
+              Upgrade
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {insufficientCredits && !result && !outOfCredits && (
+        <div className="mb-4 sm:mb-6 flex items-center gap-3 px-4 py-3 bg-warning/10 border border-warning/20 rounded-xl animate-fade-in">
+          <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-warning">Not enough credits for this action</p>
+            <p className="text-xs text-muted-foreground">
+              This {mode === "url" ? "URL scan" : "analysis"} costs {currentCost} credits but you only have {credits.remaining} left.
+            </p>
+          </div>
+          <Link to="/pricing" className="flex-shrink-0">
+            <Button size="sm" variant="outline" className="gap-1.5 border-warning/30 text-warning hover:bg-warning/10">
+              <Crown className="w-3.5 h-3.5" />
+              Upgrade
+            </Button>
+          </Link>
         </div>
       )}
 
@@ -255,7 +300,7 @@ export default function Home() {
             {!(mode === "url" && urlLocked) && (
               <Button
                 onClick={handleAnalyze}
-                disabled={(mode === "url" ? !urlText.trim() : !messageText.trim()) || analyzing || outOfCredits}
+                disabled={(mode === "url" ? !urlText.trim() : !messageText.trim()) || analyzing || outOfCredits || insufficientCredits}
                 className="w-full h-11 sm:h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
                 size="lg"
               >
@@ -266,7 +311,7 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    {mode === "url" ? "Scan Link" : "Analyze Message"}
+                    {mode === "url" ? `Scan Link · ${urlCost} credits` : `Analyze Message · ${CREDIT_COSTS.MESSAGE} credits`}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </>
                 )}

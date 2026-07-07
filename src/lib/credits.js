@@ -1,21 +1,22 @@
 import { base44 } from "@/api/base44Client";
 
 export const CREDIT_COSTS = {
-  MESSAGE: 1,
-  URL_SCAN: 5,
-  IMAGE_UPLOAD: 3,
+  MESSAGE: 3,
+  URL_SCAN: 12,
+  IMAGE_UPLOAD: 8,
+  AGENT_CHAT: 2,
 };
 
 export const PLAN_LIMITS = {
-  starter: 10,
-  plus: 100,
-  premium: 250,
+  starter: 15,
+  plus: 150,
+  premium: 400,
 };
 
 export const PLAN_PRICES = {
   starter: 0,
-  plus: 40,
-  premium: 80,
+  plus: 59,
+  premium: 119,
 };
 
 export const PLAN_NAMES = {
@@ -30,31 +31,34 @@ export const PLAN_FAMILY_LIMITS = {
   premium: Infinity,
 };
 
+export const LOW_CREDIT_THRESHOLD = 0.2;
+
 export const PLAN_FEATURES = {
   starter: [
-    "10 AI analyses per month",
+    "15 AI credits per month (~5 analyses)",
     "12 scam categories (SMS, email, crypto & more)",
     "Risk scores & plain-English explanations",
     "1 protected family member",
   ],
   plus: [
     "Everything in Starter, plus:",
-    "100 AI analyses per month",
+    "150 AI credits per month (~50 analyses)",
     "URL & link scanning with live web checks",
+    "Marketplace listing analysis (eBay, Amazon, Etsy & more)",
     "AI explanations & tactic breakdowns",
     "Image upload & screenshot analysis",
     "AI Agent chat",
-    "Chrome Extension access",
     "5 protected family members",
     "Guardian email alerts",
     "Priority support",
   ],
   premium: [
     "Everything in Plus, plus:",
-    "250 AI analyses per month",
+    "400 AI credits per month (~133 analyses)",
     "Unlimited family members",
     "Full analytics dashboard with trends",
     "CSV export of your analysis history",
+    "Premium Learning Center with interactive lessons",
     "Faster processing priority",
     "Early access to new features",
   ],
@@ -63,7 +67,6 @@ export const PLAN_FEATURES = {
 export async function getCreditStatus() {
   const user = await base44.auth.me();
   let plan = user.subscription_plan || "starter";
-  // Migrate old plan names
   if (plan === "free") plan = "starter";
   if (plan === "elite") plan = "premium";
   const currentMonth = new Date().toISOString().slice(0, 7);
@@ -81,6 +84,7 @@ export async function getCreditStatus() {
 
   const limit = PLAN_LIMITS[plan] || PLAN_LIMITS.starter;
   const remaining = Math.max(0, limit - creditsUsed);
+  const lowThreshold = Math.ceil(limit * LOW_CREDIT_THRESHOLD);
 
   return {
     plan,
@@ -91,6 +95,8 @@ export async function getCreditStatus() {
     isPaid: plan === "plus" || plan === "premium",
     isPremium: plan === "plus" || plan === "premium",
     isPremiumPlan: plan === "premium",
+    lowCredit: remaining > 0 && remaining <= lowThreshold,
+    lowThreshold,
   };
 }
 
@@ -125,6 +131,31 @@ export async function incrementCreditUsage(amount = 1) {
   });
 
   return creditsUsed;
+}
+
+export function getCachedAnalysis(input) {
+  try {
+    const key = `vardin_cache_${btoa(unescape(encodeURIComponent(input))).slice(0, 40)}`;
+    const cached = localStorage.getItem(key);
+    if (!cached) return null;
+    const data = JSON.parse(cached);
+    if (Date.now() - data.timestamp > 86400000) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return { ...data.result, _cached: true };
+  } catch {
+    return null;
+  }
+}
+
+export function cacheAnalysis(input, result) {
+  try {
+    const key = `vardin_cache_${btoa(unescape(encodeURIComponent(input))).slice(0, 40)}`;
+    localStorage.setItem(key, JSON.stringify({ result, timestamp: Date.now() }));
+  } catch {
+    // localStorage might be full or unavailable
+  }
 }
 
 export async function startPaypalCheckout(planName) {

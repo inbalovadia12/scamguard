@@ -173,11 +173,11 @@ export default function AgentChat() {
     );
   }
 
-  if (credits && credits.remaining < 1) {
+  if (credits && credits.remaining < CREDIT_COSTS.MESSAGE) {
     return (
       <LockedFeature
-        title="Out of AI Credits"
-        description={`You've used all ${credits.limit} of your monthly AI credits. Your credits reset next month, or upgrade for more.`}
+        title="Not Enough Credits"
+        description={`You have ${credits.remaining} of ${credits.limit} credits left, but each message uses ${CREDIT_COSTS.MESSAGE} credits. Your credits reset next month, or upgrade for more.`}
         buttonLabel="Manage Subscription"
       />
     );

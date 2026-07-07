@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, Globe,
+  BarChart3, MessageSquare, User, ChevronRight, Globe, GraduationCap,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -30,6 +30,7 @@ const navGroups = [
     label: "More",
     items: [
       { path: "/analytics", label: "Analytics", icon: BarChart3 },
+      { path: "/lessons", label: "Lessons", icon: GraduationCap },
       { path: "/feedback", label: "Feedback", icon: MessageSquare },
     ],
   },

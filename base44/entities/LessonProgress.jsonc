@@ -1,0 +1,61 @@
+{
+  "name": "LessonProgress",
+  "type": "object",
+  "properties": {
+    "lesson_id": {
+      "type": "string",
+      "description": "Unique identifier for the lesson"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "phishing_emails",
+        "scam_texts",
+        "fake_calls",
+        "marketplace_scams",
+        "social_media",
+        "qr_codes",
+        "crypto_fraud",
+        "identity_theft",
+        "password_security",
+        "deepfakes",
+        "online_shopping",
+        "family_safety"
+      ],
+      "description": "Lesson category"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "in_progress",
+        "completed"
+      ],
+      "default": "not_started",
+      "description": "Current progress status"
+    },
+    "score": {
+      "type": "number",
+      "default": 0,
+      "description": "Quiz score percentage (0-100)"
+    },
+    "xp_earned": {
+      "type": "number",
+      "default": 0,
+      "description": "XP earned from this lesson"
+    },
+    "started_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user started this lesson"
+    },
+    "completed_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the user completed this lesson"
+    }
+  },
+  "required": [
+    "lesson_id"
+  ]
+}

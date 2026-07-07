@@ -29,6 +29,7 @@ import Analytics from '@/pages/Analytics';
 import Feedback from '@/pages/Feedback';
 import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
+import Lessons from '@/pages/Lessons';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -75,6 +76,7 @@ const AuthenticatedApp = () => {
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/alerts/:id" element={<AlertDetail />} />
           <Route path="/family" element={<Family />} />
+          <Route path="/lessons" element={<Lessons />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/pricing" element={<Pricing />} />

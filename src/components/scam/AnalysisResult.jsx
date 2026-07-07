@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { Volume2, VolumeX, ChevronDown, ChevronUp, Ban, Phone, Flag, BookOpen } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Volume2, VolumeX, ChevronDown, ChevronUp, Ban, Phone, Flag, BookOpen, ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import RiskBadge from "@/components/scam/RiskBadge";
+import RiskBadge, { getRiskLevelFromScore, getRiskBarColor } from "@/components/scam/RiskBadge";
 import TacticTag from "@/components/scam/TacticTag";
 
 const stepIcons = {
@@ -10,9 +10,77 @@ const stepIcons = {
   "Report to carrier": Flag,
 };
 
+function AnimatedScoreBar({ score }) {
+  const [animatedScore, setAnimatedScore] = useState(0);
+  const barColor = getRiskBarColor(score);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimatedScore(score), 100);
+    return () => clearTimeout(timer);
+  }, [score]);
+
+  return (
+    <div className="space-y-2.5">
+      <div className="flex justify-between items-baseline">
+        <span className="text-sm font-medium text-muted-foreground">Risk Score</span>
+        <span className="text-2xl font-bold font-heading tabular-nums">
+          <AnimatedNumber value={animatedScore} />
+          <span className="text-sm text-muted-foreground font-normal">/100</span>
+        </span>
+      </div>
+      <div className="relative h-3 bg-muted rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-[1200ms] ease-out ${barColor}`}
+          style={{ width: `${animatedScore}%` }}
+        />
+        <div
+          className="absolute top-0 bottom-0 w-0.5 bg-foreground/20 transition-all duration-[1200ms] ease-out"
+          style={{ left: `${animatedScore}%` }}
+        />
+      </div>
+      <div className="flex justify-between text-[10px] text-muted-foreground/60 font-medium px-0.5">
+        <span>Low</span>
+        <span>Medium</span>
+        <span>High</span>
+        <span>Critical</span>
+      </div>
+    </div>
+  );
+}
+
+function AnimatedNumber({ value }) {
+  const [display, setDisplay] = useState(0);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const start = display;
+    const diff = value - start;
+    const duration = 1000;
+    const startTime = performance.now();
+
+    const animate = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(start + diff * eased));
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [value]);
+
+  return <span>{display}</span>;
+}
+
 export default function AnalysisResult({ analysis, showEducation = true }) {
   const [speaking, setSpeaking] = useState(false);
   const [eduOpen, setEduOpen] = useState(false);
+
+  const riskScore = analysis.risk_score ?? 0;
+  const derivedLevel = getRiskLevelFromScore(riskScore);
 
   const handleSpeak = () => {
     if (speaking) {
@@ -29,10 +97,17 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Risk Level */}
+    <div className="space-y-5">
+      {analysis._cached && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-1.5">
+          <ShieldX className="w-3.5 h-3.5" />
+          Result from cache — no credits were used for this analysis.
+        </div>
+      )}
+
+      {/* Risk Header */}
       <div className="flex items-center justify-between">
-        <RiskBadge level={analysis.risk_level} size="lg" />
+        <RiskBadge level={derivedLevel} size="lg" />
         <Button variant="outline" size="sm" onClick={handleSpeak} className="gap-2">
           {speaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           {speaking ? "Stop" : "Listen"}
@@ -40,31 +115,26 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
       </div>
 
       {/* Score bar */}
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Risk Score</span>
-          <span className="font-semibold">{analysis.risk_score}/100</span>
-        </div>
-        <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-1000 ${
-              analysis.risk_score >= 70 ? "bg-destructive" : analysis.risk_score >= 40 ? "bg-warning" : "bg-success"
-            }`}
-            style={{ width: `${analysis.risk_score}%` }}
-          />
-        </div>
-      </div>
+      <AnimatedScoreBar score={riskScore} />
 
       {/* Explanation */}
-      <div className="bg-muted rounded-2xl p-5 space-y-3">
-        <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">What we found</h3>
+      <div className="bg-muted/50 rounded-2xl p-5 space-y-2">
+        <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">What we found</h3>
         <p className="text-base leading-relaxed">{analysis.explanation}</p>
       </div>
+
+      {/* Marketplace info */}
+      {analysis.marketplace_platform && (
+        <div className="flex items-center gap-2 text-sm bg-primary/5 rounded-xl px-4 py-3 border border-primary/10">
+          <span className="text-muted-foreground">Detected platform:</span>
+          <span className="font-semibold text-primary">{analysis.marketplace_platform}</span>
+        </div>
+      )}
 
       {/* Tactics */}
       {analysis.tactics_detected?.length > 0 && (
         <div className="space-y-3">
-          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Manipulation tactics detected</h3>
+          <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Manipulation tactics detected</h3>
           <div className="flex flex-wrap gap-2">
             {analysis.tactics_detected.map((tactic) => (
               <TacticTag key={tactic} tactic={tactic} />
@@ -76,7 +146,7 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
       {/* Next Steps */}
       {analysis.next_steps?.length > 0 && (
         <div className="space-y-3">
-          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">What to do next</h3>
+          <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">What to do next</h3>
           <div className="space-y-2">
             {analysis.next_steps.map((step, i) => {
               const Icon = stepIcons[step] || Flag;
@@ -98,7 +168,7 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
         <div className="border border-border rounded-2xl overflow-hidden">
           <button
             onClick={() => setEduOpen(!eduOpen)}
-            className="w-full flex items-center justify-between p-4 hover:bg-muted transition-colors"
+            className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
           >
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-primary" />
@@ -121,7 +191,7 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
               {analysis.what_to_say && (
                 <div>
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">What to say if contacted again</h4>
-                  <p className="text-sm leading-relaxed italic bg-muted p-3 rounded-xl">&ldquo;{analysis.what_to_say}&rdquo;</p>
+                  <p className="text-sm leading-relaxed italic bg-muted/50 p-3 rounded-xl">&ldquo;{analysis.what_to_say}&rdquo;</p>
                 </div>
               )}
             </div>
