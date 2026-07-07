@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +37,21 @@ const navGroups = [
 ];
 
 export default function AppLayout() {
+  // Apply accessibility settings from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("vardin_accessibility");
+      if (raw) {
+        const s = JSON.parse(raw);
+        const root = document.documentElement;
+        root.classList.remove("text-size-normal", "text-size-large", "text-size-xlarge");
+        root.classList.add(`text-size-${s.text_size || "normal"}`);
+        root.classList.toggle("high-contrast", !!s.high_contrast);
+        root.classList.toggle("reduced-motion", !!s.reduced_motion);
+      }
+    } catch {}
+  }, []);
+
   const location = useLocation();
   const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);

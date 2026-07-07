@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import {
-  ShieldCheck, Crown, Mail, Loader2, Bell, Lock, LogOut, ChevronRight,
+  ShieldCheck, Crown, Mail, Loader2, Bell, Lock, LogOut, ChevronRight, Accessibility, Type, Eye, Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getCreditStatus, PLAN_NAMES, PLAN_LIMITS } from "@/lib/credits";
@@ -22,6 +22,9 @@ export default function Profile() {
   const [alertPref, setAlertPref] = useState("all");
   const [notifyEmail, setNotifyEmail] = useState(true);
   const [privacyRedact, setPrivacyRedact] = useState(true);
+  const [textSize, setTextSize] = useState("normal");
+  const [highContrast, setHighContrast] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -31,6 +34,31 @@ export default function Profile() {
       setPrivacyRedact(user.privacy_auto_redact !== false);
     }
   }, [user]);
+
+  // Load accessibility settings from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("vardin_accessibility");
+      if (raw) {
+        const s = JSON.parse(raw);
+        setTextSize(s.text_size || "normal");
+        setHighContrast(!!s.high_contrast);
+        setReducedMotion(!!s.reduced_motion);
+      }
+    } catch {}
+  }, []);
+
+  // Apply accessibility settings immediately on change
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("text-size-normal", "text-size-large", "text-size-xlarge");
+    root.classList.add(`text-size-${textSize}`);
+    root.classList.toggle("high-contrast", highContrast);
+    root.classList.toggle("reduced-motion", reducedMotion);
+    try {
+      localStorage.setItem("vardin_accessibility", JSON.stringify({ text_size: textSize, high_contrast: highContrast, reduced_motion: reducedMotion }));
+    } catch {}
+  }, [textSize, highContrast, reducedMotion]);
 
   useEffect(() => {
     getCreditStatus().then(setCredits);
@@ -183,6 +211,62 @@ export default function Profile() {
             <p className="text-xs text-muted-foreground">Remove names, numbers & addresses before storing messages</p>
           </div>
           <Switch checked={privacyRedact} onCheckedChange={setPrivacyRedact} />
+        </div>
+      </Card>
+
+      {/* Accessibility */}
+      <Card className="rounded-2xl border-border/50 p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <Accessibility className="w-4 h-4 text-primary" />
+          <h2 className="font-semibold">Accessibility</h2>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Type className="w-4 h-4 text-muted-foreground" />
+            <Label>Text Size</Label>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { value: "normal", label: "Normal", preview: "Aa" },
+              { value: "large", label: "Large", preview: "Aa" },
+              { value: "xlarge", label: "Extra Large", preview: "Aa" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setTextSize(opt.value)}
+                className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
+                  textSize === opt.value
+                    ? "border-primary bg-primary/5"
+                    : "border-border/50 hover:border-primary/30"
+                }`}
+              >
+                <span className={`font-bold ${opt.value === "normal" ? "text-base" : opt.value === "large" ? "text-lg" : "text-xl"}`}>
+                  {opt.preview}
+                </span>
+                <span className="text-xs text-muted-foreground">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-start gap-2">
+            <Eye className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium">High Contrast</p>
+              <p className="text-xs text-muted-foreground">Increase contrast for better readability</p>
+            </div>
+          </div>
+          <Switch checked={highContrast} onCheckedChange={setHighContrast} />
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-start gap-2">
+            <Zap className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Reduced Motion</p>
+              <p className="text-xs text-muted-foreground">Minimize animations and transitions</p>
+            </div>
+          </div>
+          <Switch checked={reducedMotion} onCheckedChange={setReducedMotion} />
         </div>
       </Card>
 

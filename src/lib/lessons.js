@@ -3,6 +3,7 @@ export const LESSON_CATEGORIES = [
     id: "phishing_emails",
     name: "Phishing Emails",
     icon: "Mail",
+    logo: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/88d6e25de_generated_image.png",
     color: "from-blue-500 to-blue-600",
     description: "Spot fake emails before you click",
     lessons: [
@@ -14,45 +15,49 @@ export const LESSON_CATEGORIES = [
           {
             type: "text",
             heading: "What is Phishing?",
-            body: "Phishing is when scammers send fraudulent emails pretending to be from legitimate companies — your bank, a delivery service, or a government agency. Their goal is to trick you into clicking a link, downloading an attachment, or entering your password on a fake website.",
+            body: "Phishing is when scammers send fake emails that look real. They pretend to be your bank, a delivery service, or the government. Their goal? To trick you into clicking a bad link, opening a dangerous file, or typing your password on a fake website.",
           },
           {
             type: "tip",
-            body: "The name 'phishing' comes from 'fishing' — scammers cast a wide net hoping someone bites.",
+            body: "The word 'phishing' comes from 'fishing' — scammers cast a wide net hoping someone bites.",
           },
           {
             type: "text",
             heading: "The 5 Red Flags",
-            body: "1. Urgency: 'Your account will be suspended in 24 hours!'\n2. Generic greetings: 'Dear Customer' instead of your name\n3. Mismatched URLs: The link text says 'bank.com' but the actual URL is 'secure-bank-login.xyz'\n4. Requests for sensitive info: Banks never ask for your password by email\n5. Unexpected attachments: Especially .zip, .exe, or .html files",
+            body: "1. Urgency: 'Your account will be closed in 24 hours!'\n2. Generic greeting: 'Dear Customer' instead of your real name\n3. Suspicious links: The link says 'bank.com' but really goes to 'fake-site.xyz'\n4. Asking for passwords: Real banks never ask for your password by email\n5. Surprise attachments: Especially .zip, .exe, or .html files you didn't ask for",
           },
           {
             type: "example",
             title: "Real Example",
-            body: "Subject: Urgent: Your Account Has Been Limited\n\n'Dear Customer, We detected unusual activity on your account. Click here to verify your identity within 24 hours or your account will be permanently suspended.'\n\nRed flags: generic greeting, urgent threat, suspicious link, no specific account details.",
+            body: "Subject: Urgent: Your Account Has Been Limited\n\n'Dear Customer, We detected unusual activity on your account. Click here to verify your identity within 24 hours or your account will be permanently suspended.'\n\nWhy this is fake: generic greeting, urgent threat, suspicious link, no specific account details.",
           },
         ],
         quiz: [
           {
+            type: "multiple_choice",
             question: "Which of these is the strongest sign of a phishing email?",
             options: [
               "The email has a professional logo",
-              "The email addresses you as 'Dear Customer' and threatens account suspension",
+              "The email says 'Dear Customer' and threatens to close your account",
               "The email is sent during business hours",
               "The email has an unsubscribe link",
             ],
             correct: 1,
-            explanation: "Generic greetings combined with urgency threats are classic phishing indicators.",
+            explanation: "Generic greetings plus urgency threats are classic phishing signs.",
           },
           {
-            question: "Your bank emails asking you to 'confirm your password' via a link. What do you do?",
-            options: [
-              "Click the link and enter your password",
-              "Reply with your password",
-              "Go directly to your bank's website by typing the URL yourself",
-              "Forward it to friends to warn them",
-            ],
-            correct: 2,
-            explanation: "Never click links in suspicious emails. Always navigate to your bank's website directly.",
+            type: "true_false",
+            question: "Your bank will never ask you to confirm your password through an email link.",
+            correct: true,
+            explanation: "Correct! Banks never ask for passwords by email. If unsure, go to your bank's website directly by typing the address yourself.",
+          },
+          {
+            type: "fill_blank",
+            question: "Fill in the blank: Phishing emails often create a false sense of ______ to make you act quickly without thinking.",
+            text_before: "Phishing emails often create a false sense of ",
+            text_after: " to make you act quickly without thinking.",
+            acceptable_answers: ["urgency", "emergency", "panic", "fear"],
+            explanation: "Urgency is the #1 tool scammers use. They want you to panic and click before you think.",
           },
         ],
       },
@@ -64,20 +69,21 @@ export const LESSON_CATEGORIES = [
           {
             type: "text",
             heading: "How to Read a URL",
-            body: "A URL has several parts: protocol (https://), subdomain (mail.), domain (google.com), and path (/inbox). Scammers exploit this by hiding their real domain in the subdomain or path.\n\nExample: 'https://google.com.scam-site.xyz/login' — the real domain is 'scam-site.xyz', not 'google.com'. The scammer just put 'google.com' in the subdomain to trick you.",
+            body: "A web address (URL) has parts: the protocol (https://), the domain (google.com), and the path (/inbox). Scammers hide their real domain inside the address.\n\nExample: 'https://google.com.scam-site.xyz/login' — the real website is 'scam-site.xyz', NOT 'google.com'. The scammer just put 'google.com' in the middle to fool you.",
           },
           {
             type: "tip",
-            body: "Always read URLs from right to left. The real domain is just before the first single slash after the protocol.",
+            body: "Always read web addresses from right to left. The real domain is the word right before the first single slash after the protocol.",
           },
           {
             type: "text",
             heading: "URL Shorteners",
-            body: "Services like bit.ly and tinyurl.com hide the real destination. If you receive a shortened link, use a link expander service (like checkshorturl.com) to see where it actually goes before clicking.",
+            body: "Services like bit.ly and tinyurl.com hide where a link really goes. If you get a shortened link, use a link expander tool (like checkshorturl.com) to see the real destination before you click.",
           },
         ],
         quiz: [
           {
+            type: "multiple_choice",
             question: "Which part of 'https://login.paypal.com.secure-verify.xyz/signin' is the real domain?",
             options: [
               "paypal.com",
@@ -86,7 +92,50 @@ export const LESSON_CATEGORIES = [
               "paypal.com.secure-verify.xyz",
             ],
             correct: 2,
-            explanation: "Read right to left — 'secure-verify.xyz' is the real domain. 'paypal.com' is just part of the subdomain.",
+            explanation: "Read right to left — 'secure-verify.xyz' is the real domain. 'paypal.com' is just part of the subdomain used to trick you.",
+          },
+          {
+            type: "true_false",
+            question: "A link that says 'Click here to verify your account' always goes where it says.",
+            correct: false,
+            explanation: "Correct! Link text can say anything. The real destination is in the actual URL, not the clickable text.",
+          },
+        ],
+      },
+      {
+        id: "email_spoofing",
+        title: "Email Spoofing: Fake Sender Addresses",
+        xp: 50,
+        content: [
+          {
+            type: "text",
+            heading: "What is Email Spoofing?",
+            body: "Scammers can make an email look like it came from someone you trust. The 'From' name might say 'Bank of America' or 'Amazon Security', but the real sender address is completely different. Always check the actual email address, not just the display name.",
+          },
+          {
+            type: "text",
+            heading: "How to Check the Real Sender",
+            body: "On a computer, hover over or click the sender's name to see the full email address. On a phone, tap the sender's name to expand the details. If the address looks strange (like 'security@bank-alert-verify.com' instead of 'security@bank.com'), it's fake.",
+          },
+          {
+            type: "tip",
+            body: "If an email asks you to do something urgent, take 5 seconds to check the sender's real email address. Those 5 seconds can save you thousands of dollars.",
+          },
+        ],
+        quiz: [
+          {
+            type: "fill_blank",
+            question: "Fill in the blank: Even if an email's display name says 'Your Bank', you should always check the actual ______ address.",
+            text_before: "Even if an email's display name says 'Your Bank', you should always check the actual ",
+            text_after: " address.",
+            acceptable_answers: ["email", "sender", "from", "sender email", "email address"],
+            explanation: "The display name can say anything. The real email address tells you who actually sent it.",
+          },
+          {
+            type: "true_false",
+            question: "If an email looks professional and has a company logo, it must be real.",
+            correct: false,
+            explanation: "Correct! Scammers can easily copy logos and design to make emails look professional. Always verify the sender's email address.",
           },
         ],
       },
@@ -96,6 +145,7 @@ export const LESSON_CATEGORIES = [
     id: "scam_texts",
     name: "Scam Text Messages",
     icon: "MessageSquare",
+    logo: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/4e413e7aa_generated_image.png",
     color: "from-green-500 to-green-600",
     description: "Don't fall for SMS traps",
     lessons: [
@@ -107,45 +157,90 @@ export const LESSON_CATEGORIES = [
           {
             type: "text",
             heading: "What is Smishing?",
-            body: "Smishing (SMS + phishing) is when scammers send text messages pretending to be from banks, delivery services, or government agencies. They usually include a link or phone number designed to steal your information or money.",
+            body: "Smishing (SMS + phishing) is when scammers send text messages pretending to be from your bank, a delivery service, or the government. They usually include a link or phone number to steal your info or money.",
           },
           {
             type: "text",
-            heading: "Common Smishing Scams",
-            body: "1. Package delivery: 'Your package is held at the depot. Pay $2 redelivery fee here: [link]'\n2. Bank alerts: 'Suspicious activity detected. Verify here: [link]'\n3. Prize notifications: 'You've won a $500 gift card! Claim at: [link]'\n4. Government: 'You owe the IRS. Pay now or face legal action: [link]'",
+            heading: "Common Text Scams",
+            body: "1. Package delivery: 'Your package is on hold. Pay $2 fee here: [link]'\n2. Bank alerts: 'Suspicious activity detected. Verify here: [link]'\n3. Prize: 'You won a $500 gift card! Claim at: [link]'\n4. Government: 'You owe taxes. Pay now or face legal action: [link]'",
           },
           {
             type: "tip",
-            body: "Legitimate companies never ask you to pay fees or verify account details via a text message link. When in doubt, contact the company directly using the phone number from their official website.",
+            body: "Real companies never ask you to pay fees or verify account details through a text message link. When in doubt, contact the company directly using the phone number from their official website.",
           },
           {
             type: "example",
             title: "Real Example",
-            body: "From: +1-555-0192\n'USPS: Package [TRACKING#] held at facility due to incomplete address. Confirm delivery details: http://usp-delivery.xyz/track'\n\nRed flags: random sender number, fake USPS domain (usp-delivery.xyz), urgency to act, link that doesn't go to usps.com.",
+            body: "From: +1-555-0192\n'USPS: Package [TRACKING#] held at facility due to incomplete address. Confirm delivery details: http://usp-delivery.xyz/track'\n\nWhy it's fake: random sender number, fake USPS domain (usp-delivery.xyz), creates urgency, link doesn't go to usps.com.",
           },
         ],
         quiz: [
           {
+            type: "multiple_choice",
             question: "You get a text saying 'Your package is on hold. Click to confirm your address.' What's the safest action?",
             options: [
               "Click the link to confirm your address",
               "Reply with your address",
-              "Check your actual delivery app or tracking number from the original order",
+              "Check your actual delivery app or tracking number from your original order",
               "Call the number in the text",
             ],
             correct: 2,
-            explanation: "Always verify through official channels. Check your order confirmation or delivery app instead of clicking links in texts.",
+            explanation: "Always check through official channels. Look at your order confirmation or delivery app instead of clicking links in texts.",
           },
           {
-            question: "Which text is most likely a scam?",
+            type: "true_false",
+            question: "You can win a prize from a contest you never entered.",
+            correct: false,
+            explanation: "Correct! You can't win a contest you didn't enter. Prize texts are almost always scams.",
+          },
+          {
+            type: "fill_blank",
+            question: "Fill in the blank: If a text message creates ______ and asks you to click a link, it's likely a scam.",
+            text_before: "If a text message creates ",
+            text_after: " and asks you to click a link, it's likely a scam.",
+            acceptable_answers: ["urgency", "panic", "fear", "pressure", "stress"],
+            explanation: "Scammers use urgency to make you panic and act before you think. Slow down and verify.",
+          },
+        ],
+      },
+      {
+        id: "two_factor_texts",
+        title: "2FA Code Scams: Don't Share Your Code",
+        xp: 50,
+        content: [
+          {
+            type: "text",
+            heading: "The 2FA Code Scam",
+            body: "You get a text with a verification code you didn't ask for. Then someone messages you saying 'Did you get a code? I'm trying to log in, can you send it to me?' This is a scam. They're trying to log into your account and need YOUR code to finish.",
+          },
+          {
+            type: "text",
+            heading: "Never Share Your Code",
+            body: "Verification codes are like keys to your accounts. No legitimate company will ever ask you to share a 2FA code. If you get a code you didn't request, someone may be trying to hack your account — change your password right away.",
+          },
+          {
+            type: "tip",
+            body: "If you get a 2FA code you didn't ask for, ignore it. But check your account — someone may be trying to log in. Change your password if it keeps happening.",
+          },
+        ],
+        quiz: [
+          {
+            type: "true_false",
+            question: "It's safe to share your 2FA verification code if someone says they need it to verify your account.",
+            correct: false,
+            explanation: "Correct! NEVER share your 2FA code with anyone. No legitimate company will ask for it.",
+          },
+          {
+            type: "multiple_choice",
+            question: "You get a text with a code, then someone messages: 'Hey, I sent that to the wrong number. Can you send me the code?' What do you do?",
             options: [
-              "A text from your carrier about your data usage",
-              "A text saying 'You won a $1000 Walmart gift card! Click here to claim'",
-              "A text confirming your doctor's appointment",
-              "A text with a 2FA code you just requested",
+              "Send them the code — they seem nice",
+              "Ask them who they are first, then send it",
+              "Don't send the code — they're trying to hack an account",
+              "Send them a fake code instead",
             ],
-            correct: 1,
-            explanation: "Unsolicited prize notifications are almost always scams. You can't win a contest you didn't enter.",
+            correct: 2,
+            explanation: "This is a common scam. The person is trying to log into an account and needs your code to finish. Never share verification codes.",
           },
         ],
       },
@@ -155,6 +250,7 @@ export const LESSON_CATEGORIES = [
     id: "marketplace_scams",
     name: "Marketplace Scams",
     icon: "ShoppingCart",
+    logo: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/e4f5cb057_generated_image.png",
     color: "from-orange-500 to-red-500",
     description: "Buy and sell safely online",
     lessons: [
@@ -166,45 +262,91 @@ export const LESSON_CATEGORIES = [
           {
             type: "text",
             heading: "The Golden Rule",
-            body: "Never complete a marketplace transaction outside the platform. Scammers will try to move you to WhatsApp, email, or direct bank transfer to bypass the platform's buyer protection.",
+            body: "Never complete a marketplace deal outside the platform. Scammers try to move you to WhatsApp, email, or direct bank transfer to bypass the platform's buyer protection.",
           },
           {
             type: "text",
             heading: "Common Buyer Scams",
-            body: "1. Too good to be true: A $2000 laptop for $300? Walk away.\n2. Fake escrow: 'I'll use this escrow service' — it's a fake website they control.\n3. Overpayment: They send more than the price and ask you to refund the difference. The original payment is fake.\n4. Gift card payment: No legitimate buyer pays with gift cards.",
+            body: "1. Too good to be true: A $2000 laptop for $300? Walk away.\n2. Fake escrow: 'I'll use this escrow service' — it's a fake website they control.\n3. Overpayment: They send more than the price and ask you to refund the difference. The original payment is fake.\n4. Gift card payment: No real buyer pays with gift cards.",
           },
           {
             type: "text",
             heading: "Common Seller Scams",
-            body: "1. Fake payment confirmation: A forged email that looks like it's from PayPal.\n2. Shipping scam: They provide a fake tracking number and claim non-delivery.\n3. Bait and switch: The item you receive is different from the photos.",
+            body: "1. Fake payment confirmation: A forged email that looks like it's from PayPal.\n2. Fake tracking: They provide a fake tracking number and claim the item was delivered.\n3. Bait and switch: The item you receive is different from the photos.",
           },
           {
             type: "tip",
-            body: "Always check seller ratings and reviews. New accounts with no history selling high-value items at discount prices are a major red flag.",
+            body: "Always check seller ratings and reviews. New accounts with no history selling expensive items at low prices are a big red flag.",
           },
         ],
         quiz: [
           {
+            type: "multiple_choice",
             question: "A buyer on Facebook Marketplace offers to pay via Zelle and asks you to ship the item. What should you do?",
             options: [
               "Accept — Zelle is a legitimate payment app",
-              "Ship the item immediately to seem reliable",
-              "Decline — Facebook Marketplace has no seller protection for off-platform payments and shipping",
+              "Ship the item immediately",
+              "Decline — there's no seller protection for off-platform payments and shipping",
               "Ask them to pay with gift cards instead",
             ],
             correct: 2,
-            explanation: "Zelle payments can't be reversed, and Facebook Marketplace doesn't protect shipped items paid via Zelle. Stick to local, in-person cash transactions or the platform's built-in payment system.",
+            explanation: "Zelle payments can't be reversed, and Marketplace doesn't protect shipped items paid via Zelle. Stick to in-person cash or the platform's built-in payment.",
           },
           {
-            question: "Someone offers to buy your $500 item for $800 and asks you to refund the $300 difference. What's happening?",
+            type: "true_false",
+            question: "If a buyer sends you more money than the asking price and asks for a refund of the difference, it's likely a scam.",
+            correct: true,
+            explanation: "Correct! This is the overpayment scam. The original payment is fake and will be reversed, leaving you out both the item and the refund.",
+          },
+          {
+            type: "fill_blank",
+            question: "Fill in the blank: If a deal seems too ______ to be true, it probably is.",
+            text_before: "If a deal seems too ",
+            text_after: " to be true, it probably is.",
+            acceptable_answers: ["good", "great", "amazing", "cheap", "cheap"],
+            explanation: "Trust your gut. If something seems too good to be true, walk away.",
+          },
+        ],
+      },
+      {
+        id: "selling_safely",
+        title: "Selling Safely: Avoid Getting Scammed",
+        xp: 75,
+        content: [
+          {
+            type: "text",
+            heading: "Meet in Safe Places",
+            body: "When selling locally, always meet in a public, well-lit place. Many police stations have 'safe exchange zones' in their parking lots with cameras. Never meet at someone's home or invite strangers to yours.",
+          },
+          {
+            type: "text",
+            heading: "Payment Red Flags",
+            body: "1. 'I'll send a check for more than the price' — fake check scam\n2. 'I paid via PayPal, check your email' — the email is forged\n3. 'I need your bank details to transfer' — they'll drain your account\n4. 'Can you ship it to my cousin overseas?' — they'll never pay\n\nOnly accept cash in person or the platform's official payment system.",
+          },
+          {
+            type: "tip",
+            body: "Take photos of the item and any communication before meeting. If something goes wrong, you'll have evidence.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_answer",
+            question: "Which of these are safe payment methods when selling locally? (Select all that apply)",
             options: [
-              "They made an honest mistake",
-              "It's an overpayment scam — the original payment is fake",
-              "They're being generous",
-              "It's a standard marketplace practice",
+              "Cash in person",
+              "Platform's built-in payment",
+              "Wire transfer to their bank",
+              "Gift cards",
+              "Cryptocurrency",
             ],
-            correct: 1,
-            explanation: "Overpayment scams use fake payments that will later be reversed, leaving you out both the item and the refunded difference.",
+            correct: [0, 1],
+            explanation: "Cash in person and platform payments are safest. Wire transfers, gift cards, and crypto can't be reversed and are scam favorites.",
+          },
+          {
+            type: "true_false",
+            question: "Meeting a buyer at a police station parking lot is a good safety practice.",
+            correct: true,
+            explanation: "Correct! Many police stations have designated safe exchange zones with cameras. Always meet in public, well-lit places.",
           },
         ],
       },
@@ -214,6 +356,7 @@ export const LESSON_CATEGORIES = [
     id: "crypto_fraud",
     name: "Investment & Crypto Fraud",
     icon: "TrendingUp",
+    logo: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/6836b0e50_generated_image.png",
     color: "from-purple-500 to-pink-500",
     description: "Protect your investments",
     lessons: [
@@ -225,45 +368,49 @@ export const LESSON_CATEGORIES = [
           {
             type: "text",
             heading: "The Promise",
-            body: "Crypto scammers promise guaranteed high returns with little or no risk. They might claim to have a 'trading bot', 'mining pool', or 'arbitrage system' that generates 5-10% daily returns. This is mathematically impossible — no investment can sustain those returns.",
+            body: "Crypto scammers promise guaranteed high returns with little or no risk. They might say they have a 'trading bot' or 'mining pool' that makes 5-10% daily returns. This is impossible — no investment can sustain those returns.",
           },
           {
             type: "text",
             heading: "Common Crypto Scams",
-            body: "1. Pig butchering: Scammers build a romantic or friendly relationship over weeks, then introduce a 'crypto investment opportunity' that turns out to be a fake exchange.\n2. Fake exchanges: Websites that look like real crypto exchanges but steal your deposit.\n3. Giveaway scams: 'Send us 1 ETH and we'll send back 2!' — they never send anything back.\n4. Rug pulls: Developers create a new token, build hype, then drain the liquidity pool and disappear.",
+            body: "1. Pig butchering: Scammers build a romantic or friendly relationship over weeks, then introduce a 'crypto investment' that turns out to be fake.\n2. Fake exchanges: Websites that look real but steal your deposit.\n3. Giveaway scams: 'Send us 1 ETH and we'll send back 2!' — they never send anything.\n4. Rug pulls: Developers create a new coin, build hype, then steal all the money and disappear.",
           },
           {
             type: "tip",
-            body: "If someone you met online starts talking about crypto investments — especially if they're a romantic interest — it's almost certainly a scam. Real financial advisors don't solicit through dating apps.",
+            body: "If someone you met online starts talking about crypto investments — especially a romantic interest — it's almost certainly a scam. Real financial advisors don't find clients on dating apps.",
           },
           {
             type: "example",
             title: "Real Example",
-            body: "After weeks of chatting on a dating app, your match mentions they make $500/day trading crypto on a platform called 'CoinSafePro'. They show you screenshots of their 'earnings' and offer to teach you. You deposit money, see fake profits, but when you try to withdraw, you're told you need to pay a 'tax' or 'withdrawal fee' first. The money is gone.",
+            body: "After weeks of chatting on a dating app, your match mentions they make $500/day trading crypto on 'CoinSafePro'. They show fake screenshots of profits and offer to teach you. You deposit money, see fake profits, but when you try to withdraw, they say you need to pay a 'tax' or 'withdrawal fee' first. The money is gone.",
           },
         ],
         quiz: [
           {
-            question: "An online romantic interest introduces you to a crypto investment platform with guaranteed daily returns. What is this?",
+            type: "multiple_choice",
+            question: "An online romantic interest introduces you to a crypto platform with guaranteed daily returns. What is this?",
             options: [
               "A great investment opportunity",
               "A legitimate way to build wealth together",
-              "A 'pig butchering' scam — the relationship is fake and the platform will steal your money",
+              "A 'pig butchering' scam — the relationship is fake and they'll steal your money",
               "A standard dating experience",
             ],
             correct: 2,
-            explanation: "Pig butchering scams combine romance fraud with crypto fraud. The relationship is built over weeks to gain trust before the financial ask.",
+            explanation: "Pig butchering scams combine romance fraud with crypto fraud. The relationship is built over weeks to gain trust before stealing your money.",
           },
           {
-            question: "A crypto project guarantees 5% daily returns with 'zero risk'. What should you do?",
-            options: [
-              "Invest immediately before the opportunity closes",
-              "Invest a small amount to test it",
-              "Recognize it as a Ponzi scheme — guaranteed high returns with no risk don't exist",
-              "Tell your friends about this great opportunity",
-            ],
-            correct: 2,
-            explanation: "5% daily returns would turn $1000 into $5 billion in a year. Any investment promising guaranteed high returns is a scam.",
+            type: "true_false",
+            question: "An investment that guarantees 5% daily returns with zero risk is legitimate.",
+            correct: false,
+            explanation: "Correct! 5% daily returns would turn $1,000 into $5 billion in a year. Any investment promising guaranteed high returns is a scam.",
+          },
+          {
+            type: "fill_blank",
+            question: "Fill in the blank: In a 'giveaway scam', scammers ask you to send crypto and promise to send back ______.",
+            text_before: "In a 'giveaway scam', scammers ask you to send crypto and promise to send back ",
+            text_after: ".",
+            acceptable_answers: ["more", "double", "extra", "twice as much", "2x"],
+            explanation: "Giveaway scammers promise to send back more than you sent. They never send anything back — they just take your money.",
           },
         ],
       },
@@ -273,6 +420,7 @@ export const LESSON_CATEGORIES = [
     id: "family_safety",
     name: "Family Digital Safety",
     icon: "Users",
+    logo: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/e2fd5665a_generated_image.png",
     color: "from-teal-500 to-cyan-500",
     description: "Protect your loved ones",
     lessons: [
@@ -289,7 +437,7 @@ export const LESSON_CATEGORIES = [
           {
             type: "text",
             heading: "How to Help",
-            body: "1. Have regular conversations about scams — make it normal to discuss suspicious messages.\n2. Set up Vardin for them and add them to your family circle so you get alerts.\n3. Enable caller ID and spam filtering on their phone.\n4. Set up automatic updates on their devices.\n5. Remove remote access software if they don't need it — scammers use it to 'fix' fake problems.",
+            body: "1. Talk regularly about scams — make it normal to discuss suspicious messages.\n2. Set up Vardin for them and add them to your family circle so you get alerts.\n3. Turn on caller ID and spam filtering on their phone.\n4. Set up automatic updates on their devices.\n5. Remove remote access software if they don't need it — scammers use it to 'fix' fake problems.",
           },
           {
             type: "tip",
@@ -298,6 +446,7 @@ export const LESSON_CATEGORIES = [
         ],
         quiz: [
           {
+            type: "multiple_choice",
             question: "You get a call from 'your grandson' saying he's in jail and needs bail money urgently. He begs you not to tell his parents. What do you do?",
             options: [
               "Send the money immediately",
@@ -308,6 +457,14 @@ export const LESSON_CATEGORIES = [
             correct: 2,
             explanation: "This is the classic grandparent scam. Always verify through a known phone number. The urgency and secrecy are manipulation tactics.",
           },
+          {
+            type: "fill_blank",
+            question: "Fill in the blank: Having a family ______ word can help verify if a caller is really your family member.",
+            text_before: "Having a family ",
+            text_after: " word can help verify if a caller is really your family member.",
+            acceptable_answers: ["code", "safe", "secret", "password", "code safe", "safe code"],
+            explanation: "A family code word that only your real family knows can stop impersonation scams.",
+          },
         ],
       },
     ],
@@ -316,6 +473,7 @@ export const LESSON_CATEGORIES = [
     id: "password_security",
     name: "Password Security",
     icon: "Lock",
+    logo: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/6921fd193_generated_image.png",
     color: "from-indigo-500 to-purple-500",
     description: "Lock down your accounts",
     lessons: [
@@ -327,17 +485,17 @@ export const LESSON_CATEGORIES = [
           {
             type: "text",
             heading: "Strong Passwords",
-            body: "A strong password is at least 16 characters, includes a mix of upper/lowercase letters, numbers, and symbols. But length matters more than complexity — 'purple-elephant-dancing-7' is stronger than 'P@ssw0rd!' and easier to remember.",
+            body: "A strong password is at least 16 characters long. It should have a mix of upper and lowercase letters, numbers, and symbols. But length matters most — 'purple-elephant-dancing-7' is stronger than 'P@ssw0rd!' and easier to remember.",
           },
           {
             type: "text",
             heading: "Never Reuse Passwords",
-            body: "If you use the same password for your email, bank, and social media, one breach compromises everything. Use a password manager (like Bitwarden or 1Password) to generate and store unique passwords for every account.",
+            body: "If you use the same password for your email, bank, and social media, one breach gives hackers access to everything. Use a password manager (like Bitwarden or 1Password) to create and store unique passwords for every account.",
           },
           {
             type: "text",
             heading: "Enable 2FA Everywhere",
-            body: "Two-factor authentication adds a second layer of security. Even if someone steals your password, they can't log in without the second factor (usually a code from your phone). Use an authenticator app (Google Authenticator, Authy) rather than SMS when possible — SIM swapping can intercept texts.",
+            body: "Two-factor authentication (2FA) adds a second layer of security. Even if someone steals your password, they can't log in without the second code from your phone. Use an authenticator app (like Google Authenticator or Authy) instead of text messages when possible.",
           },
           {
             type: "tip",
@@ -346,6 +504,7 @@ export const LESSON_CATEGORIES = [
         ],
         quiz: [
           {
+            type: "multiple_choice",
             question: "Which is the strongest password?",
             options: [
               "P@ssw0rd2024!",
@@ -354,18 +513,62 @@ export const LESSON_CATEGORIES = [
               "YourName2024",
             ],
             correct: 1,
-            explanation: "Length is the most important factor. A 30+ character passphrase is exponentially harder to crack than a short complex password.",
+            explanation: "Length is the most important factor. A 30+ character passphrase is much harder to crack than a short complex password.",
           },
           {
-            question: "Why should you use an authenticator app instead of SMS for 2FA?",
+            type: "true_false",
+            question: "Using the same password for your email and bank account is safe as long as the password is complex.",
+            correct: false,
+            explanation: "Correct! Never reuse passwords. If one site gets hacked, scammers will try that password on all your other accounts.",
+          },
+          {
+            type: "fill_blank",
+            question: "Fill in the blank: Two-factor authentication is also called ______ for short.",
+            text_before: "Two-factor authentication is also called ",
+            text_after: " for short.",
+            acceptable_answers: ["2fa", "2 fa", "two-factor", "two factor"],
+            explanation: "2FA stands for 'Two-Factor Authentication' — an extra security layer beyond just your password.",
+          },
+        ],
+      },
+      {
+        id: "password_managers",
+        title: "Password Managers: Your Digital Vault",
+        xp: 50,
+        content: [
+          {
+            type: "text",
+            heading: "What is a Password Manager?",
+            body: "A password manager is like a secure digital vault. It creates strong, unique passwords for every account and remembers them all. You only need to remember ONE master password. Popular options include Bitwarden (free), 1Password, and Google Password Manager.",
+          },
+          {
+            type: "text",
+            heading: "Why You Need One",
+            body: "The average person has 70-80 online accounts. You can't remember 80 unique strong passwords — but a password manager can. It fills in passwords automatically on legitimate websites and warns you if a site looks suspicious.",
+          },
+          {
+            type: "tip",
+            body: "Your master password should be a long passphrase — like 'my-dog-loves-pizza-2024'. Make it something you'll remember but no one could guess.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "How many passwords do you need to remember when using a password manager?",
             options: [
-              "SMS is too slow",
-              "SIM swapping attacks can intercept SMS codes",
-              "Authenticator apps look better",
-              "SMS costs money",
+              "All of them — one for each account",
+              "Just one — your master password",
+              "Two — your master password and email password",
+              "None — it works automatically",
             ],
             correct: 1,
-            explanation: "SIM swapping lets attackers take over your phone number and receive your SMS 2FA codes. Authenticator apps are immune to this attack.",
+            explanation: "You only need to remember your master password. The manager handles all the rest automatically.",
+          },
+          {
+            type: "true_false",
+            question: "Password managers can generate strong, unique passwords for every account.",
+            correct: true,
+            explanation: "Correct! Password managers create random, strong passwords that are nearly impossible to crack, and they remember them for you.",
           },
         ],
       },
@@ -375,6 +578,7 @@ export const LESSON_CATEGORIES = [
     id: "deepfakes",
     name: "AI Deepfake Scams",
     icon: "Bot",
+    logo: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/e7608ba85_generated_image.png",
     color: "from-rose-500 to-pink-500",
     description: "When seeing isn't believing",
     lessons: [
@@ -386,17 +590,17 @@ export const LESSON_CATEGORIES = [
           {
             type: "text",
             heading: "What are Deepfakes?",
-            body: "Deepfakes use AI to create realistic fake videos or audio of real people. Scammers use them to impersonate executives, celebrities, or even family members. In 2024, a Hong Kong company lost $25 million after a deepfake video call with their 'CFO'.",
+            body: "Deepfakes use AI to create fake videos or audio of real people. Scammers use them to impersonate bosses, celebrities, or family members. In 2024, a company lost $25 million after a deepfake video call with their 'CFO'.",
           },
           {
             type: "text",
             heading: "How to Spot Deepfakes",
-            body: "1. Unnatural blinking or no blinking at all\n2. Blurry areas around the face or hairline\n3. Lips that don't quite match the audio\n4. Inconsistent lighting or shadows\n5. Unusual pauses or robotic speech patterns\n6. The person avoids showing their hands or full body",
+            body: "1. Unnatural blinking or no blinking at all\n2. Blurry areas around the face or hairline\n3. Lips that don't match the audio\n4. Inconsistent lighting or shadows\n5. Unusual pauses or robotic speech\n6. The person avoids showing their hands or full body",
           },
           {
             type: "text",
             heading: "Voice Cloning Scams",
-            body: "With just 3 seconds of audio, AI can clone someone's voice. Scammers call pretending to be a family member in distress — 'I've been in an accident, I need money for medical bills.' Always verify by calling back on a known number.",
+            body: "With just 3 seconds of audio, AI can copy someone's voice. Scammers call pretending to be a family member in distress — 'I've been in an accident, I need money for medical bills.' Always verify by calling back on a known number.",
           },
           {
             type: "tip",
@@ -405,6 +609,7 @@ export const LESSON_CATEGORIES = [
         ],
         quiz: [
           {
+            type: "multiple_choice",
             question: "You get a voicemail from your boss asking you to urgently transfer funds to a new vendor. The voice sounds exactly like them. What do you do?",
             options: [
               "Transfer the funds immediately — it's clearly your boss",
@@ -413,7 +618,21 @@ export const LESSON_CATEGORIES = [
               "Transfer half the amount to be safe",
             ],
             correct: 2,
-            explanation: "Voice cloning can replicate anyone's voice from seconds of audio. Always verify financial requests through a separate, known communication channel.",
+            explanation: "Voice cloning can copy anyone's voice from seconds of audio. Always verify financial requests through a separate, known communication channel.",
+          },
+          {
+            type: "true_false",
+            question: "AI needs hours of audio to clone someone's voice.",
+            correct: false,
+            explanation: "Correct! Modern AI can clone a voice from just 3 seconds of audio. That's why you should always verify voice requests through another channel.",
+          },
+          {
+            type: "fill_blank",
+            question: "Fill in the blank: A family ______ word can protect you from voice cloning scams.",
+            text_before: "A family ",
+            text_after: " word can protect you from voice cloning scams.",
+            acceptable_answers: ["safe", "code", "secret", "password"],
+            explanation: "A safe word that only your real family knows stops voice clone scammers who can't possibly know it.",
           },
         ],
       },
@@ -423,6 +642,7 @@ export const LESSON_CATEGORIES = [
     id: "qr_codes",
     name: "QR Code Scams",
     icon: "QrCode",
+    logo: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/dbc65d00e_generated_image.png",
     color: "from-amber-500 to-orange-500",
     description: "Scan with caution",
     lessons: [
@@ -434,20 +654,21 @@ export const LESSON_CATEGORIES = [
           {
             type: "text",
             heading: "What's in a QR Code?",
-            body: "A QR code is just a link in disguise. You can't see where it goes until you scan it — and by then it may have opened a phishing site, started a download, or initiated a payment. Scammers place fake QR codes on parking meters, restaurant menus, and posters.",
+            body: "A QR code is just a link in disguise. You can't see where it goes until you scan it — and by then it may have opened a scam website, started a download, or initiated a payment. Scammers place fake QR codes on parking meters, restaurant menus, and posters.",
           },
           {
             type: "text",
             heading: "Common QR Scams",
-            body: "1. Fake parking meters: A sticker over the real QR code sends you to a payment site that steals your card details.\n2. Restaurant menu scam: A fake QR code on a table leads to a phishing site.\n3. Package delivery: A QR code in a scam text leads to a fake delivery site.\n4. Crypto giveaway: 'Scan to claim free Bitcoin' — the site drains your wallet.",
+            body: "1. Fake parking meters: A sticker over the real QR code sends you to a site that steals your card details.\n2. Restaurant menu scam: A fake QR code on a table leads to a phishing site.\n3. Package delivery: A QR code in a scam text leads to a fake delivery site.\n4. Crypto giveaway: 'Scan to claim free Bitcoin' — the site drains your wallet.",
           },
           {
             type: "tip",
-            body: "Before scanning a QR code, check if it's a sticker placed over another code. Use your phone's built-in QR scanner (not a third-party app) which often shows the URL before opening it.",
+            body: "Before scanning, check if the QR code is a sticker placed over another code. Use your phone's built-in QR scanner (not a third-party app) which often shows the URL before opening it.",
           },
         ],
         quiz: [
           {
+            type: "multiple_choice",
             question: "You're at a parking meter and see a QR code sticker for payment. How can you verify it's legitimate?",
             options: [
               "Scan it — QR codes are always safe",
@@ -456,7 +677,200 @@ export const LESSON_CATEGORIES = [
               "Take a photo and send it to a friend",
             ],
             correct: 1,
-            explanation: "Scammers often place sticker QR codes over legitimate ones. If the code looks like a sticker or is peeling, don't scan it. Pay through the official parking app instead.",
+            explanation: "Scammers often place sticker QR codes over real ones. If the code looks like a sticker or is peeling, don't scan it. Use the official parking app instead.",
+          },
+          {
+            type: "true_false",
+            question: "A QR code is just a hidden website link that you can't read until you scan it.",
+            correct: true,
+            explanation: "Correct! That's why QR codes can be dangerous — you don't know where they'll take you until it's too late.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "identity_theft",
+    name: "Identity Theft",
+    icon: "ShieldAlert",
+    logo: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/a035c363d_generated_image.png",
+    color: "from-red-500 to-orange-500",
+    description: "Protect your personal identity",
+    lessons: [
+      {
+        id: "identity_basics",
+        title: "Identity Theft: What You Need to Know",
+        xp: 75,
+        content: [
+          {
+            type: "text",
+            heading: "What is Identity Theft?",
+            body: "Identity theft is when someone steals your personal information — like your Social Security number, bank details, or date of birth — and uses it to open accounts, get loans, or make purchases in your name. It can ruin your credit and take months to fix.",
+          },
+          {
+            type: "text",
+            heading: "How Thieves Get Your Info",
+            body: "1. Phishing emails and texts that trick you into giving info\n2. Data breaches at companies you use\n3. Stolen mail or trash with personal documents\n4. Public Wi-Fi snooping\n5. Social media oversharing (posting your full birth date, address, etc.)",
+          },
+          {
+            type: "text",
+            heading: "How to Protect Yourself",
+            body: "1. Shred documents with personal info before throwing them away\n2. Don't carry your Social Security card in your wallet\n3. Use strong, unique passwords for all accounts\n4. Check your credit report yearly for free at AnnualCreditReport.com\n5. Freeze your credit if you're not applying for new accounts",
+          },
+          {
+            type: "tip",
+            body: "A credit freeze is free and stops anyone from opening accounts in your name. You can unfreeze it temporarily when you need to apply for credit.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "Which of these is the best way to dispose of documents with personal information?",
+            options: [
+              "Throw them in the trash",
+              "Recycle them as-is",
+              "Shred them first",
+              "Keep them forever",
+            ],
+            correct: 2,
+            explanation: "Always shred documents with personal info. Thieves go through trash to find bank statements, credit card offers, and other documents.",
+          },
+          {
+            type: "true_false",
+            question: "Posting your full birth date and hometown on social media is safe.",
+            correct: false,
+            explanation: "Correct! Your birth date, full name, and hometown are often enough to steal your identity. Share as little personal info as possible online.",
+          },
+          {
+            type: "fill_blank",
+            question: "Fill in the blank: A credit ______ stops anyone from opening new accounts in your name.",
+            text_before: "A credit ",
+            text_after: " stops anyone from opening new accounts in your name.",
+            acceptable_answers: ["freeze", "lock", "block", "freeze lock"],
+            explanation: "A credit freeze is free and is one of the best ways to prevent identity theft. You can unfreeze it when you need to apply for credit.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "online_shopping",
+    name: "Online Shopping Safety",
+    icon: "ShoppingBag",
+    logo: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/1f0a82069_generated_image.png",
+    color: "from-blue-500 to-cyan-500",
+    description: "Shop online without getting scammed",
+    lessons: [
+      {
+        id: "shopping_basics",
+        title: "Safe Online Shopping",
+        xp: 50,
+        content: [
+          {
+            type: "text",
+            heading: "Check Before You Buy",
+            body: "Before buying from a new website, check for: 1. 'https' in the web address (the 's' means secure) 2. A padlock icon in the address bar 3. Contact info like a real address and phone number 4. Clear return and refund policies. If any of these are missing, shop elsewhere.",
+          },
+          {
+            type: "text",
+            heading: "Use a Credit Card, Not Debit",
+            body: "Always pay with a credit card or PayPal when shopping online. Credit cards have fraud protection — if you're scammed, you can dispute the charge. Debit cards take money directly from your bank, and getting it back is much harder.",
+          },
+          {
+            type: "text",
+            heading: "Watch Out for Fake Reviews",
+            body: "If all reviews are 5 stars, sound very similar, or were all posted on the same day, they might be fake. Check reviews on multiple sites, not just the store's page. Look for reviews that mention specific details — both good and bad.",
+          },
+          {
+            type: "tip",
+            body: "If a website asks for your Social Security number or bank login to buy something, it's a scam. No legitimate store needs that information.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "Which payment method offers the best fraud protection for online shopping?",
+            options: [
+              "Debit card",
+              "Bank transfer",
+              "Credit card or PayPal",
+              "Gift card",
+            ],
+            correct: 2,
+            explanation: "Credit cards and PayPal have strong fraud protection. You can dispute charges and get your money back. Debit cards and bank transfers are much harder to reverse.",
+          },
+          {
+            type: "true_false",
+            question: "A website with 'https' and a padlock icon is always safe to buy from.",
+            correct: false,
+            explanation: "Not quite! 'https' means the connection is secure, but it doesn't mean the website itself is trustworthy. Scammers can also get 'https' certificates. Check for reviews and contact info too.",
+          },
+          {
+            type: "fill_blank",
+            question: "Fill in the blank: If all reviews are 5 stars and sound the same, they might be ______.",
+            text_before: "If all reviews are 5 stars and sound the same, they might be ",
+            text_after: ".",
+            acceptable_answers: ["fake", "false", "fake reviews", "not real", "fake false"],
+            explanation: "Fake reviews are common on scam websites. Check reviews on independent sites and look for detailed, balanced reviews.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "social_media",
+    name: "Social Media Scams",
+    icon: "Heart",
+    logo: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/459091435_generated_image.png",
+    color: "from-pink-500 to-purple-500",
+    description: "Stay safe on social platforms",
+    lessons: [
+      {
+        id: "social_basics",
+        title: "Social Media Scam Basics",
+        xp: 50,
+        content: [
+          {
+            type: "text",
+            heading: "Common Social Media Scams",
+            body: "1. Fake giveaways: 'Share this post and we'll send you a free iPhone!' — they just want your data.\n2. Romance scams: Someone falls in love with you fast, then needs money for an 'emergency'.\n3. Account takeover: 'You've been hacked! Click here to secure your account' — the link steals your login.\n4. Fake brand accounts: Impersonators offering customer support to steal your info.",
+          },
+          {
+            type: "text",
+            heading: "Protect Your Account",
+            body: "1. Use a strong, unique password for each social media account\n2. Enable two-factor authentication\n3. Set profiles to private so strangers can't see your personal info\n4. Don't accept friend requests from people you don't know\n5. Never share your 2FA codes or login details with anyone",
+          },
+          {
+            type: "tip",
+            body: "Be careful what you share publicly. Scammers use your posts — vacation photos, family details, location check-ins — to target you or pretend to be you.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "Someone you just met on social media falls in love with you quickly, then says they have an emergency and needs money. What is this?",
+            options: [
+              "True love",
+              "A romance scam — they're after your money, not a relationship",
+              "A misunderstanding",
+              "Normal online dating",
+            ],
+            correct: 1,
+            explanation: "Romance scammers move fast, avoid video calls, and eventually ask for money. Never send money to someone you haven't met in person.",
+          },
+          {
+            type: "true_false",
+            question: "It's safe to click links in direct messages from accounts you don't know.",
+            correct: false,
+            explanation: "Correct! Never click links from strangers. They often lead to phishing sites designed to steal your login or install malware.",
+          },
+          {
+            type: "fill_blank",
+            question: "Fill in the blank: If someone falls in love with you very quickly online and then asks for money, it's likely a ______ scam.",
+            text_before: "If someone falls in love with you very quickly online and then asks for money, it's likely a ",
+            text_after: " scam.",
+            acceptable_answers: ["romance", "love", "dating", "catfish", "catfishing"],
+            explanation: "Romance scams are one of the most common and costly social media scams. Real relationships don't move that fast or ask for money.",
           },
         ],
       },
@@ -474,6 +888,9 @@ export function getIcon(name) {
     Lock: "Lock",
     Bot: "Bot",
     QrCode: "QrCode",
+    ShieldAlert: "ShieldAlert",
+    ShoppingBag: "ShoppingBag",
+    Heart: "Heart",
   };
   return icons[name] || "ShieldCheck";
 }

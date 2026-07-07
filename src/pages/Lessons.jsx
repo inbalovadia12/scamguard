@@ -20,6 +20,9 @@ const ICON_MAP = {
   Lock: (props) => <svg {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
   Bot: (props) => <svg {...props}><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>,
   QrCode: (props) => <svg {...props}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h7v7h-7z"/></svg>,
+  ShieldAlert: (props) => <svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>,
+  ShoppingBag: (props) => <svg {...props}><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+  Heart: (props) => <svg {...props}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
   ShieldCheck: (props) => <svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>,
 };
 
@@ -186,9 +189,13 @@ export default function Lessons() {
         {LESSON_CATEGORIES.map((category, catIdx) => (
           <div key={category.id} className="space-y-3 animate-slide-up" style={{ animationDelay: `${(catIdx + 2) * 80}ms` }}>
             <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center flex-shrink-0`}>
-                <CategoryIcon name={category.icon} className="w-4.5 h-4.5 text-white" />
-              </div>
+              {category.logo && (
+                <img
+                  src={category.logo}
+                  alt=""
+                  className="w-11 h-11 rounded-xl object-cover flex-shrink-0"
+                />
+              )}
               <div>
                 <h2 className="font-semibold text-base">{category.name}</h2>
                 <p className="text-xs text-muted-foreground">{category.description}</p>
