@@ -1,6 +1,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import { User, Bot } from "lucide-react";
+import TruncatedText from "@/components/TruncatedText";
 
 export default function MessageBubble({ message }) {
   const isUser = message.role === "user";
@@ -14,9 +15,9 @@ export default function MessageBubble({ message }) {
       >
         {isUser ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
       </div>
-      <div className={`flex flex-col max-w-[80%] ${isUser ? "items-end" : "items-start"}`}>
+      <div className={`flex flex-col min-w-0 flex-1 ${isUser ? "items-end" : "items-start"}`}>
         <div
-          className={`rounded-2xl px-4 py-3 ${
+          className={`rounded-2xl px-4 py-3 max-w-[85%] ${
             isUser ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
           }`}
         >
@@ -34,9 +35,9 @@ export default function MessageBubble({ message }) {
           )}
           {message.content &&
             (isUser ? (
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <TruncatedText text={message.content} maxChars={60} />
             ) : (
-              <ReactMarkdown className="text-sm prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 prose-headings:my-2">
+              <ReactMarkdown className="text-sm prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0 prose-headings:my-2 break-words">
                 {message.content}
               </ReactMarkdown>
             ))}

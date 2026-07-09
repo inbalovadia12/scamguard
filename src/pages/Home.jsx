@@ -10,6 +10,7 @@ import {
   AlertTriangle, Crown,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import TruncatedText from "@/components/TruncatedText";
 import AnalysisResult from "@/components/scam/AnalysisResult";
 import ConsentBanner from "@/components/family/ConsentBanner";
 import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS, getCachedAnalysis, cacheAnalysis } from "@/lib/credits";
@@ -335,9 +336,11 @@ export default function Home() {
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               {mode === "url" ? "Scanned link" : "Original message"}
             </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap break-all">
-              {mode === "url" ? urlText : messageText}
-            </p>
+            <TruncatedText
+              text={mode === "url" ? urlText : messageText}
+              maxChars={mode === "url" ? 80 : 120}
+              className="text-muted-foreground"
+            />
           </div>
 
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6">

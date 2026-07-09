@@ -3,11 +3,12 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, Globe, GraduationCap,
+  BarChart3, MessageSquare, User, ChevronRight, Globe, GraduationCap, LayoutGrid,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import ThemeToggle from "@/components/ThemeToggle";
+import NudigoPopup from "@/components/NudigoPopup";
 
 const navGroups = [
   {
@@ -31,6 +32,7 @@ const navGroups = [
     items: [
       { path: "/analytics", label: "Analytics", icon: BarChart3 },
       { path: "/lessons", label: "Lessons", icon: GraduationCap },
+      { path: "/projects", label: "More Projects", icon: LayoutGrid },
       { path: "/feedback", label: "Feedback", icon: MessageSquare },
     ],
   },
@@ -245,11 +247,14 @@ export default function AppLayout() {
           <Outlet />
         </main>
 
+        <NudigoPopup />
+
         <footer className="border-t border-border/50 py-6 px-4 mt-auto">
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
             <p>© 2026 Vardin. Stay safe out there.</p>
             <div className="flex items-center gap-4">
               <Link to="/" className="hover:text-foreground transition-colors">About</Link>
+              <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
               <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
               <Link to="/admin" className="hover:text-muted-foreground text-xs opacity-40 hover:opacity-100 transition-opacity">Admin</Link>
             </div>

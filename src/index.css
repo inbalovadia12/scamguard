@@ -237,28 +237,50 @@
     to { box-shadow: 0 0 30px hsl(var(--primary) / 0.5); }
   }
 
-  /* === Accessibility: Text Size === */
-  .text-size-large {
-    font-size: 18px;
+  /* === Accessibility: Text Size (text only, not layout) === */
+  .text-size-large p,
+  .text-size-large li,
+  .text-size-large label,
+  .text-size-large span:not(.material-icons),
+  .text-size-large a:not(.btn),
+  .text-size-large h1,
+  .text-size-large h2,
+  .text-size-large h3,
+  .text-size-large h4,
+  .text-size-large h5,
+  .text-size-large h6 {
+    font-size: 1.125rem;
+    line-height: 1.6;
   }
-  .text-size-large h1 { font-size: 1.5em; }
-  .text-size-large h2 { font-size: 1.35em; }
-  .text-size-large h3 { font-size: 1.2em; }
-  .text-size-large .text-sm { font-size: 0.875rem; }
-  .text-size-large .text-xs { font-size: 0.8rem; }
-  .text-size-large .text-base { font-size: 1.1rem; }
+  .text-size-large h1 { font-size: 1.875rem; }
+  .text-size-large h2 { font-size: 1.5rem; }
+  .text-size-large h3 { font-size: 1.25rem; }
+  .text-size-large .text-sm { font-size: 0.95rem; }
+  .text-size-large .text-xs { font-size: 0.85rem; }
+  .text-size-large .text-base { font-size: 1.125rem; }
   .text-size-large .text-lg { font-size: 1.25rem; }
 
-  .text-size-xlarge {
-    font-size: 20px;
+  .text-size-xlarge p,
+  .text-size-xlarge li,
+  .text-size-xlarge label,
+  .text-size-xlarge span:not(.material-icons),
+  .text-size-xlarge a:not(.btn),
+  .text-size-xlarge h1,
+  .text-size-xlarge h2,
+  .text-size-xlarge h3,
+  .text-size-xlarge h4,
+  .text-size-xlarge h5,
+  .text-size-xlarge h6 {
+    font-size: 1.25rem;
+    line-height: 1.7;
   }
-  .text-size-xlarge h1 { font-size: 1.6em; }
-  .text-size-xlarge h2 { font-size: 1.4em; }
-  .text-size-xlarge h3 { font-size: 1.25em; }
+  .text-size-xlarge h1 { font-size: 2rem; }
+  .text-size-xlarge h2 { font-size: 1.625rem; }
+  .text-size-xlarge h3 { font-size: 1.375rem; }
   .text-size-xlarge .text-sm { font-size: 1rem; }
   .text-size-xlarge .text-xs { font-size: 0.9rem; }
-  .text-size-xlarge .text-base { font-size: 1.2rem; }
-  .text-size-xlarge .text-lg { font-size: 1.35rem; }
+  .text-size-xlarge .text-base { font-size: 1.25rem; }
+  .text-size-xlarge .text-lg { font-size: 1.375rem; }
 
   /* === Accessibility: High Contrast === */
   .high-contrast {
