@@ -1,12 +1,17 @@
 // Vardin Extension - Popup Script
-// Handles auth verification, premium gating, and page scanning
+// Handles auth verification, premium gating, credit tracking, and page scanning
 
 var APP_BASE = 'https://vardin.base44.app';
 var LOGIN_URL = APP_BASE + '/login';
 var PRICING_URL = APP_BASE + '/pricing';
 
+// Credit costs per scan mode (must match backend CREDIT_COSTS)
+var CREDIT_COSTS = { url: 12, text: 8, screenshot: 8, both: 12 };
+
 var authToken = null;
 var appId = null;
+var creditsRemaining = null;
+var creditsLimit = null;
 
 // === Utility: XSS-safe HTML escaping ===
 function escapeHtml(text) {
@@ -58,9 +63,30 @@ async function checkAuth() {
     }
 
     var data = await response.json();
-    return { authenticated: true, premium: data.premium, plan: data.plan, userName: data.user_name };
+    return {
+      authenticated: true,
+      premium: data.premium,
+      plan: data.plan,
+      userName: data.user_name,
+      creditsRemaining: data.credits_remaining,
+      creditsLimit: data.credits_limit
+    };
   } catch (error) {
     return { authenticated: false, premium: false, error: error.message };
+  }
+}
+
+// === Update credit display ===
+function updateCreditDisplay() {
+  var el = document.getElementById('credits-display');
+  if (!el) return;
+
+  var scanMode = document.getElementById('scan-mode').value;
+  var cost = CREDIT_COSTS[scanMode] || CREDIT_COSTS.text;
+
+  if (creditsRemaining != null && creditsLimit != null) {
+    el.innerHTML = '<span class="credits-remaining">' + creditsRemaining + ' / ' + creditsLimit + ' credits</span>' +
+      '<span class="credits-cost">This scan: ' + cost + ' credits</span>';
   }
 }
 
@@ -144,12 +170,30 @@ async function scanPage() {
       return;
     }
 
+    if (response.status === 402) {
+      var data402 = await response.json();
+      creditsRemaining = data402.credits_remaining || 0;
+      creditsLimit = data402.credits_limit || 0;
+      updateCreditDisplay();
+      resultsDiv.innerHTML = '<div class="error-box"><p>\u26A0\uFE0F Not enough credits</p><p class="error-sub">This scan costs ' + (data402.credit_cost || CREDIT_COSTS[scanMode]) + ' credits but you have ' + creditsRemaining + ' remaining.</p><button id="upgrade-inline-btn" class="btn-primary" style="margin-top:8px">Upgrade Plan</button></div>';
+      document.getElementById('upgrade-inline-btn').addEventListener('click', function() { chrome.tabs.create({ url: PRICING_URL }); });
+      return;
+    }
+
     if (!response.ok) {
       var errData = await response.json().catch(function() { return {}; });
       throw new Error(errData.error || 'Server error (' + response.status + ')');
     }
 
     var data = await response.json();
+
+    // Update credits from response
+    if (data.credits_remaining != null) {
+      creditsRemaining = data.credits_remaining;
+      creditsLimit = data.credits_limit || creditsLimit;
+      updateCreditDisplay();
+    }
+
     displayResults(data, data.answer_type || answerType);
   } catch (error) {
     resultsDiv.innerHTML = '<div class="error-box"><p>' + escapeHtml('\u26A0\uFE0F ' + error.message) + '</p></div>';
@@ -277,6 +321,10 @@ async function init() {
     return;
   }
 
+  // Store credits
+  creditsRemaining = authResult.creditsRemaining;
+  creditsLimit = authResult.creditsLimit;
+
   // Show plan badge
   var badge = document.getElementById('plan-badge');
   if (badge) {
@@ -285,6 +333,7 @@ async function init() {
   }
 
   showView('scan');
+  updateCreditDisplay();
 }
 
 // === Event listeners ===
@@ -300,6 +349,9 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   document.getElementById('scan-btn').addEventListener('click', scanPage);
+
+  // Update credit cost display when scan mode changes
+  document.getElementById('scan-mode').addEventListener('change', updateCreditDisplay);
 });
 
 // Auto-detect login/logout via storage changes

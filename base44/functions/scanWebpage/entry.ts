@@ -1,5 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+const PLAN_LIMITS = { starter: 15, plus: 150, premium: 400 };
+const CREDIT_COSTS = { url: 12, text: 8, screenshot: 8, both: 12 };
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -11,7 +14,9 @@ Deno.serve(async (req) => {
     }
 
     // === Premium verification: checked server-side, never trust client ===
-    const plan = user.subscription_plan || 'starter';
+    let plan = user.subscription_plan || 'starter';
+    if (plan === 'free') plan = 'starter';
+    if (plan === 'elite') plan = 'premium';
     if (plan !== 'premium' && plan !== 'plus') {
       return Response.json({
         error: 'Premium subscription required',
@@ -27,6 +32,27 @@ Deno.serve(async (req) => {
     const answerType = options?.answer_type || 'detailed';
     const customFocus = typeof options?.custom_focus === 'string' ? options.custom_focus.slice(0, 500) : '';
     const customInstructions = typeof options?.custom_instructions === 'string' ? options.custom_instructions.slice(0, 1000) : '';
+
+    // === Credit check: verify user has enough credits for this scan mode ===
+    const creditCost = CREDIT_COSTS[scanMode] || CREDIT_COSTS.text;
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    let creditsUsed = user.credits_used || 0;
+    const resetMonth = user.credits_reset_month;
+    if (resetMonth !== currentMonth) {
+      creditsUsed = 0;
+    }
+    const creditLimit = PLAN_LIMITS[plan] || PLAN_LIMITS.starter;
+    const creditsRemaining = Math.max(0, creditLimit - creditsUsed);
+
+    if (creditsRemaining < creditCost) {
+      return Response.json({
+        error: 'Insufficient credits',
+        credits_remaining: creditsRemaining,
+        credits_limit: creditLimit,
+        credit_cost: creditCost,
+        upgrade_url: 'https://vardin.base44.app/pricing'
+      }, { status: 402 });
+    }
 
     // Build prompt
     let prompt = `You are Vardin, an expert scam and fraud detection AI. Analyze the following webpage for potential scam, phishing, or fraud indicators.\n\n`;
@@ -130,7 +156,23 @@ Deno.serve(async (req) => {
 
     const result = await base44.asServiceRole.integrations.Core.InvokeLLM(llmOptions);
 
-    return Response.json({ analysis: result, scan_mode: scanMode, answer_type: answerType });
+    // === Deduct credits after successful scan ===
+    const newCreditsUsed = creditsUsed + creditCost;
+    await base44.auth.updateMe({
+      credits_used: newCreditsUsed,
+      credits_reset_month: currentMonth,
+    });
+
+    const newRemaining = Math.max(0, creditLimit - newCreditsUsed);
+
+    return Response.json({
+      analysis: result,
+      scan_mode: scanMode,
+      answer_type: answerType,
+      credits_used: creditCost,
+      credits_remaining: newRemaining,
+      credits_limit: creditLimit
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
