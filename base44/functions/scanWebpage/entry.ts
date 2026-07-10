@@ -62,6 +62,17 @@ Deno.serve(async (req) => {
       }, { status: 402 });
     }
 
+    // Validate that we actually have content to analyze (prevent hallucinated results)
+    if (scanMode !== 'url') {
+      const hasText = page_text && page_text.trim().length > 0;
+      const hasScreenshot = screenshot_data_url && screenshot_data_url.length > 0;
+      if (!hasText && !hasScreenshot) {
+        return Response.json({
+          error: 'No page content could be extracted. Try a different scan mode or webpage.',
+        }, { status: 400 });
+      }
+    }
+
     // Build prompt
     let prompt = `You are Vardin, an expert scam and fraud detection AI. Analyze the following webpage for potential scam, phishing, or fraud indicators.\n\n`;
     prompt += `IMPORTANT: Respond entirely in ${languageName}. All explanations, verdicts, labels, and text must be in ${languageName}.\n\n`;

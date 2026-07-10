@@ -5,7 +5,7 @@ export const EXTENSION_FILES = {
   'manifest.json': String.raw`{
   "manifest_version": 3,
   "name": "Vardin Scam Scanner",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "AI-powered scam detection for any webpage. Premium feature.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["<all_urls>"],
@@ -581,7 +581,7 @@ async function scanPage() {
         });
         pageText = (results && results[0] && results[0].result) || '';
       } catch (textErr) {
-        pageText = '';
+        throw new Error(t('err_no_text') + ' (' + (textErr.message || textErr) + ')');
       }
     }
 
@@ -590,7 +590,7 @@ async function scanPage() {
       try {
         screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 80 });
       } catch (shotErr) {
-        screenshotDataUrl = '';
+        throw new Error(t('err_no_screenshot') + ' (' + (shotErr.message || shotErr) + ')');
       }
     }
 

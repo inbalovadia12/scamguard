@@ -3,7 +3,7 @@ import { Check, Globe } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { LANGUAGES } from "@/lib/i18n/translations";
 
-export default function LanguageToggle({ className = "" }) {
+export default function LanguageToggle({ className = "", dropUp = false }) {
   const { lang, setLang } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -32,7 +32,7 @@ export default function LanguageToggle({ className = "" }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-40 bg-popover border border-border rounded-xl shadow-lg overflow-hidden z-50 animate-scale-in">
+        <div className={`absolute right-0 ${dropUp ? 'bottom-full mb-1' : 'top-full mt-1'} w-40 bg-popover border border-border rounded-xl shadow-lg overflow-hidden z-50 animate-scale-in`}>
           {LANGUAGES.map((l) => (
             <button
               key={l.code}

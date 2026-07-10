@@ -145,7 +145,7 @@ export default function AppLayout() {
               {t("nav.profile")}
             </Link>
             <div className="flex items-center gap-1 px-1">
-              <LanguageToggle className="rounded-xl" />
+              <LanguageToggle className="rounded-xl" dropUp />
               <ThemeToggle className="rounded-xl" />
               <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-destructive flex-1 justify-start">
                 <LogOut className="w-4 h-4 mr-2" />
