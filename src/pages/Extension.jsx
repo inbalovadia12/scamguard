@@ -5,12 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { getCreditStatus } from "@/lib/credits";
 import { EXTENSION_FILES, README_CONTENT } from "@/lib/extensionFiles";
+import { useI18n } from "@/lib/i18n";
 
-const FEATURES = [
-  { icon: FileText, title: "Text Analysis", desc: "Extract and analyze page text content" },
-  { icon: Eye, title: "Screenshot Analysis", desc: "AI visually sees your screen" },
-  { icon: Globe, title: "URL Analysis", desc: "Check domain reputation and patterns" },
-  { icon: Settings2, title: "Custom Focus", desc: "Tell the AI exactly what to look for" },
+const STEPS_KEYS = [
+  "ext.step_1",
+  "ext.step_2",
+  "ext.step_3",
+  "ext.step_4",
+  "ext.step_5",
+  "ext.step_6",
 ];
 
 const STEPS = [
@@ -23,10 +26,18 @@ const STEPS = [
 ];
 
 export default function Extension() {
+  const { t } = useI18n();
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [error, setError] = useState(null);
   const [creditStatus, setCreditStatus] = useState(null);
+
+  const FEATURES = [
+    { icon: FileText, title: t("ext.feature_text"), desc: t("ext.feature_text_desc") },
+    { icon: Eye, title: t("ext.feature_screenshot"), desc: t("ext.feature_screenshot_desc") },
+    { icon: Globe, title: t("ext.feature_url"), desc: t("ext.feature_url_desc") },
+    { icon: Settings2, title: t("ext.feature_custom"), desc: t("ext.feature_custom_desc") },
+  ];
 
   useEffect(() => {
     getCreditStatus().then(setCreditStatus).catch(() => {});
@@ -76,9 +87,9 @@ export default function Extension() {
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center mx-auto shadow-lg shadow-primary/20">
           <Puzzle className="w-8 h-8 text-primary-foreground" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Vardin Chrome Extension</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">{t("ext.title")}</h1>
         <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto">
-          Scan any webpage for scams with one click. AI-powered analysis that you can customize to look for exactly what matters to you.
+          {t("ext.subtitle")}
         </p>
       </div>
 
@@ -90,15 +101,15 @@ export default function Extension() {
               <Lock className="w-6 h-6 text-warning" />
             </div>
             <div>
-              <h2 className="font-semibold text-base">Premium Required</h2>
+              <h2 className="font-semibold text-base">{t("ext.premium_required")}</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                The Chrome extension is a Premium feature. Upgrade to download and use it.
+                {t("ext.premium_desc")}
               </p>
             </div>
             <Link to="/pricing">
               <Button className="gap-2 bg-gradient-to-r from-primary to-primary/80">
                 <Crown className="w-4 h-4" />
-                Upgrade to Premium
+                {t("ext.upgrade")}
               </Button>
             </Link>
           </div>
@@ -108,14 +119,14 @@ export default function Extension() {
               <CheckCircle2 className="w-6 h-6 text-success" />
             </div>
             <div>
-              <h2 className="font-semibold text-base">Download Complete!</h2>
+              <h2 className="font-semibold text-base">{t("ext.download_complete")}</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Extract the ZIP and follow the installation steps below.
+                {t("ext.extract_zip")}
               </p>
             </div>
             <Button variant="outline" onClick={() => setDownloaded(false)} className="gap-2">
               <Download className="w-4 h-4" />
-              Download Again
+              {t("ext.download_again")}
             </Button>
           </div>
         ) : (
@@ -124,9 +135,9 @@ export default function Extension() {
               <Download className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h2 className="font-semibold text-base">Download Chrome Extension</h2>
+              <h2 className="font-semibold text-base">{t("ext.download_title")}</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Complete extension packaged as a ZIP. Extract and load via chrome://extensions.
+                {t("ext.download_desc")}
               </p>
             </div>
             <Button
@@ -137,12 +148,12 @@ export default function Extension() {
               {downloading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Packaging...
+                  {t("ext.packaging")}
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Download Extension (ZIP)
+                  {t("ext.download_zip")}
                 </>
               )}
             </Button>
@@ -170,11 +181,11 @@ export default function Extension() {
       <div className="bg-card rounded-2xl border border-border/50 p-6 space-y-4 animate-slide-up" style={{ animationDelay: "300ms" }}>
         <h2 className="font-semibold text-base flex items-center gap-2">
           <Settings2 className="w-4 h-4 text-primary" />
-          Customization Options
+          {t("ext.customization")}
         </h2>
         <div className="space-y-3 text-sm">
           <div>
-            <p className="font-medium text-foreground mb-1">Scan Mode — What to look at:</p>
+            <p className="font-medium text-foreground mb-1">{t("ext.scan_mode_label")}</p>
             <ul className="text-muted-foreground space-y-0.5 ml-4">
               <li>• <strong>Page Text</strong> — Extract and analyze the text content</li>
               <li>• <strong>Screenshot</strong> — AI visually sees your screen</li>
@@ -183,7 +194,7 @@ export default function Extension() {
             </ul>
           </div>
           <div>
-            <p className="font-medium text-foreground mb-1">Result Type — How results appear:</p>
+            <p className="font-medium text-foreground mb-1">{t("ext.result_type_label")}</p>
             <ul className="text-muted-foreground space-y-0.5 ml-4">
               <li>• <strong>Quick Verdict</strong> — Yes/No + one sentence</li>
               <li>• <strong>Detailed Report</strong> — Full breakdown with risk score</li>
@@ -192,8 +203,8 @@ export default function Extension() {
             </ul>
           </div>
           <div>
-            <p className="font-medium text-foreground mb-1">Custom Focus & Instructions:</p>
-            <p className="text-muted-foreground ml-4">Tell the AI exactly what to look for (e.g., "Is this a phishing site?", "Is this investment legitimate?") and add your own instructions.</p>
+            <p className="font-medium text-foreground mb-1">{t("ext.custom_focus_label")}</p>
+            <p className="text-muted-foreground ml-4">{t("ext.custom_focus_desc")}</p>
           </div>
         </div>
       </div>
@@ -202,32 +213,32 @@ export default function Extension() {
       <div className="bg-card rounded-2xl border border-border/50 p-6 space-y-4 animate-slide-up" style={{ animationDelay: "350ms" }}>
         <h2 className="font-semibold text-base flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-primary" />
-          Security & Privacy
+          {t("ext.security")}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
-            <span className="text-muted-foreground">Uses your logged-in session — no passwords stored</span>
+            <span className="text-muted-foreground">{t("ext.security_1")}</span>
           </div>
           <div className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
-            <span className="text-muted-foreground">Premium status verified server-side on every request</span>
+            <span className="text-muted-foreground">{t("ext.security_2")}</span>
           </div>
           <div className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
-            <span className="text-muted-foreground">No API keys or secrets in extension files</span>
+            <span className="text-muted-foreground">{t("ext.security_3")}</span>
           </div>
           <div className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
-            <span className="text-muted-foreground">Strict CSP — no inline scripts or external resources</span>
+            <span className="text-muted-foreground">{t("ext.security_4")}</span>
           </div>
           <div className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
-            <span className="text-muted-foreground">HTTPS only — all communication encrypted</span>
+            <span className="text-muted-foreground">{t("ext.security_5")}</span>
           </div>
           <div className="flex items-start gap-2">
             <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
-            <span className="text-muted-foreground">Least-privilege permissions — no broad host access</span>
+            <span className="text-muted-foreground">{t("ext.security_6")}</span>
           </div>
         </div>
       </div>
@@ -236,13 +247,13 @@ export default function Extension() {
       <div className="bg-card rounded-2xl border border-border/50 p-6 space-y-4 animate-slide-up" style={{ animationDelay: "400ms" }}>
         <h2 className="font-semibold text-base flex items-center gap-2">
           <Monitor className="w-4 h-4 text-primary" />
-          Installation Guide
+          {t("ext.installation")}
         </h2>
         <ol className="space-y-3 text-sm text-muted-foreground">
-          {STEPS.map((step, i) => (
+          {STEPS_KEYS.map((key, i) => (
             <li key={i} className="flex gap-3">
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary font-semibold text-xs flex items-center justify-center">{i + 1}</span>
-              <span>{step}</span>
+              <span>{t(key)}</span>
             </li>
           ))}
         </ol>
@@ -252,7 +263,7 @@ export default function Extension() {
       <div className="bg-card rounded-2xl border border-border/50 p-6 space-y-4 animate-slide-up" style={{ animationDelay: "450ms" }}>
         <h2 className="font-semibold text-base flex items-center gap-2">
           <Lock className="w-4 h-4 text-primary" />
-          How Authentication Works
+          {t("ext.auth_title")}
         </h2>
         <ol className="space-y-2 text-sm text-muted-foreground">
           <li className="flex gap-2"><span className="font-medium text-foreground">1.</span> Click the extension icon on any page</li>

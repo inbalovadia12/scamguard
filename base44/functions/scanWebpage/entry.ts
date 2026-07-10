@@ -32,6 +32,14 @@ Deno.serve(async (req) => {
     const answerType = options?.answer_type || 'detailed';
     const customFocus = typeof options?.custom_focus === 'string' ? options.custom_focus.slice(0, 500) : '';
     const customInstructions = typeof options?.custom_instructions === 'string' ? options.custom_instructions.slice(0, 1000) : '';
+    const language = options?.language || 'en';
+
+    const LANGUAGE_NAMES: Record<string, string> = {
+      en: 'English',
+      he: 'Hebrew',
+      es: 'Spanish',
+    };
+    const languageName = LANGUAGE_NAMES[language] || 'English';
 
     // === Credit check: verify user has enough credits for this scan mode ===
     const creditCost = CREDIT_COSTS[scanMode] || CREDIT_COSTS.text;
@@ -56,6 +64,7 @@ Deno.serve(async (req) => {
 
     // Build prompt
     let prompt = `You are Vardin, an expert scam and fraud detection AI. Analyze the following webpage for potential scam, phishing, or fraud indicators.\n\n`;
+    prompt += `IMPORTANT: Respond entirely in ${languageName}. All explanations, verdicts, labels, and text must be in ${languageName}.\n\n`;
     prompt += `Page URL: ${page_url || 'unknown'}\n\n`;
 
     if (scanMode === 'text' || scanMode === 'both') {

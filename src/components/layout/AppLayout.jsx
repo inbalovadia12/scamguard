@@ -7,39 +7,43 @@ import {
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { useI18n } from "@/lib/i18n";
 import ThemeToggle from "@/components/ThemeToggle";
+import LanguageToggle from "@/components/LanguageToggle";
 import NudigoPopup from "@/components/NudigoPopup";
 
-const navGroups = [
+const NAV_GROUPS = [
   {
-    label: "Tools",
+    labelKey: "nav.tools",
     items: [
-      { path: "/dashboard", label: "Home", icon: ShieldCheck },
-      { path: "/check", label: "Check", icon: Search },
-      { path: "/url-scanner", label: "URL Scan", icon: Globe },
-      { path: "/agent", label: "AI Chat", icon: Bot },
-      { path: "/extension", label: "Extension", icon: Puzzle },
+      { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
+      { path: "/check", labelKey: "nav.check", icon: Search },
+      { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
+      { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
+      { path: "/extension", labelKey: "nav.extension", icon: Puzzle },
     ],
   },
   {
-    label: "Protection",
+    labelKey: "nav.protection",
     items: [
-      { path: "/alerts", label: "Alerts", icon: Bell },
-      { path: "/family", label: "Family", icon: Users },
+      { path: "/alerts", labelKey: "nav.alerts", icon: Bell },
+      { path: "/family", labelKey: "nav.family", icon: Users },
     ],
   },
   {
-    label: "More",
+    labelKey: "nav.more",
     items: [
-      { path: "/analytics", label: "Analytics", icon: BarChart3 },
-      { path: "/lessons", label: "Lessons", icon: GraduationCap },
-      { path: "/projects", label: "More Projects", icon: LayoutGrid },
-      { path: "/feedback", label: "Feedback", icon: MessageSquare },
+      { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
+      { path: "/lessons", labelKey: "nav.lessons", icon: GraduationCap },
+      { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },
+      { path: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
     ],
   },
 ];
 
 export default function AppLayout() {
+  const { t } = useI18n();
+
   // Apply accessibility settings from localStorage
   useEffect(() => {
     try {
@@ -87,10 +91,10 @@ export default function AppLayout() {
         </div>
 
         <nav className="flex-1 px-4 space-y-6 overflow-y-auto">
-          {navGroups.map((group) => (
-            <div key={group.label}>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.labelKey}>
               <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
-                {group.label}
+                {t(group.labelKey)}
               </p>
               <div className="space-y-1">
                 {group.items.map((item) => (
@@ -104,7 +108,7 @@ export default function AppLayout() {
                     }`}
                   >
                     <item.icon className="w-4 h-4" />
-                    {item.label}
+                    {t(item.labelKey)}
                   </Link>
                 ))}
               </div>
@@ -120,9 +124,9 @@ export default function AppLayout() {
             >
               <div className="flex items-center gap-2 mb-2">
                 <Crown className="w-4 h-4 text-primary flex-shrink-0" />
-                <span className="text-sm font-semibold text-primary">Upgrade Plan</span>
+                <span className="text-sm font-semibold text-primary">{t("nav.upgrade_plan")}</span>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">Unlock more credits & family protection features.</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{t("nav.upgrade_desc")}</p>
             </Link>
           )}
 
@@ -138,13 +142,14 @@ export default function AppLayout() {
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-xs font-bold text-primary-foreground">
                 {initials}
               </div>
-              Profile
+              {t("nav.profile")}
             </Link>
             <div className="flex items-center gap-1 px-1">
+              <LanguageToggle className="rounded-xl" />
               <ThemeToggle className="rounded-xl" />
               <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-destructive flex-1 justify-start">
                 <LogOut className="w-4 h-4 mr-2" />
-                Log out
+                {t("nav.log_out")}
               </Button>
             </div>
           </div>
@@ -161,6 +166,7 @@ export default function AppLayout() {
             <span className="font-bold text-lg tracking-tight font-heading">Vardin</span>
           </Link>
           <div className="flex items-center gap-1">
+            <LanguageToggle className="rounded-lg" />
             <ThemeToggle className="rounded-lg" />
             <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -173,10 +179,10 @@ export default function AppLayout() {
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 top-16 z-20 bg-background animate-fade-in" onClick={() => setMobileOpen(false)}>
           <div className="px-4 py-4 space-y-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            {navGroups.map((group) => (
-              <div key={group.label}>
+            {NAV_GROUPS.map((group) => (
+              <div key={group.labelKey}>
                 <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
-                  {group.label}
+                  {t(group.labelKey)}
                 </p>
                 <div className="space-y-1">
                   {group.items.map((item) => (
@@ -192,7 +198,7 @@ export default function AppLayout() {
                     >
                       <div className="flex items-center gap-3">
                         <item.icon className="w-4 h-4" />
-                        {item.label}
+                        {t(item.labelKey)}
                       </div>
                       <ChevronRight className="w-4 h-4 opacity-40" />
                     </Link>
@@ -213,7 +219,7 @@ export default function AppLayout() {
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-xs font-bold text-primary-foreground">
                     {initials}
                   </div>
-                  Profile
+                  {t("nav.profile")}
                 </div>
                 <ChevronRight className="w-4 h-4 opacity-40" />
               </Link>
@@ -225,7 +231,7 @@ export default function AppLayout() {
                 >
                   <div className="flex items-center gap-2.5">
                     <Crown className="w-4 h-4 flex-shrink-0" />
-                    Upgrade Plan
+                    {t("nav.upgrade_plan")}
                   </div>
                   <ChevronRight className="w-4 h-4 flex-shrink-0" />
                 </Link>
@@ -235,7 +241,7 @@ export default function AppLayout() {
                 className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:bg-muted w-full"
               >
                 <LogOut className="w-4 h-4" />
-                Log out
+                {t("nav.log_out")}
               </button>
             </div>
           </div>
@@ -252,12 +258,12 @@ export default function AppLayout() {
 
         <footer className="border-t border-border/50 py-6 px-4 mt-auto">
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
-            <p>© 2026 Vardin. Stay safe out there.</p>
+            <p>{t("footer.copyright")}</p>
             <div className="flex items-center gap-4">
-              <Link to="/" className="hover:text-foreground transition-colors">About</Link>
-              <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-              <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-              <Link to="/admin" className="hover:text-muted-foreground text-xs opacity-40 hover:opacity-100 transition-opacity">Admin</Link>
+              <Link to="/" className="hover:text-foreground transition-colors">{t("footer.about")}</Link>
+              <Link to="/privacy" className="hover:text-foreground transition-colors">{t("footer.privacy")}</Link>
+              <Link to="/pricing" className="hover:text-foreground transition-colors">{t("footer.pricing")}</Link>
+              <Link to="/admin" className="hover:text-muted-foreground text-xs opacity-40 hover:opacity-100 transition-opacity">{t("footer.admin")}</Link>
             </div>
           </div>
         </footer>
