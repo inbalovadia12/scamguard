@@ -32,6 +32,7 @@ import Admin from '@/pages/Admin';
 import Lessons from '@/pages/Lessons';
 import Privacy from '@/pages/Privacy';
 import Projects from '@/pages/Projects';
+import Extension from '@/pages/Extension';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -81,6 +82,7 @@ const AuthenticatedApp = () => {
           <Route path="/lessons" element={<Lessons />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/projects" element={<Projects />} />
+          <Route path="/extension" element={<Extension />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/pricing" element={<Pricing />} />

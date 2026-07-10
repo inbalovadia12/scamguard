@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="m9 12 2 2 4-4"/>
+        </svg>
+        <span>Vardin</span>
+      </div>
+      <button id="settings-toggle" class="icon-btn" title="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 ! 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </header>
+
+    <div id="main-view" class="space">
+      <div class="field">
+        <label>Scan Mode</label>
+        <select id="scan-mode">
+          <option value="text">Page Text</option>
+          <option value="screenshot">Screenshot</option>
+          <option value="both">Text + Screenshot</option>
+          <option value="url">URL Only</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Answer Type</label>
+        <select id="answer-type">
+          <option value="quick">Quick Verdict</option>
+          <option value="detailed" selected>Detailed Report</option>
+          <option value="risk_score">Risk Score Only</option>
+          <option value="red_flags">Red Flags</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Custom Focus <span class="optional">(optional)</span></label>
+        <input type="text" id="custom-focus" placeholder="e.g., Is this a phishing site?">
+      </div>
+
+      <div class="field">
+        <label>Custom Instructions <span class="optional">(optional)</span></label>
+        <textarea id="custom-instructions" placeholder="e.g., Focus on payment methods and trust signals" rows="2"></textarea>
+      </div>
+
+      <button id="scan-btn" class="scan-btn">
+        <span class="btn-text">Scan This Page</span>
+      </button>
+
+      <div id="results" class="results hidden"></div>
+    </div>
+
+    <div id="settings-view" class="space hidden">
+      <div class="field">
+        <label>API Endpoint</label>
+        <input type="text" id="api-url" placeholder="https://vardin.base44.app/api/functions/scanWebpage">
+      </div>
+      <button id="save-settings" class="scan-btn">Save Settings</button>
+      <button id="back-btn" class="link-btn">Back</button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

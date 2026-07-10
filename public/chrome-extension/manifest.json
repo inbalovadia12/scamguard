@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Vardin Scam Scanner",
+  "version": "1.0.0",
+  "description": "AI-powered scam detection for any webpage. Customize what to scan and how results are displayed.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["https://vardin.base44.app/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Vardin Scam Scanner"
+  }
+}
