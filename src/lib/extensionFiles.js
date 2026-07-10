@@ -8,7 +8,7 @@ export const EXTENSION_FILES = {
   "version": "1.0.0",
   "description": "AI-powered scam detection for any webpage. Premium feature.",
   "permissions": ["activeTab", "scripting", "storage"],
-  "host_permissions": ["https://vardin.base44.app/*"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
@@ -150,13 +150,20 @@ setInterval(function() {
         </svg>
         <span>Vardin</span>
       </div>
-      <span id="plan-badge" class="badge hidden"></span>
+      <div class="header-right">
+        <select id="lang-select" class="lang-select" aria-label="Language">
+          <option value="en">English</option>
+          <option value="he">עברית</option>
+          <option value="es">Español</option>
+        </select>
+        <span id="plan-badge" class="badge hidden"></span>
+      </div>
     </header>
 
     <!-- Loading View -->
     <div id="loading-view" class="view">
       <div class="spinner"></div>
-      <p class="center-text">Checking access...</p>
+      <p class="center-text" data-i18n="checking_access">Checking access...</p>
     </div>
 
     <!-- Login View -->
@@ -167,9 +174,9 @@ setInterval(function() {
           <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
       </div>
-      <h2>Connect Your Account</h2>
-      <p>Log in to Vardin on your browser to start scanning webpages for scams.</p>
-      <button id="login-btn" class="btn-primary">Open Vardin Login</button>
+      <h2 data-i18n="connect_title">Connect Your Account</h2>
+      <p data-i18n="connect_desc">Log in to Vardin on your browser to start scanning webpages for scams.</p>
+      <button id="login-btn" class="btn-primary" data-i18n="open_login">Open Vardin Login</button>
     </div>
 
     <!-- Upgrade View -->
@@ -180,47 +187,47 @@ setInterval(function() {
           <path d="M5 21h14"/>
         </svg>
       </div>
-      <h2>Premium Required</h2>
-      <p>The Vardin Chrome extension requires a Premium subscription. Upgrade to unlock AI-powered scam scanning on any webpage.</p>
-      <button id="upgrade-btn" class="btn-primary">Upgrade to Premium</button>
+      <h2 data-i18n="premium_title">Premium Required</h2>
+      <p data-i18n="premium_desc">The Vardin Chrome extension requires a Premium subscription. Upgrade to unlock AI-powered scam scanning on any webpage.</p>
+      <button id="upgrade-btn" class="btn-primary" data-i18n="upgrade_premium">Upgrade to Premium</button>
     </div>
 
     <!-- Scan View -->
     <div id="scan-view" class="view hidden">
       <div class="field">
-        <label for="scan-mode">Scan Mode</label>
+        <label for="scan-mode" data-i18n="scan_mode">Scan Mode</label>
         <select id="scan-mode">
-          <option value="text">Page Text</option>
-          <option value="screenshot">Screenshot</option>
-          <option value="both">Text + Screenshot</option>
-          <option value="url">URL Only</option>
+          <option value="text" data-i18n="mode_text">Page Text</option>
+          <option value="screenshot" data-i18n="mode_screenshot">Screenshot</option>
+          <option value="both" data-i18n="mode_both">Text + Screenshot</option>
+          <option value="url" data-i18n="mode_url">URL Only</option>
         </select>
       </div>
 
       <div class="field">
-        <label for="answer-type">Result Type</label>
+        <label for="answer-type" data-i18n="result_type">Result Type</label>
         <select id="answer-type">
-          <option value="quick">Quick Verdict</option>
-          <option value="detailed" selected>Detailed Report</option>
-          <option value="risk_score">Risk Score Only</option>
-          <option value="red_flags">Red Flags</option>
+          <option value="quick" data-i18n="result_quick">Quick Verdict</option>
+          <option value="detailed" selected data-i18n="result_detailed">Detailed Report</option>
+          <option value="risk_score" data-i18n="result_risk">Risk Score Only</option>
+          <option value="red_flags" data-i18n="result_flags">Red Flags</option>
         </select>
       </div>
 
       <div class="field">
-        <label for="custom-focus">Custom Focus <span class="optional">(optional)</span></label>
-        <input type="text" id="custom-focus" placeholder="e.g., Is this a phishing site?" maxlength="500">
+        <label for="custom-focus"><span data-i18n="custom_focus">Custom Focus</span> <span class="optional" data-i18n="optional">(optional)</span></label>
+        <input type="text" id="custom-focus" data-i18n-placeholder="focus_placeholder" maxlength="500">
       </div>
 
       <div class="field">
-        <label for="custom-instructions">Instructions <span class="optional">(optional)</span></label>
-        <textarea id="custom-instructions" placeholder="Additional instructions for the AI..." rows="2" maxlength="1000"></textarea>
+        <label for="custom-instructions"><span data-i18n="instructions_label">Instructions</span> <span class="optional" data-i18n="optional">(optional)</span></label>
+        <textarea id="custom-instructions" data-i18n-placeholder="instructions_placeholder" rows="2" maxlength="1000"></textarea>
       </div>
 
       <div id="credits-display" class="credits-bar"></div>
 
       <button id="scan-btn" class="btn-primary">
-        <span id="scan-btn-text">Scan This Page</span>
+        <span id="scan-btn-text" data-i18n="scan_btn">Scan This Page</span>
       </button>
 
       <div id="results" class="results hidden"></div>
@@ -244,6 +251,213 @@ var authToken = null;
 var appId = null;
 var creditsRemaining = null;
 var creditsLimit = null;
+var currentLang = 'en';
+
+// === i18n translations ===
+var I18N = {
+  en: {
+    lang_name: 'English',
+    checking_access: 'Checking access...',
+    connect_title: 'Connect Your Account',
+    connect_desc: 'Log in to Vardin on your browser to start scanning webpages for scams.',
+    open_login: 'Open Vardin Login',
+    premium_title: 'Premium Required',
+    premium_desc: 'The Vardin Chrome extension requires a Premium subscription. Upgrade to unlock AI-powered scam scanning on any webpage.',
+    upgrade_premium: 'Upgrade to Premium',
+    scan_mode: 'Scan Mode',
+    mode_text: 'Page Text',
+    mode_screenshot: 'Screenshot',
+    mode_both: 'Text + Screenshot',
+    mode_url: 'URL Only',
+    result_type: 'Result Type',
+    result_quick: 'Quick Verdict',
+    result_detailed: 'Detailed Report',
+    result_risk: 'Risk Score Only',
+    result_flags: 'Red Flags',
+    custom_focus: 'Custom Focus',
+    optional: '(optional)',
+    focus_placeholder: 'e.g., Is this a phishing site?',
+    instructions_label: 'Instructions',
+    instructions_placeholder: 'Additional instructions for the AI...',
+    credits_remaining: 'credits',
+    this_scan: 'This scan:',
+    scan_btn: 'Scan This Page',
+    scanning: 'Scanning...',
+    analyzing: 'Analyzing page for scams...',
+    scam: 'SCAM',
+    safe: 'SAFE',
+    confidence: 'Confidence',
+    risk_level: 'RISK',
+    red_flags_found: 'Red Flags Found:',
+    no_flags: 'No red flags detected',
+    explanation: 'Explanation',
+    what_they_want: 'What They Want',
+    tactics_detected: 'Tactics Detected',
+    recommended_actions: 'Recommended Actions',
+    not_enough_credits: 'Not enough credits',
+    credits_cost_msg: 'This scan costs {cost} credits but you have {remaining} remaining.',
+    upgrade_plan: 'Upgrade Plan',
+    err_no_text: 'Could not extract text from this page. Try Screenshot mode instead.',
+    err_no_screenshot: 'Could not capture a screenshot of this page.',
+    err_internal: 'Cannot scan Chrome internal pages.',
+    err_no_page: 'Cannot access this page. Try a regular webpage.',
+    language: 'Language'
+  },
+  he: {
+    lang_name: 'עברית',
+    checking_access: 'בודק גישה...',
+    connect_title: 'חבר את החשבון שלך',
+    connect_desc: 'התחבר ל-Vardin בדפדפן שלך כדי להתחיל לסרוק דפי אינטרנט להונאות.',
+    open_login: 'פתח התחברות Vardin',
+    premium_title: 'נדרש Premium',
+    premium_desc: 'תוסף Chrome של Vardin דורש מנוי Premium. שדרג כדי לפתוח סריקת הונאות מופעלת AI בכל דף אינטרנט.',
+    upgrade_premium: 'שדרג ל-Premium',
+    scan_mode: 'מצב סריקה',
+    mode_text: 'טקסט הדף',
+    mode_screenshot: 'צילום מסך',
+    mode_both: 'טקסט + צילום מסך',
+    mode_url: 'כתובת בלבד',
+    result_type: 'סוג תוצאה',
+    result_quick: 'פסק דין מהיר',
+    result_detailed: 'דוח מפורט',
+    result_risk: 'ציון סיכון בלבד',
+    result_flags: 'דגלים אדומים',
+    custom_focus: 'מיקוד מותאם',
+    optional: '(אופציונלי)',
+    focus_placeholder: 'לדוגמה, האם זה אתר פישינג?',
+    instructions_label: 'הוראות',
+    instructions_placeholder: 'הוראות נוספות ל-AI...',
+    credits_remaining: 'קרדיטים',
+    this_scan: 'סריקה זו:',
+    scan_btn: 'סרוק דף זה',
+    scanning: 'סורק...',
+    analyzing: 'מנתח את הדף להונאות...',
+    scam: 'הונאה',
+    safe: 'בטוח',
+    confidence: 'ביטחון',
+    risk_level: 'סיכון',
+    red_flags_found: 'דגלים אדומים שנמצאו:',
+    no_flags: 'לא נמצאו דגלים אדומים',
+    explanation: 'הסבר',
+    what_they_want: 'מה הם רוצים',
+    tactics_detected: 'טקטיקות שזוהו',
+    recommended_actions: 'פעולות מומלצות',
+    not_enough_credits: 'אין מספיק קרדיטים',
+    credits_cost_msg: 'סריקה זו עולה {cost} קרדיטים אך נשארו לך {remaining}.',
+    upgrade_plan: 'שדרג תוכנית',
+    err_no_text: 'לא ניתן לחלץ טקסט מדף זה. נסה מצב צילום מסך במקום.',
+    err_no_screenshot: 'לא ניתן לצלם צילום מסך של דף זה.',
+    err_internal: 'לא ניתן לסרוק דפים פנימיים של Chrome.',
+    err_no_page: 'לא ניתן לגשת לדף זה. נסה דף אינטרנט רגיל.',
+    language: 'שפה'
+  },
+  es: {
+    lang_name: 'Español',
+    checking_access: 'Verificando acceso...',
+    connect_title: 'Conecta tu cuenta',
+    connect_desc: 'Inicia sesión en Vardin en tu navegador para empezar a escanear páginas web en busca de estafas.',
+    open_login: 'Abrir inicio de sesión Vardin',
+    premium_title: 'Se requiere Premium',
+    premium_desc: 'La extensión de Chrome de Vardin requiere una suscripción Premium. Actualiza para desbloquear el escaneo de estafas con IA en cualquier página web.',
+    upgrade_premium: 'Actualizar a Premium',
+    scan_mode: 'Modo de escaneo',
+    mode_text: 'Texto de la página',
+    mode_screenshot: 'Captura de pantalla',
+    mode_both: 'Texto + Captura',
+    mode_url: 'Solo URL',
+    result_type: 'Tipo de resultado',
+    result_quick: 'Veredicto rápido',
+    result_detailed: 'Informe detallado',
+    result_risk: 'Solo puntuación de riesgo',
+    result_flags: 'Banderas rojas',
+    custom_focus: 'Enfoque personalizado',
+    optional: '(opcional)',
+    focus_placeholder: 'ej., ¿Es este un sitio de phishing?',
+    instructions_label: 'Instrucciones',
+    instructions_placeholder: 'Instrucciones adicionales para la IA...',
+    credits_remaining: 'créditos',
+    this_scan: 'Este escaneo:',
+    scan_btn: 'Escanear esta página',
+    scanning: 'Escaneando...',
+    analyzing: 'Analizando la página en busca de estafas...',
+    scam: 'ESTAFA',
+    safe: 'SEGURO',
+    confidence: 'Confianza',
+    risk_level: 'RIESGO',
+    red_flags_found: 'Banderas rojas encontradas:',
+    no_flags: 'No se detectaron banderas rojas',
+    explanation: 'Explicación',
+    what_they_want: 'Lo que quieren',
+    tactics_detected: 'Tácticas detectadas',
+    recommended_actions: 'Acciones recomendadas',
+    not_enough_credits: 'Créditos insuficientes',
+    credits_cost_msg: 'Este escaneo cuesta {cost} créditos pero te quedan {remaining}.',
+    upgrade_plan: 'Mejorar plan',
+    err_no_text: 'No se pudo extraer texto de esta página. Prueba el modo Captura de pantalla.',
+    err_no_screenshot: 'No se pudo capturar una captura de pantalla de esta página.',
+    err_internal: 'No se pueden escanear páginas internas de Chrome.',
+    err_no_page: 'No se puede acceder a esta página. Prueba una página web normal.',
+    language: 'Idioma'
+  }
+};
+
+var LANGS = [
+  { code: 'en', label: 'English', dir: 'ltr' },
+  { code: 'he', label: 'עברית', dir: 'rtl' },
+  { code: 'es', label: 'Español', dir: 'ltr' }
+];
+
+function t(key, params) {
+  var str = (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key;
+  if (params) {
+    for (var k in params) {
+      str = str.replace('{' + k + '}', params[k]);
+    }
+  }
+  return str;
+}
+
+function setLang(lang) {
+  if (!I18N[lang]) return;
+  currentLang = lang;
+  chrome.storage.local.set({ lang: lang });
+  var langInfo = LANGS.find(function(l) { return l.code === lang; });
+  document.documentElement.lang = lang;
+  document.documentElement.dir = langInfo ? langInfo.dir : 'ltr';
+  applyTranslations();
+}
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n-placeholder');
+    el.placeholder = t(key);
+  });
+  // Update scan button text (may be in "scanning" state)
+  var btnText = document.getElementById('scan-btn-text');
+  if (btnText && !btnText.dataset.scanning) {
+    btnText.textContent = t('scan_btn');
+  }
+  // Update select options
+  var scanModeSelect = document.getElementById('scan-mode');
+  if (scanModeSelect) {
+    scanModeSelect.options[0].text = t('mode_text');
+    scanModeSelect.options[1].text = t('mode_screenshot');
+    scanModeSelect.options[2].text = t('mode_both');
+    scanModeSelect.options[3].text = t('mode_url');
+  }
+  var answerTypeSelect = document.getElementById('answer-type');
+  if (answerTypeSelect) {
+    answerTypeSelect.options[0].text = t('result_quick');
+    answerTypeSelect.options[1].text = t('result_detailed');
+    answerTypeSelect.options[2].text = t('result_risk');
+    answerTypeSelect.options[3].text = t('result_flags');
+  }
+  updateCreditDisplay();
+}
 
 // === Utility: XSS-safe HTML escaping ===
 function escapeHtml(text) {
@@ -317,8 +531,8 @@ function updateCreditDisplay() {
   var cost = CREDIT_COSTS[scanMode] || CREDIT_COSTS.text;
 
   if (creditsRemaining != null && creditsLimit != null) {
-    el.innerHTML = '<span class="credits-remaining">' + creditsRemaining + ' / ' + creditsLimit + ' credits</span>' +
-      '<span class="credits-cost">This scan: ' + cost + ' credits</span>';
+    el.innerHTML = '<span class="credits-remaining">' + creditsRemaining + ' / ' + creditsLimit + ' ' + t('credits_remaining') + '</span>' +
+      '<span class="credits-cost">' + t('this_scan') + ' ' + cost + ' ' + t('credits_remaining') + '</span>';
   }
 }
 
@@ -329,9 +543,10 @@ async function scanPage() {
   var resultsDiv = document.getElementById('results');
 
   btn.disabled = true;
-  btnText.textContent = 'Scanning...';
+  btnText.dataset.scanning = '1';
+  btnText.textContent = t('scanning');
   resultsDiv.classList.remove('hidden');
-  resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>Analyzing page for scams...</p></div>';
+  resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>' + t('analyzing') + '</p></div>';
 
   try {
     var scanMode = document.getElementById('scan-mode').value;
@@ -347,11 +562,11 @@ async function scanPage() {
     var tab = tabs[0];
 
     if (!tab || !tab.url) {
-      throw new Error('Cannot access this page. Try a regular webpage.');
+      throw new Error(t('err_no_page'));
     }
 
     if (tab.url.indexOf('chrome://') === 0 || tab.url.indexOf('chrome-extension://') === 0 || tab.url.indexOf('https://chrome.google.com/webstore') === 0) {
-      throw new Error('Cannot scan Chrome internal pages.');
+      throw new Error(t('err_internal'));
     }
 
     var pageText = '';
@@ -359,16 +574,32 @@ async function scanPage() {
 
     // Extract page text
     if (scanMode === 'text' || scanMode === 'both') {
-      var results = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: function() { return document.body ? document.body.innerText.slice(0, 10000) : ''; }
-      });
-      pageText = (results && results[0] && results[0].result) || '';
+      try {
+        var results = await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: function() { return document.body ? document.body.innerText.slice(0, 10000) : ''; }
+        });
+        pageText = (results && results[0] && results[0].result) || '';
+      } catch (textErr) {
+        pageText = '';
+      }
     }
 
     // Capture screenshot
     if (scanMode === 'screenshot' || scanMode === 'both') {
-      screenshotDataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'jpeg', quality: 80 });
+      try {
+        screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 80 });
+      } catch (shotErr) {
+        screenshotDataUrl = '';
+      }
+    }
+
+    // Validate we got at least some content for the requested mode
+    if (scanMode === 'text' && !pageText) {
+      throw new Error(t('err_no_text'));
+    }
+    if ((scanMode === 'screenshot' || scanMode === 'both') && !screenshotDataUrl) {
+      throw new Error(t('err_no_screenshot'));
     }
 
     // Call backend scan function with auth headers
@@ -387,7 +618,8 @@ async function scanPage() {
           scan_mode: scanMode,
           answer_type: answerType,
           custom_focus: customFocus,
-          custom_instructions: customInstructions
+          custom_instructions: customInstructions,
+          language: currentLang
         }
       })
     });
@@ -407,7 +639,7 @@ async function scanPage() {
       creditsRemaining = data402.credits_remaining || 0;
       creditsLimit = data402.credits_limit || 0;
       updateCreditDisplay();
-      resultsDiv.innerHTML = '<div class="error-box"><p>\u26A0\uFE0F Not enough credits</p><p class="error-sub">This scan costs ' + (data402.credit_cost || CREDIT_COSTS[scanMode]) + ' credits but you have ' + creditsRemaining + ' remaining.</p><button id="upgrade-inline-btn" class="btn-primary" style="margin-top:8px">Upgrade Plan</button></div>';
+      resultsDiv.innerHTML = '<div class="error-box"><p>\u26A0\uFE0F ' + t('not_enough_credits') + '</p><p class="error-sub">' + t('credits_cost_msg', { cost: (data402.credit_cost || CREDIT_COSTS[scanMode]), remaining: creditsRemaining }) + '</p><button id="upgrade-inline-btn" class="btn-primary" style="margin-top:8px">' + t('upgrade_plan') + '</button></div>';
       document.getElementById('upgrade-inline-btn').addEventListener('click', function() { chrome.tabs.create({ url: PRICING_URL }); });
       return;
     }
@@ -431,7 +663,8 @@ async function scanPage() {
     resultsDiv.innerHTML = '<div class="error-box"><p>' + escapeHtml('\u26A0\uFE0F ' + error.message) + '</p></div>';
   } finally {
     btn.disabled = false;
-    btnText.textContent = 'Scan This Page';
+    delete btnText.dataset.scanning;
+    btnText.textContent = t('scan_btn');
   }
 }
 
@@ -446,9 +679,9 @@ function displayResults(data, answerType) {
     var isScam = a.is_scam;
     var cls = isScam ? 'danger' : 'safe';
     html = '<div class="result-card ' + cls + '">' +
-      '<div class="verdict-badge ' + cls + '">' + (isScam ? '\u26A0\uFE0F SCAM' : '\u2705 SAFE') + '</div>' +
+      '<div class="verdict-badge ' + cls + '">' + (isScam ? '\u26A0\uFE0F ' + t('scam') : '\u2705 ' + t('safe')) + '</div>' +
       '<p class="verdict-text">' + escapeHtml(a.verdict) + '</p>' +
-      (a.confidence != null ? '<p class="confidence">Confidence: ' + escapeHtml(a.confidence) + '%</p>' : '') +
+      (a.confidence != null ? '<p class="confidence">' + t('confidence') + ': ' + escapeHtml(a.confidence) + '%</p>' : '') +
       '</div>';
   } else if (mode === 'risk_score') {
     var score = a.risk_score || 0;
@@ -457,7 +690,7 @@ function displayResults(data, answerType) {
     html = '<div class="result-card ' + cls2 + '">' +
       '<div class="score-display"><span class="score-number">' + escapeHtml(score) + '</span><span class="score-max">/100</span></div>' +
       '<div class="risk-bar"><div class="risk-fill ' + cls2 + '" style="width:' + score + '%"></div></div>' +
-      '<p class="risk-level ' + cls2 + '">' + escapeHtml(level.toUpperCase()) + ' RISK</p>' +
+      '<p class="risk-level ' + cls2 + '">' + escapeHtml(level.toUpperCase()) + ' ' + t('risk_level') + '</p>' +
       (a.summary ? '<p class="summary">' + escapeHtml(a.summary) + '</p>' : '') +
       '</div>';
   } else if (mode === 'red_flags') {
@@ -465,8 +698,8 @@ function displayResults(data, answerType) {
     var risk = a.overall_risk || 'low';
     var cls3 = risk === 'high' ? 'danger' : risk === 'medium' ? 'warning' : 'safe';
     html = '<div class="result-card ' + cls3 + '">' +
-      '<p class="card-title">Red Flags Found: ' + flags.length + '</p>' +
-      '<p class="risk-level ' + cls3 + '">' + escapeHtml(risk.toUpperCase()) + ' RISK</p>';
+      '<p class="card-title">' + t('red_flags_found') + ' ' + flags.length + '</p>' +
+      '<p class="risk-level ' + cls3 + '">' + escapeHtml(risk.toUpperCase()) + ' ' + t('risk_level') + '</p>';
     if (flags.length > 0) {
       html += '<ul class="flag-list">';
       for (var i = 0; i < flags.length; i++) {
@@ -474,7 +707,7 @@ function displayResults(data, answerType) {
       }
       html += '</ul>';
     } else {
-      html += '<p class="empty">No red flags detected \u2705</p>';
+      html += '<p class="empty">' + t('no_flags') + ' \u2705</p>';
     }
     html += '</div>';
   } else {
@@ -484,33 +717,33 @@ function displayResults(data, answerType) {
     html = '<div class="result-card ' + dCls + '">';
     html += '<div class="result-header">';
     html += '<div class="score-display small"><span class="score-number">' + escapeHtml(dScore) + '</span><span class="score-max">/100</span></div>';
-    html += '<span class="risk-level ' + dCls + '">' + escapeHtml(dLevel.toUpperCase()) + ' RISK</span>';
+    html += '<span class="risk-level ' + dCls + '">' + escapeHtml(dLevel.toUpperCase()) + ' ' + t('risk_level') + '</span>';
     html += '</div>';
     if (a.is_scam != null) {
-      html += '<div class="verdict-badge ' + (a.is_scam ? 'danger' : 'safe') + '">' + (a.is_scam ? '\u26A0\uFE0F SCAM DETECTED' : '\u2705 LIKELY SAFE') + '</div>';
+      html += '<div class="verdict-badge ' + (a.is_scam ? 'danger' : 'safe') + '">' + (a.is_scam ? ('\u26A0\uFE0F ' + t('scam')) : ('\u2705 ' + t('safe'))) + '</div>';
     }
     if (a.explanation) {
-      html += '<div class="section"><p class="section-label">Explanation</p><p class="section-text">' + escapeHtml(a.explanation) + '</p></div>';
+      html += '<div class="section"><p class="section-label">' + t('explanation') + '</p><p class="section-text">' + escapeHtml(a.explanation) + '</p></div>';
     }
     if (a.what_they_want) {
-      html += '<div class="section"><p class="section-label">What They Want</p><p class="section-text">' + escapeHtml(a.what_they_want) + '</p></div>';
+      html += '<div class="section"><p class="section-label">' + t('what_they_want') + '</p><p class="section-text">' + escapeHtml(a.what_they_want) + '</p></div>';
     }
     if (a.tactics_detected && a.tactics_detected.length) {
-      html += '<div class="section"><p class="section-label">Tactics Detected</p><ul class="flag-list">';
-      for (var t = 0; t < a.tactics_detected.length; t++) {
-        html += '<li>' + escapeHtml(a.tactics_detected[t]) + '</li>';
+      html += '<div class="section"><p class="section-label">' + t('tactics_detected') + '</p><ul class="flag-list">';
+      for (var tt = 0; tt < a.tactics_detected.length; tt++) {
+        html += '<li>' + escapeHtml(a.tactics_detected[tt]) + '</li>';
       }
       html += '</ul></div>';
     }
     if (a.red_flags && a.red_flags.length) {
-      html += '<div class="section"><p class="section-label">Red Flags</p><ul class="flag-list">';
+      html += '<div class="section"><p class="section-label">' + t('red_flags_found') + '</p><ul class="flag-list">';
       for (var r = 0; r < a.red_flags.length; r++) {
         html += '<li>' + escapeHtml(a.red_flags[r]) + '</li>';
       }
       html += '</ul></div>';
     }
     if (a.next_steps && a.next_steps.length) {
-      html += '<div class="section"><p class="section-label">Recommended Actions</p><ul class="action-list">';
+      html += '<div class="section"><p class="section-label">' + t('recommended_actions') + '</p><ul class="action-list">';
       for (var s = 0; s < a.next_steps.length; s++) {
         html += '<li>' + escapeHtml(a.next_steps[s]) + '</li>';
       }
@@ -525,6 +758,18 @@ function displayResults(data, answerType) {
 // === Initialization ===
 async function init() {
   showView('loading');
+
+  // Load saved language
+  var savedLang = await chrome.storage.local.get(['lang']);
+  if (savedLang.lang && I18N[savedLang.lang]) {
+    currentLang = savedLang.lang;
+  }
+  var langInfo = LANGS.find(function(l) { return l.code === currentLang; });
+  document.documentElement.lang = currentLang;
+  document.documentElement.dir = langInfo ? langInfo.dir : 'ltr';
+  var langSelect = document.getElementById('lang-select');
+  if (langSelect) langSelect.value = currentLang;
+  applyTranslations();
 
   // Load saved scan settings
   var saved = await chrome.storage.local.get(['scanMode', 'answerType']);
@@ -584,6 +829,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Update credit cost display when scan mode changes
   document.getElementById('scan-mode').addEventListener('change', updateCreditDisplay);
+
+  // Language selector
+  document.getElementById('lang-select').addEventListener('change', function(e) {
+    setLang(e.target.value);
+  });
 });
 
 // Auto-detect login/logout via storage changes
@@ -616,6 +866,56 @@ header {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lang-select {
+  font-size: 11px;
+  padding: 3px 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  color: #475569;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.lang-select:focus {
+  border-color: #0f766e;
+}
+
+/* RTL support */
+html[dir="rtl"] body {
+  direction: rtl;
+  text-align: right;
+}
+
+html[dir="rtl"] .field label,
+html[dir="rtl"] .view p,
+html[dir="rtl"] .center-text {
+  text-align: right;
+}
+
+html[dir="rtl"] .view h2 {
+  text-align: center;
+}
+
+html[dir="rtl"] .flag-list li,
+html[dir="rtl"] .action-list li {
+  padding-left: 0;
+  padding-right: 18px;
+}
+
+html[dir="rtl"] .flag-list li::before,
+html[dir="rtl"] .action-list li::before {
+  left: auto;
+  right: 0;
 }
 
 .logo {
