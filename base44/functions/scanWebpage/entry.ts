@@ -2,15 +2,31 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 Deno.serve(async (req) => {
   try {
+    const base44 = createClientFromRequest(req);
+
+    // === Authentication: validate user token server-side ===
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // === Premium verification: checked server-side, never trust client ===
+    const plan = user.subscription_plan || 'starter';
+    if (plan !== 'premium' && plan !== 'plus') {
+      return Response.json({
+        error: 'Premium subscription required',
+        upgrade_url: 'https://vardin.base44.app/pricing'
+      }, { status: 403 });
+    }
+
+    // Parse request body
     const body = await req.json();
     const { page_text, screenshot_data_url, page_url, options } = body;
 
-    const base44 = createClientFromRequest(req);
-
     const scanMode = options?.scan_mode || 'text';
     const answerType = options?.answer_type || 'detailed';
-    const customFocus = options?.custom_focus || '';
-    const customInstructions = options?.custom_instructions || '';
+    const customFocus = typeof options?.custom_focus === 'string' ? options.custom_focus.slice(0, 500) : '';
+    const customInstructions = typeof options?.custom_instructions === 'string' ? options.custom_instructions.slice(0, 1000) : '';
 
     // Build prompt
     let prompt = `You are Vardin, an expert scam and fraud detection AI. Analyze the following webpage for potential scam, phishing, or fraud indicators.\n\n`;
