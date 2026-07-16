@@ -240,7 +240,7 @@ Deno.serve(async (req) => {
         };
     }
 
-    const llmOptions: any = { prompt, response_json_schema: responseSchema };
+    const llmOptions: any = { prompt, response_json_schema: responseSchema, add_context_from_internet: true, model: 'gemini_3_flash' };
 
     // === Upload screenshot/QR image for vision analysis ===
     if ((scanType === 'screenshot' || scanType === 'qr' || (scanType === 'page' && (scanMode === 'screenshot' || scanMode === 'both'))) && screenshot_data_url) {
