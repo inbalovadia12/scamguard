@@ -513,7 +513,7 @@ async function scanPage() {
       }
       if (scanMode === 'screenshot' || scanMode === 'both') {
         try {
-          screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 80 });
+          screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 60 });
         } catch (shotErr) {
           if (scanMode === 'screenshot') throw new Error(t('err_no_screenshot'));
         }
@@ -526,7 +526,7 @@ async function scanPage() {
         screenshotDataUrl = uploadedFileData;
       } else {
         try {
-          screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 80 });
+          screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 60 });
         } catch (shotErr) {
           throw new Error(t('err_no_screenshot'));
         }
@@ -551,7 +551,7 @@ async function scanPage() {
         page_url: pageUrl,
         options: {
           scan_type: scanType,
-          scan_mode: scanType === 'page' ? document.getElementById('scan-mode').value : scanMode || scanType,
+          scan_mode: scanType === 'page' ? document.getElementById('scan-mode').value : scanType,
           answer_type: answerType,
           custom_focus: customFocus,
           language: currentLang
@@ -782,7 +782,7 @@ document.addEventListener('DOMContentLoaded', function() {
       var tab = tabs[0];
       if (!tab) return;
       try {
-        var dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 80 });
+        var dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 60 });
         uploadedFileData = dataUrl;
         uploadedFileName = 'screenshot.jpg';
         document.getElementById('drop-zone-text').textContent = t('screenshot_captured');

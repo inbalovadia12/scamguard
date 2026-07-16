@@ -163,8 +163,18 @@ Deno.serve(async (req) => {
       prompt += 'Analyze this uploaded file for: phishing language, fake invoices, fake job offers, suspicious documents, embedded URLs, and risky content.\n';
       prompt += 'File name: ' + (file_name || 'unknown') + '\n\n';
     } else if (scanType === 'screenshot') {
-      prompt += 'Analyze this screenshot for scam indicators. This could be an email, SMS, WhatsApp, Telegram, Facebook, Instagram, marketplace listing, fake invoice, payment request, or login page.\n';
-      prompt += 'Look for: urgency tactics, suspicious links, brand impersonation, payment requests, credential harvesting, and social engineering.\n\n';
+      prompt += 'You are analyzing a screenshot image. First, describe what you see (email, text message, chat, website, invoice, marketplace listing, login page, etc.). Then analyze it for scam indicators.\n\n';
+      prompt += 'Look for these SPECIFIC indicators:\n';
+      prompt += '- Urgency or pressure tactics ("act now", "limited time", "account suspended", "final notice")\n';
+      prompt += '- Requests for money, gift cards, crypto, wire transfers, or bank details\n';
+      prompt += '- Requests for personal info (passwords, SSN, credit card, verification codes)\n';
+      prompt += '- Suspicious or mismatched URLs, sender emails, or phone numbers\n';
+      prompt += '- Brand impersonation (fake Amazon, PayPal, banks, government agencies, delivery services)\n';
+      prompt += '- Too-good-to-be-true offers (prizes, lottery, investment returns, free gifts)\n';
+      prompt += '- Romance or trust-building from strangers met online\n';
+      prompt += '- Tech support scams (fake virus alerts, "call this number")\n';
+      prompt += '- Phishing login pages designed to steal credentials\n\n';
+      prompt += 'IMPORTANT: Only report indicators that are ACTUALLY VISIBLE in the image. Do NOT invent threats. If the screenshot is benign, say so clearly with a low risk score.\n\n';
     }
 
     if (customFocus) prompt += 'Specific focus: ' + customFocus + '\n\n';
@@ -236,15 +246,21 @@ Deno.serve(async (req) => {
     if ((scanType === 'screenshot' || scanType === 'qr' || (scanType === 'page' && (scanMode === 'screenshot' || scanMode === 'both'))) && screenshot_data_url) {
       try {
         const base64Data = screenshot_data_url.split(',')[1] || '';
+        if (!base64Data) {
+          return Response.json({ error: 'Screenshot data is invalid or empty.' }, { status: 400 });
+        }
         const binaryString = atob(base64Data);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-        const blob = new Blob([bytes], { type: 'image/jpeg' });
-        const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ file: blob });
-        llmOptions.file_urls = [file_url];
-        llmOptions.prompt += '\n\nAlso analyze the attached image visually.';
-      } catch (_uploadErr) {
-        // Continue without image if upload fails
+        const file = new File([bytes], 'screenshot.jpg', { type: 'image/jpeg' });
+        const uploadResult = await base44.integrations.Core.UploadFile({ file });
+        if (!uploadResult || !uploadResult.file_url) {
+          return Response.json({ error: 'Screenshot upload returned no URL.' }, { status: 500 });
+        }
+        llmOptions.file_urls = [uploadResult.file_url];
+        llmOptions.prompt += '\n\nAnalyze the attached screenshot image. Describe what you see in the image first, then assess it for scam indicators.';
+      } catch (uploadErr) {
+        return Response.json({ error: 'Failed to upload screenshot: ' + (uploadErr.message || 'unknown error') }, { status: 500 });
       }
     }
 
@@ -252,19 +268,25 @@ Deno.serve(async (req) => {
     if (scanType === 'file' && file_data) {
       try {
         const base64Data = file_data.split(',')[1] || file_data;
+        if (!base64Data) {
+          return Response.json({ error: 'File data is invalid or empty.' }, { status: 400 });
+        }
         const binaryString = atob(base64Data);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-        const blob = new Blob([bytes]);
-        const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ file: blob });
-        llmOptions.file_urls = [file_url];
-        llmOptions.prompt += '\n\nAlso analyze the attached file.';
-      } catch (_fileUploadErr) {
-        // Continue without file if upload fails
+        const file = new File([bytes], file_name || 'uploaded-file', { type: 'application/octet-stream' });
+        const uploadResult = await base44.integrations.Core.UploadFile({ file });
+        if (!uploadResult || !uploadResult.file_url) {
+          return Response.json({ error: 'File upload returned no URL.' }, { status: 500 });
+        }
+        llmOptions.file_urls = [uploadResult.file_url];
+        llmOptions.prompt += '\n\nAnalyze the attached file. Extract and assess any text, URLs, or suspicious content within it.';
+      } catch (fileUploadErr) {
+        return Response.json({ error: 'Failed to upload file: ' + (fileUploadErr.message || 'unknown error') }, { status: 500 });
       }
     }
 
-    const result = await base44.asServiceRole.integrations.Core.InvokeLLM(llmOptions);
+    const result = await base44.integrations.Core.InvokeLLM(llmOptions);
 
     // === Deduct credits after successful scan ===
     const newCreditsUsed = creditsUsed + creditCost;
