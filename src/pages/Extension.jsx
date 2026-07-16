@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Download, Puzzle, Settings2, Eye, FileText, Globe, Monitor, Lock, Loader2, ShieldCheck, Crown, CheckCircle2 } from "lucide-react";
+import { Download, Puzzle, Settings2, Eye, FileText, Globe, Monitor, Lock, Loader2, ShieldCheck, Crown, CheckCircle2, QrCode, Mail, MessageSquare, ShoppingCart, FileSearch, Zap, MousePointer, ClipboardList, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -36,7 +36,18 @@ export default function Extension() {
     { icon: FileText, title: t("ext.feature_text"), desc: t("ext.feature_text_desc") },
     { icon: Eye, title: t("ext.feature_screenshot"), desc: t("ext.feature_screenshot_desc") },
     { icon: Globe, title: t("ext.feature_url"), desc: t("ext.feature_url_desc") },
-    { icon: Settings2, title: t("ext.feature_custom"), desc: t("ext.feature_custom_desc") },
+    { icon: QrCode, title: t("ext.feature_qr"), desc: t("ext.feature_qr_desc") },
+    { icon: Mail, title: t("ext.feature_email"), desc: t("ext.feature_email_desc") },
+    { icon: MessageSquare, title: t("ext.feature_chat"), desc: t("ext.feature_chat_desc") },
+    { icon: ShoppingCart, title: t("ext.feature_marketplace"), desc: t("ext.feature_marketplace_desc") },
+    { icon: FileSearch, title: t("ext.feature_file"), desc: t("ext.feature_file_desc") },
+  ];
+
+  const PROTECTION_FEATURES = [
+    { icon: Zap, title: t("ext.protection_auto"), desc: t("ext.protection_auto_desc") },
+    { icon: MousePointer, title: t("ext.protection_hover"), desc: t("ext.protection_hover_desc") },
+    { icon: ClipboardList, title: t("ext.protection_clipboard"), desc: t("ext.protection_clipboard_desc") },
+    { icon: AlertTriangle, title: t("ext.protection_warning"), desc: t("ext.protection_warning_desc") },
   ];
 
   useEffect(() => {
@@ -187,10 +198,14 @@ export default function Extension() {
           <div>
             <p className="font-medium text-foreground mb-1">{t("ext.scan_mode_label")}</p>
             <ul className="text-muted-foreground space-y-0.5 ml-4">
-              <li>• <strong>Page Text</strong> — Extract and analyze the text content</li>
-              <li>• <strong>Screenshot</strong> — AI visually sees your screen</li>
-              <li>• <strong>Both</strong> — Text + visual analysis combined</li>
-              <li>• <strong>URL Only</strong> — Check the domain and URL structure</li>
+              <li>• <strong>{t("ext.type_page")}</strong> — {t("ext.feature_text_desc")}</li>
+              <li>• <strong>{t("ext.type_url")}</strong> — {t("ext.feature_url_desc")} + {t("ext.virustotal")}</li>
+              <li>• <strong>{t("ext.type_screenshot")}</strong> — {t("ext.feature_screenshot_desc")}</li>
+              <li>• <strong>{t("ext.type_qr")}</strong> — {t("ext.feature_qr_desc")}</li>
+              <li>• <strong>{t("ext.type_email")}</strong> — {t("ext.feature_email_desc")}</li>
+              <li>• <strong>{t("ext.type_chat")}</strong> — {t("ext.feature_chat_desc")}</li>
+              <li>• <strong>{t("ext.type_marketplace")}</strong> — {t("ext.feature_marketplace_desc")}</li>
+              <li>• <strong>{t("ext.type_file")}</strong> — {t("ext.feature_file_desc")}</li>
             </ul>
           </div>
           <div>
@@ -241,6 +256,43 @@ export default function Extension() {
             <span className="text-muted-foreground">{t("ext.security_6")}</span>
           </div>
         </div>
+      </div>
+
+      {/* Real-Time Protection */}
+      <div className="bg-card rounded-2xl border border-border/50 p-6 space-y-4 animate-slide-up" style={{ animationDelay: "375ms" }}>
+        <h2 className="font-semibold text-base flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-primary" />
+          {t("ext.protection_title")}
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {PROTECTION_FEATURES.map((f) => (
+            <div key={f.title}>
+              <div className="flex items-center gap-2 mb-1">
+                <f.icon className="w-4 h-4 text-primary" />
+                <h3 className="font-semibold text-sm">{f.title}</h3>
+              </div>
+              <p className="text-xs text-muted-foreground">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* VirusTotal */}
+      <div className="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-2xl p-6 space-y-3 animate-slide-up" style={{ animationDelay: "380ms" }}>
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5 text-primary" />
+          <h2 className="font-semibold text-base text-primary">{t("ext.virustotal")}</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">{t("ext.virustotal_desc")}</p>
+      </div>
+
+      {/* Report Actions */}
+      <div className="bg-card rounded-2xl border border-border/50 p-6 space-y-3 animate-slide-up" style={{ animationDelay: "385ms" }}>
+        <h2 className="font-semibold text-base flex items-center gap-2">
+          <FileText className="w-4 h-4 text-primary" />
+          {t("ext.report_actions")}
+        </h2>
+        <p className="text-sm text-muted-foreground">{t("ext.report_actions_desc")}</p>
       </div>
 
       {/* Setup instructions */}

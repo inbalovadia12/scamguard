@@ -7,15 +7,17 @@ import {
   TrendingUp, Loader2, Zap,
 } from "lucide-react";
 import { getCreditStatus, PLAN_NAMES } from "@/lib/credits";
-
-const quickActions = [
-  { path: "/check", label: "Check a Message", desc: "Analyze any suspicious text", icon: Search, color: "from-primary to-primary/80" },
-  { path: "/check", label: "Scan a URL", desc: "Verify any link is safe", icon: Link2, color: "from-chart-2 to-chart-2/80" },
-  { path: "/agent", label: "Ask AI", desc: "Chat with Vardin's AI", icon: Bot, color: "from-chart-5 to-chart-5/80" },
-  { path: "/family", label: "Protect Family", desc: "Invite loved ones", icon: Users, color: "from-chart-3 to-chart-3/80" },
-];
+import { useI18n } from "@/lib/i18n";
 
 export default function Dashboard() {
+  const { t } = useI18n();
+
+  const quickActions = [
+    { path: "/check", label: t("dash.check_message"), desc: t("dash.quick_check_desc"), icon: Search, color: "from-primary to-primary/80" },
+    { path: "/check", label: t("dash.quick_scan_url"), desc: t("dash.quick_scan_desc"), icon: Link2, color: "from-chart-2 to-chart-2/80" },
+    { path: "/agent", label: t("dash.quick_ask_ai"), desc: t("dash.quick_ask_desc"), icon: Bot, color: "from-chart-5 to-chart-5/80" },
+    { path: "/family", label: t("dash.quick_family"), desc: t("dash.quick_family_desc"), icon: Users, color: "from-chart-3 to-chart-3/80" },
+  ];
   const [credits, setCredits] = useState(null);
   const [recent, setRecent] = useState([]);
   const [familyCount, setFamilyCount] = useState(0);
@@ -54,10 +56,10 @@ export default function Dashboard() {
       {/* Welcome */}
       <div className="animate-slide-up">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">
-          Welcome back<span className="text-muted-foreground font-normal"> 👋</span>
+          {t("dash.welcome")}<span className="text-muted-foreground font-normal"> 👋</span>
         </h1>
         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-          Here's your protection overview.
+          {t("dash.overview")}
         </p>
       </div>
 
@@ -65,15 +67,15 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={Zap}
-          label="Credits Left"
+          label={t("dash.credits_left")}
           value={`${credits.remaining}/${credits.limit}`}
           sub={PLAN_NAMES[credits.plan]}
           pct={creditPct}
           animate="anim-delay-1"
         />
-        <StatCard icon={Users} label="Family Protected" value={familyCount} animate="anim-delay-1" />
-        <StatCard icon={Bell} label="New Alerts" value={alertCount} animate="anim-delay-2" />
-        <StatCard icon={BarChart3} label="Total Checks" value={recent.length} animate="anim-delay-2" />
+        <StatCard icon={Users} label={t("dash.family_protected")} value={familyCount} animate="anim-delay-1" />
+        <StatCard icon={Bell} label={t("dash.new_alerts")} value={alertCount} animate="anim-delay-2" />
+        <StatCard icon={BarChart3} label={t("dash.total_checks")} value={recent.length} animate="anim-delay-2" />
       </div>
 
       {/* Quick actions */}
@@ -100,17 +102,17 @@ export default function Dashboard() {
       <div className="grid lg:grid-cols-3 gap-4 animate-slide-up anim-delay-3">
         <div className="lg:col-span-2 rounded-2xl border border-border/50 bg-card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-sm font-heading">Recent Activity</h2>
-            <Link to="/alerts" className="text-xs text-primary hover:underline">View all</Link>
+            <h2 className="font-semibold text-sm font-heading">{t("dash.recent_activity")}</h2>
+            <Link to="/alerts" className="text-xs text-primary hover:underline">{t("dash.view_all")}</Link>
           </div>
           {recent.length === 0 ? (
             <div className="text-center py-8 space-y-2">
               <ShieldCheck className="w-8 h-8 text-muted-foreground/40 mx-auto" />
-              <p className="text-sm text-muted-foreground">No checks yet. Start by analyzing a message.</p>
+              <p className="text-sm text-muted-foreground">{t("dash.no_checks")}</p>
               <Link to="/check">
                 <Button size="sm" className="mt-2 gap-2 bg-gradient-to-r from-primary to-primary/80">
                   <Search className="w-3.5 h-3.5" />
-                  Check a Message
+                  {t("dash.check_message")}
                 </Button>
               </Link>
             </div>
@@ -132,15 +134,15 @@ export default function Dashboard() {
         <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-transparent p-5">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-primary" />
-            <h2 className="font-semibold text-sm font-heading text-primary">Scam Trend Alert</h2>
+            <h2 className="font-semibold text-sm font-heading text-primary">{t("dash.trend_title")}</h2>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-            Package delivery scams surge during holidays. Fake "missed delivery" texts ask you to pay redelivery fees via a link. Always verify directly with the courier.
+            {t("dash.trend_desc")}
           </p>
           <Link to="/check">
             <Button size="sm" variant="outline" className="w-full gap-2">
               <Search className="w-3.5 h-3.5" />
-              Check a Message
+              {t("dash.check_message")}
             </Button>
           </Link>
         </div>

@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     const zip = new JSZip();
 
     // Add each extension file to the ZIP
-    const allowedFiles = ['manifest.json', 'background.js', 'content.js', 'popup.html', 'popup.js', 'styles.css', 'README.txt'];
+    const allowedFiles = ['manifest.json', 'background.js', 'content.js', 'protection.js', 'popup.html', 'popup.js', 'styles.css', 'README.txt'];
     for (const filename of allowedFiles) {
       if (files[filename] && typeof files[filename] === 'string') {
         zip.file(filename, files[filename]);

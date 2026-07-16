@@ -1,9 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /alerts
-Disallow: /family
-Disallow: /analytics
-Disallow: /onboarding
-Disallow: /agent
 
-Sitemap: https://vardin.app/sitemap.xml
+Sitemap: https://vardin.base44.app/sitemap.xml
