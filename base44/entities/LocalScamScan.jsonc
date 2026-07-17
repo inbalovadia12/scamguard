@@ -1,0 +1,61 @@
+{
+  "name": "LocalScamScan",
+  "type": "object",
+  "properties": {
+    "location_name": {
+      "type": "string",
+      "description": "City, country of the scan"
+    },
+    "latitude": {
+      "type": "number",
+      "description": "Latitude coordinate"
+    },
+    "longitude": {
+      "type": "number",
+      "description": "Longitude coordinate"
+    },
+    "country": {
+      "type": "string",
+      "description": "Country name"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Overall scam risk level for this area"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Overall assessment of scam activity in this area"
+    },
+    "scam_details": {
+      "type": "string",
+      "description": "JSON array of common scams with name, description, peak_season, peak_months"
+    },
+    "seasonal_patterns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Time-of-year patterns for scams"
+    },
+    "local_resources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Local authorities, hotlines, and websites for reporting scams"
+    },
+    "current_trends": {
+      "type": "string",
+      "description": "Current trending scams in this area"
+    }
+  },
+  "required": [
+    "location_name",
+    "risk_level"
+  ]
+}
