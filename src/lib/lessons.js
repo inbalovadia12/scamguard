@@ -414,6 +414,88 @@ export const LESSON_CATEGORIES = [
           },
         ],
       },
+      {
+        id: "crypto_giveaway",
+        title: "Crypto Giveaway Scams & Fake Exchanges",
+        xp: 75,
+        content: [
+          {
+            type: "text",
+            heading: "The Giveaway Trap",
+            body: "Scammers impersonate celebrities, influencers, or crypto brands on social media. They announce a 'limited time giveaway': send them 1 ETH, and they'll send back 2. This is always a scam. No one gives away free cryptocurrency. Once you send yours, it's gone forever — crypto transactions cannot be reversed.",
+          },
+          {
+            type: "text",
+            heading: "Fake Exchanges",
+            body: "Scammers create websites that look like real crypto exchanges (Binance, Coinbase, Kraken). You create an account, deposit crypto, and see fake 'profits' on the dashboard. But when you try to withdraw, they demand 'withdrawal fees' or 'tax payments' first. The exchange was never real — your money was stolen the moment you deposited it.",
+          },
+          {
+            type: "tip",
+            body: "Only use well-known, established exchanges. Check the URL carefully — scammers use look-alike domains like 'binance-pro.com' or 'coinbase-secure.net'. Bookmark the real site and always use the bookmark.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "Someone impersonating a celebrity on social media posts: 'Sending 0.5 ETH to this address, I'll send back 1 ETH!' What is this?",
+            options: [
+              "A legitimate promotion from the celebrity",
+              "A crypto giveaway scam — they keep your ETH and send nothing back",
+              "A marketing campaign by Ethereum",
+              "A test of the blockchain network",
+            ],
+            correct: 1,
+            explanation: "Celebrity crypto giveaways are always scams. No one will double your crypto. The account is impersonating a real person.",
+          },
+          {
+            type: "true_false",
+            question: "If a crypto exchange website looks professional and shows your balance growing, it must be real.",
+            correct: false,
+            explanation: "Fake exchanges show fake dashboards with fake profits. When you try to withdraw, they demand more fees. The money was stolen on deposit.",
+          },
+        ],
+      },
+      {
+        id: "crypto_wallet_security",
+        title: "Crypto Wallet Security: Protecting Your Keys",
+        xp: 75,
+        content: [
+          {
+            type: "text",
+            heading: "Hot vs Cold Wallets",
+            body: "A 'hot wallet' is connected to the internet (like an exchange account or mobile app). It's convenient but vulnerable to hacking. A 'cold wallet' is offline (like a hardware device — Ledger, Trezor). It's the safest way to store significant crypto amounts. Rule of thumb: keep only what you need for daily use in a hot wallet. Store the rest in cold storage.",
+          },
+          {
+            type: "text",
+            heading: "Your Seed Phrase is Sacred",
+            body: "When you create a crypto wallet, you get a 'seed phrase' — 12 or 24 words that can restore your entire wallet. If anyone gets your seed phrase, they can steal all your crypto instantly. Never type it into a website. Never share it with 'support'. Never store it in a photo on your phone. Write it on paper and store it in a safe.",
+          },
+          {
+            type: "tip",
+            body: "No legitimate crypto support agent will ever ask for your seed phrase. If someone asks for it — even claiming to be from the wallet company — it's a scam.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "Someone claiming to be from 'MetaMask Support' asks for your 12-word seed phrase to 'fix a syncing issue'. What do you do?",
+            options: [
+              "Give them the seed phrase — they're from support",
+              "Give them only half the words",
+              "Never share it — real support never asks for your seed phrase",
+              "Ask them to prove they work there first",
+            ],
+            correct: 2,
+            explanation: "Your seed phrase IS your wallet. Anyone who has it can take everything. No legitimate support agent will ever ask for it.",
+          },
+          {
+            type: "true_false",
+            question: "A hardware wallet (cold storage) is safer than keeping crypto on an exchange.",
+            correct: true,
+            explanation: "Cold wallets keep your keys offline, where hackers can't reach them. For large amounts, cold storage is the safest option.",
+          },
+        ],
+      },
     ],
   },
   {
@@ -464,6 +546,47 @@ export const LESSON_CATEGORIES = [
             text_after: " word can help verify if a caller is really your family member.",
             acceptable_answers: ["code", "safe", "secret", "password", "code safe", "safe code"],
             explanation: "A family code word that only your real family knows can stop impersonation scams.",
+          },
+        ],
+      },
+      {
+        id: "protecting_kids",
+        title: "Protecting Children Online",
+        xp: 50,
+        content: [
+          {
+            type: "text",
+            heading: "Online Grooming",
+            body: "Scammers and predators befriend children through games, social media, or chat apps. They build trust over time, then ask for personal info, photos, or money. Watch for signs: your child is secretive about their phone, has new 'friends' you don't know, receives gifts or money from strangers, or seems anxious after being online.",
+          },
+          {
+            type: "text",
+            heading: "Gaming Scams",
+            body: "Kids are targeted through games like Roblox, Fortnite, and Minecraft. Common scams: 'Buy cheap V-Bucks here' (fake sites steal card details), 'I'll level up your account for free' (they steal the account), or 'Trade me your rare item and I'll trade back' (they never do). Teach kids to never share account passwords or click links from strangers in games.",
+          },
+          {
+            type: "tip",
+            body: "Talk to your kids about scams the same way you talk about stranger danger. Make it clear they won't get in trouble if they tell you about something suspicious — you're there to help, not to punish.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "Your child says someone in a game offered to give them free in-game currency if they click a link. What should you teach them?",
+            options: [
+              "Click it — free currency is great",
+              "Ask the stranger for their real name first",
+              "Never click links from strangers in games — it's likely a scam",
+              "Click it but don't enter any passwords",
+            ],
+            correct: 2,
+            explanation: "Free in-game currency offers are almost always scams. Teach kids to never click links from strangers and to tell you about suspicious offers.",
+          },
+          {
+            type: "true_false",
+            question: "If your child falls for a scam, they should be punished so they learn their lesson.",
+            correct: false,
+            explanation: "Punishment makes kids hide things. If they come to you about a scam, thank them for telling you. You want them to feel safe reporting suspicious activity.",
           },
         ],
       },
@@ -636,6 +759,47 @@ export const LESSON_CATEGORIES = [
           },
         ],
       },
+      {
+        id: "deepfake_detection",
+        title: "Deepfake Detection: Train Your Eye",
+        xp: 75,
+        content: [
+          {
+            type: "text",
+            heading: "Technical Signs of a Deepfake",
+            body: "Deepfakes are getting better, but they still leave clues. Look for: unnatural skin texture (too smooth or too blurry), inconsistent lighting (shadows don't match the face), weird eye behavior (blinking too much or not at all), teeth that look blurred or wrong, and hair edges that look painted. If something feels 'off', trust your instinct.",
+          },
+          {
+            type: "text",
+            heading: "Verification Strategies",
+            body: "If you see a video making an unbelievable claim from a celebrity or public figure: 1. Check if major news outlets are reporting it. 2. Search for the original source — deepfakes often lack a verifiable origin. 3. Do a reverse image search on a screenshot. 4. Look for the same video on the person's official accounts. If it's only on random social media accounts, be suspicious.",
+          },
+          {
+            type: "tip",
+            body: "Deepfakes are designed to trigger strong emotions — anger, fear, outrage. If a video makes you feel extremely emotional, take a breath and verify before sharing. Scammers count on you sharing before thinking.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "You see a viral video of a politician saying something shocking. What's the best way to verify if it's real?",
+            options: [
+              "Share it immediately — if it's fake, someone will correct you",
+              "Check if major news outlets and the politician's official accounts confirm it",
+              "Read the comments — if people believe it, it's real",
+              "Look at how many views it has — popular videos are real",
+            ],
+            correct: 1,
+            explanation: "Always verify shocking claims through multiple independent sources. Deepfakes spread because people share before verifying. Check official accounts and news outlets.",
+          },
+          {
+            type: "true_false",
+            question: "Deepfakes are designed to trigger strong emotions so you share before verifying.",
+            correct: true,
+            explanation: "Scammers use emotion — anger, fear, outrage — to make you act quickly. If a video makes you feel extremely emotional, that's a sign to slow down and verify.",
+          },
+        ],
+      },
     ],
   },
   {
@@ -684,6 +848,47 @@ export const LESSON_CATEGORIES = [
             question: "A QR code is just a hidden website link that you can't read until you scan it.",
             correct: true,
             explanation: "Correct! That's why QR codes can be dangerous — you don't know where they'll take you until it's too late.",
+          },
+        ],
+      },
+      {
+        id: "safe_qr_scanning",
+        title: "Safe QR Scanning Habits",
+        xp: 50,
+        content: [
+          {
+            type: "text",
+            heading: "Preview Before You Open",
+            body: "Most modern phones show you the URL before opening it when you scan a QR code. Always read this URL. If it looks suspicious — a random string of characters, an unknown domain, or a .tk/.xyz/.top extension — don't open it. You can always decline and type a known URL manually instead.",
+          },
+          {
+            type: "text",
+            heading: "Where Scammers Place Fake QR Codes",
+            body: "Scammers target high-traffic areas: parking meters, restaurant tables, public transit stations, and even on flyers and posters. They stick their fake QR code on top of the real one. Always check if a QR code looks like a sticker placed over another code. If it's peeling, misaligned, or looks tampered with, don't scan it.",
+          },
+          {
+            type: "tip",
+            body: "When possible, use the official app instead of scanning a QR code. If a parking meter has a QR code, check if the city has an official parking app and use that instead. It's safer and often faster.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "You scan a QR code at a restaurant and your phone shows a URL that looks like a random string of characters. What should you do?",
+            options: [
+              "Open it — it's probably just a short link",
+              "Open it but don't enter any personal info",
+              "Don't open it — type the restaurant's known website instead",
+              "Open it and see what happens",
+            ],
+            correct: 2,
+            explanation: "Legitimate restaurant QR codes usually show a clean, readable URL. Random strings are a red flag. When in doubt, ask staff for the real menu or type the restaurant's website directly.",
+          },
+          {
+            type: "true_false",
+            question: "If a QR code is printed on official-looking material, it's always safe to scan.",
+            correct: false,
+            explanation: "Scammers can print professional-looking stickers and place them over real QR codes. Always check for tampering, especially on public QR codes like parking meters and restaurant tables.",
           },
         ],
       },
@@ -751,6 +956,47 @@ export const LESSON_CATEGORIES = [
           },
         ],
       },
+      {
+        id: "identity_recovery",
+        title: "Recovering from Identity Theft",
+        xp: 75,
+        content: [
+          {
+            type: "text",
+            heading: "Act Fast",
+            body: "If your identity is stolen, time is critical. The faster you act, the more you can limit the damage. Step 1: Call the fraud departments of any affected banks or credit card companies. Step 2: Place a fraud alert on your credit report by contacting any one of the three major bureaus (Equifax, Experian, TransUnion). Step 3: File a report with the FTC at IdentityTheft.gov. Step 4: File a police report — many banks require this to reverse fraudulent charges.",
+          },
+          {
+            type: "text",
+            heading: "Freeze Your Credit",
+            body: "A credit freeze stops anyone (including you) from opening new accounts in your name. It's free and can be done online with each of the three credit bureaus. If you need to apply for credit, you can temporarily lift the freeze. This is the single most effective step to prevent further damage after identity theft.",
+          },
+          {
+            type: "tip",
+            body: "Keep records of everything: dates, times, who you spoke with, and reference numbers. This documentation is essential for disputing charges and proving your case to banks and credit bureaus.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "You discover someone opened a credit card in your name. What should you do FIRST?",
+            options: [
+              "Wait to see if they make charges before acting",
+              "Call the fraud department of the affected bank and place a fraud alert",
+              "Post about it on social media to warn others",
+              "Pay off the fraudulent card to protect your credit score",
+            ],
+            correct: 1,
+            explanation: "Act immediately. Call the bank's fraud department, place a fraud alert on your credit, and file reports with the FTC and police. Never pay off fraudulent charges — that's accepting responsibility for debt that isn't yours.",
+          },
+          {
+            type: "true_false",
+            question: "A credit freeze costs money and hurts your credit score.",
+            correct: false,
+            explanation: "Credit freezes are free by federal law and do NOT affect your credit score. They simply prevent new accounts from being opened in your name. You can lift the freeze temporarily when needed.",
+          },
+        ],
+      },
     ],
   },
   {
@@ -815,6 +1061,47 @@ export const LESSON_CATEGORIES = [
           },
         ],
       },
+      {
+        id: "fake_stores",
+        title: "Spotting Fake Online Stores",
+        xp: 50,
+        content: [
+          {
+            type: "text",
+            heading: "Signs of a Fake Store",
+            body: "Fake online stores are designed to steal your money and card details. Watch for: prices 50-90% below normal (a $1000 camera for $150 is a scam), no physical address or phone number, poor grammar and spelling, no return policy, a domain that's very new (check with whois.com), and payment only via wire transfer, crypto, or gift cards. If the deal is impossibly good, the store is fake.",
+          },
+          {
+            type: "text",
+            heading: "Social Media Ad Scams",
+            body: "Many fake stores advertise on Facebook, Instagram, and TikTok. They show professional product photos stolen from real brands. You order, they take your money, and either send nothing or send a cheap knockoff. Before buying from a social media ad: search for the store name + 'scam' or 'reviews', check how long the domain has existed, and see if they have a real social media presence with real customer interactions.",
+          },
+          {
+            type: "tip",
+            body: "Use a credit card for all online purchases. If the store is fake, you can dispute the charge and get your money back. Never pay with debit card, wire transfer, crypto, or gift cards — these can't be reversed.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "You see a Facebook ad for a luxury watch brand selling $500 watches for $39.99. The store looks professional. What should you do?",
+            options: [
+              "Buy it — it's probably a clearance sale",
+              "Buy one and see if it arrives",
+              "Search for the store name + 'scam' and check the domain age before buying",
+              "Buy it but use PayPal for protection",
+            ],
+            correct: 2,
+            explanation: "Luxury brands don't sell at 90% off. Search for the store name + 'scam', check the domain age on whois.com, and look for reviews on independent sites. If it's a new domain with no real reviews, it's a scam.",
+          },
+          {
+            type: "true_false",
+            question: "A professional-looking website with high-quality photos is always a legitimate store.",
+            correct: false,
+            explanation: "Scammers steal product photos from real brands and build professional-looking websites in minutes. The design doesn't make it real. Check for physical addresses, return policies, domain age, and independent reviews.",
+          },
+        ],
+      },
     ],
   },
   {
@@ -871,6 +1158,47 @@ export const LESSON_CATEGORIES = [
             text_after: " scam.",
             acceptable_answers: ["romance", "love", "dating", "catfish", "catfishing"],
             explanation: "Romance scams are one of the most common and costly social media scams. Real relationships don't move that fast or ask for money.",
+          },
+        ],
+      },
+      {
+        id: "social_media_privacy",
+        title: "Protecting Your Social Media Privacy",
+        xp: 50,
+        content: [
+          {
+            type: "text",
+            heading: "What Not to Share",
+            body: "Scammers use your social media to target you. Never post: your full birth date (month, day, AND year), your home address, photos of the front of your house, vacation plans while you're away (post after you return), photos of IDs or boarding passes, or your phone number. Each piece of info helps scammers impersonate you, guess your security questions, or target you with personalized scams.",
+          },
+          {
+            type: "text",
+            heading: "Lock Down Your Accounts",
+            body: "1. Set profiles to private so only friends can see your posts. 2. Review your friend list — remove people you don't know. 3. Turn off location tagging in posts and photos. 4. Disable 'check-ins' that reveal where you are. 5. Review third-party apps connected to your social media and remove any you don't use. 6. Enable two-factor authentication on every account.",
+          },
+          {
+            type: "tip",
+            body: "Scammers stalk social media to build convincing phishing messages. If you post about your bank, they'll send you a fake email from that bank. If you post about a delivery, they'll text you about a 'package issue'. Share less, get scammed less.",
+          },
+        ],
+        quiz: [
+          {
+            type: "multiple_choice",
+            question: "Which of these is safe to post on social media?",
+            options: [
+              "Your full birth date including year",
+              "A photo of your boarding pass",
+              "A vacation photo after you've returned home",
+              "Your home address and phone number",
+            ],
+            correct: 2,
+            explanation: "Posting vacation photos after you return is safe. Everything else gives scammers information they can use to target you. Never post your full birth date, boarding passes, or home address publicly.",
+          },
+          {
+            type: "true_false",
+            question: "Scammers can use your social media posts to create convincing phishing emails.",
+            correct: true,
+            explanation: "If you post about your bank or a recent purchase, scammers use that info to craft personalized phishing messages that look real. The less you share, the harder you are to target.",
           },
         ],
       },

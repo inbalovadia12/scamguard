@@ -1,5 +1,36 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+// === VirusTotal URL reputation check ===
+async function getVirusTotalReport(url: string): Promise<any | null> {
+  const apiKey = Deno.env.get("VIRUSTOTAL_API_KEY");
+  if (!apiKey) return null;
+  try {
+    const urlBytes = new TextEncoder().encode(url);
+    let binary = '';
+    for (let i = 0; i < urlBytes.length; i++) binary += String.fromCharCode(urlBytes[i]);
+    const base64 = btoa(binary);
+    const urlId = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const response = await fetch(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
+      headers: { 'x-apikey': apiKey },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const attrs = data?.data?.attributes;
+    if (!attrs) return null;
+    const stats = attrs.last_analysis_stats || {};
+    return {
+      malicious: stats.malicious || 0,
+      suspicious: stats.suspicious || 0,
+      harmless: stats.harmless || 0,
+      undetected: stats.undetected || 0,
+      total_engines: (stats.malicious || 0) + (stats.suspicious || 0) + (stats.harmless || 0) + (stats.undetected || 0),
+      reputation: attrs.reputation || 0,
+      categories: attrs.categories || {},
+    };
+  } catch (_e) { return null; }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -15,6 +46,7 @@ Deno.serve(async (req) => {
     }
 
     const marketplace = detectMarketplace(targetUrl);
+    const vtReport = await getVirusTotalReport(targetUrl);
 
     let websiteContent = '';
     let httpStatus = 0;
@@ -56,6 +88,10 @@ Deno.serve(async (req) => {
       ? `\n\nREDIRECT DETECTED: Original URL ${targetUrl} redirected to ${finalUrl}. Redirects can sometimes indicate URL manipulation or cloaking.`
       : '';
 
+    const vtInfo = vtReport
+      ? `\n\nVIRUSTOTAL REPORT:\n- Malicious detections: ${vtReport.malicious}/${vtReport.total_engines} security engines\n- Suspicious detections: ${vtReport.suspicious}\n- Harmless: ${vtReport.harmless}\n- Community reputation: ${vtReport.reputation}\n${Object.keys(vtReport.categories).length > 0 ? '- Categories: ' + Object.values(vtReport.categories).join(', ') + '\n' : ''}`
+      : '\n\n(VirusTotal report unavailable — analyze based on URL and content only)';
+
     const prompt = `You are a scam detection expert. Analyze this URL and its website content for scam/phishing risk.
 
 URL: ${targetUrl}
@@ -65,7 +101,7 @@ ${fetchError ? `Website fetch error: ${fetchError}` : 'Website fetched successfu
 
 Website content extracted:
 ${websiteContent || '(Could not fetch website content — analyze based on URL structure and domain only)'}
-${marketplaceContext}${redirectInfo}
+${marketplaceContext}${redirectInfo}${vtInfo}
 
 Analyze:
 - Domain: typosquatting, suspicious TLDs, recently registered domains, non-matching brand domains, IDN homograph attacks
@@ -80,6 +116,10 @@ Analyze:
 
 ${marketplace ? `Since this is a ${marketplace} listing, focus your explanation on marketplace-specific scam indicators and provide actionable advice for that platform.` : 'If this appears to be a marketplace listing (eBay, Amazon, Etsy, etc.), analyze it as such.'}
 
+IMPORTANT: The risk_score MUST be a whole number between 0 and 100 (where 100 is most dangerous). Never use decimals like 0.98 — use 98 instead.
+
+If this is NOT a marketplace listing, leave the marketplace_platform field empty (do not fill it with "N/A" or any text).
+
 Rules: never say "definitely a scam" — use "likely" or "highly likely". Be educational and plain-English. Include concrete next steps. If the site is legitimate, say so clearly.`;
 
     const result = await base44.integrations.Core.InvokeLLM({
@@ -90,7 +130,7 @@ Rules: never say "definitely a scam" — use "likely" or "highly likely". Be edu
         type: 'object',
         properties: {
           risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
-          risk_score: { type: 'number' },
+          risk_score: { type: 'number', description: '0-100 risk score where 100 is most dangerous' },
           explanation: { type: 'string' },
           tactics_detected: { type: 'array', items: { type: 'string' } },
           next_steps: { type: 'array', items: { type: 'string' } },
@@ -207,3 +247,4 @@ function extractContent(html, marketplace) {
 
   return result;
 }
+// VirusTotal integration + risk_score 0-100 fix
