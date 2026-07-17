@@ -36,6 +36,7 @@ import Projects from '@/pages/Projects';
 import Extension from '@/pages/Extension';
 import ScamFeed from '@/pages/ScamFeed';
 import LocalScamIntel from '@/pages/LocalScamIntel';
+import PhoneLookup from '@/pages/PhoneLookup';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -84,6 +85,7 @@ const AuthenticatedApp = () => {
           <Route path="/family" element={<Family />} />
           <Route path="/scam-feed" element={<ScamFeed />} />
           <Route path="/local-intel" element={<LocalScamIntel />} />
+          <Route path="/phone-lookup" element={<PhoneLookup />} />
           <Route path="/lessons" element={<Lessons />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/projects" element={<Projects />} />

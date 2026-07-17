@@ -18,6 +18,7 @@ export const translations = {
     "nav.feedback": "Feedback",
     "nav.scam_feed": "Scam Feed",
     "nav.local_intel": "Local Scam Intel",
+    "nav.phone_lookup": "Phone Lookup",
     // Profile
     "nav.profile": "Profile",
     "nav.log_out": "Log out",
@@ -144,6 +145,7 @@ export const translations = {
     "nav.feedback": "משוב",
     "nav.scam_feed": "פיד הונאות",
     "nav.local_intel": "מודיעין הונאות מקומי",
+    "nav.phone_lookup": "חיפוש מספר",
     "nav.profile": "פרופיל",
     "nav.log_out": "התנתק",
     "nav.upgrade_plan": "שדרג תוכנית",
@@ -266,6 +268,7 @@ export const translations = {
     "nav.feedback": "Comentarios",
     "nav.scam_feed": "Feed de Estafas",
     "nav.local_intel": "Inteligencia de Estafas",
+    "nav.phone_lookup": "Búsqueda de Teléfono",
     "nav.profile": "Perfil",
     "nav.log_out": "Cerrar sesión",
     "nav.upgrade_plan": "Mejorar Plan",

@@ -32,13 +32,26 @@ export default function LocalScamIntel() {
     }
   };
 
+  const ipGeolocate = async () => {
+    setGeoLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("https://ipwho.is/");
+      const data = await res.json();
+      if (data && data.city) {
+        const name = [data.city, data.country].filter(Boolean).join(", ");
+        setLocationInput(name);
+        if (data.latitude && data.longitude) {
+          setGeoCoords({ latitude: data.latitude, longitude: data.longitude });
+        }
+      }
+    } catch {}
+    setGeoLoading(false);
+  };
+
   const handleGeolocate = () => {
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser. Please enter your location manually.");
-      return;
-    }
-    if (typeof window !== "undefined" && !window.isSecureContext) {
-      setError("Location access requires HTTPS. Please enter your city manually.");
+    if (!navigator.geolocation || (typeof window !== "undefined" && !window.isSecureContext)) {
+      ipGeolocate();
       return;
     }
     setGeoLoading(true);
@@ -48,8 +61,7 @@ export default function LocalScamIntel() {
     const fallbackTimer = setTimeout(() => {
       if (!resolved) {
         resolved = true;
-        setGeoLoading(false);
-        setError("Location request timed out. Please enter your city manually.");
+        ipGeolocate();
       }
     }, 16000);
 
@@ -74,16 +86,11 @@ export default function LocalScamIntel() {
         }
         setGeoLoading(false);
       },
-      (err) => {
+      () => {
         if (resolved) return;
         resolved = true;
         clearTimeout(fallbackTimer);
-        let msg = "Could not access your location. Please enter your city manually.";
-        if (err.code === 1) msg = "Location permission denied. Please enter your city manually.";
-        else if (err.code === 2) msg = "Location unavailable. Please enter your city manually.";
-        else if (err.code === 3) msg = "Location request timed out. Please enter your city manually.";
-        setError(msg);
-        setGeoLoading(false);
+        ipGeolocate();
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
