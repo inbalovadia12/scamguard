@@ -1,3 +1,5 @@
+import { EXTRA_LESSONS, NEW_CATEGORIES } from './lessons-extra';
+
 export const LESSON_CATEGORIES = [
   {
     id: "phishing_emails",
@@ -1369,6 +1371,16 @@ export const LESSON_CATEGORIES = [
   },
 ];
 
+// Merge extra lessons into existing categories
+LESSON_CATEGORIES.forEach((cat) => {
+  if (EXTRA_LESSONS[cat.id]) {
+    cat.lessons.push(...EXTRA_LESSONS[cat.id]);
+  }
+});
+
+// Append new categories
+LESSON_CATEGORIES.push(...NEW_CATEGORIES);
+
 export function getIcon(name) {
   const icons = {
     Mail: "Mail",
@@ -1382,6 +1394,10 @@ export function getIcon(name) {
     ShieldAlert: "ShieldAlert",
     ShoppingBag: "ShoppingBag",
     Heart: "Heart",
+    Phone: "Phone",
+    Briefcase: "Briefcase",
+    Flame: "Flame",
+    Newspaper: "Newspaper",
   };
   return icons[name] || "ShieldCheck";
 }

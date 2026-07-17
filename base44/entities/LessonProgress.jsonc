@@ -20,7 +20,11 @@
         "password_security",
         "deepfakes",
         "online_shopping",
-        "family_safety"
+        "family_safety",
+        "phone_scams",
+        "job_scams",
+        "romance_scams",
+        "articles"
       ],
       "description": "Lesson category"
     },

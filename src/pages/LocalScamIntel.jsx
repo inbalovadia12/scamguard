@@ -37,10 +37,27 @@ export default function LocalScamIntel() {
       setError("Geolocation is not supported by your browser. Please enter your location manually.");
       return;
     }
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setError("Location access requires HTTPS. Please enter your city manually.");
+      return;
+    }
     setGeoLoading(true);
     setError(null);
+
+    let resolved = false;
+    const fallbackTimer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        setGeoLoading(false);
+        setError("Location request timed out. Please enter your city manually.");
+      }
+    }, 16000);
+
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(fallbackTimer);
         const { latitude, longitude } = pos.coords;
         setGeoCoords({ latitude, longitude });
         try {
@@ -57,10 +74,18 @@ export default function LocalScamIntel() {
         }
         setGeoLoading(false);
       },
-      () => {
-        setError("Could not access your location. Please enter your city manually.");
+      (err) => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(fallbackTimer);
+        let msg = "Could not access your location. Please enter your city manually.";
+        if (err.code === 1) msg = "Location permission denied. Please enter your city manually.";
+        else if (err.code === 2) msg = "Location unavailable. Please enter your city manually.";
+        else if (err.code === 3) msg = "Location request timed out. Please enter your city manually.";
+        setError(msg);
         setGeoLoading(false);
-      }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
