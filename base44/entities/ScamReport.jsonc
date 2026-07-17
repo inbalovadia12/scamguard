@@ -1,0 +1,81 @@
+{
+  "name": "ScamReport",
+  "type": "object",
+  "properties": {
+    "scam_type": {
+      "type": "string",
+      "enum": [
+        "phishing_email",
+        "smishing",
+        "romance",
+        "crypto_investment",
+        "marketplace",
+        "tech_support",
+        "fake_job",
+        "delivery",
+        "lottery_prize",
+        "government_impersonation",
+        "bank_impersonation",
+        "other"
+      ],
+      "description": "Type of scam reported"
+    },
+    "title": {
+      "type": "string",
+      "description": "Short headline for the scam report"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Redacted summary of the scam (no personal information)"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Risk level of the scam"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "email",
+        "sms",
+        "phone_call",
+        "social_media",
+        "marketplace",
+        "website",
+        "in_person",
+        "other"
+      ],
+      "description": "How the scam was delivered"
+    },
+    "country": {
+      "type": "string",
+      "description": "Country where the scam was encountered"
+    },
+    "verified_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of users who confirmed seeing the same scam"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "resolved",
+        "expired"
+      ],
+      "default": "active",
+      "description": "Current status of the scam report"
+    }
+  },
+  "required": [
+    "scam_type",
+    "title",
+    "summary",
+    "risk_level",
+    "channel"
+  ]
+}

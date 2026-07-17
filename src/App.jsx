@@ -34,6 +34,8 @@ import Lessons from '@/pages/Lessons';
 import Privacy from '@/pages/Privacy';
 import Projects from '@/pages/Projects';
 import Extension from '@/pages/Extension';
+import ScamFeed from '@/pages/ScamFeed';
+import TrustedContacts from '@/pages/TrustedContacts';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -80,6 +82,8 @@ const AuthenticatedApp = () => {
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/alerts/:id" element={<AlertDetail />} />
           <Route path="/family" element={<Family />} />
+          <Route path="/scam-feed" element={<ScamFeed />} />
+          <Route path="/trusted-contacts" element={<TrustedContacts />} />
           <Route path="/lessons" element={<Lessons />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/projects" element={<Projects />} />
