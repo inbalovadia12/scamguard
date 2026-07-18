@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { MessageCircle, Loader2, Send, Zap, AlertTriangle, CheckCircle2, XCircle, Lightbulb } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { MessageCircle, Loader2, Send, Zap, AlertTriangle, CheckCircle2, XCircle, Lightbulb, ImagePlus, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -20,10 +20,35 @@ export default function AINegotiator() {
   const [questions, setQuestions] = useState(null);
   const [error, setError] = useState(null);
   const [credits, setCredits] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     getCreditStatus().then(setCredits);
   }, []);
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Image must be under 10MB.");
+      return;
+    }
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setError(null);
+  };
+
+  const handleClearImage = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleGenerate = async () => {
     if (!situation.trim()) return;
@@ -31,10 +56,16 @@ export default function AINegotiator() {
     setError(null);
     setQuestions(null);
     try {
+      let image_url = null;
+      if (selectedFile) {
+        const uploadRes = await base44.integrations.Core.UploadFile({ file: selectedFile });
+        image_url = uploadRes.file_url;
+      }
       const lang = localStorage.getItem("vardin_language") || "en";
       const response = await base44.functions.invoke("generateNegotiatorQuestions", {
         situation: situation.trim(),
         language: lang,
+        image_url,
       });
       if (response.data?.error) throw new Error(response.data.error);
       setQuestions(response.data?.questions || []);
@@ -58,7 +89,7 @@ export default function AINegotiator() {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
             <MessageCircle className="w-5 h-5 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">AI Negotiator</h1>
+          <h1 className="text-2xl font-bold tracking-tight font-heading">Scam Exposer</h1>
         </div>
         <p className="text-sm text-muted-foreground max-w-md">
           Not sure if a seller is legitimate? Describe the situation and get 5 questions that will expose a scammer.
@@ -75,6 +106,31 @@ export default function AINegotiator() {
             placeholder="e.g. Someone is selling a used car on Craigslist for $2,000 below market value and wants me to wire a deposit..."
             className="min-h-[120px] resize-none"
           />
+        </div>
+
+        {/* Image upload */}
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Attach a screenshot (optional)</label>
+          {!previewUrl ? (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full border-2 border-dashed border-border rounded-xl py-6 flex items-center justify-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all"
+            >
+              <ImagePlus className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Upload a screenshot of the listing, chat, or profile</span>
+            </button>
+          ) : (
+            <div className="relative inline-block">
+              <img src={previewUrl} alt="Preview" className="max-h-32 rounded-xl" />
+              <button
+                onClick={handleClearImage}
+                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-background/80 backdrop-blur flex items-center justify-center hover:bg-background"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
         </div>
 
         {/* Examples */}

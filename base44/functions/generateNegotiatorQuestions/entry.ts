@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { situation, language } = body;
+    const { situation, language, image_url } = body;
 
     if (!situation || !situation.trim()) {
       return Response.json({ error: 'Situation description is required' }, { status: 400 });
@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
     const prompt = `You are a scam detection expert. A user suspects a scammer. Generate 5 questions that will expose them.
 
 Situation: ${situation.slice(0, 2000)}
+${image_url ? '\nAn image is attached (screenshot of a listing, chat, or profile). Analyze it for additional scam indicators and tailor your questions to what you see.' : ''}
 
 Generate 5 strategic questions that:
 1. Are tailored to this specific situation
@@ -54,9 +55,9 @@ For each question provide: the question, why it works, a red flag answer (scam),
 
 Respond entirely in ${languageName}.`;
 
-    const result = await base44.integrations.Core.InvokeLLM({
+    const llmOptions: any = {
       prompt,
-      model: 'gpt_5_mini',
+      model: image_url ? 'gemini_3_flash' : 'gpt_5_mini',
       response_json_schema: {
         type: 'object',
         properties: {
@@ -76,7 +77,10 @@ Respond entirely in ${languageName}.`;
         },
         required: ['questions'],
       },
-    });
+    };
+    if (image_url) llmOptions.file_urls = [image_url];
+
+    const result = await base44.integrations.Core.InvokeLLM(llmOptions);
 
     // Deduct credits
     const newCreditsUsed = creditsUsed + CREDIT_COST;
