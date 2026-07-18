@@ -1,9 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 const PLAN_LIMITS = { starter: 15, plus: 150, premium: 400 };
-const CREDIT_COSTS: Record<string, number> = {
-  text: 8, screenshot: 8, both: 12, url: 12,
-  email: 8, chat: 8, marketplace: 8, qr: 10, file: 12,
+const ANSWER_TYPE_COSTS: Record<string, number> = {
+  quick: 3, risk_score: 4, red_flags: 5, detailed: 8,
+};
+const SCAN_TYPE_MODIFIERS: Record<string, number> = {
+  text: 0, screenshot: 2, both: 2, url: 2,
+  email: 0, chat: 0, marketplace: 0, qr: 2, file: 4,
 };
 
 // === VirusTotal URL reputation check (API key stays on backend, never exposed) ===
@@ -76,7 +79,9 @@ Deno.serve(async (req) => {
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
     // === Credit check ===
-    const creditCost = scanType === 'page' ? (CREDIT_COSTS[scanMode] || 8) : (CREDIT_COSTS[scanType] || 8);
+    const answerTypeCost = ANSWER_TYPE_COSTS[answerType] || 8;
+    const scanModifier = scanType === 'page' ? (SCAN_TYPE_MODIFIERS[scanMode] || 0) : (SCAN_TYPE_MODIFIERS[scanType] || 0);
+    const creditCost = answerTypeCost + scanModifier;
     const currentMonth = new Date().toISOString().slice(0, 7);
     let creditsUsed = user.credits_used || 0;
     if (user.credits_reset_month !== currentMonth) creditsUsed = 0;
@@ -157,8 +162,14 @@ Deno.serve(async (req) => {
       prompt += 'Supported marketplaces: Facebook Marketplace, eBay, Craigslist, Gumtree, Amazon, Etsy, AliExpress.\n\n';
       prompt += 'Listing content:\n' + (page_text || '').slice(0, 10000) + '\n\n';
     } else if (scanType === 'qr') {
-      prompt += 'Analyze this QR code image. Decode it if possible, then analyze the destination URL for: redirects, shortened URLs, phishing risks, and suspicious patterns.\n';
-      prompt += 'If you can read the QR code, analyze the decoded URL. If not, describe what you see and assess risk.\n\n';
+      prompt += 'Analyze this QR code image. Your FIRST task is to DECODE the QR code and report the EXACT content encoded in it (URL, text, contact info, Wi-Fi credentials, etc.).\n';
+      prompt += 'If the QR contains a URL, you MUST state the full decoded URL and then analyze:\n';
+      prompt += '- What website/domain the URL points to and whether it is a legitimate, well-known site\n';
+      prompt += '- Whether the domain is suspicious, recently registered, or known for phishing/scams\n';
+      prompt += '- Any redirects, URL shorteners, or obfuscation techniques\n';
+      prompt += '- What the destination website likely does (login form, payment page, app download, malware, etc.)\n';
+      prompt += '- Whether the QR code is safe to scan or is likely a scam\n';
+      prompt += 'IMPORTANT: Your response MUST include the exact decoded URL or content from the QR code. Do not say you cannot read it without making a genuine attempt to decode it first.\n\n';
     } else if (scanType === 'file') {
       prompt += 'Analyze this uploaded file for: phishing language, fake invoices, fake job offers, suspicious documents, embedded URLs, and risky content.\n';
       prompt += 'File name: ' + (file_name || 'unknown') + '\n\n';
@@ -240,7 +251,7 @@ Deno.serve(async (req) => {
         };
     }
 
-    const llmOptions: any = { prompt, response_json_schema: responseSchema, add_context_from_internet: true, model: 'gemini_3_flash' };
+    const llmOptions: any = { prompt, response_json_schema: responseSchema, add_context_from_internet: true, model: scanType === 'qr' ? 'gemini_3_1_pro' : 'gemini_3_flash' };
 
     // === Upload screenshot/QR image for vision analysis ===
     if ((scanType === 'screenshot' || scanType === 'qr' || (scanType === 'page' && (scanMode === 'screenshot' || scanMode === 'both'))) && screenshot_data_url) {

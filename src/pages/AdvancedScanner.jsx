@@ -7,7 +7,7 @@ import { Loader2, ArrowRight, ShieldCheck, Lock, Crown, AlertTriangle } from "lu
 import { Link } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { getCreditStatus } from "@/lib/credits";
-import ScanTypeGrid, { SCAN_TYPES, ANSWER_TYPES } from "@/components/scam/ScanTypeGrid";
+import ScanTypeGrid, { SCAN_TYPES, ANSWER_TYPES, getScanCost } from "@/components/scam/ScanTypeGrid";
 import FileDropzone from "@/components/scam/FileDropzone";
 import AdvancedScanResults from "@/components/scam/AdvancedScanResults";
 
@@ -30,7 +30,7 @@ export default function AdvancedScanner() {
   }, []);
 
   const selectedType = SCAN_TYPES.find((t) => t.value === scanType);
-  const cost = selectedType?.cost || 8;
+  const cost = getScanCost(scanType, answerType);
   const outOfCredits = credits && !credits.canAnalyze;
   const isPaid = credits?.isPaid;
   const insufficientCredits = credits && credits.remaining > 0 && credits.remaining < cost;

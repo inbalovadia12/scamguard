@@ -137,10 +137,8 @@ var APP_BASE = 'https://vardin.base44.app';
 var LOGIN_URL = APP_BASE + '/login';
 var PRICING_URL = APP_BASE + '/pricing';
 
-var CREDIT_COSTS = {
-  page_text: 8, page_screenshot: 8, page_both: 12, page_url: 12,
-  url: 12, screenshot: 8, qr: 10, email: 8, chat: 8, marketplace: 8, file: 12
-};
+var ANSWER_TYPE_COSTS = { quick: 3, risk_score: 4, red_flags: 5, detailed: 8 };
+var SCAN_TYPE_MODIFIERS = { text: 0, screenshot: 2, both: 2, url: 2, qr: 2, email: 0, chat: 0, marketplace: 0, file: 4 };
 
 var MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -400,11 +398,16 @@ async function checkAuth() {
 
 function getCreditCost() {
   var scanType = document.getElementById('scan-type').value;
+  var answerType = document.getElementById('answer-type').value;
+  var base = ANSWER_TYPE_COSTS[answerType] || 8;
+  var modifier = 0;
   if (scanType === 'page') {
     var scanMode = document.getElementById('scan-mode').value;
-    return CREDIT_COSTS['page_' + scanMode] || 8;
+    modifier = SCAN_TYPE_MODIFIERS[scanMode] || 0;
+  } else {
+    modifier = SCAN_TYPE_MODIFIERS[scanType] || 0;
   }
-  return CREDIT_COSTS[scanType] || 8;
+  return base + modifier;
 }
 
 function updateCreditDisplay() {

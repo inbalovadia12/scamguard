@@ -3,22 +3,34 @@ import { FileText, Globe, Camera, QrCode, Mail, MessageSquare, ShoppingCart, Fil
 import { cn } from "@/lib/utils";
 
 export const SCAN_TYPES = [
-  { value: "page", label: "Page Text", icon: FileText, cost: 8, inputType: "textarea" },
-  { value: "url", label: "URL", icon: Globe, cost: 12, inputType: "url" },
-  { value: "screenshot", label: "Screenshot", icon: Camera, cost: 8, inputType: "image" },
-  { value: "qr", label: "QR Code", icon: QrCode, cost: 10, inputType: "image" },
-  { value: "email", label: "Email", icon: Mail, cost: 8, inputType: "textarea" },
-  { value: "chat", label: "Chat / SMS", icon: MessageSquare, cost: 8, inputType: "textarea" },
-  { value: "marketplace", label: "Marketplace", icon: ShoppingCart, cost: 8, inputType: "textarea" },
-  { value: "file", label: "File", icon: FileIcon, cost: 12, inputType: "file" },
+  { value: "page", label: "Page Text", icon: FileText, inputType: "textarea" },
+  { value: "url", label: "URL", icon: Globe, inputType: "url" },
+  { value: "screenshot", label: "Screenshot", icon: Camera, inputType: "image" },
+  { value: "qr", label: "QR Code", icon: QrCode, inputType: "image" },
+  { value: "email", label: "Email", icon: Mail, inputType: "textarea" },
+  { value: "chat", label: "Chat / SMS", icon: MessageSquare, inputType: "textarea" },
+  { value: "marketplace", label: "Marketplace", icon: ShoppingCart, inputType: "textarea" },
+  { value: "file", label: "File", icon: FileIcon, inputType: "file" },
 ];
 
 export const ANSWER_TYPES = [
-  { value: "quick", label: "Quick Verdict" },
-  { value: "detailed", label: "Detailed Report" },
-  { value: "risk_score", label: "Risk Score" },
-  { value: "red_flags", label: "Red Flags" },
+  { value: "quick", label: "Quick Verdict", cost: 3 },
+  { value: "detailed", label: "Detailed Report", cost: 8 },
+  { value: "risk_score", label: "Risk Score", cost: 4 },
+  { value: "red_flags", label: "Red Flags", cost: 5 },
 ];
+
+export const SCAN_TYPE_MODIFIERS = {
+  page: 0, url: 2, screenshot: 2, qr: 2,
+  email: 0, chat: 0, marketplace: 0, file: 4,
+  text: 0, both: 2,
+};
+
+export function getScanCost(scanType, answerType) {
+  const answerTypeCost = ANSWER_TYPES.find((a) => a.value === answerType)?.cost || 8;
+  const modifier = SCAN_TYPE_MODIFIERS[scanType] || 0;
+  return answerTypeCost + modifier;
+}
 
 export default function ScanTypeGrid({ value, onChange }) {
   return (
@@ -36,7 +48,6 @@ export default function ScanTypeGrid({ value, onChange }) {
         >
           <type.icon className="w-5 h-5" />
           <span className="text-xs font-medium">{type.label}</span>
-          <span className="text-[10px] text-muted-foreground">{type.cost} cr</span>
         </button>
       ))}
     </div>
