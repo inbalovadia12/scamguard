@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, TrendingUp, Phone, Calendar, Clock } from "lucide-react";
+import { MapPin, TrendingUp, Phone, Calendar, Clock, ExternalLink } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import SeasonalCalendar from "@/components/scam/SeasonalCalendar";
 import { RISK_META } from "@/components/scam/ScamReportCard";
@@ -92,6 +92,21 @@ export default function ScanResultView({ data }) {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {data.sources?.length > 0 && (
+        <div className="space-y-2 pt-2 border-t border-border/30">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <ExternalLink className="w-3.5 h-3.5" /> Sources
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {data.sources.map((source, i) => (
+              <a key={i} href={source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-[200px]">
+                {source}
+              </a>
+            ))}
+          </div>
         </div>
       )}
     </div>

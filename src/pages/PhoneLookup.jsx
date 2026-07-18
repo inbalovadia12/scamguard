@@ -65,6 +65,7 @@ export default function PhoneLookup() {
         user_reports: result.user_reports || [],
         scam_categories: result.scam_categories || [],
         summary: result.summary || "",
+        sources: result.sources || [],
         created_date: saved?.created_date || new Date().toISOString(),
       });
       loadHistory();
@@ -86,6 +87,7 @@ export default function PhoneLookup() {
       user_reports: lookup.user_reports || [],
       scam_categories: lookup.scam_categories || [],
       summary: lookup.summary || "",
+      sources: lookup.sources || [],
       created_date: lookup.created_date,
     });
   };

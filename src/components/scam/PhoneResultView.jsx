@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Signal, Users, Tag } from "lucide-react";
+import { MapPin, Signal, Users, Tag, ExternalLink } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { RISK_META } from "@/components/scam/ScamReportCard";
 
@@ -90,6 +90,22 @@ export default function PhoneResultView({ data }) {
                 <span className="w-1.5 h-1.5 rounded-full bg-primary/40 mt-2 flex-shrink-0" />
                 <span className="leading-relaxed">{report}</span>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sources */}
+      {data.sources?.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <ExternalLink className="w-3.5 h-3.5" /> Sources
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {data.sources.map((source, i) => (
+              <a key={i} href={source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-[200px]">
+                {source}
+              </a>
             ))}
           </div>
         </div>

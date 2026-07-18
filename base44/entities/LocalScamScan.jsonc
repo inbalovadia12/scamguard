@@ -52,6 +52,13 @@
     "current_trends": {
       "type": "string",
       "description": "Current trending scams in this area"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Source URLs for the analysis"
     }
   },
   "required": [

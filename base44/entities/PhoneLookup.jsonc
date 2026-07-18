@@ -44,6 +44,13 @@
     "summary": {
       "type": "string",
       "description": "Overall assessment"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs where information was found"
     }
   },
   "required": [

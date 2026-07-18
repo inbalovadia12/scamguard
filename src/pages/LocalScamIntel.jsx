@@ -36,10 +36,10 @@ export default function LocalScamIntel() {
     setGeoLoading(true);
     setError(null);
     try {
-      const res = await fetch("https://ipwho.is/");
+      const res = await fetch("https://ipapi.co/json/");
       const data = await res.json();
       if (data && data.city) {
-        const name = [data.city, data.country].filter(Boolean).join(", ");
+        const name = [data.city, data.country_name].filter(Boolean).join(", ");
         setLocationInput(name);
         if (data.latitude && data.longitude) {
           setGeoCoords({ latitude: data.latitude, longitude: data.longitude });
@@ -121,6 +121,7 @@ export default function LocalScamIntel() {
         seasonal_patterns: analysis.seasonal_patterns || [],
         local_resources: analysis.local_resources || [],
         current_trends: analysis.current_trends || "",
+        sources: analysis.sources || [],
         created_date: scan?.created_date || new Date().toISOString(),
       });
       loadHistory();
@@ -145,6 +146,7 @@ export default function LocalScamIntel() {
       seasonal_patterns: scan.seasonal_patterns || [],
       local_resources: scan.local_resources || [],
       current_trends: scan.current_trends || "",
+      sources: scan.sources || [],
       created_date: scan.created_date,
     });
   };

@@ -37,6 +37,8 @@ import Extension from '@/pages/Extension';
 import ScamFeed from '@/pages/ScamFeed';
 import LocalScamIntel from '@/pages/LocalScamIntel';
 import PhoneLookup from '@/pages/PhoneLookup';
+import ImageScanner from '@/pages/ImageScanner';
+import AINegotiator from '@/pages/AINegotiator';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -86,6 +88,8 @@ const AuthenticatedApp = () => {
           <Route path="/scam-feed" element={<ScamFeed />} />
           <Route path="/local-intel" element={<LocalScamIntel />} />
           <Route path="/phone-lookup" element={<PhoneLookup />} />
+          <Route path="/image-scanner" element={<ImageScanner />} />
+          <Route path="/ai-negotiator" element={<AINegotiator />} />
           <Route path="/lessons" element={<Lessons />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/projects" element={<Projects />} />

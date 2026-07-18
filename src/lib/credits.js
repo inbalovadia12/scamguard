@@ -5,6 +5,8 @@ export const CREDIT_COSTS = {
   URL_SCAN: 12,
   IMAGE_UPLOAD: 8,
   AGENT_CHAT: 2,
+  IMAGE_SCAN: 10,
+  NEGOTIATOR: 3,
 };
 
 export const PLAN_LIMITS = {

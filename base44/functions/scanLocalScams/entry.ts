@@ -16,18 +16,19 @@ Deno.serve(async (req) => {
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
-    const prompt = `You are a scam intelligence analyst. Research common scams targeting people in: ${location_name}
+    const prompt = `You are a scam intelligence analyst. Research scams targeting: ${location_name}
 
-Using web search, find:
-1. The most common scams in this specific location (city, country, region). Include locally-specific scams unique to this area.
-2. Seasonal patterns — which months do certain scams peak? For each scam, specify which months (1-12) it's most active.
-3. Local scam reporting resources — government agencies, consumer protection hotlines, cybercrime units, official websites specific to this country/region. Include real phone numbers and URLs where possible.
-4. Current trending scams — what's actively circulating right now in this area?
-5. Cultural or regional factors — local holidays, tax seasons, festivals, events that attract scammers.
+Find:
+1. Common scams in this location (city/country). Include locally-specific scams.
+2. Seasonal patterns — which months (1-12) each scam peaks.
+3. Local reporting resources — government agencies, hotlines, websites with real URLs and phone numbers.
+4. Current trending scams in this area.
+5. Cultural factors — holidays, tax seasons, events that attract scammers.
 
-IMPORTANT: Respond entirely in ${languageName}. All text must be in ${languageName}.
+Include real agency names, phone numbers, and URLs. Do not invent resources.
+Provide sources — URLs where you found this information.
 
-Be specific and actionable. Include real agency names, phone numbers, and websites where possible. Do not invent resources — if you're unsure about a specific hotline, omit it.`;
+Respond entirely in ${languageName}.`;
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,
@@ -37,23 +38,24 @@ Be specific and actionable. Include real agency names, phone numbers, and websit
         type: 'object',
         properties: {
           risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
-          country: { type: 'string', description: 'Country name' },
-          summary: { type: 'string', description: 'Overall assessment of scam activity in this area' },
+          country: { type: 'string' },
+          summary: { type: 'string' },
           common_scams: {
             type: 'array',
             items: {
               type: 'object',
               properties: {
-                name: { type: 'string', description: 'Scam name' },
-                description: { type: 'string', description: 'How the scam works and who it targets' },
-                peak_season: { type: 'string', description: 'When this scam is most active (e.g. Tax season Jan-Apr)' },
-                peak_months: { type: 'array', items: { type: 'number' }, description: 'Months 1-12 when this scam peaks' },
+                name: { type: 'string' },
+                description: { type: 'string' },
+                peak_season: { type: 'string' },
+                peak_months: { type: 'array', items: { type: 'number' } },
               },
             },
           },
-          seasonal_patterns: { type: 'array', items: { type: 'string' }, description: 'Time-of-year patterns for scams' },
-          local_resources: { type: 'array', items: { type: 'string' }, description: 'Local authorities, hotlines, and websites for reporting scams' },
-          current_trends: { type: 'string', description: 'Current trending scams in this area' },
+          seasonal_patterns: { type: 'array', items: { type: 'string' } },
+          local_resources: { type: 'array', items: { type: 'string' } },
+          current_trends: { type: 'string' },
+          sources: { type: 'array', items: { type: 'string' }, description: 'URLs of sources used' },
         },
         required: ['risk_level', 'summary', 'common_scams', 'seasonal_patterns'],
       },
@@ -70,6 +72,7 @@ Be specific and actionable. Include real agency names, phone numbers, and websit
       seasonal_patterns: result.seasonal_patterns || [],
       local_resources: result.local_resources || [],
       current_trends: result.current_trends || '',
+      sources: result.sources || [],
     });
 
     return Response.json({ analysis: result, scan: saved });

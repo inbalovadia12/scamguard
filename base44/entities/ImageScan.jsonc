@@ -1,0 +1,65 @@
+{
+  "name": "ImageScan",
+  "type": "object",
+  "properties": {
+    "image_url": {
+      "type": "string",
+      "description": "URL of the uploaded image"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Scam risk level"
+    },
+    "is_likely_scam_profile": {
+      "type": "boolean",
+      "description": "Whether the image is likely a scam profile photo"
+    },
+    "risk_score": {
+      "type": "number",
+      "description": "0-100 scam risk score"
+    },
+    "explanation": {
+      "type": "string",
+      "description": "Analysis of the image"
+    },
+    "similar_images_found": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Descriptions of where similar images appear online"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs where similar images or scam reports were found"
+    },
+    "red_flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Specific warning signs detected"
+    },
+    "use_case": {
+      "type": "string",
+      "enum": [
+        "romance",
+        "marketplace",
+        "business",
+        "general"
+      ],
+      "description": "What the user is checking for"
+    }
+  },
+  "required": [
+    "image_url"
+  ]
+}
