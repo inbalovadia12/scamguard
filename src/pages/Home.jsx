@@ -15,7 +15,7 @@ import AnalysisResult from "@/components/scam/AnalysisResult";
 import ConsentBanner from "@/components/family/ConsentBanner";
 import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS, getCachedAnalysis, cacheAnalysis } from "@/lib/credits";
 import { redactMessage } from "@/lib/redact";
-import { getSeniorLink, shouldNotifyGuardian, notifyGuardian } from "@/lib/guardianAlerts";
+import { getSeniorLink } from "@/lib/guardianAlerts";
 
 const messageTypes = [
   { value: "sms", label: "SMS / Text", icon: MessageSquare },
@@ -101,14 +101,6 @@ export default function Home() {
       senior_id: seniorLink?.id,
       ...llmResult,
     });
-
-    if (seniorLink && shouldNotifyGuardian(seniorLink, { ...llmResult, message_type: analysisType })) {
-      try {
-        await notifyGuardian(seniorLink, { ...llmResult, message_type: analysisType });
-      } catch (e) {
-        console.error("Guardian notification failed:", e);
-      }
-    }
 
     cacheAnalysis(input, llmResult);
     await incrementCreditUsage(cost);

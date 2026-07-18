@@ -1,0 +1,40 @@
+{
+  "name": "Guardian Gmail Alert",
+  "description": "Sends a Gmail email to the guardian when a high-risk scam is detected for a protected family member",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "ScamAnalysis",
+      "events": [
+        "create"
+      ]
+    },
+    "condition": "${ .trigger.data.risk_level == \"high\" and .trigger.data.submitted_by_senior == true and .trigger.data.guardian_status == \"new\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "guardian_gmail_alert",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "send_alert": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sendGuardianGmailAlert",
+            "args": {
+              "analysis_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Send Guardian Gmail Alert",
+            "description": "Email the guardian about the high-risk scam"
+          }
+        }
+      }
+    ]
+  }
+}
