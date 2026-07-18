@@ -36,6 +36,7 @@ import Projects from '@/pages/Projects';
 import Extension from '@/pages/Extension';
 import ScamFeed from '@/pages/ScamFeed';
 import LocalScamIntel from '@/pages/LocalScamIntel';
+import LocalScamDashboard from '@/pages/LocalScamDashboard';
 import PhoneLookup from '@/pages/PhoneLookup';
 import ImageScanner from '@/pages/ImageScanner';
 import AINegotiator from '@/pages/AINegotiator';
@@ -88,6 +89,7 @@ const AuthenticatedApp = () => {
           <Route path="/family" element={<Family />} />
           <Route path="/scam-feed" element={<ScamFeed />} />
           <Route path="/local-intel" element={<LocalScamIntel />} />
+          <Route path="/local-dashboard" element={<LocalScamDashboard />} />
           <Route path="/phone-lookup" element={<PhoneLookup />} />
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/ai-negotiator" element={<AINegotiator />} />

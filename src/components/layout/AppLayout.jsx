@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, Globe, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers,
+  BarChart3, MessageSquare, User, ChevronRight, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -34,6 +34,7 @@ const NAV_GROUPS = [
       { path: "/family", labelKey: "nav.family", icon: Users },
       { path: "/scam-feed", labelKey: "nav.scam_feed", icon: Megaphone },
       { path: "/local-intel", labelKey: "nav.local_intel", icon: Radar },
+      { path: "/local-dashboard", labelKey: "nav.local_dashboard", icon: Globe2 },
     ],
   },
   {
