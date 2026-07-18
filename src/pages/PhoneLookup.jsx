@@ -146,7 +146,7 @@ export default function PhoneLookup() {
               value={phoneInput}
               onChange={(e) => setPhoneInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-              placeholder="+1 555 123 4567"
+              placeholder="555 123 4567"
               className="pl-9"
             />
           </div>

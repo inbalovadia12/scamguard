@@ -102,6 +102,21 @@ function DetailedResult({ a }) {
       </div>
       {a.confidence != null && <p className="text-sm text-muted-foreground">Confidence: {a.confidence}%</p>}
       {a.scam_category && <Section label="Scam Category"><p className="text-sm">{a.scam_category}</p></Section>}
+      {a.decoded_content && (
+        <Section label="Decoded QR Content">
+          <p className="text-sm font-mono break-all bg-muted/50 rounded-lg px-3 py-2">{a.decoded_content}</p>
+        </Section>
+      )}
+      {a.final_destination_url && a.final_destination_url !== a.decoded_content && (
+        <Section label="Final Destination URL (After Redirects)">
+          <p className="text-sm font-mono break-all bg-muted/50 rounded-lg px-3 py-2">{a.final_destination_url}</p>
+        </Section>
+      )}
+      {a.destination_description && (
+        <Section label="What's On The Destination Webpage">
+          <p className="text-sm leading-relaxed">{a.destination_description}</p>
+        </Section>
+      )}
       {a.explanation && <Section label="Explanation"><p className="text-sm leading-relaxed">{a.explanation}</p></Section>}
       {a.what_they_want && <Section label="What They Want"><p className="text-sm">{a.what_they_want}</p></Section>}
       {a.tactics_detected?.length > 0 && (

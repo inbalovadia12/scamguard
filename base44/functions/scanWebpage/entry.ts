@@ -162,14 +162,21 @@ Deno.serve(async (req) => {
       prompt += 'Supported marketplaces: Facebook Marketplace, eBay, Craigslist, Gumtree, Amazon, Etsy, AliExpress.\n\n';
       prompt += 'Listing content:\n' + (page_text || '').slice(0, 10000) + '\n\n';
     } else if (scanType === 'qr') {
-      prompt += 'Analyze this QR code image. Your FIRST task is to DECODE the QR code and report the EXACT content encoded in it (URL, text, contact info, Wi-Fi credentials, etc.).\n';
-      prompt += 'If the QR contains a URL, you MUST state the full decoded URL and then analyze:\n';
-      prompt += '- What website/domain the URL points to and whether it is a legitimate, well-known site\n';
-      prompt += '- Whether the domain is suspicious, recently registered, or known for phishing/scams\n';
-      prompt += '- Any redirects, URL shorteners, or obfuscation techniques\n';
-      prompt += '- What the destination website likely does (login form, payment page, app download, malware, etc.)\n';
-      prompt += '- Whether the QR code is safe to scan or is likely a scam\n';
-      prompt += 'IMPORTANT: Your response MUST include the exact decoded URL or content from the QR code. Do not say you cannot read it without making a genuine attempt to decode it first.\n\n';
+      prompt += 'Analyze this QR code image. Complete ALL tasks below in order:\n\n';
+      prompt += 'TASK 1 — DECODE THE QR CODE:\n';
+      prompt += 'Decode the QR code and report the EXACT content encoded in it. Is it a URL, text, contact info (vCard), Wi-Fi credentials, crypto address, app download link, or something else? State the exact decoded content verbatim.\n\n';
+      prompt += 'TASK 2 — IF THE QR CONTAINS A URL, FETCH AND ANALYZE THE DESTINATION WEBPAGE:\n';
+      prompt += '  a) State the FULL decoded URL exactly as encoded in the QR code.\n';
+      prompt += '  b) VISIT the URL using web search and describe SPECIFICALLY what is on the webpage — what does the page show? Is it a login form, payment/checkout page, app download, legitimate business site, phishing page, blank page, parked domain, or something else?\n';
+      prompt += '  c) If the URL uses a shortener (bit.ly, tinyurl, t.co, etc.) or redirects, FOLLOW the redirect chain and report the FINAL destination URL. State each hop if there are multiple redirects.\n';
+      prompt += '  d) State the domain name explicitly. Is it a legitimate, well-known domain (e.g., paypal.com, google.com) or a suspicious/lookalike domain (e.g., paypa1.com, google-security-login.xyz)?\n';
+      prompt += '  e) Describe EXACTLY what the page asks the user to do: enter a password, enter credit card details, download a file, call a phone number, enter personal info, connect a wallet, etc.\n';
+      prompt += '  f) Note any urgency tactics, fake branding, or impersonation visible on the page.\n\n';
+      prompt += 'TASK 3 — RISK ASSESSMENT:\n';
+      prompt += '  - Is this QR code safe to scan?\n';
+      prompt += '  - Is it a scam? If so, what type (phishing, payment fraud, malware, fake login, crypto drainer)?\n';
+      prompt += '  - What specific risks does scanning this QR code pose to the user?\n\n';
+      prompt += 'CRITICAL: You MUST include the exact decoded URL/content in decoded_content. You MUST describe what is actually on the destination webpage in destination_description. You MUST state the final URL after redirects in final_destination_url. Do not say you cannot read the QR code — make a genuine decoding attempt first.\n\n';
     } else if (scanType === 'file') {
       prompt += 'Analyze this uploaded file for: phishing language, fake invoices, fake job offers, suspicious documents, embedded URLs, and risky content.\n';
       prompt += 'File name: ' + (file_name || 'unknown') + '\n\n';
@@ -246,6 +253,9 @@ Deno.serve(async (req) => {
             sources_checked: { type: 'array', items: { type: 'string' }, description: 'Sources/databases checked' },
             next_steps: { type: 'array', items: { type: 'string' }, description: 'Recommended actions' },
             what_they_want: { type: 'string', description: 'What the scammer is trying to get, if applicable' },
+            decoded_content: { type: 'string', description: 'For QR codes: the exact decoded content/URL from the QR code' },
+            destination_description: { type: 'string', description: 'For QR codes: detailed description of what is on the destination webpage' },
+            final_destination_url: { type: 'string', description: 'For QR codes: the final URL after any redirects' },
           },
           required: ['risk_level', 'risk_score', 'explanation'],
         };
