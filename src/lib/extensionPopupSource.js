@@ -427,7 +427,7 @@ function onScanTypeChange() {
   }
   var showUpload = scanType === 'qr' || scanType === 'file' || scanType === 'screenshot';
   document.getElementById('upload-field').classList.toggle('hidden', !showUpload);
-  document.getElementById('capture-field').classList.toggle('hidden', scanType !== 'screenshot');
+  document.getElementById('capture-field').classList.toggle('hidden', scanType !== 'screenshot' && scanType !== 'qr');
   var fileInput = document.getElementById('file-input');
   if (scanType === 'file') {
     fileInput.accept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.jpg,.jpeg,.png,.webp,.heic';
@@ -532,8 +532,15 @@ async function scanPage() {
         }
       }
     } else if (scanType === 'qr') {
-      if (!uploadedFileData) throw new Error(t('err_no_file'));
-      screenshotDataUrl = uploadedFileData;
+      if (uploadedFileData) {
+        screenshotDataUrl = uploadedFileData;
+      } else {
+        try {
+          screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 60 });
+        } catch (shotErr) {
+          throw new Error(t('err_no_screenshot'));
+        }
+      }
     } else if (scanType === 'file') {
       if (!uploadedFileData) throw new Error(t('err_no_file'));
       fileData = uploadedFileData;
