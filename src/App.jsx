@@ -39,6 +39,7 @@ import LocalScamIntel from '@/pages/LocalScamIntel';
 import PhoneLookup from '@/pages/PhoneLookup';
 import ImageScanner from '@/pages/ImageScanner';
 import AINegotiator from '@/pages/AINegotiator';
+import AdvancedScanner from '@/pages/AdvancedScanner';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -90,6 +91,7 @@ const AuthenticatedApp = () => {
           <Route path="/phone-lookup" element={<PhoneLookup />} />
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/ai-negotiator" element={<AINegotiator />} />
+          <Route path="/advanced-scanner" element={<AdvancedScanner />} />
           <Route path="/lessons" element={<Lessons />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/projects" element={<Projects />} />

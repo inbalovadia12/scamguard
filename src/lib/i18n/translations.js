@@ -7,6 +7,7 @@ export const translations = {
     // Navigation items
     "nav.home": "Home",
     "nav.check": "Check",
+    "nav.advanced_scanner": "Advanced Scanner",
     "nav.url_scan": "URL Scan",
     "nav.ai_chat": "AI Chat",
     "nav.extension": "Extension",
@@ -136,6 +137,7 @@ export const translations = {
     "nav.more": "עוד",
     "nav.home": "בית",
     "nav.check": "בדיקה",
+    "nav.advanced_scanner": "סורק מתקדם",
     "nav.url_scan": "סריקת כתובת",
     "nav.ai_chat": "צ'אט AI",
     "nav.extension": "תוסף",
@@ -261,6 +263,7 @@ export const translations = {
     "nav.more": "Más",
     "nav.home": "Inicio",
     "nav.check": "Verificar",
+    "nav.advanced_scanner": "Escáner Avanzado",
     "nav.url_scan": "Escanear URL",
     "nav.ai_chat": "Chat IA",
     "nav.extension": "Extensión",

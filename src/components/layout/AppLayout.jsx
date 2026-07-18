@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, Globe, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle,
+  BarChart3, MessageSquare, User, ChevronRight, Globe, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -18,6 +18,7 @@ const NAV_GROUPS = [
     items: [
       { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
       { path: "/check", labelKey: "nav.check", icon: Search },
+      { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
       { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
       { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
       { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
