@@ -237,6 +237,58 @@
     to { box-shadow: 0 0 30px hsl(var(--primary) / 0.5); }
   }
 
+  /* === Luxury Gradient Utilities === */
+  .luxury-mesh {
+    background-image:
+      radial-gradient(at 0% 0%, hsl(var(--primary) / 0.06) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsl(var(--warning) / 0.04) 0px, transparent 50%);
+  }
+
+  .luxury-sidebar {
+    background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.7) 100%);
+  }
+
+  .luxury-text {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--warning)) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  .luxury-card {
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--accent) / 0.3) 100%);
+    box-shadow: 0 4px 24px -8px hsl(var(--primary) / 0.1), 0 1px 3px hsl(0 0% 0% / 0.04);
+  }
+
+  .luxury-glow {
+    box-shadow: 0 0 32px -4px hsl(var(--primary) / 0.25), 0 4px 16px -4px hsl(var(--primary) / 0.15);
+  }
+
+  .luxury-gradient-btn {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(172 66% 22%) 50%, hsl(var(--primary)) 100%);
+    background-size: 200% 200%;
+    transition: background-position 0.4s ease;
+  }
+
+  .luxury-gradient-btn:hover {
+    background-position: 100% 100%;
+  }
+
+  .luxury-active-nav {
+    background: linear-gradient(90deg, hsl(var(--primary) / 0.12) 0%, hsl(var(--primary) / 0.03) 100%);
+    border-left: 2px solid hsl(var(--primary));
+  }
+
+  .luxury-card-hover {
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+  }
+
+  .luxury-card-hover:hover {
+    box-shadow: 0 8px 32px -8px hsl(var(--primary) / 0.15);
+    transform: translateY(-2px);
+  }
+
   /* === Accessibility: Text Size (text only, not layout) === */
   .text-size-large p,
   .text-size-large li,

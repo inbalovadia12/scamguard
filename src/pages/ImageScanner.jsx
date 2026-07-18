@@ -23,6 +23,7 @@ export default function ImageScanner() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [credits, setCredits] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -132,18 +133,28 @@ export default function ImageScanner() {
       {/* Upload area */}
       <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-4 animate-slide-up" style={{ animationDelay: "50ms" }}>
         {!previewUrl ? (
-          <button
+          <div
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-border rounded-xl py-12 flex flex-col items-center gap-3 hover:border-primary/40 hover:bg-primary/5 transition-all"
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const file = e.dataTransfer.files[0];
+              if (file) handleFileSelect({ target: { files: [file] } });
+            }}
+            className={`w-full border-2 border-dashed rounded-xl py-12 flex flex-col items-center gap-3 cursor-pointer transition-all ${
+              dragOver ? "border-primary bg-primary/10 scale-[1.02]" : "border-border hover:border-primary/40 hover:bg-primary/5"
+            }`}
           >
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
               <Upload className="w-6 h-6 text-muted-foreground" />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium">Click to upload a photo</p>
+              <p className="text-sm font-medium">Click or drag a photo here</p>
               <p className="text-xs text-muted-foreground mt-0.5">PNG, JPG up to 10MB</p>
             </div>
-          </button>
+          </div>
         ) : (
           <div className="relative">
             <img src={previewUrl} alt="Preview" className="w-full max-h-80 object-contain rounded-xl" />

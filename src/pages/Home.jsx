@@ -250,7 +250,16 @@ export default function Home() {
                   <Textarea
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
-                    placeholder="Paste the suspicious message here..."
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const file = e.dataTransfer.files[0];
+                      if (file && (file.type.startsWith("text/") || file.type === "application/json")) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setMessageText(ev.target.result);
+                        reader.readAsText(file);
+                      }
+                    }}
+                    placeholder="Paste the suspicious message here, or drag & drop a text file..."
                     className="min-h-[110px] sm:min-h-[160px] text-base resize-none rounded-xl"
                     disabled={outOfCredits}
                   />
@@ -280,7 +289,11 @@ export default function Home() {
                 <Input
                   value={urlText}
                   onChange={(e) => setUrlText(e.target.value)}
-                  placeholder="https://suspicious-link.com/..."
+                  onDrop={(e) => {
+                    const text = e.dataTransfer.getData("text/plain");
+                    if (text) { e.preventDefault(); setUrlText(text.trim()); }
+                  }}
+                  placeholder="https://suspicious-link.com/... or drag a URL here"
                   className="h-11 sm:h-12 text-base rounded-xl"
                   disabled={outOfCredits}
                 />

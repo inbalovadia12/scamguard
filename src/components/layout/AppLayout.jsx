@@ -85,12 +85,12 @@ export default function AppLayout() {
   const plan = user?.subscription_plan || "starter";
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background luxury-mesh flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border/50 bg-card/50 backdrop-blur-sm fixed inset-y-0 left-0 z-30">
+      <aside className="hidden md:flex flex-col w-64 border-r border-border/50 luxury-sidebar backdrop-blur-sm fixed inset-y-0 left-0 z-30">
         <div className="px-6 py-6">
           <Link to="/dashboard" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20 transition-transform group-hover:scale-105">
+            <div className="w-9 h-9 rounded-xl luxury-gradient-btn flex items-center justify-center shadow-md shadow-primary/20 transition-transform group-hover:scale-105">
               <ShieldCheck className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="font-bold text-lg tracking-tight font-heading">Vardin</span>
@@ -110,7 +110,7 @@ export default function AppLayout() {
                     to={item.path}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                       isActive(item.path)
-                        ? "bg-primary/10 text-primary"
+                        ? "luxury-active-nav text-primary font-semibold"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                     }`}
                   >
@@ -146,7 +146,7 @@ export default function AppLayout() {
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
               }`}
             >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-xs font-bold text-primary-foreground">
+              <div className="w-7 h-7 rounded-full luxury-gradient-btn flex items-center justify-center text-xs font-bold text-primary-foreground">
                 {initials}
               </div>
               {t("nav.profile")}
@@ -167,7 +167,7 @@ export default function AppLayout() {
       <div className="md:hidden fixed top-0 inset-x-0 z-30 glass border-b border-border/50">
         <div className="px-4 h-16 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg luxury-gradient-btn flex items-center justify-center">
               <ShieldCheck className="w-4.5 h-4.5 text-primary-foreground" />
             </div>
             <span className="font-bold text-lg tracking-tight font-heading">Vardin</span>
@@ -223,7 +223,7 @@ export default function AppLayout() {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-xs font-bold text-primary-foreground">
+                  <div className="w-7 h-7 rounded-full luxury-gradient-btn flex items-center justify-center text-xs font-bold text-primary-foreground">
                     {initials}
                   </div>
                   {t("nav.profile")}
