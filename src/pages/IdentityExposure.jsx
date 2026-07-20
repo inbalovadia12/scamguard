@@ -257,6 +257,10 @@ export default function IdentityExposure() {
             <p className="text-sm font-medium">Searching data brokers...</p>
             <p className="text-xs text-muted-foreground">Scanning people search sites and public records for your identity</p>
           </div>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-warning/10 border border-warning/20">
+            <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0" />
+            <p className="text-xs text-warning font-medium">Do not switch tabs or close this page while scanning.</p>
+          </div>
         </div>
       )}
     </div>
