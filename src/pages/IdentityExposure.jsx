@@ -66,13 +66,16 @@ export default function IdentityExposure() {
   };
 
   const handleScan = async () => {
-    if (!selectedFile || !fullName.trim()) return;
+    if (!fullName.trim()) return;
     setScanning(true);
     setError(null);
     setResult(null);
     try {
-      const uploadRes = await base44.integrations.Core.UploadFile({ file: selectedFile });
-      const imageUrl = uploadRes.file_url;
+      let imageUrl = null;
+      if (selectedFile) {
+        const uploadRes = await base44.integrations.Core.UploadFile({ file: selectedFile });
+        imageUrl = uploadRes.file_url;
+      }
 
       const response = await base44.functions.invoke("scanIdentityExposure", {
         image_url: imageUrl,
@@ -95,7 +98,7 @@ export default function IdentityExposure() {
   };
 
   const isPaid = credits?.isPaid;
-  const canScan = credits && credits.remaining >= CREDIT_COST && selectedFile && fullName.trim();
+  const canScan = credits && credits.remaining >= CREDIT_COST && fullName.trim();
 
   // Premium gate
   if (credits && !isPaid) {
@@ -140,7 +143,7 @@ export default function IdentityExposure() {
           <h1 className="text-2xl font-bold tracking-tight font-heading">Identity Exposure Scanner</h1>
         </div>
         <p className="text-sm text-muted-foreground max-w-lg">
-          Upload a photo of your face and enter your name. AI searches the internet for every data broker and people search site exposing your personal information — with exact opt-out links for each.
+          Enter your name and optionally a photo of your face. AI searches the internet for every data broker and people search site exposing your personal information — with exact opt-out links for each.
         </p>
       </div>
 
@@ -178,7 +181,7 @@ export default function IdentityExposure() {
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-5 sm:p-6 space-y-5 luxury-card-hover">
             {/* Face photo upload */}
             <div>
-              <label className="text-sm font-medium mb-2 block">Your Face Photo</label>
+              <label className="text-sm font-medium mb-2 block">Your Face Photo <span className="text-muted-foreground font-normal">(optional)</span></label>
               {!previewUrl ? (
                 <div
                   onClick={() => fileInputRef.current?.click()}

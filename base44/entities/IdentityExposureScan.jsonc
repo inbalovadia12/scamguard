@@ -40,7 +40,7 @@
     },
     "data_brokers_json": {
       "type": "string",
-      "description": "JSON array of data brokers with name, info_exposed, opt_out_url"
+      "description": "JSON array of data brokers with name, info_exposed, website_url"
     },
     "personal_info_found": {
       "type": "array",
@@ -72,7 +72,6 @@
     }
   },
   "required": [
-    "full_name",
-    "face_image_url"
+    "full_name"
   ]
 }

@@ -37,14 +37,15 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { image_url, full_name, age, emails, language } = body;
 
-    if (!image_url) return Response.json({ error: 'Face photo is required' }, { status: 400 });
     if (!full_name || !full_name.trim()) return Response.json({ error: 'Full name is required' }, { status: 400 });
 
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
     const name = full_name.trim().slice(0, 100);
 
-    const prompt = `You are an expert identity exposure analyst and privacy investigator. A user has uploaded a photo of their own face and provided their name. Search the internet thoroughly and report on their identity exposure.
+    const hasImage = !!image_url;
+
+    const prompt = `You are an expert identity exposure analyst and privacy investigator. ${hasImage ? 'A user has uploaded a photo of their own face and provided their name. Use the face photo to help identify the person.' : 'A user has provided their name.'} Search the internet thoroughly and report on their identity exposure.
 
 IMPORTANT: Respond entirely in ${languageName}.
 
@@ -52,20 +53,18 @@ User's name: ${name}
 ${age ? `Age: ${age}` : ''}
 ${emails && emails.length > 0 ? `Email addresses: ${emails.join(', ')}` : ''}
 
-Using the uploaded face photo AND web search:
+Using ${hasImage ? 'the uploaded face photo AND ' : ''}web search:
 
-1. FACE ANALYSIS: Look at the uploaded face photo. Use it to help identify the person. Search for this person by name online.
-
-2. DATA BROKERS & PEOPLE SEARCH SITES: Search for "${name}" on the internet. For every major data broker and people search site where this person's information is exposed (or would be exposed based on your search), list it. For EACH site provide:
+1. DATA BROKERS & PEOPLE SEARCH SITES: Search for "${name}" on the internet. For every major data broker and people search site where this person's information is exposed (or would be exposed based on your search), list it. For EACH site provide:
    - name: The site's name (e.g., "Spokeo", "Whitepages", "BeenVerified", "Intelius", "TruthFinder", "Instant Checkmate", "Radaris", "MyLife", "US Search", "PeopleSmart", "FamilyTreeNow")
    - info_exposed: What personal information is exposed (full name, age, addresses, phone numbers, email, relatives, court records, property records, etc.)
    - website_url: The main homepage URL of the site (e.g., 'https://www.spokeo.com', 'https://www.whitepages.com'). Must be a real URL you know exists.
 
-3. PERSONAL INFO FOUND: List what types of personal information are publicly available about this person online (addresses, phone numbers, email, relatives, employment, education, court records, etc.)
+2. PERSONAL INFO FOUND: List what types of personal information are publicly available about this person online (addresses, phone numbers, email, relatives, employment, education, court records, etc.)
 
-4. PUBLIC PROFILES: List any public social media profiles, professional profiles, or public records found (LinkedIn, Facebook, Instagram, Twitter/X, public registries, etc.)
+3. PUBLIC PROFILES: List any public social media profiles, professional profiles, or public records found (LinkedIn, Facebook, Instagram, Twitter/X, public registries, etc.)
 
-5. RECOMMENDED ACTIONS: Give specific, actionable steps to reduce identity exposure (which opt-outs to prioritize, privacy settings to change, accounts to lock down, etc.)
+4. RECOMMENDED ACTIONS: Give specific, actionable steps to reduce identity exposure (which opt-outs to prioritize, privacy settings to change, accounts to lock down, etc.)
 
 CRITICAL RULES:
 - Only include REAL data broker sites with their ACTUAL main website URLs.
@@ -79,7 +78,7 @@ CRITICAL RULES:
         prompt,
         add_context_from_internet: true,
         model: 'gemini_3_1_pro',
-        file_urls: [image_url],
+        ...(image_url ? { file_urls: [image_url] } : {}),
         response_json_schema: {
         type: 'object',
         properties: {
