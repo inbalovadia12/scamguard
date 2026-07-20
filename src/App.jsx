@@ -41,6 +41,7 @@ import PhoneLookup from '@/pages/PhoneLookup';
 import ImageScanner from '@/pages/ImageScanner';
 import AINegotiator from '@/pages/AINegotiator';
 import AdvancedScanner from '@/pages/AdvancedScanner';
+import IdentityExposure from '@/pages/IdentityExposure';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -94,6 +95,7 @@ const AuthenticatedApp = () => {
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/ai-negotiator" element={<AINegotiator />} />
           <Route path="/advanced-scanner" element={<AdvancedScanner />} />
+          <Route path="/identity-exposure" element={<IdentityExposure />} />
           <Route path="/lessons" element={<Lessons />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/projects" element={<Projects />} />

@@ -7,6 +7,7 @@ export const CREDIT_COSTS = {
   AGENT_CHAT: 2,
   IMAGE_SCAN: 10,
   NEGOTIATOR: 3,
+  IDENTITY_EXPOSURE: 35,
 };
 
 export const PLAN_LIMITS = {

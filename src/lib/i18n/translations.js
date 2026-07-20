@@ -23,6 +23,7 @@ export const translations = {
     "nav.phone_lookup": "Phone Lookup",
     "nav.image_scan": "Image Scan",
     "nav.ai_negotiator": "Scam Exposer",
+    "nav.identity_exposure": "Identity Exposure",
     // Profile
     "nav.profile": "Profile",
     "nav.log_out": "Log out",
@@ -154,6 +155,7 @@ export const translations = {
     "nav.phone_lookup": "חיפוש מספר",
     "nav.image_scan": "סריקת תמונה",
     "nav.ai_negotiator": "חושף הונאות",
+    "nav.identity_exposure": "חשיפת זהות",
     "nav.profile": "פרופיל",
     "nav.log_out": "התנתק",
     "nav.upgrade_plan": "שדרג תוכנית",
@@ -281,6 +283,7 @@ export const translations = {
     "nav.phone_lookup": "Búsqueda de Teléfono",
     "nav.image_scan": "Análisis de Imagen",
     "nav.ai_negotiator": "Expositor de Estafas",
+    "nav.identity_exposure": "Exposición de Identidad",
     "nav.profile": "Perfil",
     "nav.log_out": "Cerrar sesión",
     "nav.upgrade_plan": "Mejorar Plan",
