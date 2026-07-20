@@ -142,7 +142,9 @@ export default function IdentityExposureResults({ data, previewUrl }) {
           <div className="space-y-2">
             {brokers.map((broker, i) => {
               const grad = BROKER_GRADIENTS[i % BROKER_GRADIENTS.length];
-              const url = broker.opt_out_url || "";
+              const rawUrl = broker.website_url || broker.opt_out_url || "";
+              let url = "";
+              try { if (rawUrl) url = new URL(rawUrl).origin; } catch {}
               return (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border/50 luxury-card-hover">
                   <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${grad} flex items-center justify-center flex-shrink-0`}>

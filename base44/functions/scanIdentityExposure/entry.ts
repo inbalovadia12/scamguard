@@ -59,7 +59,7 @@ Using the uploaded face photo AND web search:
 2. DATA BROKERS & PEOPLE SEARCH SITES: Search for "${name}" on the internet. For every major data broker and people search site where this person's information is exposed (or would be exposed based on your search), list it. For EACH site provide:
    - name: The site's name (e.g., "Spokeo", "Whitepages", "BeenVerified", "Intelius", "TruthFinder", "Instant Checkmate", "Radaris", "MyLife", "US Search", "PeopleSmart", "FamilyTreeNow")
    - info_exposed: What personal information is exposed (full name, age, addresses, phone numbers, email, relatives, court records, property records, etc.)
-   - opt_out_url: The EXACT direct URL to that site's opt-out / data removal page. Use web search to find the real opt-out URL for each site.
+   - website_url: The main homepage URL of the site (e.g., 'https://www.spokeo.com', 'https://www.whitepages.com'). Must be a real URL you know exists.
 
 3. PERSONAL INFO FOUND: List what types of personal information are publicly available about this person online (addresses, phone numbers, email, relatives, employment, education, court records, etc.)
 
@@ -68,9 +68,9 @@ Using the uploaded face photo AND web search:
 5. RECOMMENDED ACTIONS: Give specific, actionable steps to reduce identity exposure (which opt-outs to prioritize, privacy settings to change, accounts to lock down, etc.)
 
 CRITICAL RULES:
-- Only include REAL data broker sites with their ACTUAL opt-out URLs. Use web search to verify each URL.
-- Do not invent sites or URLs. If you are unsure of an exact opt-out URL, use the site's main domain.
-- The opt_out_url must be a real, clickable URL starting with https://
+- Only include REAL data broker sites with their ACTUAL main website URLs.
+- Do not invent sites or URLs. Each website_url must be a real, clickable URL starting with https:// that you know exists.
+- If you are not confident a site exists or you know its URL, do NOT include it.
 - Be thorough — check at least 10-15 major data broker sites.`;
 
     const result = await base44.integrations.Core.InvokeLLM({
@@ -91,7 +91,7 @@ CRITICAL RULES:
               properties: {
                 name: { type: 'string', description: 'Data broker or people search site name' },
                 info_exposed: { type: 'string', description: 'What personal info is exposed on this site' },
-                opt_out_url: { type: 'string', description: 'Exact opt-out/removal URL' },
+                website_url: { type: 'string', description: 'Main homepage URL of the site' },
               },
             },
             description: 'Data brokers and people search sites exposing the user personal info',
