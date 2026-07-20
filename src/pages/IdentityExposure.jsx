@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Lock, Crown, AlertTriangle, Upload, X, Fingerprint, ShieldAlert, Sparkles } from "lucide-react";
+import { Loader2, Lock, Crown, AlertTriangle, Upload, X, Fingerprint, ShieldAlert, Sparkles, Plus, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { getCreditStatus } from "@/lib/credits";
@@ -20,6 +20,9 @@ export default function IdentityExposure() {
   const [error, setError] = useState(null);
   const [credits, setCredits] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [age, setAge] = useState("");
+  const [emails, setEmails] = useState([]);
+  const [emailInput, setEmailInput] = useState("");
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -50,6 +53,18 @@ export default function IdentityExposure() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleAddEmail = () => {
+    const trimmed = emailInput.trim();
+    if (trimmed && !emails.includes(trimmed)) {
+      setEmails([...emails, trimmed]);
+      setEmailInput("");
+    }
+  };
+
+  const handleRemoveEmail = (email) => {
+    setEmails(emails.filter((e) => e !== email));
+  };
+
   const handleScan = async () => {
     if (!selectedFile || !fullName.trim()) return;
     setScanning(true);
@@ -62,6 +77,8 @@ export default function IdentityExposure() {
       const response = await base44.functions.invoke("scanIdentityExposure", {
         image_url: imageUrl,
         full_name: fullName.trim(),
+        age: age ? parseInt(age) : null,
+        emails,
         language: lang || "en",
       });
       if (response.data?.error) throw new Error(response.data.error);
@@ -131,7 +148,7 @@ export default function IdentityExposure() {
         <div className="space-y-6 animate-scale-in">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold font-heading">Your Exposure Report</h2>
-            <Button variant="outline" onClick={() => { setResult(null); handleClearImage(); setFullName(""); }}>
+            <Button variant="outline" onClick={() => { setResult(null); handleClearImage(); setFullName(""); setAge(""); setEmails([]); setEmailInput(""); }}>
               New Scan
             </Button>
           </div>
@@ -207,6 +224,51 @@ export default function IdentityExposure() {
               <p className="text-xs text-muted-foreground mt-1.5">
                 Use the name people would search for you by — include middle name if you use it publicly.
               </p>
+            </div>
+
+            {/* Age + Email row */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Age</label>
+                <Input
+                  type="number"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  placeholder="e.g., 34"
+                  className="h-11 sm:h-12 text-base rounded-xl"
+                  min={1}
+                  max={120}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Email Addresses</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddEmail(); } }}
+                    placeholder="Add an email"
+                    className="h-11 sm:h-12 text-base rounded-xl"
+                  />
+                  <Button type="button" variant="outline" size="icon" className="h-11 w-11 sm:h-12 sm:w-12 flex-shrink-0" onClick={handleAddEmail} disabled={!emailInput.trim()}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                {emails.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {emails.map((email) => (
+                      <span key={email} className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/15">
+                        <Mail className="w-3 h-3" />
+                        {email}
+                        <button onClick={() => handleRemoveEmail(email)} className="hover:text-destructive">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Scan button */}

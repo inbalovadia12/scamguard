@@ -10,6 +10,17 @@
       "type": "string",
       "description": "URL of the uploaded face photo"
     },
+    "age": {
+      "type": "number",
+      "description": "Age entered by the user"
+    },
+    "emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Email addresses entered by the user"
+    },
     "exposure_level": {
       "type": "string",
       "enum": [

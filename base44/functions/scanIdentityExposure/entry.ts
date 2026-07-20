@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { image_url, full_name, language } = body;
+    const { image_url, full_name, age, emails, language } = body;
 
     if (!image_url) return Response.json({ error: 'Face photo is required' }, { status: 400 });
     if (!full_name || !full_name.trim()) return Response.json({ error: 'Full name is required' }, { status: 400 });
@@ -49,6 +49,8 @@ Deno.serve(async (req) => {
 IMPORTANT: Respond entirely in ${languageName}.
 
 User's name: ${name}
+${age ? `Age: ${age}` : ''}
+${emails && emails.length > 0 ? `Email addresses: ${emails.join(', ')}` : ''}
 
 Using the uploaded face photo AND web search:
 
@@ -107,6 +109,8 @@ CRITICAL RULES:
     const saved = await base44.entities.IdentityExposureScan.create({
       full_name: name,
       face_image_url: image_url,
+      age: age || null,
+      emails: emails || [],
       exposure_level: result.exposure_level || 'low',
       exposure_score: result.exposure_score || 0,
       summary: result.summary || '',
