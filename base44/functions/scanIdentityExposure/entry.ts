@@ -73,12 +73,14 @@ CRITICAL RULES:
 - If you are not confident a site exists or you know its URL, do NOT include it.
 - Be thorough — check at least 10-15 major data broker sites.`;
 
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      add_context_from_internet: true,
-      model: 'gemini_3_1_pro',
-      file_urls: [image_url],
-      response_json_schema: {
+    let result;
+    try {
+      result = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        add_context_from_internet: true,
+        model: 'gemini_3_1_pro',
+        file_urls: [image_url],
+        response_json_schema: {
         type: 'object',
         properties: {
           exposure_level: { type: 'string', enum: ['low', 'medium', 'high'], description: 'How exposed the user identity is' },
@@ -104,8 +106,14 @@ CRITICAL RULES:
         required: ['exposure_level', 'exposure_score', 'summary', 'data_brokers'],
       },
     });
+    } catch (llmError) {
+      console.error('LLM invocation failed:', llmError?.message || llmError);
+      return Response.json({ error: 'AI analysis service is temporarily unavailable. Please try again in a moment.' }, { status: 503 });
+    }
 
-    // Save to entity
+    if (!result || typeof result !== 'object') {
+      return Response.json({ error: 'AI analysis returned an unexpected response. Please try again.' }, { status: 502 });
+    }
     const saved = await base44.entities.IdentityExposureScan.create({
       full_name: name,
       face_image_url: image_url,
