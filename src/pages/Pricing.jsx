@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Check, Shield, Loader2, Zap, Sparkles, ShieldCheck } from "lucide-react";
-import { getCreditStatus, startPaypalCheckout, PLAN_FEATURES } from "@/lib/credits";
+import { getCreditStatus, startPaypalCheckout, PLAN_FEATURES, captureCreditPurchase } from "@/lib/credits";
+import CreditPacks from "@/components/CreditPacks";
 
 const plans = [
   {
@@ -45,10 +46,15 @@ export default function Pricing() {
   const [credits, setCredits] = useState(null);
   const [subscribing, setSubscribing] = useState(null);
   const [paypalStatus, setPaypalStatus] = useState(null);
+  const [creditStatus, setCreditStatus] = useState(null);
+  const [capturing, setCapturing] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paypalParam = params.get("paypal");
+    const creditsParam = params.get("credits");
+    const creditToken = params.get("token");
+
     if (paypalParam === "approved") {
       setPaypalStatus("approved");
     } else if (paypalParam === "cancelled") {
@@ -57,6 +63,22 @@ export default function Pricing() {
     if (paypalParam) {
       window.history.replaceState({}, "", "/pricing");
     }
+
+    if (creditsParam === "approved" && creditToken) {
+      setCapturing(true);
+      captureCreditPurchase(creditToken)
+        .then(() => {
+          setCreditStatus("approved");
+          window.history.replaceState({}, "", "/pricing");
+          getCreditStatus().then(setCredits);
+        })
+        .catch(() => setCreditStatus("error"))
+        .finally(() => setCapturing(false));
+    } else if (creditsParam === "cancelled") {
+      setCreditStatus("cancelled");
+      window.history.replaceState({}, "", "/pricing");
+    }
+
     getCreditStatus().then(setCredits);
   }, []);
 
@@ -163,6 +185,37 @@ export default function Pricing() {
           );
         })}
       </div>
+
+      {capturing && (
+        <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 text-center flex items-center justify-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <p className="text-sm font-medium text-primary">Processing your credit purchase...</p>
+        </div>
+      )}
+
+      {creditStatus === "approved" && (
+        <div className="p-4 rounded-2xl bg-success/10 border border-success/20 text-center">
+          <p className="text-sm font-medium text-success">
+            ✓ Credits added to your account! Your balance has been updated.
+          </p>
+        </div>
+      )}
+      {creditStatus === "cancelled" && (
+        <div className="p-4 rounded-2xl bg-warning/10 border border-warning/20 text-center">
+          <p className="text-sm font-medium text-warning">
+            Credit purchase cancelled. No charge was made.
+          </p>
+        </div>
+      )}
+      {creditStatus === "error" && (
+        <div className="p-4 rounded-2xl bg-destructive/10 border border-destructive/20 text-center">
+          <p className="text-sm font-medium text-destructive">
+            Something went wrong processing your purchase. Please contact support.
+          </p>
+        </div>
+      )}
+
+      <CreditPacks />
 
       {credits && (
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">

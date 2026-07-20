@@ -172,3 +172,23 @@ export async function startPaypalCheckout(planName) {
   }
   window.location.href = approvalUrl;
 }
+
+export const CREDIT_PACKS = {
+  small: { credits: 50, price: "5.00", displayPrice: "$5", name: "50 Credits" },
+  medium: { credits: 150, price: "12.00", displayPrice: "$12", name: "150 Credits", popular: true },
+  large: { credits: 300, price: "20.00", displayPrice: "$20", name: "300 Credits" },
+};
+
+export async function startCreditPurchase(packKey) {
+  const response = await base44.functions.invoke("createCreditPurchase", { pack: packKey });
+  if (response.data?.error) throw new Error(response.data.error);
+  const approvalUrl = response.data?.approval_url;
+  if (!approvalUrl) throw new Error("No approval URL received from PayPal");
+  window.location.href = approvalUrl;
+}
+
+export async function captureCreditPurchase(orderId) {
+  const response = await base44.functions.invoke("captureCreditPurchase", { order_id: orderId });
+  if (response.data?.error) throw new Error(response.data.error);
+  return response.data;
+}
