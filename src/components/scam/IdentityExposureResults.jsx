@@ -114,33 +114,43 @@ export default function IdentityExposureResults({ data, previewUrl }) {
         </div>
       </div>
 
-      {/* Data Brokers */}
+      {/* Opt-out + Websites */}
       {brokers.length > 0 && (
         <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-5 sm:p-6">
-          <SectionHeader icon={Database} title="Data Brokers & People Search Sites" count={brokers.length} />
-          <div className="grid gap-3 sm:grid-cols-2">
+          <SectionHeader icon={Database} title="Websites Displaying Your Name" count={brokers.length} />
+
+          {/* Single app-level opt-out */}
+          <div className="mb-5 p-5 rounded-2xl bg-gradient-to-br from-violet-500/10 via-primary/5 to-cyan-500/10 border border-primary/15 text-center space-y-3">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-gradient-to-br from-violet-500 via-primary to-cyan-500 flex items-center justify-center shadow-lg shadow-primary/20">
+              <ShieldCheck className="w-6 h-6 text-white" />
+            </div>
+            <div className="space-y-1">
+              <h4 className="font-semibold">Remove Your Data</h4>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                Start the opt-out process to remove your personal information from data broker and people search sites.
+              </p>
+            </div>
+            <a href="https://www.consumer.ftc.gov/articles/how-remove-your-personal-information-search-sites" target="_blank" rel="noopener noreferrer">
+              <Button className="bg-gradient-to-r from-violet-500 via-primary to-cyan-500 border-0 gap-2">
+                <ExternalLink className="w-4 h-4" />
+                Start Data Removal
+              </Button>
+            </a>
+          </div>
+
+          {/* Website list */}
+          <div className="space-y-2">
             {brokers.map((broker, i) => {
               const grad = BROKER_GRADIENTS[i % BROKER_GRADIENTS.length];
               return (
-                <div key={i} className="rounded-2xl border border-border/50 overflow-hidden luxury-card-hover">
-                  <div className={`h-1 bg-gradient-to-r ${grad}`} />
-                  <div className="p-4 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${grad} flex items-center justify-center flex-shrink-0`}>
-                        <UserSearch className="w-3.5 h-3.5 text-white" />
-                      </div>
-                      <h4 className="font-semibold text-sm truncate">{broker.name}</h4>
-                    </div>
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border/50 luxury-card-hover">
+                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${grad} flex items-center justify-center flex-shrink-0`}>
+                    <UserSearch className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm truncate">{broker.name}</h4>
                     {broker.info_exposed && (
-                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{broker.info_exposed}</p>
-                    )}
-                    {broker.opt_out_url && (
-                      <a href={broker.opt_out_url} target="_blank" rel="noopener noreferrer" className="block">
-                        <Button size="sm" className={`w-full bg-gradient-to-r ${grad} text-white border-0 gap-1.5`}>
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          Opt Out
-                        </Button>
-                      </a>
+                      <p className="text-xs text-muted-foreground truncate">{broker.info_exposed}</p>
                     )}
                   </div>
                 </div>
