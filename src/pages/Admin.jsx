@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
-const ADMIN_CODE = "12252012Io";
+const ADMIN_ROLE = "admin";
 
 function StatCard({ icon: Icon, label, value, color }) {
   return (
@@ -312,56 +312,46 @@ function OverviewTab() {
 
 export default function Admin() {
   const [unlocked, setUnlocked] = useState(false);
-  const [code, setCode] = useState("");
   const [error, setError] = useState(false);
   const [checking, setChecking] = useState(false);
 
-  const handleUnlock = async (e) => {
-    e?.preventDefault();
-    setChecking(true);
-    setError(false);
-    try {
-      const user = await base44.auth.me();
-      if (!user) throw new Error("Not authenticated");
-      if (code === ADMIN_CODE) {
-        setUnlocked(true);
-      } else {
+  useEffect(() => {
+    const checkAdmin = async () => {
+      setChecking(true);
+      try {
+        const user = await base44.auth.me();
+        if (user && user.role === ADMIN_ROLE) {
+          setUnlocked(true);
+        } else {
+          setError(true);
+        }
+      } catch {
         setError(true);
+      } finally {
+        setChecking(false);
       }
-    } catch {
-      setError(true);
-    } finally {
-      setChecking(false);
-    }
-  };
+    };
+    checkAdmin();
+  }, []);
+
+  if (checking) {
+    return (
+      <div className="flex justify-center py-24">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!unlocked) {
     return (
       <div className="max-w-md mx-auto py-16">
-        <div className="text-center space-y-4 mb-8">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-primary" />
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-destructive/10 flex items-center justify-center">
+            <Lock className="w-8 h-8 text-destructive" />
           </div>
-          <h1 className="text-2xl font-bold font-heading">Admin Panel</h1>
-          <p className="text-muted-foreground">Enter the admin access code to continue.</p>
+          <h1 className="text-2xl font-bold font-heading">Access Denied</h1>
+          <p className="text-muted-foreground">You need admin privileges to access this panel.</p>
         </div>
-        <form onSubmit={handleUnlock} className="bg-card rounded-3xl border border-border/50 shadow-sm p-6 space-y-4">
-          <div className="space-y-2">
-            <Input
-              type="password"
-              value={code}
-              onChange={(e) => { setCode(e.target.value); setError(false); }}
-              placeholder="Admin access code"
-              className="h-12 text-center text-lg tracking-wider"
-              autoFocus
-            />
-            {error && <p className="text-sm text-destructive text-center">Invalid access code.</p>}
-          </div>
-          <Button type="submit" disabled={!code || checking} className="w-full h-11 bg-gradient-to-r from-primary to-primary/80">
-            {checking ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Lock className="w-4 h-4 mr-2" />}
-            Unlock Panel
-          </Button>
-        </form>
       </div>
     );
   }

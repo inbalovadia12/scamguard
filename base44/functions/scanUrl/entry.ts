@@ -1,5 +1,56 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+// === SSRF protection: block private/internal IP ranges ===
+function isPrivateIp(ip: string): boolean {
+  if (ip === '::1' || ip === '::' || ip === '0.0.0.0') return true;
+  if (ip.startsWith('127.')) return true;
+  if (ip.startsWith('10.')) return true;
+  if (ip.startsWith('192.168.')) return true;
+  if (ip.startsWith('169.254.')) return true;
+  if (ip.startsWith('0.')) return true;
+  if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(ip)) return true;
+  if (ip.startsWith('fc') || ip.startsWith('fd')) return true;
+  if (ip.startsWith('fe80')) return true;
+  return false;
+}
+
+async function validateUrlSafe(urlStr: string): Promise<{ ok: boolean; error?: string }> {
+  let parsed: URL;
+  try {
+    parsed = new URL(urlStr);
+  } catch {
+    return { ok: false, error: 'Invalid URL' };
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { ok: false, error: 'Only http/https protocols allowed' };
+  }
+
+  const hostname = parsed.hostname;
+
+  // Block IP literals directly
+  if (isPrivateIp(hostname)) {
+    return { ok: false, error: 'Private/internal IP address blocked' };
+  }
+
+  // Resolve hostname and check resolved IPs
+  try {
+    const addrs = await Deno.resolveDns(hostname, 'A');
+    if (addrs.length === 0) {
+      const addrs6 = await Deno.resolveDns(hostname, 'AAAA');
+      for (const ip of addrs6) {
+        if (isPrivateIp(ip)) return { ok: false, error: 'Private/internal IP address blocked' };
+      }
+    }
+    for (const ip of addrs) {
+      if (isPrivateIp(ip)) return { ok: false, error: 'Private/internal IP address blocked' };
+    }
+  } catch {
+    // DNS resolution failed — let the fetch fail naturally
+  }
+
+  return { ok: true };
+}
+
 // === VirusTotal URL reputation check ===
 async function getVirusTotalReport(url: string): Promise<any | null> {
   const apiKey = Deno.env.get("VIRUSTOTAL_API_KEY");
@@ -55,26 +106,46 @@ Deno.serve(async (req) => {
     let redirectCount = 0;
 
     try {
-      const response = await fetch(targetUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-        },
-        redirect: 'follow',
-        signal: AbortSignal.timeout(15000),
-      });
+      let currentUrl = targetUrl;
+      let response: Response | null = null;
+      const maxRedirects = 5;
 
-      httpStatus = response.status;
-      try {
-        finalUrl = response.url || targetUrl;
-        if (finalUrl !== targetUrl) redirectCount = 1;
-      } catch {}
+      for (let i = 0; i <= maxRedirects; i++) {
+        const validation = await validateUrlSafe(currentUrl);
+        if (!validation.ok) {
+          fetchError = validation.error || 'URL validation failed';
+          break;
+        }
 
-      const html = await response.text();
-      websiteContent = extractContent(html, marketplace);
-      if (websiteContent.length > 8000) {
-        websiteContent = websiteContent.substring(0, 8000) + '...[truncated]';
+        response = await fetch(currentUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+          },
+          redirect: 'manual',
+          signal: AbortSignal.timeout(15000),
+        });
+
+        // Handle redirects manually to validate each jump
+        if (response.status >= 300 && response.status < 400) {
+          const location = response.headers.get('location');
+          if (!location) break;
+          currentUrl = new URL(location, currentUrl).href;
+          redirectCount++;
+          continue;
+        }
+        break;
+      }
+
+      if (response && !fetchError) {
+        httpStatus = response.status;
+        finalUrl = currentUrl;
+        const html = await response.text();
+        websiteContent = extractContent(html, marketplace);
+        if (websiteContent.length > 8000) {
+          websiteContent = websiteContent.substring(0, 8000) + '...[truncated]';
+        }
       }
     } catch (e) {
       fetchError = e.message;

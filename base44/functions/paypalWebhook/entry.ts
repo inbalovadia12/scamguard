@@ -151,6 +151,27 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Method not allowed" }, { status: 405 });
     }
 
+    // Fail closed if PayPal credentials are not configured
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET || !PAYPAL_WEBHOOK_ID) {
+      console.error("PayPal credentials not configured — webhook rejected");
+      return new Response(null, { status: 200 });
+    }
+
+    // Require all PayPal signature headers before attempting verification
+    const requiredHeaders = [
+      "paypal-auth-algo",
+      "paypal-cert-url",
+      "paypal-transmission-id",
+      "paypal-transmission-sig",
+      "paypal-transmission-time",
+    ];
+    for (const header of requiredHeaders) {
+      if (!req.headers.get(header)) {
+        console.error(`Missing required PayPal header: ${header}`);
+        return new Response(null, { status: 200 });
+      }
+    }
+
     const body = await req.json();
 
     const isVerified = await verifyWebhookSignature(req.headers, body);

@@ -62,7 +62,10 @@ export default function Community() {
     toggleLiked(id);
 
     try {
-      await base44.entities.CommunityStory.update(id, { likes_count: Math.max(0, (story.likes_count || 0) + (isLiked ? -1 : 1)) });
+      await base44.functions.invoke("toggleStoryLike", {
+        story_id: id,
+        action: isLiked ? "unlike" : "like",
+      });
     } catch (e) {
       // Revert on error
       setStories((prev) => prev.map((s) => s.id === id ? { ...s, likes_count: story.likes_count } : s));
