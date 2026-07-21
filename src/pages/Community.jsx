@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Users, PenSquare, Filter, Globe, TrendingUp } from "lucide-react";
 import StoryCard from "@/components/community/StoryCard";
 import ShareStoryDialog from "@/components/community/ShareStoryDialog";
+import Leaderboard from "@/components/community/Leaderboard";
 
 const FILTER_OPTIONS = [
   { value: "", label: "All Stories" },
@@ -98,6 +99,9 @@ export default function Community() {
           </p>
         </div>
       </div>
+
+      {/* Leaderboard */}
+      <Leaderboard />
 
       {/* Share button + filter */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between animate-slide-up anim-delay-1">

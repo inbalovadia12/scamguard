@@ -12,6 +12,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
 import NudigoPopup from "@/components/NudigoPopup";
 import WrappedPopup from "@/components/WrappedPopup";
+import XPBar from "@/components/gamification/XPBar";
 
 const NAV_SECTIONS = [
   {
@@ -128,6 +129,7 @@ export default function AppLayout() {
         </nav>
 
         <div className="px-4 pb-4 pt-2 space-y-3">
+          <XPBar />
           {plan !== "premium" && plan !== "plus" && (
             <Link
               to="/pricing"

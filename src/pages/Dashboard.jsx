@@ -9,6 +9,7 @@ import {
 import { getCreditStatus, PLAN_NAMES } from "@/lib/credits";
 import { useI18n } from "@/lib/i18n";
 import { isWrappedSeason } from "@/lib/wrappedSeason";
+import StreakBadges from "@/components/gamification/StreakBadges";
 
 export default function Dashboard() {
   const { t } = useI18n();
@@ -96,6 +97,9 @@ export default function Dashboard() {
         <StatCard icon={Bell} label={t("dash.new_alerts")} value={alertCount} animate="anim-delay-2" />
         <StatCard icon={BarChart3} label={t("dash.total_checks")} value={recent.length} animate="anim-delay-2" />
       </div>
+
+      {/* Streaks & Badges */}
+      <StreakBadges />
 
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-slide-up anim-delay-2">
