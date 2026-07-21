@@ -25,16 +25,21 @@ const NAV_SECTIONS = [
   {
     labelKey: "nav.tools",
     items: [
-      { path: "/lessons", labelKey: "nav.lessons", icon: GraduationCap },
       { path: "/check", labelKey: "nav.check", icon: Search },
       { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
       { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
       { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
       { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
       { path: "/identity-exposure", labelKey: "nav.identity_exposure", icon: Fingerprint },
+      { path: "/extension", labelKey: "nav.extension", icon: Puzzle },
+    ],
+  },
+  {
+    labelKey: "nav.learn",
+    items: [
+      { path: "/lessons", labelKey: "nav.lessons", icon: GraduationCap },
       { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
       { path: "/ai-negotiator", labelKey: "nav.ai_negotiator", icon: MessageCircle },
-      { path: "/extension", labelKey: "nav.extension", icon: Puzzle },
     ],
   },
   {
@@ -53,11 +58,6 @@ const NAV_SECTIONS = [
       { path: "/wrapped", labelKey: "nav.wrapped", icon: Sparkles },
       { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
       { path: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
-    ],
-  },
-  {
-    labelKey: "nav.more",
-    items: [
       { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },
     ],
   },

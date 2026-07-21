@@ -3,6 +3,7 @@ export const translations = {
     // Navigation groups
     "nav.main": "Main",
     "nav.tools": "Tools",
+    "nav.learn": "Learn",
     "nav.protection": "Protection",
     "nav.social": "Social",
     "nav.more": "More",
@@ -141,6 +142,7 @@ export const translations = {
   he: {
     "nav.main": "ראשי",
     "nav.tools": "כלים",
+    "nav.learn": "למידה",
     "nav.protection": "הגנה",
     "nav.social": "חברתי",
     "nav.more": "עוד",
@@ -274,6 +276,7 @@ export const translations = {
   es: {
     "nav.main": "Principal",
     "nav.tools": "Herramientas",
+    "nav.learn": "Aprender",
     "nav.protection": "Protección",
     "nav.social": "Social",
     "nav.more": "Más",
