@@ -32,6 +32,8 @@ import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
 import Lessons from '@/pages/Lessons';
 import Privacy from '@/pages/Privacy';
+import About from '@/pages/About';
+import Contact from '@/pages/Contact';
 import Projects from '@/pages/Projects';
 import Extension from '@/pages/Extension';
 import ScamFeed from '@/pages/ScamFeed';
@@ -72,6 +74,8 @@ const AuthenticatedApp = () => {
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Landing />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/contact" element={<Contact />} />
 
       {/* Auth routes */}
       <Route path="/login" element={<Login />} />

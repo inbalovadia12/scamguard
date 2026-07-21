@@ -288,7 +288,8 @@ export default function AppLayout() {
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
             <p>{t("footer.copyright")}</p>
             <div className="flex items-center gap-4">
-              <Link to="/" className="hover:text-foreground transition-colors">{t("footer.about")}</Link>
+              <Link to="/about" className="hover:text-foreground transition-colors">{t("footer.about")}</Link>
+              <Link to="/contact" className="hover:text-foreground transition-colors">{t("footer.contact")}</Link>
               <Link to="/privacy" className="hover:text-foreground transition-colors">{t("footer.privacy")}</Link>
               <Link to="/pricing" className="hover:text-foreground transition-colors">{t("footer.pricing")}</Link>
               <Link to="/admin" className="hover:text-muted-foreground text-xs opacity-40 hover:opacity-100 transition-opacity">{t("footer.admin")}</Link>

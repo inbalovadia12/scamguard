@@ -38,6 +38,7 @@ export const translations = {
     // Footer
     "footer.copyright": "© 2026 Vardin. Stay safe out there.",
     "footer.about": "About",
+    "footer.contact": "Contact",
     "footer.privacy": "Privacy",
     "footer.pricing": "Pricing",
     "footer.admin": "Admin",
@@ -172,6 +173,7 @@ export const translations = {
     "nav.upgrade_desc": "פתח יותר קרדיטים ותכונות הגנת משפחה.",
     "footer.copyright": "© 2026 Vardin. שמרו על עצמכם.",
     "footer.about": "אודות",
+    "footer.contact": "צור קשר",
     "footer.privacy": "פרטיות",
     "footer.pricing": "מחירים",
     "footer.admin": "מנהל",
@@ -304,6 +306,7 @@ export const translations = {
     "nav.upgrade_desc": "Desbloquea más créditos y funciones de protección familiar.",
     "footer.copyright": "© 2026 Vardin. Mantente seguro.",
     "footer.about": "Acerca de",
+    "footer.contact": "Contacto",
     "footer.privacy": "Privacidad",
     "footer.pricing": "Precios",
     "footer.admin": "Admin",
