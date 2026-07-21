@@ -24,11 +24,36 @@ export default function IdentityExposure() {
   const [age, setAge] = useState("");
   const [emails, setEmails] = useState([]);
   const [emailInput, setEmailInput] = useState("");
+  const [savedScans, setSavedScans] = useState([]);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     getCreditStatus().then(setCredits);
   }, []);
+
+  useEffect(() => {
+    base44.entities.IdentityExposureScan.list("-created_date", 10)
+      .then((scans) => setSavedScans(scans || []))
+      .catch(() => {});
+  }, []);
+
+  const handleSelectSavedScan = (scan) => {
+    let parsedBrokers = [];
+    try { parsedBrokers = scan.data_brokers_json ? JSON.parse(scan.data_brokers_json) : []; } catch {}
+    setResult({
+      result: {
+        exposure_level: scan.exposure_level,
+        exposure_score: scan.exposure_score,
+        summary: scan.summary,
+        data_brokers: parsedBrokers,
+        personal_info_found: scan.personal_info_found || [],
+        public_profiles: scan.public_profiles || [],
+        recommended_actions: scan.recommended_actions || [],
+        sources: scan.sources || [],
+      },
+    });
+    setFullName(scan.full_name || "");
+  };
 
   const handleFileSelect = (e) => {
     const file = e.target?.files?.[0] || (e.dataTransfer && e.dataTransfer.files?.[0]);
@@ -314,6 +339,40 @@ export default function IdentityExposure() {
 
       {/* Loading state */}
       {scanning && <LongLoadingScreen type="identity" />}
+
+      {/* Saved scans history */}
+      {!result && !scanning && savedScans.length > 0 && (
+        <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-5 animate-slide-up">
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <Fingerprint className="w-4 h-4 text-primary" />
+            Past Scans
+          </h3>
+          <div className="space-y-2">
+            {savedScans.map((scan) => (
+              <button
+                key={scan.id}
+                onClick={() => handleSelectSavedScan(scan)}
+                className="w-full flex items-center justify-between gap-3 p-3 rounded-xl border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all text-left"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{scan.full_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {scan.created_date ? new Date(scan.created_date).toLocaleDateString() : ""}
+                    {scan.data_brokers_json ? ` · ${JSON.parse(scan.data_brokers_json).length} sites found` : ""}
+                  </p>
+                </div>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  scan.exposure_level === "high" ? "bg-rose-500/10 text-rose-500" :
+                  scan.exposure_level === "medium" ? "bg-amber-500/10 text-amber-500" :
+                  "bg-emerald-500/10 text-emerald-500"
+                }`}>
+                  {scan.exposure_score || 0}/100
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

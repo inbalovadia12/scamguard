@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
 
     const hasImage = !!image_url;
 
-    const prompt = `You are an expert identity exposure analyst and privacy investigator. ${hasImage ? 'A user has uploaded a photo of their own face and provided their name. Use the face photo to help identify the person.' : 'A user has provided their name.'} Search the internet thoroughly and report on their identity exposure.
+    const prompt = `You are an expert identity exposure analyst. ${hasImage ? 'A user has uploaded a photo of their own face and provided their name.' : 'A user has provided their name.'} Your job is to find WEBSITES AND DATABASES THAT ALREADY STORE AND PUBLISH this person's personal information to the public — so they can request removal.
 
 IMPORTANT: Respond entirely in ${languageName}.
 
@@ -53,24 +53,44 @@ User's name: ${name}
 ${age ? `Age: ${age}` : ''}
 ${emails && emails.length > 0 ? `Email addresses: ${emails.join(', ')}` : ''}
 
-Using ${hasImage ? 'the uploaded face photo AND ' : ''}web search:
+=== WHAT TO RETURN (data_brokers array) ===
+List WEBSITES THAT ALREADY HAVE THIS PERSON'S DATA STORED AND PUBLICLY SEARCHABLE. These are:
+- Data brokers: companies that collect, package, and SELL consumer data (e.g., Spokeo, Whitepages, BeenVerified, Intelius, TruthFinder, Instant Checkmate, Radaris, MyLife, US Search, PeopleSmart, FamilyTreeNow, PeopleFinder, BeenVerified, CheckPeople, SpyDialer, That's Them, FastPeopleSearch, TruePeopleSearch, Addresses.com, 411.com, YellowPages, ZoomInfo, Apollo.io)
+- People search engines: sites where anyone can type a name and see personal details
+- Public records aggregators: sites that publish court records, property records, marriage/divorce records, criminal records
 
-1. DATA BROKERS & PEOPLE SEARCH SITES: Search for "${name}" on the internet. For every major data broker and people search site where this person's information is exposed (or would be exposed based on your search), list it. For EACH site provide:
-   - name: The site's name (e.g., "Spokeo", "Whitepages", "BeenVerified", "Intelius", "TruthFinder", "Instant Checkmate", "Radaris", "MyLife", "US Search", "PeopleSmart", "FamilyTreeNow")
-   - info_exposed: What personal information is exposed (full name, age, addresses, phone numbers, email, relatives, court records, property records, etc.)
-   - website_url: The main homepage URL of the site (e.g., 'https://www.spokeo.com', 'https://www.whitepages.com'). Must be a real URL you know exists.
+For EACH site provide:
+   - name: The site's brand name (e.g., "Spokeo")
+   - info_exposed: What personal information this site typically stores and displays about people (full name, age, current/past addresses, phone numbers, email, relatives, court records, property records, etc.)
+   - website_url: The REAL main homepage URL (e.g., 'https://www.spokeo.com'). Must be a URL you know exists.
 
-2. PERSONAL INFO FOUND: List what types of personal information are publicly available about this person online (addresses, phone numbers, email, relatives, employment, education, court records, etc.)
+=== DO NOT INCLUDE (these are WRONG answers) ===
+- Identity theft protection or monitoring services (LifeLock, IdentityForce, etc.)
+- Privacy tools or VPNs
+- Apps that help YOU search for people (that is the opposite of what we want)
+- Generic search engines (Google, Bing)
+- Social media apps (Facebook, LinkedIn, Instagram) — those go in public_profiles instead
+- Credit bureaus (Experian, Equifax) unless their public-facing people search product exposes data
+- Any site whose PURPOSE is to protect identity rather than publish it
 
-3. PUBLIC PROFILES: List any public social media profiles, professional profiles, or public records found (LinkedIn, Facebook, Instagram, Twitter/X, public registries, etc.)
+The data_brokers array must ONLY contain sites whose business model is collecting and publishing/selling ordinary people's personal data so that anyone can look it up.
 
-4. RECOMMENDED ACTIONS: Give specific, actionable steps to reduce identity exposure (which opt-outs to prioritize, privacy settings to change, accounts to lock down, etc.)
+${emails && emails.length > 0 ? `Also search for the email address(es) on data breach databases and people search sites.` : ''}
+
+=== OTHER SECTIONS ===
+PERSONAL INFO FOUND: List what types of personal information are publicly available about this person online (addresses, phone numbers, email, relatives, employment, education, court records, etc.)
+
+PUBLIC PROFILES: List any public social media profiles or professional profiles found (LinkedIn, Facebook, Instagram, Twitter/X, etc.)
+
+RECOMMENDED ACTIONS: Give specific, actionable steps to reduce identity exposure (which opt-outs to prioritize, privacy settings to change, accounts to lock down, etc.)
+
+SOURCES: List the actual URLs you checked or found during your search.
 
 CRITICAL RULES:
-- Only include REAL data broker sites with their ACTUAL main website URLs.
-- Do not invent sites or URLs. Each website_url must be a real, clickable URL starting with https:// that you know exists.
-- If you are not confident a site exists or you know its URL, do NOT include it.
-- Be thorough — check at least 10-15 major data broker sites.`;
+- Every entry in data_brokers must be a REAL site that STORES and PUBLISHES people's personal data.
+- Each website_url must be a real, clickable URL starting with https:// that you know exists.
+- Do not invent sites or URLs.
+- Aim for 10-15 real data broker sites.`;
 
     let result;
     try {
