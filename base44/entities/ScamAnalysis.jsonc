@@ -90,6 +90,11 @@
     "guardian_notes": {
       "type": "string",
       "description": "Notes from the guardian"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
     }
   },
   "required": [
