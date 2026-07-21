@@ -1,0 +1,79 @@
+{
+  "name": "CommunityStory",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Headline for the story"
+    },
+    "story": {
+      "type": "string",
+      "description": "The user's experience with the scam"
+    },
+    "scam_type": {
+      "type": "string",
+      "enum": [
+        "phishing_email",
+        "smishing",
+        "romance",
+        "crypto_investment",
+        "marketplace",
+        "tech_support",
+        "fake_job",
+        "delivery",
+        "lottery_prize",
+        "government_impersonation",
+        "bank_impersonation",
+        "other"
+      ],
+      "description": "Type of scam experienced"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "email",
+        "sms",
+        "phone_call",
+        "social_media",
+        "marketplace",
+        "website",
+        "in_person",
+        "other"
+      ],
+      "description": "How the scam was delivered"
+    },
+    "country": {
+      "type": "string",
+      "description": "Country where the scam was encountered"
+    },
+    "anonymous": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the story is posted anonymously"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Display name of the author"
+    },
+    "likes_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of likes"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "flagged",
+        "removed"
+      ],
+      "default": "active",
+      "description": "Status of the story"
+    }
+  },
+  "required": [
+    "title",
+    "story",
+    "scam_type"
+  ]
+}

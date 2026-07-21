@@ -42,6 +42,8 @@ import ImageScanner from '@/pages/ImageScanner';
 import AINegotiator from '@/pages/AINegotiator';
 import AdvancedScanner from '@/pages/AdvancedScanner';
 import IdentityExposure from '@/pages/IdentityExposure';
+import Wrapped from '@/pages/Wrapped';
+import Community from '@/pages/Community';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -104,6 +106,8 @@ const AuthenticatedApp = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/wrapped" element={<Wrapped />} />
+          <Route path="/community" element={<Community />} />
         </Route>
         <Route path="/onboarding" element={<Onboarding />} />
       </Route>
