@@ -144,7 +144,7 @@ export default function IdentityExposureResults({ data, previewUrl }) {
               const grad = BROKER_GRADIENTS[i % BROKER_GRADIENTS.length];
               const rawUrl = broker.website_url || broker.opt_out_url || "";
               let url = "";
-              try { if (rawUrl) url = new URL(rawUrl).origin; } catch {}
+              try { if (rawUrl) url = new URL(rawUrl).href; } catch {}
               return (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border/50 luxury-card-hover">
                   <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${grad} flex items-center justify-center flex-shrink-0`}>
@@ -160,7 +160,7 @@ export default function IdentityExposureResults({ data, previewUrl }) {
                     <a href={url} target="_blank" rel="noopener noreferrer" className="flex-shrink-0">
                       <Button size="sm" variant="outline" className="gap-1.5">
                         <ExternalLink className="w-3.5 h-3.5" />
-                        Visit Site
+                        View Listing
                       </Button>
                     </a>
                   )}

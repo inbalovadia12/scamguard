@@ -62,7 +62,16 @@ List WEBSITES THAT ALREADY HAVE THIS PERSON'S DATA STORED AND PUBLICLY SEARCHABL
 For EACH site provide:
    - name: The site's brand name (e.g., "Spokeo")
    - info_exposed: What personal information this site typically stores and displays about people (full name, age, current/past addresses, phone numbers, email, relatives, court records, property records, etc.)
-   - website_url: The REAL main homepage URL (e.g., 'https://www.spokeo.com'). Must be a URL you know exists.
+   - website_url: The DIRECT LINK to the specific search results page or profile page for THIS PERSON on that site — NOT the homepage. For example:
+     * Spokeo: https://www.spokeo.com/John-Smith (name in URL path)
+     * Whitepages: https://www.whitepages.com/name/John-Smith
+     * BeenVerified: https://www.beenverified.com/people/John-Smith
+     * Intelius: https://www.intelius.com/people-search/John-Smith/
+     * Radaris: https://radaris.com/p/John/Smith/
+     * FastPeopleSearch: https://www.fastpeoplesearch.com/John-Smith
+     * TruePeopleSearch: https://www.truepeoplesearch.com/results?name=John%20Smith
+     * MyLife: https://www.mylife.com/John-Smith/
+     Use the site's actual URL pattern for name searches. If you are not confident of the exact URL pattern, provide the site's people-search page URL (e.g., https://www.spokeo.com/people-search) rather than the homepage.
 
 === DO NOT INCLUDE (these are WRONG answers) ===
 - Identity theft protection or monitoring services (LifeLock, IdentityForce, etc.)
@@ -88,7 +97,8 @@ SOURCES: List the actual URLs you checked or found during your search.
 
 CRITICAL RULES:
 - Every entry in data_brokers must be a REAL site that STORES and PUBLISHES people's personal data.
-- Each website_url must be a real, clickable URL starting with https:// that you know exists.
+- Each website_url must be a DIRECT link to this person's search/profile page on that site — never the bare homepage.
+- Use the real URL pattern each site uses for name searches. If unsure of the exact pattern, use the site's people-search page URL instead of the homepage.
 - Do not invent sites or URLs.
 - Aim for 10-15 real data broker sites.`;
 
@@ -112,7 +122,7 @@ CRITICAL RULES:
               properties: {
                 name: { type: 'string', description: 'Data broker or people search site name' },
                 info_exposed: { type: 'string', description: 'What personal info is exposed on this site' },
-                website_url: { type: 'string', description: 'Main homepage URL of the site' },
+                website_url: { type: 'string', description: 'Direct link to the search results or profile page for this person on this site, NOT the homepage' },
               },
             },
             description: 'Data brokers and people search sites exposing the user personal info',
