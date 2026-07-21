@@ -7,13 +7,14 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import {
-  ShieldCheck, Crown, Mail, Loader2, Bell, Lock, LogOut, ChevronRight, Accessibility, Type, Eye, Zap, Users,
+  ShieldCheck, Crown, Mail, Loader2, Bell, Lock, LogOut, ChevronRight, Accessibility, Type, Eye, Zap, Users, AlertTriangle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getCreditStatus, PLAN_NAMES, PLAN_LIMITS } from "@/lib/credits";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import CommunityDataToggle from "@/components/community/CommunityDataToggle";
+import CreditPacks from "@/components/CreditPacks";
 
 export default function Profile() {
   const { user, checkUserAuth } = useAuth();
@@ -142,19 +143,41 @@ export default function Profile() {
         </div>
 
         {credits && (
-          <div className="pt-4 border-t border-border/50">
-            <div className="flex items-center justify-between mb-2">
+          <div className="pt-4 border-t border-border/50 space-y-3">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-sm text-muted-foreground">AI Credits this month</span>
-              <span className="text-sm font-medium">{credits.creditsUsed} / {credits.limit}</span>
+              <span className="text-sm font-medium">{credits.creditsUsed} / {credits.limit} used</span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-primary to-primary/80 transition-all"
+                className={`h-full rounded-full transition-all ${
+                  credits.lowCredit
+                    ? "bg-gradient-to-r from-warning to-destructive"
+                    : "bg-gradient-to-r from-primary to-primary/80"
+                }`}
                 style={{ width: `${Math.min(100, (credits.creditsUsed / credits.limit) * 100)}%` }}
               />
             </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-primary">{credits.remaining} remaining</span>
+              {credits.lowCredit && (
+                <span className="flex items-center gap-1 text-xs font-medium text-warning">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Running low — consider a top-up
+                </span>
+              )}
+            </div>
           </div>
         )}
+      </Card>
+
+      {/* Buy Credits */}
+      <Card className="rounded-2xl border-border/50 p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <Zap className="w-4 h-4 text-primary" />
+          <h2 className="font-semibold">Buy More Credits</h2>
+        </div>
+        <CreditPacks />
       </Card>
 
       {/* Account Info */}
