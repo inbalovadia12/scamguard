@@ -1,5 +1,5 @@
 import React from "react";
-import { ShieldCheck, Lock, Eye, Database, Mail, Users, Trash2 } from "lucide-react";
+import { ShieldCheck, Lock, Eye, Database, Mail, Users, Trash2, AlertTriangle } from "lucide-react";
 
 export default function Privacy() {
   const sections = [
@@ -27,6 +27,11 @@ export default function Privacy() {
       icon: Mail,
       title: "Email Communications",
       body: "We may send you emails for:\n\n• Guardian alerts when a protected senior submits a high-risk message (if enabled).\n• Account verification and password reset.\n• Subscription confirmations and payment receipts.\n• Occasional product updates.\n\nYou can control email notifications in your Profile settings under Notifications.",
+    },
+    {
+      icon: AlertTriangle,
+      title: "AI Accuracy Disclaimer",
+      body: "Vardin's scam detection is powered by artificial intelligence. While we strive for high accuracy, AI is not infallible and may produce incorrect assessments. A result indicating \"low risk\" does not guarantee that a message, URL, or image is safe, and a \"high risk\" result does not definitively prove malicious intent. Vardin's analyses are for informational and educational purposes only and should not be relied upon as the sole basis for any decision. Always use your own judgment, verify suspicious content through multiple sources, and contact official authorities or the relevant organization directly if you are unsure. Vardin is not liable for any losses or damages resulting from reliance on AI-generated assessments.",
     },
     {
       icon: Trash2,
