@@ -182,6 +182,8 @@ export default function AINegotiator() {
         )}
       </div>
 
+      <AIDisclaimer />
+
       {/* Loading state */}
       {loading && <LongLoadingScreen type="negotiator" />}
 
