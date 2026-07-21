@@ -12,13 +12,34 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    const increment = action === 'like' ? 1 : -1;
+    // Check if user already liked this story (prevents duplicate likes)
+    const existing = await base44.asServiceRole.entities.StoryLike.filter({
+      story_id,
+      created_by_id: user.id,
+    });
 
-    // Atomic increment — only likes_count can be modified, and only by ±1
-    await base44.asServiceRole.entities.CommunityStory.updateMany(
-      { id: story_id, status: 'active' },
-      { $inc: { likes_count: increment } }
-    );
+    if (action === 'like') {
+      // Only increment if not already liked
+      if (existing.length === 0) {
+        await base44.asServiceRole.entities.StoryLike.create({
+          story_id,
+          created_by_id: user.id,
+        });
+        await base44.asServiceRole.entities.CommunityStory.updateMany(
+          { id: story_id, status: 'active' },
+          { $inc: { likes_count: 1 } }
+        );
+      }
+    } else {
+      // Only decrement if already liked
+      if (existing.length > 0) {
+        await base44.asServiceRole.entities.StoryLike.delete(existing[0].id);
+        await base44.asServiceRole.entities.CommunityStory.updateMany(
+          { id: story_id, status: 'active' },
+          { $inc: { likes_count: -1 } }
+        );
+      }
+    }
 
     return Response.json({ success: true });
   } catch (error) {
