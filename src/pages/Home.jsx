@@ -18,6 +18,7 @@ import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS, getCachedAnalysis,
 import { redactMessage } from "@/lib/redact";
 import { getSeniorLink } from "@/lib/guardianAlerts";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 const messageTypes = [
   { value: "sms", label: "SMS / Text", icon: MessageSquare },
@@ -333,6 +334,8 @@ export default function Home() {
             <span>🔒 Auto-redacted before storage</span>
             <span>⚡ Instant AI analysis</span>
           </div>
+
+          <AIDisclaimer className="animate-fade-in anim-delay-3" />
 
           <div className="rounded-xl border border-border/50 bg-card/50 p-3 animate-fade-in anim-delay-3">
             <CommunityDataToggle />

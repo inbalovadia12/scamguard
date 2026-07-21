@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Send, Loader2, Globe, Link2 } from "lucide-react";
 import MessageBubble from "@/components/agent/MessageBubble";
 import LockedFeature from "@/components/LockedFeature";
+import AIDisclaimer from "@/components/AIDisclaimer";
 import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
 
 export default function UrlScanner() {
@@ -160,6 +161,8 @@ export default function UrlScanner() {
           {credits.remaining} / {credits.limit} credits left
         </div>
       )}
+
+      <AIDisclaimer />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 const CREDIT_COST = 3;
 const EXAMPLES = [

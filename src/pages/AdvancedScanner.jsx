@@ -11,6 +11,7 @@ import ScanTypeGrid, { SCAN_TYPES, ANSWER_TYPES, getScanCost } from "@/component
 import FileDropzone from "@/components/scam/FileDropzone";
 import AdvancedScanResults from "@/components/scam/AdvancedScanResults";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 export default function AdvancedScanner() {
   const { lang } = useI18n();
@@ -159,6 +160,8 @@ export default function AdvancedScanner() {
         </div>
       ) : (
         <div className="space-y-5 animate-slide-up anim-delay-1">
+          <AIDisclaimer />
+
           {/* Credits bar */}
           {credits && (
             <div className="flex items-center justify-between px-4 py-2.5 bg-muted rounded-xl">

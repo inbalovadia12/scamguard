@@ -7,6 +7,7 @@ import { RISK_META } from "@/components/scam/ScamReportCard";
 import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import CommunityIntel from "@/components/community/CommunityIntel";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 const USE_CASES = [
   { value: "romance", label: "Romance Scam", desc: "Dating app profile photo" },
@@ -205,6 +206,8 @@ export default function ImageScanner() {
           </div>
         )}
       </div>
+
+      <AIDisclaimer className="animate-slide-up" style={{ animationDelay: "70ms" }} />
 
       {/* Loading state */}
       {scanning && <LongLoadingScreen type="image" />}

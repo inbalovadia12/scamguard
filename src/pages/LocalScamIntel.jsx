@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import ScanResultView from "@/components/scam/ScanResultView";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import CommunityIntel from "@/components/community/CommunityIntel";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 export default function LocalScamIntel() {
   const [locationInput, setLocationInput] = useState("");
@@ -200,6 +201,8 @@ export default function LocalScamIntel() {
           </div>
         )}
       </div>
+
+      <AIDisclaimer />
 
       {/* Scanning state */}
       {scanning && <LongLoadingScreen type="local" />}

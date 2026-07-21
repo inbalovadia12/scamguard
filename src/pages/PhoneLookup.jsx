@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import PhoneResultView from "@/components/scam/PhoneResultView";
 import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 export default function PhoneLookup() {
   const [phoneInput, setPhoneInput] = useState("");
@@ -163,6 +164,8 @@ export default function PhoneLookup() {
           </div>
         )}
       </div>
+
+      <AIDisclaimer />
 
       {/* Loading state */}
       {looking && <LongLoadingScreen type="phone" />}
