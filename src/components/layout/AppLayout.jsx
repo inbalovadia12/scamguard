@@ -17,6 +17,10 @@ const PRIMARY_ITEMS = [
   { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
   { path: "/check", labelKey: "nav.check", icon: Search },
   { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
+  { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
+  { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
+  { path: "/identity-exposure", labelKey: "nav.identity_exposure", icon: Fingerprint },
+  { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
 ];
 
 const DROPDOWN_GROUPS = [
@@ -24,11 +28,7 @@ const DROPDOWN_GROUPS = [
     labelKey: "nav.scanners",
     items: [
       { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
-      { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
-      { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
-      { path: "/identity-exposure", labelKey: "nav.identity_exposure", icon: Fingerprint },
       { path: "/ai-negotiator", labelKey: "nav.ai_negotiator", icon: MessageCircle },
-      { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
       { path: "/extension", labelKey: "nav.extension", icon: Puzzle },
     ],
   },
