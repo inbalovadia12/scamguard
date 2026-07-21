@@ -57,6 +57,11 @@
       "type": "string",
       "format": "date-time",
       "description": "When the user completed this lesson"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
     }
   },
   "required": [

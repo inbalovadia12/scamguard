@@ -69,6 +69,11 @@
       ],
       "default": "active",
       "description": "Status of the story"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
     }
   },
   "required": [

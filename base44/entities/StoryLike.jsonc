@@ -5,6 +5,11 @@
     "story_id": {
       "type": "string",
       "description": "ID of the liked community story"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
     }
   },
   "required": [

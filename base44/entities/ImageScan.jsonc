@@ -57,6 +57,11 @@
         "general"
       ],
       "description": "What the user is checking for"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
     }
   },
   "required": [

@@ -40,6 +40,11 @@
     "senior_user_id": {
       "type": "string",
       "description": "The senior's user ID once they create an account"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
     }
   },
   "required": [
