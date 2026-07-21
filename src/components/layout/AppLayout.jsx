@@ -13,28 +13,43 @@ import LanguageToggle from "@/components/LanguageToggle";
 import NudigoPopup from "@/components/NudigoPopup";
 import WrappedPopup from "@/components/WrappedPopup";
 
-const NAV_ITEMS = [
-  { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
-  { path: "/check", labelKey: "nav.check", icon: Search },
-  { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
-  { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
-  { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
-  { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
-  { path: "/identity-exposure", labelKey: "nav.identity_exposure", icon: Fingerprint },
-  { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
-  { path: "/ai-negotiator", labelKey: "nav.ai_negotiator", icon: MessageCircle },
-  { path: "/extension", labelKey: "nav.extension", icon: Puzzle },
-  { path: "/alerts", labelKey: "nav.alerts", icon: Bell },
-  { path: "/family", labelKey: "nav.family", icon: Users },
-  { path: "/scam-feed", labelKey: "nav.scam_feed", icon: Megaphone },
-  { path: "/local-intel", labelKey: "nav.local_intel", icon: Radar },
-  { path: "/local-dashboard", labelKey: "nav.local_dashboard", icon: Globe2 },
-  { path: "/wrapped", labelKey: "nav.wrapped", icon: Sparkles },
-  { path: "/community", labelKey: "nav.community", icon: Users },
-  { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
-  { path: "/lessons", labelKey: "nav.lessons", icon: GraduationCap },
-  { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },
-  { path: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
+const NAV_SECTIONS = [
+  {
+    labelKey: "nav.tools",
+    items: [
+      { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
+      { path: "/check", labelKey: "nav.check", icon: Search },
+      { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
+      { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
+      { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
+      { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
+      { path: "/identity-exposure", labelKey: "nav.identity_exposure", icon: Fingerprint },
+      { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
+      { path: "/ai-negotiator", labelKey: "nav.ai_negotiator", icon: MessageCircle },
+      { path: "/extension", labelKey: "nav.extension", icon: Puzzle },
+    ],
+  },
+  {
+    labelKey: "nav.protection",
+    items: [
+      { path: "/alerts", labelKey: "nav.alerts", icon: Bell },
+      { path: "/family", labelKey: "nav.family", icon: Users },
+      { path: "/scam-feed", labelKey: "nav.scam_feed", icon: Megaphone },
+      { path: "/local-intel", labelKey: "nav.local_intel", icon: Radar },
+      { path: "/local-dashboard", labelKey: "nav.local_dashboard", icon: Globe2 },
+    ],
+  },
+  {
+    labelKey: "nav.more",
+    items: [
+      { path: "/wrapped", labelKey: "nav.wrapped", icon: Sparkles },
+      { path: "/community", labelKey: "nav.community", icon: Users },
+      { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
+      { path: "/lessons", labelKey: "nav.lessons", icon: GraduationCap },
+      { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },
+      { path: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
+    ],
+  },
 ];
 
 export default function AppLayout() {
@@ -86,20 +101,29 @@ export default function AppLayout() {
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                isActive(item.path)
-                  ? "luxury-active-nav text-primary"
-                  : "text-foreground hover:bg-muted/60"
-              }`}
-            >
-              <item.icon className="w-4.5 h-4.5" />
-              {t(item.labelKey)}
-            </Link>
+        <nav className="flex-1 px-4 space-y-4 overflow-y-auto">
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.labelKey}>
+              <p className="px-4 mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {t(section.labelKey)}
+              </p>
+              <div className="space-y-0.5">
+                {section.items.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      isActive(item.path)
+                        ? "luxury-active-nav text-primary"
+                        : "text-foreground hover:bg-muted/60"
+                    }`}
+                  >
+                    <item.icon className="w-4.5 h-4.5" />
+                    {t(item.labelKey)}
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
@@ -166,21 +190,30 @@ export default function AppLayout() {
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 top-16 z-20 bg-background animate-fade-in" onClick={() => setMobileOpen(false)}>
           <div className="px-4 py-4 space-y-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="space-y-1">
-              {NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                    isActive(item.path)
-                      ? "bg-primary/10 text-primary"
-                      : "text-foreground hover:bg-muted"
-                  }`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  {t(item.labelKey)}
-                </Link>
+            <div className="space-y-5">
+              {NAV_SECTIONS.map((section) => (
+                <div key={section.labelKey}>
+                  <p className="px-4 mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    {t(section.labelKey)}
+                  </p>
+                  <div className="space-y-0.5">
+                    {section.items.map((item) => (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setMobileOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                          isActive(item.path)
+                            ? "bg-primary/10 text-primary"
+                            : "text-foreground hover:bg-muted"
+                        }`}
+                      >
+                        <item.icon className="w-5 h-5" />
+                        {t(item.labelKey)}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
 
