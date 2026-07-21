@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getCreditStatus } from "@/lib/credits";
+import LongLoadingScreen from "@/components/LongLoadingScreen";
 
 const CREDIT_COST = 3;
 const EXAMPLES = [
@@ -181,15 +182,7 @@ export default function AINegotiator() {
       </div>
 
       {/* Loading state */}
-      {loading && (
-        <div className="bg-card rounded-2xl border border-border/50 p-8 flex flex-col items-center gap-4 animate-fade-in">
-          <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          <div className="text-center space-y-1">
-            <p className="text-sm font-medium">Crafting your questions...</p>
-            <p className="text-xs text-muted-foreground">Tailoring 5 questions to expose a scammer</p>
-          </div>
-        </div>
-      )}
+      {loading && <LongLoadingScreen type="negotiator" />}
 
       {/* Results */}
       {!loading && questions && questions.length > 0 && (

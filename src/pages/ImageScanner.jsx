@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { RISK_META } from "@/components/scam/ScamReportCard";
 import { getCreditStatus } from "@/lib/credits";
+import LongLoadingScreen from "@/components/LongLoadingScreen";
 
 const USE_CASES = [
   { value: "romance", label: "Romance Scam", desc: "Dating app profile photo" },
@@ -200,15 +201,7 @@ export default function ImageScanner() {
       </div>
 
       {/* Loading state */}
-      {scanning && (
-        <div className="bg-card rounded-2xl border border-border/50 p-8 flex flex-col items-center gap-4 animate-fade-in">
-          <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          <div className="text-center space-y-1">
-            <p className="text-sm font-medium">Analyzing image...</p>
-            <p className="text-xs text-muted-foreground">Searching the web for similar images and scam reports</p>
-          </div>
-        </div>
-      )}
+      {scanning && <LongLoadingScreen type="image" />}
 
       {/* Result */}
       {!scanning && result && <ImageScanResult data={result} previewUrl={previewUrl} />}

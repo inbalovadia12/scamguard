@@ -10,6 +10,7 @@ import { getCreditStatus } from "@/lib/credits";
 import ScanTypeGrid, { SCAN_TYPES, ANSWER_TYPES, getScanCost } from "@/components/scam/ScanTypeGrid";
 import FileDropzone from "@/components/scam/FileDropzone";
 import AdvancedScanResults from "@/components/scam/AdvancedScanResults";
+import LongLoadingScreen from "@/components/LongLoadingScreen";
 
 export default function AdvancedScanner() {
   const { lang } = useI18n();
@@ -144,7 +145,9 @@ export default function AdvancedScanner() {
         </p>
       </div>
 
-      {result ? (
+      {scanning ? (
+        <LongLoadingScreen type="scanner" />
+      ) : result ? (
         <div className="space-y-6 animate-scale-in">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold font-heading">Scan Result</h2>

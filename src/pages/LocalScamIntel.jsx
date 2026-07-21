@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ScanResultView from "@/components/scam/ScanResultView";
+import LongLoadingScreen from "@/components/LongLoadingScreen";
 
 export default function LocalScamIntel() {
   const [locationInput, setLocationInput] = useState("");
@@ -200,17 +201,7 @@ export default function LocalScamIntel() {
       </div>
 
       {/* Scanning state */}
-      {scanning && (
-        <div className="bg-card rounded-2xl border border-border/50 p-8 flex flex-col items-center gap-4 animate-fade-in">
-          <Radar className="w-12 h-12 text-primary animate-pulse" />
-          <div className="text-center space-y-1">
-            <p className="text-sm font-medium">Scanning {locationInput}...</p>
-            <p className="text-xs text-muted-foreground">
-              Researching common scams, seasonal patterns, and local resources
-            </p>
-          </div>
-        </div>
-      )}
+      {scanning && <LongLoadingScreen type="local" />}
 
       {/* Result */}
       {!scanning && currentResult && (

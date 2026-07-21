@@ -16,6 +16,7 @@ import ConsentBanner from "@/components/family/ConsentBanner";
 import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS, getCachedAnalysis, cacheAnalysis } from "@/lib/credits";
 import { redactMessage } from "@/lib/redact";
 import { getSeniorLink } from "@/lib/guardianAlerts";
+import LongLoadingScreen from "@/components/LongLoadingScreen";
 
 const messageTypes = [
   { value: "sms", label: "SMS / Text", icon: MessageSquare },
@@ -188,7 +189,9 @@ export default function Home() {
         </div>
       )}
 
-      {!result ? (
+      {analyzing ? (
+        <LongLoadingScreen type={mode === "url" ? "url" : "message"} />
+      ) : !result ? (
         <div className="space-y-5 sm:space-y-8">
           <div className="text-center space-y-2 sm:space-y-3 animate-slide-up">
             <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">

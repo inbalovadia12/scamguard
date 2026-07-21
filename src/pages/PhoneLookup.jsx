@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PhoneResultView from "@/components/scam/PhoneResultView";
 import { getCreditStatus } from "@/lib/credits";
+import LongLoadingScreen from "@/components/LongLoadingScreen";
 
 export default function PhoneLookup() {
   const [phoneInput, setPhoneInput] = useState("");
@@ -164,15 +165,7 @@ export default function PhoneLookup() {
       </div>
 
       {/* Loading state */}
-      {looking && (
-        <div className="bg-card rounded-2xl border border-border/50 p-8 flex flex-col items-center gap-4 animate-fade-in">
-          <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          <div className="text-center space-y-1">
-            <p className="text-sm font-medium">Looking up {phoneInput}...</p>
-            <p className="text-xs text-muted-foreground">Searching scam databases and user reports</p>
-          </div>
-        </div>
-      )}
+      {looking && <LongLoadingScreen type="phone" />}
 
       {/* Result */}
       {!looking && currentResult && (
