@@ -18,6 +18,7 @@ const NAV_SECTIONS = [
     labelKey: "nav.tools",
     items: [
       { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
+      { path: "/lessons", labelKey: "nav.lessons", icon: GraduationCap },
       { path: "/check", labelKey: "nav.check", icon: Search },
       { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
       { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
@@ -45,7 +46,6 @@ const NAV_SECTIONS = [
       { path: "/wrapped", labelKey: "nav.wrapped", icon: Sparkles },
       { path: "/community", labelKey: "nav.community", icon: Users },
       { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
-      { path: "/lessons", labelKey: "nav.lessons", icon: GraduationCap },
       { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },
       { path: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
     ],
