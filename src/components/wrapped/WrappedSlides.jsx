@@ -1,5 +1,11 @@
-import React from "react";
-import { Shield, Scan, AlertTriangle, TrendingUp, Calendar, Zap, Trophy, Share2, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import { Shield, Scan, AlertTriangle, TrendingUp, Calendar, Zap, Trophy, Share2, Sparkles, Check } from "lucide-react";
+
+const BG_IMAGES = {
+  intro: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/796fcaa9e_generated_image.png",
+  shield: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/3549164c8_generated_image.png",
+  outro: "https://media.base44.com/images/public/6a46a8e315996af6f0443792/abb8c67dc_generated_image.png",
+};
 
 const SCAM_TYPE_LABELS = {
   sms: "SMS / Text",
@@ -13,20 +19,30 @@ const SCAM_TYPE_LABELS = {
   delivery: "Package Delivery",
   lottery_prize: "Lottery / Prize",
   charity: "Charity",
+  url: "URL / Link",
   other: "Other",
 };
 
-function SlideShell({ gradient, children }) {
+function SlideShell({ gradient, imageUrl, children }) {
   return (
-    <div className={`absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br ${gradient} px-6 text-center`}>
-      {children}
+    <div className={`absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br ${gradient} px-6 text-center overflow-hidden`}>
+      {imageUrl && (
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-overlay"
+          style={{ backgroundImage: `url(${imageUrl})` }}
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none" />
+      <div className="relative z-10 flex flex-col items-center justify-center">
+        {children}
+      </div>
     </div>
   );
 }
 
 export function IntroSlide({ stats }) {
   return (
-    <SlideShell gradient="from-violet-600 via-primary to-cyan-500">
+    <SlideShell gradient="from-violet-600 via-primary to-cyan-500" imageUrl={BG_IMAGES.intro}>
       <Sparkles className="w-12 h-12 text-white/80 mb-4 animate-bounce-in" />
       <p className="text-white/70 text-base sm:text-lg font-medium mb-2 animate-fade-in">Vardin presents</p>
       <h1 className="text-white text-4xl sm:text-7xl font-bold font-heading mb-4 animate-slide-up leading-tight">
@@ -54,7 +70,7 @@ export function TotalScansSlide({ stats }) {
 
 export function ScamsBlockedSlide({ stats }) {
   return (
-    <SlideShell gradient="from-red-500 via-orange-500 to-amber-500">
+    <SlideShell gradient="from-red-500 via-orange-500 to-amber-500" imageUrl={BG_IMAGES.shield}>
       <Shield className="w-14 h-14 sm:w-16 sm:h-16 text-white/90 mb-6 animate-bounce-in" />
       <p className="text-white/70 text-base sm:text-lg mb-2">We protected you from</p>
       <h1 className="text-white text-7xl sm:text-8xl font-bold font-heading mb-2 animate-scale-in">
@@ -135,9 +151,17 @@ export function CreditsSlide({ stats }) {
 }
 
 export function OutroSlide({ stats, onShare }) {
+  const [shared, setShared] = useState(false);
   const percentile = Math.min(99, Math.max(50, 50 + stats.total_scans * 2));
+
+  const handleShare = async () => {
+    await onShare();
+    setShared(true);
+    setTimeout(() => setShared(false), 3000);
+  };
+
   return (
-    <SlideShell gradient="from-violet-600 via-primary to-cyan-500">
+    <SlideShell gradient="from-violet-600 via-primary to-cyan-500" imageUrl={BG_IMAGES.outro}>
       <Trophy className="w-14 h-14 sm:w-16 sm:h-16 text-white/90 mb-6 animate-bounce-in" />
       <p className="text-white/70 text-base sm:text-lg mb-2">You're safer than</p>
       <h1 className="text-white text-6xl sm:text-7xl font-bold font-heading mb-2 animate-scale-in">
@@ -145,11 +169,11 @@ export function OutroSlide({ stats, onShare }) {
       </h1>
       <p className="text-white/90 text-lg sm:text-2xl mb-8">of users this year</p>
       <button
-        onClick={onShare}
+        onClick={handleShare}
         className="flex items-center gap-2 px-6 py-3 bg-white text-primary rounded-full font-semibold text-base sm:text-lg hover:scale-105 transition-transform animate-slide-up shadow-lg"
       >
-        <Share2 className="w-5 h-5" />
-        Share Your Wrapped
+        {shared ? <Check className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
+        {shared ? "Copied!" : "Share Your Wrapped"}
       </button>
       <p className="text-white/60 text-xs sm:text-sm mt-6">Thank you for protecting yourself with Vardin</p>
     </SlideShell>

@@ -26,6 +26,7 @@ export const translations = {
     "nav.identity_exposure": "Identity Exposure",
     "nav.wrapped": "Wrapped",
     "nav.community": "Community",
+    "nav.scanners": "Scanners",
     // Profile
     "nav.profile": "Profile",
     "nav.log_out": "Log out",
@@ -160,6 +161,7 @@ export const translations = {
     "nav.identity_exposure": "חשיפת זהות",
     "nav.wrapped": "סיכום שנתי",
     "nav.community": "קהילה",
+    "nav.scanners": "סורקים",
     "nav.profile": "פרופיל",
     "nav.log_out": "התנתק",
     "nav.upgrade_plan": "שדרג תוכנית",
@@ -290,6 +292,7 @@ export const translations = {
     "nav.identity_exposure": "Exposición de Identidad",
     "nav.wrapped": "Resumen Anual",
     "nav.community": "Comunidad",
+    "nav.scanners": "Escáneres",
     "nav.profile": "Perfil",
     "nav.log_out": "Cerrar sesión",
     "nav.upgrade_plan": "Mejorar Plan",

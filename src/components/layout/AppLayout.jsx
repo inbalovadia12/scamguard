@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers, Fingerprint, Sparkles,
+  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers, Fingerprint, Sparkles,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -11,14 +11,18 @@ import { useI18n } from "@/lib/i18n";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
 import NudigoPopup from "@/components/NudigoPopup";
+import NavDropdown from "@/components/layout/NavDropdown";
 
-const NAV_GROUPS = [
+const PRIMARY_ITEMS = [
+  { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
+  { path: "/check", labelKey: "nav.check", icon: Search },
+  { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
+];
+
+const DROPDOWN_GROUPS = [
   {
-    labelKey: "nav.tools",
+    labelKey: "nav.scanners",
     items: [
-      { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
-      { path: "/check", labelKey: "nav.check", icon: Search },
-      { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
       { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
       { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
       { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
@@ -72,6 +76,24 @@ export default function AppLayout() {
   const location = useLocation();
   const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState(() => {
+    const init = {};
+    DROPDOWN_GROUPS.forEach((g, i) => {
+      if (g.items.some((item) => location.pathname === item.path)) init[i] = true;
+    });
+    return init;
+  });
+  const toggleGroup = (i) => setOpenGroups((prev) => ({ ...prev, [i]: !prev[i] }));
+
+  useEffect(() => {
+    setOpenGroups((prev) => {
+      const next = { ...prev };
+      DROPDOWN_GROUPS.forEach((g, i) => {
+        if (g.items.some((item) => location.pathname === item.path)) next[i] = true;
+      });
+      return next;
+    });
+  }, [location.pathname]);
 
   const handleLogout = () => {
     base44.auth.logout("/login");
@@ -100,29 +122,36 @@ export default function AppLayout() {
           </Link>
         </div>
 
-        <nav className="flex-1 px-4 space-y-6 overflow-y-auto">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.labelKey}>
-              <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
-                {t(group.labelKey)}
-              </p>
-              <div className="space-y-1">
-                {group.items.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      isActive(item.path)
-                        ? "luxury-active-nav text-primary font-semibold"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                    }`}
-                  >
-                    <item.icon className="w-4 h-4" />
-                    {t(item.labelKey)}
-                  </Link>
-                ))}
-              </div>
-            </div>
+        <nav className="flex-1 px-4 space-y-4 overflow-y-auto">
+          {/* Primary features — bigger, always visible */}
+          <div className="space-y-1.5">
+            {PRIMARY_ITEMS.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                  isActive(item.path)
+                    ? "luxury-active-nav text-primary"
+                    : "text-foreground hover:bg-muted/60"
+                }`}
+              >
+                <item.icon className="w-5 h-5" />
+                {t(item.labelKey)}
+              </Link>
+            ))}
+          </div>
+
+          <div className="h-px bg-border/50 mx-2" />
+
+          {/* Collapsible dropdown groups */}
+          {DROPDOWN_GROUPS.map((group, i) => (
+            <NavDropdown
+              key={group.labelKey}
+              labelKey={group.labelKey}
+              items={group.items}
+              isOpen={!!openGroups[i]}
+              onToggle={() => toggleGroup(i)}
+            />
           ))}
         </nav>
 
@@ -189,32 +218,38 @@ export default function AppLayout() {
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 top-16 z-20 bg-background animate-fade-in" onClick={() => setMobileOpen(false)}>
           <div className="px-4 py-4 space-y-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            {NAV_GROUPS.map((group) => (
-              <div key={group.labelKey}>
-                <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
-                  {t(group.labelKey)}
-                </p>
-                <div className="space-y-1">
-                  {group.items.map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium transition-all ${
-                        isActive(item.path)
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <item.icon className="w-4 h-4" />
-                        {t(item.labelKey)}
-                      </div>
-                      <ChevronRight className="w-4 h-4 opacity-40" />
-                    </Link>
-                  ))}
-                </div>
-              </div>
+            {/* Primary features */}
+            <div className="space-y-1.5">
+              {PRIMARY_ITEMS.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold transition-all ${
+                    isActive(item.path)
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <item.icon className="w-5 h-5" />
+                  {t(item.labelKey)}
+                </Link>
+              ))}
+            </div>
+
+            <div className="h-px bg-border/50 mx-2" />
+
+            {/* Collapsible dropdown groups */}
+            {DROPDOWN_GROUPS.map((group, i) => (
+              <NavDropdown
+                key={group.labelKey}
+                labelKey={group.labelKey}
+                items={group.items}
+                isOpen={!!openGroups[i]}
+                onToggle={() => toggleGroup(i)}
+                variant="mobile"
+                onNavigate={() => setMobileOpen(false)}
+              />
             ))}
 
             <div className="border-t border-border/50 pt-4 space-y-1">
