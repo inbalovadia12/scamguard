@@ -4,10 +4,11 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Search, Link2, Bot, Users, Bell, BarChart3, ArrowRight, ShieldCheck,
-  TrendingUp, Loader2, Zap,
+  TrendingUp, Loader2, Zap, Sparkles,
 } from "lucide-react";
 import { getCreditStatus, PLAN_NAMES } from "@/lib/credits";
 import { useI18n } from "@/lib/i18n";
+import { isWrappedSeason } from "@/lib/wrappedSeason";
 
 export default function Dashboard() {
   const { t } = useI18n();
@@ -62,6 +63,24 @@ export default function Dashboard() {
           {t("dash.overview")}
         </p>
       </div>
+
+      {/* Wrapped banner */}
+      {isWrappedSeason() && (
+        <Link to="/wrapped" className="block animate-slide-up">
+          <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-violet-500 via-primary to-cyan-500 p-5 text-white shadow-lg shadow-primary/30 luxury-card-hover">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-base">Your 2026 Wrapped is Ready!</p>
+                <p className="text-sm text-white/80">Available for one week only — see your year in scam protection</p>
+              </div>
+              <ArrowRight className="w-5 h-5 flex-shrink-0" />
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

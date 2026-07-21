@@ -9,22 +9,9 @@ import {
   IntroSlide, TotalScansSlide, ScamsBlockedSlide, TopThreatSlide,
   RiskBreakdownSlide, DaysActiveSlide, CreditsSlide, OutroSlide
 } from "@/components/wrapped/WrappedSlides";
+import { isWrappedSeason, getNextWrappedDate } from "@/lib/wrappedSeason";
 
 const WRAPPED_BG = "https://media.base44.com/images/public/6a46a8e315996af6f0443792/796fcaa9e_generated_image.png";
-
-function isWrappedSeason() {
-  const month = new Date().getMonth();
-  return month === 11 || month === 0;
-}
-
-function getNextWrappedDate() {
-  const now = new Date();
-  const month = now.getMonth();
-  if (month >= 1 && month <= 10) {
-    return new Date(now.getFullYear(), 11, 1);
-  }
-  return new Date(now.getFullYear() + 1, 11, 1);
-}
 
 export default function Wrapped() {
   const { toast } = useToast();
@@ -201,7 +188,7 @@ function ComingSoon() {
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight font-heading">Wrapped is Coming Soon</h1>
           <p className="text-muted-foreground text-sm sm:text-base max-w-md mx-auto">
-            Your yearly scam protection recap unlocks every December. Come back to see your year in review.
+            Your yearly scam protection recap unlocks for one week every December. Come back to see your year in review.
           </p>
         </div>
       </div>

@@ -1,0 +1,45 @@
+{
+  "description": "Sends a daily scam protection summary email to all protected family members via Gmail at 9 AM (Asia/Jerusalem)",
+  "name": "Daily Family Summary Email",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 9 * * *",
+      "one_time_date": null,
+      "timezone": "Asia/Jerusalem",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "daily_family_summary",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "send_summaries": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sendDailyFamilySummary",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Send daily summaries",
+            "description": "Email protected seniors"
+          }
+        }
+      }
+    ]
+  }
+}

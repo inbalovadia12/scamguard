@@ -12,6 +12,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
 import NudigoPopup from "@/components/NudigoPopup";
 import NavDropdown from "@/components/layout/NavDropdown";
+import WrappedPopup from "@/components/WrappedPopup";
 
 const PRIMARY_ITEMS = [
   { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
@@ -300,6 +301,7 @@ export default function AppLayout() {
         </main>
 
         <NudigoPopup />
+        <WrappedPopup />
 
         <footer className="border-t border-border/50 py-6 px-4 mt-auto">
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
