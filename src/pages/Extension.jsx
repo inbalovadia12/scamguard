@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Download, Puzzle, Settings2, Eye, FileText, Globe, Monitor, Lock, Loader2, ShieldCheck, Crown, CheckCircle2, QrCode, Mail, MessageSquare, ShoppingCart, FileSearch, Zap, MousePointer, ClipboardList, AlertTriangle } from "lucide-react";
+import { Download, Puzzle, Settings2, Eye, FileText, Globe, Monitor, Lock, Loader2, ShieldCheck, Crown, CheckCircle2, QrCode, Mail, MessageSquare, ShoppingCart, FileSearch, Zap, ClipboardList, AlertTriangle } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -45,7 +45,6 @@ export default function Extension() {
 
   const PROTECTION_FEATURES = [
     { icon: Zap, title: t("ext.protection_auto"), desc: t("ext.protection_auto_desc") },
-    { icon: MousePointer, title: t("ext.protection_hover"), desc: t("ext.protection_hover_desc") },
     { icon: ClipboardList, title: t("ext.protection_clipboard"), desc: t("ext.protection_clipboard_desc") },
     { icon: AlertTriangle, title: t("ext.protection_warning"), desc: t("ext.protection_warning_desc") },
   ];

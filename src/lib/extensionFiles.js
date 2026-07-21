@@ -243,7 +243,7 @@ setInterval(function() {
 }, 3000);
 `,
   'protection.js': String.raw`// Vardin Extension - Protection Content Script (runs on all URLs)
-// Features: link hover protection, form detection warnings, clipboard monitoring
+// Features: form detection warnings, clipboard monitoring
 
 (function() {
   // Don't run on Vardin's own domain or Chrome internal pages
@@ -253,34 +253,12 @@ setInterval(function() {
   // === Inject styles ===
   var style = document.createElement('style');
   style.textContent = [
-    '.vardin-tooltip { position: fixed; z-index: 2147483647; max-width: 320px; padding: 8px 12px; border-radius: 8px; font-size: 12px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.15); pointer-events: none; transition: opacity 0.2s; }',
-    '.vardin-tooltip.safe { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }',
-    '.vardin-tooltip.suspicious { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }',
-    '.vardin-tooltip.danger { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }',
     '.vardin-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 2147483647; padding: 10px 16px; background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }',
     '.vardin-banner .vardin-close { margin-left: auto; cursor: pointer; opacity: 0.8; background: none; border: none; color: white; font-size: 18px; }',
     '.vardin-banner .vardin-close:hover { opacity: 1; }',
     '.vardin-paste-warning { position: fixed; bottom: 16px; right: 16px; z-index: 2147483647; padding: 12px 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; color: #991b1b; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 300px; }'
   ].join('\n');
   document.head.appendChild(style);
-
-  var tooltip = null;
-
-  function showTooltip(e, text, level) {
-    if (tooltip) tooltip.remove();
-    tooltip = document.createElement('div');
-    tooltip.className = 'vardin-tooltip ' + level;
-    tooltip.textContent = text;
-    tooltip.style.opacity = '0';
-    document.body.appendChild(tooltip);
-    tooltip.style.left = (e.clientX + 12) + 'px';
-    tooltip.style.top = (e.clientY + 12) + 'px';
-    tooltip.style.opacity = '1';
-  }
-
-  function hideTooltip() {
-    if (tooltip) { tooltip.remove(); tooltip = null; }
-  }
 
   // === Suspicious URL patterns ===
   function isSuspiciousUrl(url) {
@@ -301,24 +279,6 @@ setInterval(function() {
     if (hasSuspiciousTld) return 'suspicious';
     return null;
   }
-
-  // === Link hover protection ===
-  document.addEventListener('mouseover', function(e) {
-    var link = e.target.closest('a');
-    if (!link || !link.href) return;
-    if (link.href.indexOf('javascript:') === 0) return;
-    var risk = isSuspiciousUrl(link.href);
-    if (risk) {
-      var domain = '';
-      try { domain = new URL(link.href).hostname; } catch (_) { domain = link.href; }
-      var label = risk === 'danger' ? '\u26A0\uFE0F Possible phishing' : '\u26A0\uFE0F Suspicious link';
-      showTooltip(e, label + ': ' + domain, risk);
-    }
-  }, true);
-
-  document.addEventListener('mouseout', function(e) {
-    if (e.target.closest('a')) hideTooltip();
-  }, true);
 
   // === Form detection: warn on risky pages with password/card inputs ===
   function checkForms() {
@@ -558,7 +518,6 @@ FEATURES
 - Marketplace Analysis: Detect fake sellers, unrealistic prices, payment scams
 - File Analysis: Analyze PDF, DOC, XLS, PPT, TXT, CSV, ZIP, images
 - Auto-Scan: Automatically scan pages on navigation (opt-in)
-- Link Hover Protection: Warnings on suspicious links
 - Before-Action Warnings: Alerts on risky pages with password/card inputs
 - Clipboard Protection: Warns when pasting crypto addresses or suspicious URLs
 - Full i18n: English, Hebrew (RTL), Spanish
@@ -590,7 +549,6 @@ SCAN TYPES
 - File: Upload documents for phishing language and embedded URL analysis
 
 PROTECTION FEATURES (automatic)
-- Link Hover: Hover over any link to see if it's suspicious
 - Form Warning: If you're on a risky page with password/card inputs, a warning banner appears
 - Clipboard: If you paste a crypto wallet address or suspicious URL, you get a warning
 - Auto-Scan Badge: When enabled, the extension badge shows risk level (green/yellow/red)
