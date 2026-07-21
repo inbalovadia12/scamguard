@@ -14,7 +14,7 @@ function isPrivateIp(ip: string): boolean {
   return false;
 }
 
-async function validateUrlSafe(urlStr: string): Promise<{ ok: boolean; error?: string }> {
+async function validateUrlSafe(urlStr: string): Promise<{ ok: boolean; error?: string; resolvedIp?: string; hostname?: string }> {
   let parsed: URL;
   try {
     parsed = new URL(urlStr);
@@ -32,23 +32,31 @@ async function validateUrlSafe(urlStr: string): Promise<{ ok: boolean; error?: s
     return { ok: false, error: 'Private/internal IP address blocked' };
   }
 
-  // Resolve hostname and check resolved IPs
+  // Resolve hostname, validate all IPs, and pin to the first safe IP
+  // Pinning prevents DNS rebinding: the fetch uses this exact IP, not a fresh DNS lookup
+  let resolvedIp: string | null = null;
   try {
     const addrs = await Deno.resolveDns(hostname, 'A');
-    if (addrs.length === 0) {
+    for (const ip of addrs) {
+      if (isPrivateIp(ip)) return { ok: false, error: 'Private/internal IP address blocked' };
+    }
+    if (addrs.length > 0) {
+      resolvedIp = addrs[0];
+    }
+    if (!resolvedIp) {
       const addrs6 = await Deno.resolveDns(hostname, 'AAAA');
       for (const ip of addrs6) {
         if (isPrivateIp(ip)) return { ok: false, error: 'Private/internal IP address blocked' };
       }
-    }
-    for (const ip of addrs) {
-      if (isPrivateIp(ip)) return { ok: false, error: 'Private/internal IP address blocked' };
+      if (addrs6.length > 0) {
+        resolvedIp = addrs6[0];
+      }
     }
   } catch {
     // DNS resolution failed — let the fetch fail naturally
   }
 
-  return { ok: true };
+  return { ok: true, resolvedIp: resolvedIp || undefined, hostname };
 }
 
 // === VirusTotal URL reputation check ===
@@ -117,12 +125,24 @@ Deno.serve(async (req) => {
           break;
         }
 
-        response = await fetch(currentUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-          },
+        // Pin the fetch to the validated IP to prevent DNS rebinding SSRF
+        // The fetch connects to the resolved IP directly, eliminating the TOCTOU window
+        // where a malicious DNS server could return a different (private) IP at fetch time
+        let fetchUrl = currentUrl;
+        const fetchHeaders: Record<string, string> = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+        };
+        if (validation.resolvedIp && validation.hostname) {
+          const pinned = new URL(currentUrl);
+          pinned.hostname = validation.resolvedIp;
+          fetchUrl = pinned.href;
+          fetchHeaders['Host'] = validation.hostname;
+        }
+
+        response = await fetch(fetchUrl, {
+          headers: fetchHeaders,
           redirect: 'manual',
           signal: AbortSignal.timeout(15000),
         });
