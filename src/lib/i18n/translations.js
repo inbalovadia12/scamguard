@@ -1,8 +1,10 @@
 export const translations = {
   en: {
     // Navigation groups
+    "nav.main": "Main",
     "nav.tools": "Tools",
     "nav.protection": "Protection",
+    "nav.social": "Social",
     "nav.more": "More",
     // Navigation items
     "nav.home": "Home",
@@ -137,8 +139,10 @@ export const translations = {
     "landing.nav.get_started": "Get Started",
   },
   he: {
+    "nav.main": "ראשי",
     "nav.tools": "כלים",
     "nav.protection": "הגנה",
+    "nav.social": "חברתי",
     "nav.more": "עוד",
     "nav.home": "בית",
     "nav.check": "בדיקה",
@@ -268,8 +272,10 @@ export const translations = {
     "landing.nav.get_started": "התחל עכשיו",
   },
   es: {
+    "nav.main": "Principal",
     "nav.tools": "Herramientas",
     "nav.protection": "Protección",
+    "nav.social": "Social",
     "nav.more": "Más",
     "nav.home": "Inicio",
     "nav.check": "Verificar",

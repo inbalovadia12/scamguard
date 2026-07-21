@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers, Fingerprint, Sparkles,
+  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers, Fingerprint, Sparkles, Trophy,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -16,9 +16,15 @@ import XPBar from "@/components/gamification/XPBar";
 
 const NAV_SECTIONS = [
   {
-    labelKey: "nav.tools",
+    labelKey: "nav.main",
     items: [
       { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
+      { path: "/community", labelKey: "nav.community", icon: Users },
+    ],
+  },
+  {
+    labelKey: "nav.tools",
+    items: [
       { path: "/lessons", labelKey: "nav.lessons", icon: GraduationCap },
       { path: "/check", labelKey: "nav.check", icon: Search },
       { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
@@ -42,13 +48,17 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    labelKey: "nav.more",
+    labelKey: "nav.social",
     items: [
       { path: "/wrapped", labelKey: "nav.wrapped", icon: Sparkles },
-      { path: "/community", labelKey: "nav.community", icon: Users },
       { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
-      { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },
       { path: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
+    ],
+  },
+  {
+    labelKey: "nav.more",
+    items: [
+      { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },
     ],
   },
 ];
