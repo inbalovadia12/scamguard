@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { RISK_META } from "@/components/scam/ScamReportCard";
 import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
+import CommunityIntel from "@/components/community/CommunityIntel";
 
 const USE_CASES = [
   { value: "romance", label: "Romance Scam", desc: "Dating app profile photo" },
@@ -13,6 +14,11 @@ const USE_CASES = [
   { value: "business", label: "Fake Business", desc: "Business or professional" },
   { value: "general", label: "General", desc: "Any suspicious photo" },
 ];
+
+const USE_CASE_TO_SCAM = {
+  romance: "romance",
+  marketplace: "marketplace",
+};
 
 const CREDIT_COST = 10;
 
@@ -282,6 +288,13 @@ function ImageScanResult({ data, previewUrl }) {
               </a>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Community Intel */}
+      {USE_CASE_TO_SCAM[data.use_case] && (
+        <div className="border-t border-border/50 pt-4">
+          <CommunityIntel scamTypes={[USE_CASE_TO_SCAM[data.use_case]]} />
         </div>
       )}
     </div>

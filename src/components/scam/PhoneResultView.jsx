@@ -2,6 +2,7 @@ import React from "react";
 import { MapPin, Signal, Users, Tag, ExternalLink } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { RISK_META } from "@/components/scam/ScamReportCard";
+import CommunityIntel, { matchCategoriesToEnum } from "@/components/community/CommunityIntel";
 
 export default function PhoneResultView({ data }) {
   const risk = RISK_META[data.risk_level] || RISK_META.medium;
@@ -110,6 +111,11 @@ export default function PhoneResultView({ data }) {
           </div>
         </div>
       )}
+
+      {/* Community Intel */}
+      <div className="border-t border-border/50 pt-4">
+        <CommunityIntel scamTypes={matchCategoriesToEnum(data.scam_categories)} title="Community Reports" />
+      </div>
     </div>
   );
 }

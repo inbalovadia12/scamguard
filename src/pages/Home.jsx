@@ -12,6 +12,7 @@ import {
 import { Link } from "react-router-dom";
 import TruncatedText from "@/components/TruncatedText";
 import AnalysisResult from "@/components/scam/AnalysisResult";
+import CommunityDataToggle from "@/components/community/CommunityDataToggle";
 import ConsentBanner from "@/components/family/ConsentBanner";
 import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS, getCachedAnalysis, cacheAnalysis } from "@/lib/credits";
 import { redactMessage } from "@/lib/redact";
@@ -332,6 +333,10 @@ export default function Home() {
             <span>🔒 Auto-redacted before storage</span>
             <span>⚡ Instant AI analysis</span>
           </div>
+
+          <div className="rounded-xl border border-border/50 bg-card/50 p-3 animate-fade-in anim-delay-3">
+            <CommunityDataToggle />
+          </div>
         </div>
       ) : (
         <div className="space-y-6 animate-scale-in">
@@ -352,7 +357,7 @@ export default function Home() {
           </div>
 
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6">
-            <AnalysisResult analysis={result} />
+            <AnalysisResult analysis={result} messageType={mode === "url" ? "url" : messageType} />
           </div>
         </div>
       )}

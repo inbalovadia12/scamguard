@@ -3,6 +3,21 @@ import { Volume2, VolumeX, ChevronDown, ChevronUp, Ban, Phone, Flag, BookOpen, S
 import { Button } from "@/components/ui/button";
 import RiskBadge, { getRiskLevelFromScore, getRiskBarColor } from "@/components/scam/RiskBadge";
 import TacticTag from "@/components/scam/TacticTag";
+import CommunityIntel from "@/components/community/CommunityIntel";
+
+const MESSAGE_TYPE_TO_SCAM = {
+  sms: "smishing",
+  email: "phishing_email",
+  job_offer: "fake_job",
+  marketplace: "marketplace",
+  romance: "romance",
+  bank_government: "bank_impersonation",
+  tech_support: "tech_support",
+  crypto_investment: "crypto_investment",
+  delivery: "delivery",
+  lottery_prize: "lottery_prize",
+  charity: "other",
+};
 
 const stepIcons = {
   "Do not reply": Ban,
@@ -75,7 +90,7 @@ function AnimatedNumber({ value }) {
   return <span>{display}</span>;
 }
 
-export default function AnalysisResult({ analysis, showEducation = true }) {
+export default function AnalysisResult({ analysis, showEducation = true, messageType }) {
   const [speaking, setSpeaking] = useState(false);
   const [eduOpen, setEduOpen] = useState(false);
 
@@ -196,6 +211,13 @@ export default function AnalysisResult({ analysis, showEducation = true }) {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Community Intel */}
+      {messageType && MESSAGE_TYPE_TO_SCAM[messageType] && (
+        <div className="border-t border-border/50 pt-4">
+          <CommunityIntel scamTypes={[MESSAGE_TYPE_TO_SCAM[messageType]]} />
         </div>
       )}
 

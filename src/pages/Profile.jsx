@@ -7,12 +7,13 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import {
-  ShieldCheck, Crown, Mail, Loader2, Bell, Lock, LogOut, ChevronRight, Accessibility, Type, Eye, Zap,
+  ShieldCheck, Crown, Mail, Loader2, Bell, Lock, LogOut, ChevronRight, Accessibility, Type, Eye, Zap, Users,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getCreditStatus, PLAN_NAMES, PLAN_LIMITS } from "@/lib/credits";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "@/components/ui/use-toast";
+import CommunityDataToggle from "@/components/community/CommunityDataToggle";
 
 export default function Profile() {
   const { user, checkUserAuth } = useAuth();
@@ -212,6 +213,15 @@ export default function Profile() {
           </div>
           <Switch checked={privacyRedact} onCheckedChange={setPrivacyRedact} />
         </div>
+      </Card>
+
+      {/* Community */}
+      <Card className="rounded-2xl border-border/50 p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-primary" />
+          <h2 className="font-semibold">Community</h2>
+        </div>
+        <CommunityDataToggle />
       </Card>
 
       {/* Accessibility */}

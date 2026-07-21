@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ScanResultView from "@/components/scam/ScanResultView";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
+import CommunityIntel from "@/components/community/CommunityIntel";
 
 export default function LocalScamIntel() {
   const [locationInput, setLocationInput] = useState("");
@@ -207,6 +208,9 @@ export default function LocalScamIntel() {
       {!scanning && currentResult && (
         <div className="bg-card rounded-2xl border border-border/50 p-5 animate-slide-up">
           <ScanResultView data={currentResult} />
+          <div className="border-t border-border/50 pt-4 mt-4">
+            <CommunityIntel country={currentResult.country} title="Local Community Stories" />
+          </div>
         </div>
       )}
 
