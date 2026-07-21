@@ -19,7 +19,6 @@ const NAV_SECTIONS = [
     labelKey: "nav.main",
     items: [
       { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
-      { path: "/community", labelKey: "nav.community", icon: Users },
     ],
   },
   {
@@ -54,6 +53,12 @@ const NAV_SECTIONS = [
   },
   {
     labelKey: "nav.social",
+    items: [
+      { path: "/community", labelKey: "nav.community", icon: Users },
+    ],
+  },
+  {
+    labelKey: "nav.more",
     items: [
       { path: "/wrapped", labelKey: "nav.wrapped", icon: Sparkles },
       { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
