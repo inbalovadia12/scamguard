@@ -145,6 +145,22 @@ Deno.serve(async (req) => {
       vtReport = await getVirusTotalReport(page_url);
     }
 
+    // === QR: pre-process with client-decoded content (BarcodeDetector) ===
+    let qrDecodedContent = '';
+    let qrFinalUrl = '';
+    let qrPageTitle = '';
+    if (scanType === 'qr' && clientDecodedContent) {
+      qrDecodedContent = clientDecodedContent;
+      if (qrDecodedContent.startsWith('http://') || qrDecodedContent.startsWith('https://')) {
+        const redirectResult = await followRedirects(qrDecodedContent);
+        qrFinalUrl = redirectResult.finalUrl;
+        qrPageTitle = redirectResult.pageTitle;
+        if (!vtReport) {
+          vtReport = await getVirusTotalReport(qrFinalUrl);
+        }
+      }
+    }
+
     // === Build prompt ===
     let prompt = 'You are Vardin, an expert scam and fraud detection AI.\n\n';
     prompt += 'IMPORTANT: Respond entirely in ' + languageName + '. All text must be in ' + languageName + '.\n\n';
