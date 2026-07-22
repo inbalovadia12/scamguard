@@ -9,6 +9,7 @@ export const CREDIT_COSTS = {
   NEGOTIATOR: 3,
   IDENTITY_EXPOSURE: 35,
   CALL_CHUNK: 1,
+  SCREEN_CAPTURE: 5,
 };
 
 export const PLAN_LIMITS = {
