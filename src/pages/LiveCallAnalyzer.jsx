@@ -429,6 +429,9 @@ export default function LiveCallAnalyzer() {
                 5 credits per capture (every 10 seconds)
               </p>
             )}
+            <p className="text-xs text-muted-foreground text-center">
+              System Audio and Screen View are only available on desktop browsers.
+            </p>
             {!creditStatus?.canAnalyze && (
               <p className="text-xs text-warning text-center">You're out of AI credits for this month.</p>
             )}
