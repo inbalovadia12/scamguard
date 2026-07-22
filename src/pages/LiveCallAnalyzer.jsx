@@ -186,7 +186,23 @@ export default function LiveCallAnalyzer() {
 
       recorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
+        setIsListening(false);
       };
+
+      recorder.onerror = () => {
+        setError("Recording was interrupted. Tap Start to resume.");
+        if (recorderRef.current && recorderRef.current.state !== "inactive") {
+          recorderRef.current.stop();
+        }
+      };
+
+      stream.getAudioTracks().forEach((track) => {
+        track.onended = () => {
+          if (recorderRef.current && recorderRef.current.state !== "inactive") {
+            recorderRef.current.stop();
+          }
+        };
+      });
 
       recorder.start(CHUNK_MS);
       setIsListening(true);
@@ -208,6 +224,9 @@ export default function LiveCallAnalyzer() {
       videoRef.current.srcObject = null;
       videoRef.current = null;
     }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+    }
     setIsListening(false);
   };
 
@@ -228,6 +247,7 @@ export default function LiveCallAnalyzer() {
 
     const captureFrame = async () => {
       if (isProcessingRef.current) return;
+      if (!video.videoWidth || !video.videoHeight) return;
       isProcessingRef.current = true;
       setProcessingChunk(true);
 
