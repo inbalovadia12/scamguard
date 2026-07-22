@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Loader2, Crown, Sparkles, Trophy } from "lucide-react";
+import { GraduationCap, Loader2, Crown, Sparkles, Trophy, Phone, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import LockedFeature from "@/components/LockedFeature";
 import LessonCard from "@/components/lessons/LessonCard";
@@ -181,6 +181,23 @@ export default function Lessons() {
       <div className="animate-slide-up anim-delay-1">
         <LessonStats progress={progress} xp={totalXP} streak={1} />
       </div>
+
+      {/* Call Simulator Banner */}
+      <Link
+        to="/call-simulator"
+        className="block bg-gradient-to-r from-rose-500 to-red-600 rounded-2xl p-5 shadow-lg shadow-rose-500/20 hover:shadow-rose-500/30 transition-all animate-slide-up anim-delay-1"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
+            <Phone className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-white text-sm sm:text-base">Practice Call Simulator</h3>
+            <p className="text-xs text-white/80 mt-0.5">Roleplay against an AI scammer and get scored on your performance</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-white/70 flex-shrink-0" />
+        </div>
+      </Link>
 
       {completedCount > 0 && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground bg-card rounded-xl border border-border/50 p-3 animate-fade-in">
