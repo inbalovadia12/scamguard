@@ -10,7 +10,11 @@ import AIDisclaimer from "@/components/AIDisclaimer";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const CHUNK_MS = 5000;
-const SCREEN_INTERVAL_MS = 10000;
+const SCREEN_INTERVAL_OPTIONS = [
+  { label: "1 sec", ms: 1000, credits: 8 },
+  { label: "3 sec", ms: 3000, credits: 5 },
+  { label: "5 sec", ms: 5000, credits: 3 },
+];
 const RISK_ORDER = { low: 0, medium: 1, high: 2 };
 
 function getSupportedAudioMime() {
@@ -32,6 +36,7 @@ const RISK_CONFIG = {
 export default function LiveCallAnalyzer() {
   const isMobile = useIsMobile();
   const [mode, setMode] = useState("mic");
+  const [screenInterval, setScreenInterval] = useState(SCREEN_INTERVAL_OPTIONS[2]);
 
   useEffect(() => {
     if (isMobile && (mode === "system" || mode === "screen")) {
@@ -330,7 +335,7 @@ export default function LiveCallAnalyzer() {
           });
         }
 
-        await incrementCreditUsage(CREDIT_COSTS.SCREEN_CAPTURE);
+        await incrementCreditUsage(screenInterval.credits);
         setCreditStatus(await getCreditStatus());
       } catch (e) {
         setError(e.message || "Failed to analyze screen capture.");
@@ -341,7 +346,7 @@ export default function LiveCallAnalyzer() {
     };
 
     captureFrame();
-    screenIntervalRef.current = setInterval(captureFrame, SCREEN_INTERVAL_MS);
+    screenIntervalRef.current = setInterval(captureFrame, screenInterval.ms);
     setIsListening(true);
   };
 
@@ -434,10 +439,25 @@ export default function LiveCallAnalyzer() {
               {mode === "screen" ? <Eye className="w-4 h-4" /> : <Radio className="w-4 h-4" />}
               {mode === "screen" ? "Start Watching" : "Start Listening"}
             </Button>
-            {mode === "screen" && (
-              <p className="text-xs text-muted-foreground text-center">
-                5 credits per capture (every 10 seconds)
-              </p>
+            {mode === "screen" && !isMobile && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-xs text-muted-foreground">Capture every:</span>
+                  {SCREEN_INTERVAL_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.label}
+                      onClick={() => setScreenInterval(opt)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        screenInterval.label === opt.label
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-muted/70"
+                      }`}
+                    >
+                      {opt.label} · {opt.credits} cr
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
             <p className="text-xs text-muted-foreground text-center">
               System Audio and Screen View are only available on desktop browsers.
