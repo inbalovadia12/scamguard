@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Phone, PhoneOff, Send, Loader2, AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { Phone, PhoneOff, Send, Loader2, AlertTriangle, CheckCircle2, Info, Mic, Keyboard, Volume2 } from "lucide-react";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 
@@ -11,14 +12,45 @@ export default function CallInterface({ scenario, conversation, setConversation,
   const [callEnded, setCallEnded] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const lastSpokenIndexRef = useRef(-1);
+  const lang = localStorage.getItem("vardin_language") || "en";
+  const { isListening, interimText, isSupported: speechSupported, start: startListening, stop: stopListening } = useSpeechRecognition(lang);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversation, waiting]);
 
-  const handleSend = async () => {
-    if (!userInput.trim() || waiting || callEnded) return;
-    const userMessage = { speaker: "user", text: userInput.trim() };
+  // TTS for scammer messages in voice mode
+  useEffect(() => {
+    if (!voiceMode) {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      lastSpokenIndexRef.current = conversation.length - 1;
+      return;
+    }
+    for (let i = lastSpokenIndexRef.current + 1; i < conversation.length; i++) {
+      if (conversation[i].speaker === "scammer") {
+        if (window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(conversation[i].text);
+          u.lang = lang === "he" ? "he-IL" : lang === "es" ? "es-ES" : "en-US";
+          u.rate = 0.95;
+          u.pitch = 0.85;
+          window.speechSynthesis.speak(u);
+        }
+      }
+    }
+    lastSpokenIndexRef.current = conversation.length - 1;
+  }, [conversation, voiceMode, lang]);
+
+  useEffect(() => {
+    return () => { if (window.speechSynthesis) window.speechSynthesis.cancel(); };
+  }, []);
+
+  const handleSend = async (overrideText) => {
+    const text = (overrideText || userInput).trim();
+    if (!text || waiting || callEnded) return;
+    const userMessage = { speaker: "user", text };
     const updatedConvo = [...conversation, userMessage];
     setConversation(updatedConvo);
     setUserInput("");
@@ -26,7 +58,6 @@ export default function CallInterface({ scenario, conversation, setConversation,
     setFeedback(null);
 
     try {
-      const lang = localStorage.getItem("vardin_language") || "en";
       const response = await base44.functions.invoke("simulateScamCall", {
         action: "respond",
         scenario_id: scenario.id,
@@ -71,8 +102,19 @@ export default function CallInterface({ scenario, conversation, setConversation,
   };
 
   const handleEndCall = () => {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (isListening) stopListening();
     setCallEnded(true);
     onEndCall(conversation);
+  };
+
+  const handleVoiceSend = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      startListening((text) => handleSend(text));
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -107,6 +149,17 @@ export default function CallInterface({ scenario, conversation, setConversation,
           </div>
         </div>
         <div className="flex items-center gap-1.5">
+          {speechSupported && (
+            <button
+              onClick={() => setVoiceMode(!voiceMode)}
+              className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                voiceMode ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"
+              }`}
+            >
+              {voiceMode ? <Mic className="w-3 h-3" /> : <Keyboard className="w-3 h-3" />}
+              {voiceMode ? "Voice" : "Text"}
+            </button>
+          )}
           <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
             <Phone className="w-3 h-3" />
             Live
@@ -192,6 +245,41 @@ export default function CallInterface({ scenario, conversation, setConversation,
           <div className="flex items-center justify-center py-2">
             <p className="text-sm text-muted-foreground">Call ended. Loading your score...</p>
           </div>
+        ) : voiceMode ? (
+          <>
+            <div className="flex flex-col items-center gap-2 py-1">
+              <div className="min-h-[36px] text-center text-sm text-muted-foreground px-2">
+                {isListening ? (interimText || "Listening...") : waiting ? "Waiting for response..." : "Your turn to speak"}
+              </div>
+              <button
+                onClick={handleVoiceSend}
+                disabled={waiting && !isListening}
+                className={`relative w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg transition-all disabled:opacity-50 ${
+                  isListening ? "bg-destructive shadow-destructive/30" : "bg-primary shadow-primary/30 hover:bg-primary/90"
+                }`}
+              >
+                {isListening && <span className="absolute inset-0 rounded-full bg-destructive animate-ping opacity-30" />}
+                <Mic className="w-5 h-5 relative z-10" />
+              </button>
+              <p className="text-xs text-muted-foreground">{isListening ? "Tap to stop" : "Tap to speak"}</p>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
+                <Volume2 className="w-3 h-3" />
+                Voice on
+              </p>
+              <Button
+                onClick={handleEndCall}
+                variant="outline"
+                size="sm"
+                className="ml-auto text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/20"
+                disabled={waiting}
+              >
+                <PhoneOff className="w-3.5 h-3.5" />
+                End Call
+              </Button>
+            </div>
+          </>
         ) : (
           <>
             <div className="flex items-end gap-2">
