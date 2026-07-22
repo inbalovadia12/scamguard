@@ -1,0 +1,81 @@
+{
+  "name": "LiveGuardSession",
+  "type": "object",
+  "properties": {
+    "session_type": {
+      "type": "string",
+      "enum": [
+        "microphone",
+        "system_audio",
+        "screen_view"
+      ],
+      "description": "Type of source monitored"
+    },
+    "overall_risk": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Overall risk level detected during the session"
+    },
+    "tactics_detected": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Scam tactics detected during the session"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Warning messages generated during the session"
+    },
+    "transcript": {
+      "type": "string",
+      "description": "JSON string of transcript/analysis segments"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "description": "Duration of the session in seconds"
+    },
+    "segment_count": {
+      "type": "number",
+      "description": "Number of segments analyzed"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
+    }
+  },
+  "required": [
+    "session_type"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

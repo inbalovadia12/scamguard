@@ -242,6 +242,25 @@ export default function LiveCallAnalyzer() {
 
   const handleStop = () => {
     userStoppedRef.current = true;
+
+    // Save session record
+    if (transcript.length > 0 || warnings.length > 0) {
+      const sessionType = mode === "mic" ? "microphone" : mode === "system" ? "system_audio" : "screen_view";
+      base44.entities.LiveGuardSession.create({
+        session_type: sessionType,
+        overall_risk: overallRisk,
+        tactics_detected: tactics,
+        warnings: warnings.map((w) => w.text),
+        transcript: JSON.stringify(transcript.map((t) => ({
+          text: t.text,
+          risk_level: t.risk_level,
+          speaker: t.speaker,
+        }))),
+        duration_seconds: callSeconds,
+        segment_count: transcript.length,
+      }).catch(() => {});
+    }
+
     if (chunkIntervalRef.current) {
       clearInterval(chunkIntervalRef.current);
       chunkIntervalRef.current = null;
