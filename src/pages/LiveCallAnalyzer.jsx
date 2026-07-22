@@ -23,7 +23,7 @@ function getSupportedAudioMime() {
 }
 
 const RISK_CONFIG = {
-  low: { color: "text-success", bg: "bg-success/10", border: "border-success/30", icon: ShieldCheck, label: "No Threats Detected" },
+  low: { color: "text-success", bg: "bg-success/10", border: "border-success/30", icon: ShieldCheck, label: "Legitimate — No Scam Detected" },
   medium: { color: "text-warning", bg: "bg-warning/10", border: "border-warning/30", icon: AlertTriangle, label: "Caution — Suspicious Activity" },
   high: { color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30", icon: ShieldAlert, label: "High Risk — Likely Scam" },
 };
@@ -35,6 +35,7 @@ export default function LiveCallAnalyzer() {
   const [warnings, setWarnings] = useState([]);
   const [overallRisk, setOverallRisk] = useState("low");
   const [tactics, setTactics] = useState([]);
+  const [coaching, setCoaching] = useState([]);
   const [error, setError] = useState(null);
   const [creditStatus, setCreditStatus] = useState(null);
   const [checkingPlan, setCheckingPlan] = useState(true);
@@ -90,6 +91,7 @@ export default function LiveCallAnalyzer() {
     setWarnings([]);
     setOverallRisk("low");
     setTactics([]);
+    setCoaching([]);
     setCallSeconds(0);
     transcriptRef.current = [];
     overallRiskRef.current = "low";
@@ -145,9 +147,13 @@ export default function LiveCallAnalyzer() {
           const result = response.data;
 
           if (result.transcript) {
-            const newSeg = { text: result.transcript, timestamp: new Date(), risk_level: result.risk_level };
+            const newSeg = { text: result.transcript, timestamp: new Date(), risk_level: result.risk_level, speaker: result.speaker || "unknown", feedback: result.feedback || "" };
             setTranscript((prev) => [...prev, newSeg]);
             transcriptRef.current = [...transcriptRef.current, newSeg];
+          }
+
+          if (result.feedback) {
+            setCoaching((prev) => [{ text: result.feedback, timestamp: new Date() }, ...prev]);
           }
 
           if (result.warnings?.length) {
@@ -481,7 +487,7 @@ export default function LiveCallAnalyzer() {
       {(transcript.length > 0 || warnings.length > 0) && (
         <div className="grid sm:grid-cols-2 gap-4">
           <TranscriptFeed segments={transcript} />
-          <WarningPanel warnings={warnings} tactics={tactics} />
+          <WarningPanel warnings={warnings} tactics={tactics} coaching={coaching} />
         </div>
       )}
 

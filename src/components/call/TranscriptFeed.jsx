@@ -1,10 +1,16 @@
 import React, { useEffect, useRef } from "react";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, User, AlertTriangle, ThumbsUp, ShieldCheck } from "lucide-react";
 
 const RISK_COLORS = {
   low: "border-l-success",
   medium: "border-l-warning",
   high: "border-l-destructive",
+};
+
+const SPEAKER_CONFIG = {
+  scammer: { label: "Scammer", icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/10" },
+  victim: { label: "You", icon: User, color: "text-primary", bg: "bg-primary/10" },
+  unknown: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
 };
 
 export default function TranscriptFeed({ segments }) {
@@ -26,17 +32,31 @@ export default function TranscriptFeed({ segments }) {
         {segments.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Waiting for speech...</p>
         ) : (
-          segments.map((seg, i) => (
-            <div
-              key={i}
-              className={`text-sm p-2.5 rounded-lg bg-muted/30 border-l-2 ${RISK_COLORS[seg.risk_level] || RISK_COLORS.low}`}
-            >
-              <p className="text-foreground">{seg.text}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {new Date(seg.timestamp).toLocaleTimeString()}
-              </p>
-            </div>
-          ))
+          segments.map((seg, i) => {
+            const cfg = SPEAKER_CONFIG[seg.speaker] || SPEAKER_CONFIG.unknown;
+            const SpeakerIcon = cfg.icon;
+            return (
+              <div
+                key={i}
+                className={`text-sm p-2.5 rounded-lg bg-muted/30 border-l-2 ${RISK_COLORS[seg.risk_level] || RISK_COLORS.low}`}
+              >
+                <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${cfg.bg} ${cfg.color} text-xs font-medium mb-1.5`}>
+                  <SpeakerIcon className="w-3 h-3" />
+                  {cfg.label}
+                </div>
+                <p className="text-foreground">{seg.text}</p>
+                {seg.feedback && (
+                  <div className={`mt-2 flex items-start gap-1.5 p-2 rounded-lg ${seg.speaker === "victim" ? "bg-primary/5" : "bg-muted/40"}`}>
+                    <ThumbsUp className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-primary font-medium">{seg.feedback}</p>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {new Date(seg.timestamp).toLocaleTimeString()}
+                </p>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

@@ -44,13 +44,14 @@ Analyze for these scam indicators:
 - Fake job offers or lottery/prize notifications
 
 Return:
+- is_scam: true if scam indicators are present, false if this is clearly legitimate/normal content
 - red_flags: Specific concerning text or elements detected in THIS screenshot (empty array if none)
 - risk_level: "low" (normal content), "medium" (some concerning elements), "high" (clear scam indicators)
 - warnings: Short, actionable warning messages for the user
 - tactics_detected: Named tactics if any (e.g., "Phishing", "Urgency", "Impersonation")
-- analysis: Brief 1-2 sentence assessment of what you see
+- analysis: Brief 1-2 sentence assessment. If NOT a scam, explicitly say so ("This appears to be a normal [app/message]. No scam indicators detected.")
 
-If the screen shows normal, non-suspicious content, return risk_level: "low" with empty arrays.
+If the screen shows normal, non-suspicious content, return risk_level: "low", is_scam: false, with empty arrays.
 Respond entirely in ${languageName}.`;
 
     const analysis = await base44.integrations.Core.InvokeLLM({
@@ -59,17 +60,19 @@ Respond entirely in ${languageName}.`;
       response_json_schema: {
         type: 'object',
         properties: {
+          is_scam: { type: 'boolean' },
           red_flags: { type: 'array', items: { type: 'string' } },
           risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
           warnings: { type: 'array', items: { type: 'string' } },
           tactics_detected: { type: 'array', items: { type: 'string' } },
           analysis: { type: 'string' },
         },
-        required: ['risk_level', 'red_flags', 'warnings'],
+        required: ['risk_level', 'red_flags', 'warnings', 'is_scam'],
       },
     });
 
     return Response.json({
+      is_scam: analysis.is_scam ?? false,
       red_flags: analysis.red_flags || [],
       risk_level: analysis.risk_level || 'low',
       warnings: analysis.warnings || [],

@@ -1,4 +1,6 @@
 // Extra lessons for existing categories — appended via lessons.js merge logic
+import { CALL_PRACTICE_CATEGORY } from './lessons-call-practice';
+
 export const EXTRA_LESSONS = {
   phishing_emails: [
     {
@@ -1102,3 +1104,5 @@ export const NEW_CATEGORIES = [
     ],
   },
 ];
+
+NEW_CATEGORIES.push(CALL_PRACTICE_CATEGORY);

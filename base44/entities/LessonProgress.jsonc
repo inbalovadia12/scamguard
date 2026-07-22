@@ -24,7 +24,8 @@
         "phone_scams",
         "job_scams",
         "romance_scams",
-        "articles"
+        "articles",
+        "call_practice"
       ],
       "description": "Lesson category"
     },

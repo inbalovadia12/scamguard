@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Check, X, ChevronRight, ChevronLeft, Lightbulb, AlertCircle, BookOpen, Type } from "lucide-react";
+import { Check, X, ChevronRight, ChevronLeft, Lightbulb, AlertCircle, BookOpen, Type, AlertTriangle, User, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,8 @@ export default function LessonView({ lesson, onComplete, onExit }) {
   const isQuizStep = step >= lesson.content.length;
   const quizIndex = step - lesson.content.length;
   const currentQuiz = isQuizStep ? lesson.quiz[quizIndex] : null;
-  const quizType = currentQuiz?.type || "multiple_choice";
+  const rawQuizType = currentQuiz?.type || "multiple_choice";
+  const quizType = rawQuizType === "scenario" ? "multiple_choice" : rawQuizType;
 
   const handleAnswer = (optionIndex) => {
     setAnswers({ ...answers, [quizIndex]: optionIndex });
@@ -63,7 +64,8 @@ export default function LessonView({ lesson, onComplete, onExit }) {
       setMultiAnswerSelected([]);
     } else {
       const correctCount = lesson.quiz.filter((q, i) => {
-        if ((q.type || "multiple_choice") === "multiple_choice") return answers[i] === q.correct;
+        const qType = q.type || "multiple_choice";
+        if (qType === "multiple_choice" || qType === "scenario") return answers[i] === q.correct;
         if (q.type === "true_false") return answers[i] === q.correct;
         if (q.type === "fill_blank") {
           const saved = (answers[i + "_fill"] || "").trim().toLowerCase();
@@ -143,6 +145,42 @@ export default function LessonView({ lesson, onComplete, onExit }) {
               </div>
               <p className="text-base leading-relaxed whitespace-pre-line">{lesson.content[step].body}</p>
             </div>
+          ) : lesson.content[step].type === "audio_transcript" ? (
+            <div className="space-y-3">
+              {lesson.content[step].lines?.map((line, li) => {
+                const isScammer = line.speaker === "scammer";
+                return (
+                  <div key={li} className={`flex gap-2.5 ${isScammer ? "" : "flex-row-reverse"}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      isScammer ? "bg-destructive/10" : "bg-primary/10"
+                    }`}>
+                      {isScammer
+                        ? <AlertTriangle className="w-4 h-4 text-destructive" />
+                        : <User className="w-4 h-4 text-primary" />}
+                    </div>
+                    <div className={`flex-1 max-w-[80%]`}>
+                      <span className={`text-xs font-medium ${isScammer ? "text-destructive" : "text-primary"}`}>
+                        {isScammer ? "Scammer" : "Victim"}
+                      </span>
+                      <div className={`rounded-2xl p-3 mt-0.5 ${
+                        isScammer ? "bg-destructive/5 border border-destructive/20" : "bg-primary/5 border border-primary/20"
+                      }`}>
+                        <p className="text-sm leading-relaxed">{line.text}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {lesson.content[step].analysis && (
+                <div className="flex items-start gap-2.5 bg-primary/5 border border-primary/20 rounded-2xl p-4 mt-2">
+                  <ShieldCheck className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-xs font-semibold text-primary uppercase tracking-wider">AI Analysis</span>
+                    <p className="text-sm leading-relaxed mt-1">{lesson.content[step].analysis}</p>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <p className="text-base sm:text-lg leading-relaxed whitespace-pre-line">{lesson.content[step].body}</p>
           )}
@@ -153,12 +191,13 @@ export default function LessonView({ lesson, onComplete, onExit }) {
           <div className="flex items-center gap-2">
             {quizType === "fill_blank" ? <Type className="w-5 h-5 text-primary" /> : <BookOpen className="w-5 h-5 text-primary" />}
             <span className="text-xs font-semibold text-primary uppercase tracking-wider">
-              {quizType === "true_false" ? "True or False" :
+              {rawQuizType === "scenario" ? "Scenario" :
+               quizType === "true_false" ? "True or False" :
                quizType === "fill_blank" ? "Fill in the Blank" :
                quizType === "multiple_answer" ? "Select All That Apply" :
                "Multiple Choice"}
-              {" · "}
-              Question {quizIndex + 1} of {lesson.quiz.length}
+               {" · "}
+               Question {quizIndex + 1} of {lesson.quiz.length}
             </span>
           </div>
 

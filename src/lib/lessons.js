@@ -1398,6 +1398,7 @@ export function getIcon(name) {
     Briefcase: "Briefcase",
     Flame: "Flame",
     Newspaper: "Newspaper",
+    PhoneCall: "PhoneCall",
   };
   return icons[name] || "ShieldCheck";
 }
