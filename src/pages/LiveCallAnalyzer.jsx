@@ -7,6 +7,7 @@ import { getCreditStatus, CREDIT_COSTS, incrementCreditUsage } from "@/lib/credi
 import TranscriptFeed from "@/components/call/TranscriptFeed";
 import WarningPanel from "@/components/call/WarningPanel";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const CHUNK_MS = 5000;
 const SCREEN_INTERVAL_MS = 10000;
@@ -29,7 +30,14 @@ const RISK_CONFIG = {
 };
 
 export default function LiveCallAnalyzer() {
+  const isMobile = useIsMobile();
   const [mode, setMode] = useState("mic");
+
+  useEffect(() => {
+    if (isMobile && (mode === "system" || mode === "screen")) {
+      setMode("mic");
+    }
+  }, [isMobile, mode]);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState([]);
   const [warnings, setWarnings] = useState([]);
@@ -400,24 +408,26 @@ export default function LiveCallAnalyzer() {
                 <span className="text-xs text-muted-foreground">Phone calls via speaker</span>
               </button>
               <button
-                onClick={() => setMode("system")}
+                onClick={() => !isMobile && setMode("system")}
+                disabled={isMobile}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  mode === "system" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
+                  isMobile ? "opacity-40 cursor-not-allowed border-border/30" : mode === "system" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
                 }`}
               >
-                <Monitor className={`w-6 h-6 ${mode === "system" ? "text-primary" : "text-muted-foreground"}`} />
+                <Monitor className={`w-6 h-6 ${mode === "system" && !isMobile ? "text-primary" : "text-muted-foreground"}`} />
                 <span className="text-sm font-medium">System Audio</span>
-                <span className="text-xs text-muted-foreground">Teams, Zoom, Meet</span>
+                <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "Teams, Zoom, Meet"}</span>
               </button>
               <button
-                onClick={() => setMode("screen")}
+                onClick={() => !isMobile && setMode("screen")}
+                disabled={isMobile}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  mode === "screen" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
+                  isMobile ? "opacity-40 cursor-not-allowed border-border/30" : mode === "screen" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
                 }`}
               >
-                <Eye className={`w-6 h-6 ${mode === "screen" ? "text-primary" : "text-muted-foreground"}`} />
+                <Eye className={`w-6 h-6 ${mode === "screen" && !isMobile ? "text-primary" : "text-muted-foreground"}`} />
                 <span className="text-sm font-medium">Screen View</span>
-                <span className="text-xs text-muted-foreground">SMS, WhatsApp, Email</span>
+                <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "SMS, WhatsApp, Email"}</span>
               </button>
             </div>
             <Button onClick={handleStart} className="w-full gap-2 h-12" disabled={!creditStatus?.canAnalyze}>
