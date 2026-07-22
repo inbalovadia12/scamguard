@@ -189,19 +189,19 @@ export default function LiveCallAnalyzer() {
 
   if (!creditStatus?.isPremiumPlan) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-card rounded-2xl border border-border/50 p-8 text-center space-y-4 animate-slide-up">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+      <div className="max-w-md mx-auto px-4">
+        <div className="bg-card rounded-2xl border border-border/50 p-8 sm:p-10 text-center space-y-5 animate-slide-up flex flex-col items-center">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
             <Radio className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-xl font-bold font-heading">Live Guard</h1>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+          <p className="text-sm text-muted-foreground">
             Real-time scam detection during calls and meetings. Get instant warnings as scam tactics are detected.
           </p>
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
             <Crown className="w-4 h-4" /> Premium Feature
           </div>
-          <Button asChild>
+          <Button asChild className="w-full">
             <Link to="/pricing">Upgrade to Premium</Link>
           </Button>
         </div>
