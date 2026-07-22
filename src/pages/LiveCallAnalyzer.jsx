@@ -8,7 +8,7 @@ import TranscriptFeed from "@/components/call/TranscriptFeed";
 import WarningPanel from "@/components/call/WarningPanel";
 import AIDisclaimer from "@/components/AIDisclaimer";
 
-const CHUNK_MS = 15000;
+const CHUNK_MS = 5000;
 const RISK_ORDER = { low: 0, medium: 1, high: 2 };
 
 const RISK_CONFIG = {
@@ -28,6 +28,7 @@ export default function LiveCallAnalyzer() {
   const [creditStatus, setCreditStatus] = useState(null);
   const [checkingPlan, setCheckingPlan] = useState(true);
   const [processingChunk, setProcessingChunk] = useState(false);
+  const [callSeconds, setCallSeconds] = useState(0);
 
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
@@ -35,6 +36,12 @@ export default function LiveCallAnalyzer() {
   const isProcessingRef = useRef(false);
   const transcriptRef = useRef([]);
   const overallRiskRef = useRef("low");
+
+  useEffect(() => {
+    if (!isListening) return;
+    const interval = setInterval(() => setCallSeconds((s) => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, [isListening]);
 
   useEffect(() => {
     const init = async () => {
@@ -62,6 +69,7 @@ export default function LiveCallAnalyzer() {
     setWarnings([]);
     setOverallRisk("low");
     setTactics([]);
+    setCallSeconds(0);
     transcriptRef.current = [];
     overallRiskRef.current = "low";
     chunkQueueRef.current = [];
@@ -179,7 +187,7 @@ export default function LiveCallAnalyzer() {
     );
   }
 
-  if (!creditStatus?.isPremium) {
+  if (!creditStatus?.isPremiumPlan) {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="bg-card rounded-2xl border border-border/50 p-8 text-center space-y-4 animate-slide-up">
@@ -262,7 +270,7 @@ export default function LiveCallAnalyzer() {
               <div>
                 <p className="text-sm font-semibold">Listening via {mode === "mic" ? "Microphone" : "System Audio"}</p>
                 <p className="text-xs text-muted-foreground">
-                  {processingChunk ? "Analyzing..." : "Capturing audio..."}
+                  {processingChunk ? "Analyzing..." : "Capturing audio..."} • {Math.floor(callSeconds / 60)}:{String(callSeconds % 60).padStart(2, "0")}
                 </p>
               </div>
             </div>
@@ -286,7 +294,7 @@ export default function LiveCallAnalyzer() {
           <div className="flex-1">
             <p className={`text-sm font-bold ${cfg.color}`}>{cfg.label}</p>
             <p className="text-xs text-muted-foreground">
-              {transcript.length} segments analyzed • {creditStatus?.remaining || 0} credits left
+              {transcript.length} segments • {warnings.length} warnings • {creditStatus?.remaining || 0} credits left
             </p>
           </div>
           {tactics.length > 0 && (

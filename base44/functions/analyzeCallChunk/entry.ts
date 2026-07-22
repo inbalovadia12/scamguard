@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
     let plan = user.subscription_plan || 'starter';
     if (plan === 'free') plan = 'starter';
     if (plan === 'elite') plan = 'premium';
-    if (plan !== 'premium' && plan !== 'plus') {
+    if (plan !== 'premium') {
       return Response.json({ error: 'Premium subscription required', upgrade_url: 'https://vardin.base44.app/pricing' }, { status: 403 });
     }
 
