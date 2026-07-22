@@ -45,6 +45,8 @@ export default function LiveCallAnalyzer() {
   const streamRef = useRef(null);
   const screenIntervalRef = useRef(null);
   const videoRef = useRef(null);
+  const chunkIntervalRef = useRef(null);
+  const userStoppedRef = useRef(false);
   const chunkQueueRef = useRef([]);
   const isProcessingRef = useRef(false);
   const transcriptRef = useRef([]);
@@ -70,6 +72,9 @@ export default function LiveCallAnalyzer() {
       if (recorderRef.current && recorderRef.current.state !== "inactive") {
         recorderRef.current.stop();
       }
+      if (chunkIntervalRef.current) {
+        clearInterval(chunkIntervalRef.current);
+      }
       if (screenIntervalRef.current) {
         clearInterval(screenIntervalRef.current);
       }
@@ -89,6 +94,7 @@ export default function LiveCallAnalyzer() {
     transcriptRef.current = [];
     overallRiskRef.current = "low";
     chunkQueueRef.current = [];
+    userStoppedRef.current = false;
 
     try {
       if (mode === "screen") {
@@ -106,7 +112,6 @@ export default function LiveCallAnalyzer() {
           displayStream.getTracks().forEach((t) => t.stop());
           throw new Error('No audio captured. Make sure to check "Share audio" when sharing your screen.');
         }
-        displayStream.getVideoTracks().forEach((t) => t.stop());
         stream = new MediaStream(audioTracks);
       }
 
@@ -119,6 +124,7 @@ export default function LiveCallAnalyzer() {
         if (isProcessingRef.current || chunkQueueRef.current.length === 0) return;
         isProcessingRef.current = true;
         setProcessingChunk(true);
+        setError(null);
 
         try {
           const blob = chunkQueueRef.current.shift();
@@ -185,26 +191,30 @@ export default function LiveCallAnalyzer() {
       };
 
       recorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        setIsListening(false);
-      };
-
-      recorder.onerror = () => {
-        setError("Recording was interrupted. Tap Start to resume.");
-        if (recorderRef.current && recorderRef.current.state !== "inactive") {
-          recorderRef.current.stop();
+        if (!userStoppedRef.current) {
+          try {
+            recorderRef.current.start();
+          } catch (e) {
+            stream.getTracks().forEach((t) => t.stop());
+            setIsListening(false);
+            setError("Recording could not continue. Tap Start to resume.");
+          }
+        } else {
+          stream.getTracks().forEach((t) => t.stop());
+          if (chunkIntervalRef.current) {
+            clearInterval(chunkIntervalRef.current);
+            chunkIntervalRef.current = null;
+          }
+          setIsListening(false);
         }
       };
 
-      stream.getAudioTracks().forEach((track) => {
-        track.onended = () => {
-          if (recorderRef.current && recorderRef.current.state !== "inactive") {
-            recorderRef.current.stop();
-          }
-        };
-      });
-
-      recorder.start(CHUNK_MS);
+      recorder.start();
+      chunkIntervalRef.current = setInterval(() => {
+        if (recorderRef.current && recorderRef.current.state === "recording") {
+          recorderRef.current.stop();
+        }
+      }, CHUNK_MS);
       setIsListening(true);
     } catch (e) {
       setError(e.message || "Failed to start listening.");
@@ -212,8 +222,15 @@ export default function LiveCallAnalyzer() {
   };
 
   const handleStop = () => {
+    userStoppedRef.current = true;
+    if (chunkIntervalRef.current) {
+      clearInterval(chunkIntervalRef.current);
+      chunkIntervalRef.current = null;
+    }
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
       recorderRef.current.stop();
+    } else {
+      setIsListening(false);
     }
     if (screenIntervalRef.current) {
       clearInterval(screenIntervalRef.current);
