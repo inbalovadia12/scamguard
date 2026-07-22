@@ -110,7 +110,7 @@ export default function ImageScanner() {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
             <ImageIcon className="w-5 h-5 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">Reverse Image Scam Detector</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-heading">Reverse Image Scam Detector</h1>
         </div>
         <p className="text-sm text-muted-foreground max-w-md">
           Upload a profile photo to check if it appears elsewhere online or resembles common scam profiles.
@@ -151,7 +151,7 @@ export default function ImageScanner() {
               const file = e.dataTransfer.files[0];
               if (file) handleFileSelect({ target: { files: [file] } });
             }}
-            className={`w-full border-2 border-dashed rounded-xl py-12 flex flex-col items-center gap-3 cursor-pointer transition-all ${
+            className={`w-full border-2 border-dashed rounded-xl py-8 sm:py-12 flex flex-col items-center gap-3 cursor-pointer transition-all ${
               dragOver ? "border-primary bg-primary/10 scale-[1.02]" : "border-border hover:border-primary/40 hover:bg-primary/5"
             }`}
           >
@@ -168,7 +168,7 @@ export default function ImageScanner() {
             <img src={previewUrl} alt="Preview" className="w-full max-h-80 object-contain rounded-xl" />
             <button
               onClick={handleClearImage}
-              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center hover:bg-background"
+              className="absolute top-2 right-2 w-9 h-9 rounded-full bg-background/80 backdrop-blur flex items-center justify-center hover:bg-background"
             >
               <X className="w-4 h-4" />
             </button>
@@ -184,13 +184,13 @@ export default function ImageScanner() {
         )}
 
         {selectedFile && (
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Zap className="w-3.5 h-3.5" />
               <span>Costs {CREDIT_COST} credits</span>
               {credits && <span>· {credits.remaining} remaining</span>}
             </div>
-            <Button onClick={handleScan} disabled={scanning || !canScan} className="gap-2">
+            <Button onClick={handleScan} disabled={scanning || !canScan} className="gap-2 w-full sm:w-auto">
               {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
               {scanning ? "Scanning..." : "Scan Image"}
             </Button>
@@ -198,9 +198,9 @@ export default function ImageScanner() {
         )}
 
         {credits && !canScan && selectedFile && (
-          <div className="flex items-center justify-between gap-3 bg-destructive/5 border border-destructive/20 rounded-xl p-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-destructive/5 border border-destructive/20 rounded-xl p-3">
             <p className="text-xs text-destructive">Not enough credits. You need {CREDIT_COST} but have {credits.remaining}.</p>
-            <Button size="sm" asChild>
+            <Button size="sm" asChild className="w-full sm:w-auto">
               <Link to="/pricing">Upgrade</Link>
             </Button>
           </div>
@@ -226,9 +226,9 @@ function ImageScanResult({ data, previewUrl }) {
 
   return (
     <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-5 animate-slide-up">
-      <div className="flex gap-4">
+      <div className="flex gap-3 sm:gap-4">
         {previewUrl && (
-          <img src={previewUrl} alt="Analyzed" className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+          <img src={previewUrl} alt="Analyzed" className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover flex-shrink-0" />
         )}
         <div className="flex-1 space-y-2 min-w-0">
           {data.is_likely_scam_profile !== undefined && (
@@ -286,7 +286,7 @@ function ImageScanResult({ data, previewUrl }) {
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sources</p>
           <div className="flex flex-wrap gap-2">
             {data.sources.map((source, i) => (
-              <a key={i} href={source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-[200px]">
+              <a key={i} href={source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-full sm:max-w-[200px]">
                 {source}
               </a>
             ))}

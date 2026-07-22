@@ -91,6 +91,21 @@ export default function AppLayout() {
   const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
   const handleLogout = () => {
     base44.auth.logout("/login");
   };
@@ -186,7 +201,7 @@ export default function AppLayout() {
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-30 glass border-b border-border/50">
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 glass border-b border-border/50" style={{ paddingTop: "env(safe-area-inset-top)" }}>
         <div className="px-4 h-16 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg luxury-gradient-btn flex items-center justify-center">
@@ -206,8 +221,8 @@ export default function AppLayout() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 top-16 z-20 bg-background animate-fade-in" onClick={() => setMobileOpen(false)}>
-          <div className="px-4 py-4 space-y-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="md:hidden fixed inset-0 top-16 z-20 bg-background animate-fade-in overflow-y-auto" style={{ paddingBottom: "env(safe-area-inset-bottom)" }} onClick={() => setMobileOpen(false)}>
+          <div className="px-4 py-4 space-y-6" onClick={(e) => e.stopPropagation()}>
             <div className="space-y-5">
               {NAV_SECTIONS.map((section) => (
                 <div key={section.labelKey}>
@@ -278,17 +293,17 @@ export default function AppLayout() {
 
       {/* Main Content */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen overflow-x-hidden">
-        <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-8 pt-20 pb-6 md:py-12">
+        <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-8 pt-20 pb-6 md:py-12" style={{ paddingTop: "max(5rem, calc(4rem + env(safe-area-inset-top)))" }}>
           <Outlet />
         </main>
 
         <NudigoPopup />
         <WrappedPopup />
 
-        <footer className="border-t border-border/50 py-6 px-4 mt-auto">
+        <footer className="border-t border-border/50 py-6 px-4 mt-auto" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
             <p>{t("footer.copyright")}</p>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
               <Link to="/about" className="hover:text-foreground transition-colors">{t("footer.about")}</Link>
               <Link to="/contact" className="hover:text-foreground transition-colors">{t("footer.contact")}</Link>
               <Link to="/privacy" className="hover:text-foreground transition-colors">{t("footer.privacy")}</Link>
