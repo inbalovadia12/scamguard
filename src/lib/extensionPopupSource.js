@@ -149,6 +149,7 @@ var creditsLimit = null;
 var currentLang = 'en';
 var uploadedFileData = null;
 var uploadedFileName = '';
+var decodedQR = '';
 var lastAnalysis = null;
 var lastScanInfo = null;
 
@@ -198,6 +199,8 @@ var I18N = {
     copy_report: 'Copy', share_report: 'Share', download_report: 'Download', scan_again: 'Scan Again',
     report_copied: 'Report copied!', auto_scan: 'Auto-Scan',
     virustotal: 'VirusTotal', vt_detected: 'malicious detections', vt_reputation: 'reputation',
+    qr_destination: 'QR Code Destination', decoded_content: 'Decoded Content',
+    final_destination: 'Final Destination (After Redirects)', page_title: 'Page Title',
     scanned_on: 'Scanned', language: 'Language'
   },
   he: {
@@ -244,6 +247,8 @@ var I18N = {
     copy_report: 'העתק', share_report: 'שתף', download_report: 'הורד', scan_again: 'סרוק שוב',
     report_copied: 'הדוח הועתק!', auto_scan: 'סריקה אוטומטית',
     virustotal: 'VirusTotal', vt_detected: 'זיהויים זדוניים', vt_reputation: 'מוניטין',
+    qr_destination: 'יעד קוד QR', decoded_content: 'תוכן מפוענח',
+    final_destination: 'יעד סופי (לאחר הפניות)', page_title: 'כותרת דף',
     scanned_on: 'נסרק', language: 'שפה'
   },
   es: {
@@ -290,6 +295,8 @@ var I18N = {
     copy_report: 'Copiar', share_report: 'Compartir', download_report: 'Descargar', scan_again: 'Escanear de nuevo',
     report_copied: '¡Informe copiado!', auto_scan: 'Auto-escaneo',
     virustotal: 'VirusTotal', vt_detected: 'detecciones maliciosas', vt_reputation: 'reputación',
+    qr_destination: 'Destino del código QR', decoded_content: 'Contenido decodificado',
+    final_destination: 'Destino final (después de redirecciones)', page_title: 'Título de la página',
     scanned_on: 'Escaneado', language: 'Idioma'
   }
 };
@@ -439,6 +446,7 @@ function onScanTypeChange() {
   }
   uploadedFileData = null;
   uploadedFileName = '';
+  decodedQR = '';
   var dzt = document.getElementById('drop-zone-text');
   if (dzt) dzt.textContent = t('upload_desc');
   updateCreditDisplay();
@@ -455,11 +463,35 @@ function handleFile(file) {
     uploadedFileData = e.target.result;
     uploadedFileName = file.name;
     document.getElementById('drop-zone-text').textContent = file.name;
+    var scanType = document.getElementById('scan-type').value;
+    if (scanType === 'qr') {
+      decodedQR = '';
+      decodeQRCode(uploadedFileData).then(function(decoded) {
+        if (decoded) {
+          decodedQR = decoded;
+          document.getElementById('drop-zone-text').textContent = 'QR: ' + decoded.substring(0, 60);
+        }
+      });
+    }
   };
   reader.onerror = function() {
     showError(t('err_unsupported'));
   };
   reader.readAsDataURL(file);
+}
+
+async function decodeQRCode(dataUrl) {
+  if (typeof BarcodeDetector === 'undefined') return '';
+  try {
+    var blob = await (await fetch(dataUrl)).blob();
+    var bitmap = await createImageBitmap(blob);
+    var detector = new BarcodeDetector({ formats: ['qr_code'] });
+    var codes = await detector.detect(bitmap);
+    if (codes.length > 0) return codes[0].rawValue;
+    return '';
+  } catch (e) {
+    return '';
+  }
 }
 
 function showError(msg) {
@@ -564,7 +596,8 @@ async function scanPage() {
           scan_mode: scanType === 'page' ? document.getElementById('scan-mode').value : scanType,
           answer_type: answerType,
           custom_focus: customFocus,
-          language: currentLang
+          language: currentLang,
+          decoded_content: scanType === 'qr' ? decodedQR : ''
         }
       })
     });
@@ -614,6 +647,34 @@ function displayResults(data, answerType) {
     var vt = data.virustotal;
     var vtCls = vt.malicious > 0 ? 'danger' : 'safe';
     html += '<div class="vt-badge ' + vtCls + '"><strong>' + t('virustotal') + ':</strong> ' + vt.malicious + '/' + vt.total_engines + ' ' + t('vt_detected') + ' \u00B7 ' + t('vt_reputation') + ': ' + vt.reputation + '</div>';
+  }
+
+  // QR destination card (shown BEFORE risk assessment)
+  if (data.scan_type === 'qr') {
+    var qrDecoded = data.decoded_content || a.decoded_content;
+    var qrFinalUrl = data.final_destination_url || a.final_destination_url;
+    var qrPageTitle = data.destination_title;
+    var qrDestDesc = a.destination_description;
+    if (qrDecoded || qrFinalUrl) {
+      html += '<div class="qr-dest-card">';
+      html += '<p class="qr-dest-title">\uD83D\uDCBC ' + t('qr_destination') + '</p>';
+      if (qrDecoded) {
+        html += '<p class="qr-label">' + t('decoded_content') + '</p>';
+        html += '<p class="qr-value">' + escapeHtml(qrDecoded) + '</p>';
+      }
+      if (qrFinalUrl && qrFinalUrl !== qrDecoded) {
+        html += '<p class="qr-label">' + t('final_destination') + '</p>';
+        html += '<p class="qr-value"><a href="' + escapeHtml(qrFinalUrl) + '" target="_blank" rel="noopener">' + escapeHtml(qrFinalUrl) + '</a></p>';
+      }
+      if (qrPageTitle) {
+        html += '<p class="qr-label">' + t('page_title') + '</p>';
+        html += '<p class="qr-value">' + escapeHtml(qrPageTitle) + '</p>';
+      }
+      if (qrDestDesc) {
+        html += '<p class="qr-value">' + escapeHtml(qrDestDesc) + '</p>';
+      }
+      html += '</div>';
+    }
   }
 
   if (mode === 'quick') {

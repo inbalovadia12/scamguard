@@ -379,6 +379,9 @@ body {
   .field select, .field input, .field textarea { background: #1e293b !important; color: #e2e8f0 !important; border-color: #334155 !important; }
   .drop-zone { background: #1e293b !important; border-color: #334155 !important; color: #94a3b8 !important; }
   .vt-badge { background: #1e293b !important; }
+  .qr-dest-card { background: #052e16 !important; border-color: #14532d !important; }
+  .qr-value { background: #1e293b !important; border-color: #334155 !important; color: #cbd5e1 !important; }
+  .qr-value a { color: #2dd4bf !important; }
   .section-text, .verdict-text, .flag-list li, .action-list li { color: #cbd5e1 !important; }
   .section-label { color: #94a3b8 !important; }
 }
@@ -443,6 +446,13 @@ html[dir="rtl"] .flag-list li::before, html[dir="rtl"] .action-list li::before {
 .vt-badge { padding: 8px 10px; border-radius: 8px; font-size: 11px; background: #f0f9ff; border: 1px solid #bae6fd; color: #075985; margin-bottom: 8px; }
 .vt-badge.danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
 .vt-badge.safe { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+
+.qr-dest-card { background: #f0fdfa; border: 2px solid #99f6e4; border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
+.qr-dest-title { font-size: 14px; font-weight: 700; color: #0f766e; }
+.qr-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-top: 4px; }
+.qr-value { font-size: 12px; color: #1e293b; word-break: break-all; line-height: 1.4; background: white; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
+.qr-value a { color: #0f766e; text-decoration: none; }
+.qr-value a:hover { text-decoration: underline; }
 
 .result-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .result-card.danger { border-color: #fecaca; background: #fef2f2; }

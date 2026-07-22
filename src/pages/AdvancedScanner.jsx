@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowRight, ShieldCheck, Lock, Crown, AlertTriangle } from "lucide-react";
+import { Loader2, ArrowRight, ShieldCheck, Lock, Crown, AlertTriangle, QrCode } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { getCreditStatus } from "@/lib/credits";
@@ -26,6 +26,7 @@ export default function AdvancedScanner() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [credits, setCredits] = useState(null);
+  const [decodedQR, setDecodedQR] = useState("");
 
   useEffect(() => {
     getCreditStatus().then(setCredits);
@@ -46,7 +47,22 @@ export default function AdvancedScanner() {
   };
 
   const resetInputs = () => {
-    setText(""); setUrl(""); setFileData(null); setFileName(""); setCustomFocus("");
+    setText(""); setUrl(""); setFileData(null); setFileName(""); setCustomFocus(""); setDecodedQR("");
+  };
+
+  const handleFileSelect = async (data, name) => {
+    setFileData(data);
+    setFileName(name);
+    setDecodedQR("");
+    if (scanType === "qr" && data && typeof window.BarcodeDetector !== "undefined") {
+      try {
+        const blob = await (await fetch(data)).blob();
+        const bitmap = await window.createImageBitmap(blob);
+        const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        const codes = await detector.detect(bitmap);
+        if (codes.length > 0) setDecodedQR(codes[0].rawValue);
+      } catch {}
+    }
   };
 
   const handleScan = async () => {
@@ -72,6 +88,7 @@ export default function AdvancedScanner() {
       if (selectedType.inputType === "url") payload.page_url = url.trim();
       if (selectedType.inputType === "image") payload.screenshot_data_url = fileData;
       if (selectedType.inputType === "file") { payload.file_data = fileData; payload.file_name = fileName; }
+      if (scanType === "qr" && decodedQR) { payload.options.decoded_content = decodedQR; }
 
       const response = await base44.functions.invoke("scanWebpage", payload);
       const data = response.data;
@@ -227,12 +244,23 @@ export default function AdvancedScanner() {
                 </>
               )}
               {selectedType?.inputType === "image" && (
-                <FileDropzone
-                  onFileSelect={(data, name) => { setFileData(data); setFileName(name); }}
-                  accept="image/*"
-                  label={scanType === "qr" ? "Upload QR code image" : "Upload screenshot image"}
-                  sublabel="PNG, JPG, WebP — max 10MB"
-                />
+                <>
+                  <FileDropzone
+                    onFileSelect={handleFileSelect}
+                    accept="image/*"
+                    label={scanType === "qr" ? "Upload QR code image" : "Upload screenshot image"}
+                    sublabel="PNG, JPG, WebP — max 10MB"
+                  />
+                  {scanType === "qr" && decodedQR && (
+                    <div className="flex items-start gap-2 px-4 py-3 bg-primary/10 border border-primary/20 rounded-xl animate-scale-in">
+                      <QrCode className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-primary mb-0.5">Decoded QR Content</p>
+                        <p className="text-sm font-mono break-all">{decodedQR}</p>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
               {selectedType?.inputType === "file" && (
                 <FileDropzone

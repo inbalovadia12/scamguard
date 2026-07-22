@@ -9,6 +9,30 @@ const SCAN_TYPE_MODIFIERS: Record<string, number> = {
   email: 0, chat: 0, marketplace: 0, qr: 2, file: 4,
 };
 
+// === Follow URL redirects server-side (LLM cannot do this) ===
+async function followRedirects(url: string): Promise<{ finalUrl: string; pageTitle: string | null; contentType: string | null }> {
+  try {
+    const response = await fetch(url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(10000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VardinScanner/1.0)' },
+    });
+    const finalUrl = response.url || url;
+    const contentType = response.headers.get('content-type') || null;
+    let pageTitle: string | null = null;
+    if (contentType && contentType.includes('text/html')) {
+      try {
+        const html = await response.text();
+        const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
+        if (titleMatch) pageTitle = titleMatch[1].trim();
+      } catch {}
+    }
+    return { finalUrl, pageTitle, contentType };
+  } catch {
+    return { finalUrl: url, pageTitle: null, contentType: null };
+  }
+}
+
 // === VirusTotal URL reputation check (API key stays on backend, never exposed) ===
 async function getVirusTotalReport(url: string): Promise<any | null> {
   const apiKey = Deno.env.get("VIRUSTOTAL_API_KEY");
@@ -74,6 +98,7 @@ Deno.serve(async (req) => {
     const customFocus = typeof options?.custom_focus === 'string' ? options.custom_focus.slice(0, 500) : '';
     const customInstructions = typeof options?.custom_instructions === 'string' ? options.custom_instructions.slice(0, 1000) : '';
     const language = options?.language || 'en';
+    const clientDecodedContent = typeof options?.decoded_content === 'string' ? options.decoded_content.slice(0, 2000) : '';
 
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
@@ -162,11 +187,21 @@ Deno.serve(async (req) => {
       prompt += 'Supported marketplaces: Facebook Marketplace, eBay, Craigslist, Gumtree, Amazon, Etsy, AliExpress.\n\n';
       prompt += 'Listing content:\n' + (page_text || '').slice(0, 10000) + '\n\n';
     } else if (scanType === 'qr') {
-      prompt += 'Analyze this QR code image:\n';
-      prompt += '1. DECODE the QR code. Report the EXACT content verbatim — is it a URL, text, vCard, Wi-Fi, crypto address, or app link?\n';
-      prompt += '2. If it contains a URL: follow redirects, state the FINAL destination URL, and describe what the page shows (login form, payment page, phishing, legitimate business, etc.). Is the domain legitimate or a lookalike?\n';
-      prompt += '3. RISK: Is it safe to scan? Is it a scam (phishing, payment fraud, malware, crypto drainer)? What specific risks?\n';
-      prompt += 'You MUST include: exact decoded content in decoded_content, final URL in final_destination_url, page description in destination_description.\n\n';
+      prompt += 'Analyze this QR code image for scam risk.\n';
+      if (qrDecodedContent) {
+        prompt += 'VERIFIED DECODED CONTENT: ' + qrDecodedContent + '\n';
+        if (qrFinalUrl && qrFinalUrl !== qrDecodedContent) {
+          prompt += 'FINAL DESTINATION (after server-side redirect following): ' + qrFinalUrl + '\n';
+        }
+        if (qrPageTitle) {
+          prompt += 'DESTINATION PAGE TITLE: "' + qrPageTitle + '"\n';
+        }
+        prompt += 'The above data was verified by the system. Use it for your analysis — do NOT try to re-decode the QR code.\n\n';
+      } else {
+        prompt += '1. DECODE the QR code. Report the EXACT content verbatim in decoded_content.\n';
+        prompt += 'Do NOT try to follow redirects yourself — the system follows redirects server-side after decoding.\n';
+      }
+      prompt += '2. RISK: Is it safe to scan? Is it a scam (phishing, payment fraud, malware, crypto drainer)? What specific risks?\n\n';
     } else if (scanType === 'file') {
       prompt += 'Analyze this uploaded file for: phishing language, fake invoices, fake job offers, suspicious documents, embedded URLs, and risky content.\n';
       prompt += 'File name: ' + (file_name || 'unknown') + '\n\n';
@@ -199,6 +234,7 @@ Deno.serve(async (req) => {
             is_scam: { type: 'boolean' },
             confidence: { type: 'number', description: '0-100 confidence level' },
             verdict: { type: 'string', description: 'One sentence verdict' },
+            decoded_content: { type: 'string', description: 'For QR codes: the exact decoded content' },
           },
           required: ['is_scam', 'verdict'],
         };
@@ -211,6 +247,7 @@ Deno.serve(async (req) => {
             risk_score: { type: 'number', description: '0-100 risk score where 100 is most dangerous' },
             risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
             summary: { type: 'string', description: 'One sentence summary' },
+            decoded_content: { type: 'string', description: 'For QR codes: the exact decoded content' },
           },
           required: ['risk_score', 'risk_level'],
         };
@@ -222,6 +259,7 @@ Deno.serve(async (req) => {
           properties: {
             red_flags: { type: 'array', items: { type: 'string' }, description: 'Specific warning signs found' },
             overall_risk: { type: 'string', enum: ['low', 'medium', 'high'] },
+            decoded_content: { type: 'string', description: 'For QR codes: the exact decoded content' },
           },
           required: ['red_flags', 'overall_risk'],
         };
@@ -299,6 +337,34 @@ Deno.serve(async (req) => {
 
     const result = await base44.integrations.Core.InvokeLLM(llmOptions);
 
+    // === QR post-processing ===
+    if (scanType === 'qr') {
+      if (qrDecodedContent) {
+        // Use client-decoded content (verified via BarcodeDetector)
+        (result as any).decoded_content = qrDecodedContent;
+        if (qrFinalUrl) (result as any).final_destination_url = qrFinalUrl;
+        if (qrPageTitle) (result as any).destination_description = 'Page title: "' + qrPageTitle + '". ' + ((result as any).destination_description || '');
+      } else {
+        // Fallback: LLM-decoded content
+        qrDecodedContent = (result as any)?.decoded_content || '';
+        const decoded = qrDecodedContent;
+        if (decoded && (decoded.startsWith('http://') || decoded.startsWith('https://'))) {
+          const redirectResult = await followRedirects(decoded);
+          qrFinalUrl = redirectResult.finalUrl;
+          qrPageTitle = redirectResult.pageTitle;
+          if (redirectResult.finalUrl && redirectResult.finalUrl !== decoded) {
+            (result as any).final_destination_url = redirectResult.finalUrl;
+          }
+          if (redirectResult.pageTitle) {
+            (result as any).destination_description = 'Page title: "' + redirectResult.pageTitle + '". ' + ((result as any).destination_description || '');
+          }
+          if (!vtReport) {
+            vtReport = await getVirusTotalReport(redirectResult.finalUrl);
+          }
+        }
+      }
+    }
+
     // === Deduct credits after successful scan ===
     const newCreditsUsed = creditsUsed + creditCost;
     await base44.auth.updateMe({ credits_used: newCreditsUsed, credits_reset_month: currentMonth });
@@ -309,6 +375,9 @@ Deno.serve(async (req) => {
       scan_mode: scanMode,
       answer_type: answerType,
       virustotal: vtReport,
+      decoded_content: qrDecodedContent,
+      final_destination_url: qrFinalUrl,
+      destination_title: qrPageTitle,
       timestamp: new Date().toISOString(),
       credits_used: creditCost,
       credits_remaining: Math.max(0, creditLimit - newCreditsUsed),
