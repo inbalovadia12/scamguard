@@ -9,6 +9,33 @@ const SCAN_TYPE_MODIFIERS: Record<string, number> = {
   email: 0, chat: 0, marketplace: 0, qr: 2, file: 4,
 };
 
+// === Server-side QR code decoding (LLM cannot reliably decode QR codes) ===
+async function decodeQrServerSide(imageDataUrl: string): Promise<string> {
+  try {
+    const base64Data = imageDataUrl.split(',')[1] || '';
+    if (!base64Data) return '';
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'image/png' });
+    const formData = new FormData();
+    formData.append('file', blob, 'qr.png');
+    const response = await fetch('https://api.qrserver.com/v1/read-qr-code/', {
+      method: 'POST',
+      body: formData,
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) return '';
+    const data = await response.json();
+    if (Array.isArray(data) && data.length > 0 && data[0].symbol && data[0].symbol[0]) {
+      return data[0].symbol[0].data || '';
+    }
+    return '';
+  } catch (_e) {
+    return '';
+  }
+}
+
 // === Follow URL redirects server-side (LLM cannot do this) ===
 async function followRedirects(url: string): Promise<{ finalUrl: string; pageTitle: string | null; contentType: string | null }> {
   try {
@@ -145,12 +172,26 @@ Deno.serve(async (req) => {
       vtReport = await getVirusTotalReport(page_url);
     }
 
-    // === QR: pre-process with client-decoded content (BarcodeDetector) ===
+    // === QR: decode via client (BarcodeDetector) or server-side API (never LLM) ===
     let qrDecodedContent = '';
     let qrFinalUrl = '';
     let qrPageTitle = '';
-    if (scanType === 'qr' && clientDecodedContent) {
-      qrDecodedContent = clientDecodedContent;
+    if (scanType === 'qr') {
+      // Priority 1: client-decoded content (BarcodeDetector in browser)
+      if (clientDecodedContent) {
+        qrDecodedContent = clientDecodedContent;
+      }
+      // Priority 2: server-side QR decoding API
+      if (!qrDecodedContent && screenshot_data_url) {
+        qrDecodedContent = await decodeQrServerSide(screenshot_data_url);
+      }
+      // If still no decoded content, return error — do NOT let LLM hallucinate a URL
+      if (!qrDecodedContent) {
+        return Response.json({
+          error: 'Could not decode this QR code. Please try a clearer or higher-resolution image.',
+        }, { status: 400 });
+      }
+      // Follow redirects + VirusTotal for URL-type content
       if (qrDecodedContent.startsWith('http://') || qrDecodedContent.startsWith('https://')) {
         const redirectResult = await followRedirects(qrDecodedContent);
         qrFinalUrl = redirectResult.finalUrl;
@@ -203,21 +244,18 @@ Deno.serve(async (req) => {
       prompt += 'Supported marketplaces: Facebook Marketplace, eBay, Craigslist, Gumtree, Amazon, Etsy, AliExpress.\n\n';
       prompt += 'Listing content:\n' + (page_text || '').slice(0, 10000) + '\n\n';
     } else if (scanType === 'qr') {
-      prompt += 'Analyze this QR code image for scam risk.\n';
-      if (qrDecodedContent) {
-        prompt += 'VERIFIED DECODED CONTENT: ' + qrDecodedContent + '\n';
-        if (qrFinalUrl && qrFinalUrl !== qrDecodedContent) {
-          prompt += 'FINAL DESTINATION (after server-side redirect following): ' + qrFinalUrl + '\n';
-        }
-        if (qrPageTitle) {
-          prompt += 'DESTINATION PAGE TITLE: "' + qrPageTitle + '"\n';
-        }
-        prompt += 'The above data was verified by the system. Use it for your analysis — do NOT try to re-decode the QR code.\n\n';
-      } else {
-        prompt += '1. DECODE the QR code. Report the EXACT content verbatim in decoded_content.\n';
-        prompt += 'Do NOT try to follow redirects yourself — the system follows redirects server-side after decoding.\n';
+      prompt += 'Analyze this QR code for scam risk.\n';
+      prompt += 'VERIFIED DECODED CONTENT (decoded by the system, NOT by you): ' + qrDecodedContent + '\n';
+      if (qrFinalUrl && qrFinalUrl !== qrDecodedContent) {
+        prompt += 'FINAL DESTINATION (after server-side redirect following): ' + qrFinalUrl + '\n';
       }
-      prompt += '2. RISK: Is it safe to scan? Is it a scam (phishing, payment fraud, malware, crypto drainer)? What specific risks?\n\n';
+      if (qrPageTitle) {
+        prompt += 'DESTINATION PAGE TITLE: "' + qrPageTitle + '"\n';
+      }
+      prompt += 'CRITICAL: The decoded content above is VERIFIED and ACCURATE. Use it for your analysis.\n';
+      prompt += 'Do NOT attempt to re-decode the QR code yourself. Do NOT invent or hallucinate a different URL.\n';
+      prompt += 'If the image is hard to read, rely on the verified decoded content above, not the image.\n\n';
+      prompt += 'RISK: Is it safe to scan? Is it a scam (phishing, payment fraud, malware, crypto drainer)? What specific risks?\n\n';
     } else if (scanType === 'file') {
       prompt += 'Analyze this uploaded file for: phishing language, fake invoices, fake job offers, suspicious documents, embedded URLs, and risky content.\n';
       prompt += 'File name: ' + (file_name || 'unknown') + '\n\n';
@@ -353,32 +391,11 @@ Deno.serve(async (req) => {
 
     const result = await base44.integrations.Core.InvokeLLM(llmOptions);
 
-    // === QR post-processing ===
-    if (scanType === 'qr') {
-      if (qrDecodedContent) {
-        // Use client-decoded content (verified via BarcodeDetector)
-        (result as any).decoded_content = qrDecodedContent;
-        if (qrFinalUrl) (result as any).final_destination_url = qrFinalUrl;
-        if (qrPageTitle) (result as any).destination_description = 'Page title: "' + qrPageTitle + '". ' + ((result as any).destination_description || '');
-      } else {
-        // Fallback: LLM-decoded content
-        qrDecodedContent = (result as any)?.decoded_content || '';
-        const decoded = qrDecodedContent;
-        if (decoded && (decoded.startsWith('http://') || decoded.startsWith('https://'))) {
-          const redirectResult = await followRedirects(decoded);
-          qrFinalUrl = redirectResult.finalUrl;
-          qrPageTitle = redirectResult.pageTitle;
-          if (redirectResult.finalUrl && redirectResult.finalUrl !== decoded) {
-            (result as any).final_destination_url = redirectResult.finalUrl;
-          }
-          if (redirectResult.pageTitle) {
-            (result as any).destination_description = 'Page title: "' + redirectResult.pageTitle + '". ' + ((result as any).destination_description || '');
-          }
-          if (!vtReport) {
-            vtReport = await getVirusTotalReport(redirectResult.finalUrl);
-          }
-        }
-      }
+    // === QR post-processing: override LLM's decoded_content with verified system value ===
+    if (scanType === 'qr' && qrDecodedContent) {
+      (result as any).decoded_content = qrDecodedContent;
+      if (qrFinalUrl) (result as any).final_destination_url = qrFinalUrl;
+      if (qrPageTitle) (result as any).destination_description = 'Page title: "' + qrPageTitle + '". ' + ((result as any).destination_description || '');
     }
 
     // === Deduct credits after successful scan ===
