@@ -14,6 +14,9 @@ export default function CallInterface({ scenario, conversation, setConversation,
   const inputRef = useRef(null);
   const [voiceMode, setVoiceMode] = useState(false);
   const lastSpokenIndexRef = useRef(-1);
+  const audioRef = useRef(null);
+  const ttsQueueRef = useRef([]);
+  const ttsPlayingRef = useRef(false);
   const lang = localStorage.getItem("vardin_language") || "en";
   const { isListening, interimText, isSupported: speechSupported, start: startListening, stop: stopListening } = useSpeechRecognition(lang);
 
@@ -21,30 +24,54 @@ export default function CallInterface({ scenario, conversation, setConversation,
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversation, waiting]);
 
-  // TTS for scammer messages in voice mode
+  const playTTS = async (text) => {
+    try {
+      const response = await base44.functions.invoke("generateSpeech", { text, language: lang });
+      if (response.data?.audio_url) {
+        const audio = new Audio(response.data.audio_url);
+        audioRef.current = audio;
+        audio.onended = () => { audioRef.current = null; processTTSQueue(); };
+        audio.onerror = () => { audioRef.current = null; processTTSQueue(); };
+        await audio.play();
+      } else {
+        processTTSQueue();
+      }
+    } catch {
+      processTTSQueue();
+    }
+  };
+
+  const processTTSQueue = () => {
+    ttsPlayingRef.current = false;
+    if (ttsQueueRef.current.length > 0) {
+      const next = ttsQueueRef.current.shift();
+      ttsPlayingRef.current = true;
+      playTTS(next);
+    }
+  };
+
+  // TTS for scammer messages in voice mode (Eleven Labs)
   useEffect(() => {
     if (!voiceMode) {
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      ttsQueueRef.current = [];
+      ttsPlayingRef.current = false;
       lastSpokenIndexRef.current = conversation.length - 1;
       return;
     }
     for (let i = lastSpokenIndexRef.current + 1; i < conversation.length; i++) {
-      if (conversation[i].speaker === "scammer") {
-        if (window.speechSynthesis) {
-          window.speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance(conversation[i].text);
-          u.lang = lang === "he" ? "he-IL" : lang === "es" ? "es-ES" : "en-US";
-          u.rate = 0.95;
-          u.pitch = 0.85;
-          window.speechSynthesis.speak(u);
-        }
+      if (conversation[i].speaker === "scammer" && conversation[i].text) {
+        ttsQueueRef.current.push(conversation[i].text);
       }
     }
     lastSpokenIndexRef.current = conversation.length - 1;
+    if (!ttsPlayingRef.current && ttsQueueRef.current.length > 0) {
+      processTTSQueue();
+    }
   }, [conversation, voiceMode, lang]);
 
   useEffect(() => {
-    return () => { if (window.speechSynthesis) window.speechSynthesis.cancel(); };
+    return () => { if (audioRef.current) audioRef.current.pause(); };
   }, []);
 
   const handleSend = async (overrideText) => {
@@ -102,7 +129,8 @@ export default function CallInterface({ scenario, conversation, setConversation,
   };
 
   const handleEndCall = () => {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (audioRef.current) audioRef.current.pause();
+    ttsQueueRef.current = [];
     if (isListening) stopListening();
     setCallEnded(true);
     onEndCall(conversation);
@@ -112,7 +140,7 @@ export default function CallInterface({ scenario, conversation, setConversation,
     if (isListening) {
       stopListening();
     } else {
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (audioRef.current) audioRef.current.pause();
       startListening((text) => handleSend(text));
     }
   };
