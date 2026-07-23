@@ -91,12 +91,12 @@ Deno.serve(async (req) => {
       ? `\nSPEAKER HISTORY (who spoke recently, oldest→newest): ${speaker_history}\n`
       : '';
 
-    const prompt = `Real-time scam detector analyzing a phone call chunk. "Victim" = app user. "Scammer" = other party. Transcript has Whisper segments with [start-end] timestamps — each line is one utterance; a new speaker often starts a new segment.
+    const prompt = `Real-time scam detector analyzing a phone call chunk. "Victim" = app user. "Scammer" = other party. Whisper segments with [start-end] timestamps — a gap between segments (end < next start) = pause = likely speaker change. Short replies ("yes", "okay", "I see", "right", "sure") = the listener responding, not the current speaker continuing.
 ${contextPrompt}${historyPrompt}
 TRANSCRIPT:
 ${formattedTranscript}
 
-Detect speaker turns (alternate using SPEAKER HISTORY; if empty, first speaker is usually "scammer"). Clean up transcription errors. For scammer turns, check: urgency, payment requests (gift cards/crypto/wire), personal info (SSN/passwords/OTP), impersonation, threats, too-good-to-be-true offers, remote access. For victim turns, check if sharing sensitive info or pushing back well.
+Detect speaker turns: continue the SPEAKER HISTORY pattern; if empty, first speaker is usually "scammer" (they initiate calls). A question followed by an answer = speaker change. Clean up transcription errors. For scammer turns, check: urgency, payment requests (gift cards/crypto/wire), personal info (SSN/passwords/OTP), impersonation, threats, too-good-to-be-true offers, remote access. For victim turns, check if sharing sensitive info or pushing back well.
 
 Return JSON: segments [{speaker, text}], feedback (advice to victim if they spoke, else ""), is_scam, red_flags, risk_level (low/medium/high), warnings, tactics_detected, analysis (1-2 sentences). Respond in ${languageName}.`;
 
