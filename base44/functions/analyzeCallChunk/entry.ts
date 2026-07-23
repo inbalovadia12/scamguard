@@ -91,82 +91,37 @@ Deno.serve(async (req) => {
       ? `\nSPEAKER HISTORY (who spoke recently, oldest→newest): ${speaker_history}\n`
       : '';
 
-    const prompt = `You are a real-time scam detection agent analyzing a live phone call or meeting.
-
-The audio was transcribed by speech recognition, which does NOT identify speakers. You must detect speaker turns from the text itself. The transcript is provided as Whisper segments with timestamps — each [start-end] line is a natural utterance boundary (a pause was detected between segments). Use these boundaries to help identify speaker turns.
-
-CRITICAL CONTEXT: The "victim" is the person being protected (the app user). The "scammer" is the other party — who could be a scammer OR a legitimate caller (label them "scammer" regardless; the risk analysis determines if they're actually malicious).
-
-Your job:
-1. SPLIT the transcript into speaker turns. Each Whisper segment (timestamped line) is a natural utterance boundary — a new speaker often starts a new segment. Within a segment there is usually one speaker. Detect turn changes using:
-   - Segment boundaries (each timestamped line is a separate utterance)
-   - Questions followed by answers
-   - Abrupt topic shifts or tone changes
-   - Addressing the other party ("sir", "ma'am", names, "you")
-   - Acknowledgments ("yes", "okay", "I see") following a statement
-2. Label each turn: "scammer" (the other party) or "victim" (the protected user).
-3. Use the SPEAKER HISTORY to alternate — if the last turn was "scammer", the next is likely "victim", and vice versa. If history is empty, the first speaker is usually the "scammer" (they typically initiate calls).
-4. Clean up obvious transcription errors (filler artifacts, repeated words, misheard terms) using context, but preserve the original meaning.
+    const prompt = `Real-time scam detector analyzing a phone call chunk. "Victim" = app user. "Scammer" = other party. Transcript has Whisper segments with [start-end] timestamps — each line is one utterance; a new speaker often starts a new segment.
 ${contextPrompt}${historyPrompt}
-TRANSCRIPT CHUNK (Whisper segments with timestamps, may contain errors):
+TRANSCRIPT:
 ${formattedTranscript}
 
-When the SCAMMER (other party) speaks, analyze for:
-- Urgency or pressure tactics ("act now", "don't hang up", "limited time")
-- Requests for gift cards, wire transfers, crypto, or unusual payment methods
-- Requests for personal info (SSN, bank details, passwords, OTP codes)
-- Impersonation (government, bank, tech support, family member in distress)
-- Too-good-to-be-true offers (lottery, prizes, investment returns)
-- Threats or intimidation (arrest, fines, account closure)
-- Requests to install software or grant remote access
-- Romance/investment scam patterns
-- Requests to stay on the line or not tell anyone
+Detect speaker turns (alternate using SPEAKER HISTORY; if empty, first speaker is usually "scammer"). Clean up transcription errors. For scammer turns, check: urgency, payment requests (gift cards/crypto/wire), personal info (SSN/passwords/OTP), impersonation, threats, too-good-to-be-true offers, remote access. For victim turns, check if sharing sensitive info or pushing back well.
 
-When the VICTIM (user) speaks, evaluate:
-- Are they giving out sensitive info they shouldn't? (warning needed)
-- Are they pushing back appropriately? (encourage them!)
-- Are they asking good verification questions? (encourage them!)
-- Are they staying calm and not being pressured? (encourage them!)
+Return JSON: segments [{speaker, text}], feedback (advice to victim if they spoke, else ""), is_scam, red_flags, risk_level (low/medium/high), warnings, tactics_detected, analysis (1-2 sentences). Respond in ${languageName}.`;
 
-Return:
-- segments: Array of { speaker: "scammer"|"victim"|"unknown", text: string } — each detected turn in this chunk, in order. If only one person spoke, return a single segment. Clean up transcription errors in the text.
-- feedback: If the victim spoke in any segment, give direct personal feedback — encouragement ("Great job not sharing your info!") or a warning ("Be careful — you just shared your address"). Empty if only the scammer spoke.
-- is_scam: true if scam indicators are present, false if clearly legitimate/normal
-- red_flags: Specific concerning phrases or behaviors detected (empty if none)
-- risk_level: "low" (normal/legitimate OR no concerns), "medium" (some concerning elements), "high" (clear scam indicators)
-- warnings: Short, actionable warning messages for the user
-- tactics_detected: Named tactics if any (e.g., "Urgency", "Impersonation")
-- analysis: Brief 1-2 sentence assessment. If NOT a scam, explicitly say so.
-
-Respond entirely in ${languageName}.`;
-
-    const analysis = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          segments: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                speaker: { type: 'string', enum: ['scammer', 'victim', 'unknown'] },
-                text: { type: 'string' },
-              },
-              required: ['speaker', 'text'],
-            },
-          },
-          feedback: { type: 'string' },
-          is_scam: { type: 'boolean' },
-          red_flags: { type: 'array', items: { type: 'string' } },
-          risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
-          warnings: { type: 'array', items: { type: 'string' } },
-          tactics_detected: { type: 'array', items: { type: 'string' } },
-          analysis: { type: 'string' },
-        },
-        required: ['segments', 'risk_level', 'warnings', 'is_scam'],
+    const llmResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${groqApiKey}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        temperature: 0,
+      }),
+      signal: AbortSignal.timeout(10000),
     });
+
+    if (!llmResponse.ok) {
+      const errText = await llmResponse.text().catch(() => 'unknown');
+      return Response.json({ error: `LLM analysis failed: ${llmResponse.status} ${errText}` }, { status: 502 });
+    }
+
+    const llmResult = await llmResponse.json();
+    const analysis = JSON.parse(llmResult.choices[0].message.content);
 
     const segments = analysis.segments || [];
     const fullTranscript = segments.map((s: any) => s.text).join(' ');
