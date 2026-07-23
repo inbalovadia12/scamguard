@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { MessageSquare, User, AlertTriangle, ThumbsUp, ShieldCheck } from "lucide-react";
+import { MessageSquare, User, AlertTriangle, ThumbsUp, ThumbsDown, ShieldCheck } from "lucide-react";
 
 const RISK_COLORS = {
   low: "border-l-success",
@@ -36,6 +36,9 @@ export default function TranscriptFeed({ segments }) {
             const cfg = SPEAKER_CONFIG[seg.speaker] || SPEAKER_CONFIG.unknown;
             const SpeakerIcon = cfg.icon;
             const isVictim = seg.speaker === "victim";
+            const isPositiveFeedback = seg.risk_level === "low";
+            const FeedbackIcon = isPositiveFeedback ? ThumbsUp : ThumbsDown;
+            const feedbackColor = isPositiveFeedback ? "text-primary" : "text-destructive";
             return (
               <div
                 key={i}
@@ -49,8 +52,8 @@ export default function TranscriptFeed({ segments }) {
                   <p className="text-foreground">{seg.text}</p>
                   {seg.feedback && (
                     <div className={`mt-2 flex items-start gap-1.5 p-2 rounded-lg ${isVictim ? "bg-primary/5" : "bg-muted/40"}`}>
-                      <ThumbsUp className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-primary font-medium">{seg.feedback}</p>
+                      <FeedbackIcon className={`w-3.5 h-3.5 ${feedbackColor} flex-shrink-0 mt-0.5`} />
+                      <p className={`text-xs ${feedbackColor} font-medium`}>{seg.feedback}</p>
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">

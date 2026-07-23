@@ -133,7 +133,7 @@ export default function LiveCallAnalyzer() {
 
       streamRef.current = stream;
       const audioMime = getSupportedAudioMime();
-      const recorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime } : undefined);
+      const recorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime, audioBitsPerSecond: 32000 } : { audioBitsPerSecond: 32000 });
       recorderRef.current = recorder;
 
       const processNextChunk = async () => {
@@ -202,8 +202,10 @@ export default function LiveCallAnalyzer() {
             });
           }
 
-          await incrementCreditUsage(CREDIT_COSTS.CALL_CHUNK);
-          setCreditStatus(await getCreditStatus());
+          incrementCreditUsage(CREDIT_COSTS.CALL_CHUNK)
+            .then(() => getCreditStatus())
+            .then(setCreditStatus)
+            .catch(() => {});
         } catch (e) {
           setError(e.message || "Failed to analyze audio chunk.");
         } finally {
