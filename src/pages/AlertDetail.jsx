@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Loader2, Send } from "lucide-react";
 import AnalysisResult from "@/components/scam/AnalysisResult";
 
 export default function AlertDetail() {
@@ -12,6 +12,11 @@ export default function AlertDetail() {
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sendingWarning, setSendingWarning] = useState(false);
+  const [warningSent, setWarningSent] = useState(false);
+  const [warningError, setWarningError] = useState(null);
+  const [seniorEmail, setSeniorEmail] = useState(null);
+  const [seniorName, setSeniorName] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -20,6 +25,20 @@ export default function AlertDetail() {
       setNotes(data.guardian_notes || "");
       if (data.guardian_status === "new") {
         await base44.entities.ScamAnalysis.update(id, { guardian_status: "reviewed" });
+        data.guardian_status = "reviewed";
+      }
+      if (data.senior_id) {
+        try {
+          const senior = await base44.entities.ProtectedSenior.get(data.senior_id);
+          setSeniorEmail(senior.email);
+          setSeniorName(senior.name || "");
+        } catch {
+          const seniors = await base44.entities.ProtectedSenior.filter({ senior_user_id: data.senior_id });
+          if (seniors.length > 0) {
+            setSeniorEmail(seniors[0].email);
+            setSeniorName(seniors[0].name || "");
+          }
+        }
       }
       setLoading(false);
     };
@@ -40,6 +59,30 @@ export default function AlertDetail() {
     setSaving(true);
     await base44.entities.ScamAnalysis.update(id, { guardian_notes: notes });
     setSaving(false);
+  };
+
+  const handleSendWarning = async () => {
+    if (!seniorEmail) return;
+    setSendingWarning(true);
+    setWarningError(null);
+    const riskLabel = (analysis.risk_level || "potential").toUpperCase();
+    const scamType = (analysis.message_type || "scam").replace(/_/g, " ");
+    const steps = analysis.next_steps?.length
+      ? analysis.next_steps.map((s) => `• ${s}`).join("\n")
+      : "• Do not share personal info, passwords, or send money\n• Do not respond to the sender\n• Block and report the sender";
+    const body = `Hi ${seniorName || "there"},\n\nI wanted to warn you about a ${riskLabel} RISK ${scamType} scam that was detected.\n\n${analysis.explanation || "This message shows signs of being a scam."}\n\nWhat you should do:\n${steps}\n\nPlease be careful. If you receive a similar message, don't respond and let me know right away.\n\nStay safe!`;
+    try {
+      await base44.integrations.Core.SendEmail({
+        to: seniorEmail,
+        subject: `⚠️ Scam Warning: ${riskLabel} risk ${scamType} detected`,
+        body,
+      });
+      setWarningSent(true);
+    } catch {
+      setWarningError("Could not send — the family member must be a registered app user.");
+    } finally {
+      setSendingWarning(false);
+    }
   };
 
   if (loading) {
@@ -82,6 +125,32 @@ export default function AlertDetail() {
       <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-4">
         <h3 className="font-semibold font-heading">Guardian Actions</h3>
 
+        <div className="grid grid-cols-2 gap-3">
+          {analysis.guardian_status !== "handled" ? (
+            <Button onClick={handleMarkHandled} disabled={saving} className="gap-2 bg-success hover:bg-success/90 h-11">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              Mark Resolved
+            </Button>
+          ) : (
+            <div className="flex items-center justify-center gap-2 bg-success/10 text-success rounded-xl h-11 text-sm font-medium">
+              <CheckCircle className="w-4 h-4" /> Resolved
+            </div>
+          )}
+          {warningSent ? (
+            <div className="flex items-center justify-center gap-2 bg-primary/10 text-primary rounded-xl h-11 text-sm font-medium">
+              <Send className="w-4 h-4" /> Warning Sent
+            </div>
+          ) : (
+            <Button variant="outline" onClick={handleSendWarning} disabled={sendingWarning || !seniorEmail} className="gap-2 h-11">
+              {sendingWarning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              Send Warning
+            </Button>
+          )}
+        </div>
+        {warningError && <p className="text-xs text-destructive">{warningError}</p>}
+        {!seniorEmail && analysis.senior_id && <p className="text-xs text-muted-foreground">Could not find family member's email.</p>}
+        {!analysis.senior_id && <p className="text-xs text-muted-foreground">No family member linked to this alert.</p>}
+
         <div className="space-y-2">
           <label className="text-sm font-medium">Notes</label>
           <Textarea
@@ -94,12 +163,6 @@ export default function AlertDetail() {
         </div>
 
         <div className="flex gap-2">
-          {analysis.guardian_status !== "handled" && (
-            <Button onClick={handleMarkHandled} disabled={saving} className="gap-2 bg-success hover:bg-success/90">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-              Mark as Handled
-            </Button>
-          )}
           <Button variant="outline" onClick={handleSaveNotes} disabled={saving} className="gap-2">
             Save Notes
           </Button>
