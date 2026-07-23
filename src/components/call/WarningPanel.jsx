@@ -22,39 +22,39 @@ export default function WarningPanel({ warnings, tactics, coaching }) {
         <h3 className="text-sm font-semibold">Warnings & Coaching</h3>
       </div>
 
-      {coaching?.length > 0 && (
-        <div className="space-y-2 mb-3">
-          {coaching.map((c, i) => {
-            const sentiment = getFeedbackSentiment(c.text);
-            const style = COACHING_STYLES[sentiment];
-            const Icon = style.icon;
-            return (
-              <div key={i} className={`text-sm p-2.5 rounded-lg border ${style.bg} ${style.border}`}>
-                <div className="flex items-start gap-1.5">
-                  <Icon className={`w-3.5 h-3.5 ${style.color} flex-shrink-0 mt-0.5`} />
-                  <p className={`${style.color} font-medium`}>{c.text}</p>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(c.timestamp).toLocaleTimeString()}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {tactics.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {tactics.map((t, i) => (
-            <span key={i} className="text-xs px-2 py-1 rounded-full bg-destructive/10 text-destructive font-medium flex items-center gap-1">
-              <Zap className="w-3 h-3" />
-              {t}
-            </span>
-          ))}
-        </div>
-      )}
-
       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+        {coaching?.length > 0 && (
+          <div className="space-y-2">
+            {coaching.map((c, i) => {
+              const sentiment = getFeedbackSentiment(c.text);
+              const style = COACHING_STYLES[sentiment];
+              const Icon = style.icon;
+              return (
+                <div key={i} className={`text-sm p-2.5 rounded-lg border ${style.bg} ${style.border}`}>
+                  <div className="flex items-start gap-1.5">
+                    <Icon className={`w-3.5 h-3.5 ${style.color} flex-shrink-0 mt-0.5`} />
+                    <p className={`${style.color} font-medium`}>{c.text}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {new Date(c.timestamp).toLocaleTimeString()}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {tactics.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 py-1">
+            {tactics.map((t, i) => (
+              <span key={i} className="text-xs px-2 py-1 rounded-full bg-destructive/10 text-destructive font-medium flex items-center gap-1">
+                <Zap className="w-3 h-3" />
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+
         {warnings.length === 0 && (!coaching || coaching.length === 0) ? (
           <div className="text-center py-8">
             <MessageCircle className="w-8 h-8 text-success/40 mx-auto mb-2" />
