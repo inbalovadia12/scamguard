@@ -9,7 +9,7 @@ const LEVEL_COLORS = {
 
 export default function WarningPanel({ warnings, tactics, coaching }) {
   return (
-    <div className="bg-card rounded-2xl border border-border/50 p-4 flex flex-col h-[400px]">
+    <div className="bg-card rounded-2xl border border-border/50 p-4 flex flex-col h-[340px] sm:h-[400px]">
       <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border/50">
         <AlertTriangle className="w-4 h-4 text-muted-foreground" />
         <h3 className="text-sm font-semibold">Warnings & Coaching</h3>

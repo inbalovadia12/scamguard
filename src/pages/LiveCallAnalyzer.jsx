@@ -431,7 +431,7 @@ export default function LiveCallAnalyzer() {
   const RiskIcon = cfg.icon;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 pb-8">
       <div className="animate-slide-up">
         <div className="flex items-center gap-2.5 mb-2">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">

@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
 
     const voiceId = voice_id || DEFAULT_VOICE_ID;
 
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
       method: 'POST',
       headers: {
         'xi-api-key': apiKey,
@@ -27,9 +27,9 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         text,
-        model_id: 'eleven_turbo_v2_5',
+        model_id: 'eleven_flash_v2_5',
         voice_settings: {
-          stability: 0.45,
+          stability: 0.5,
           similarity_boost: 0.75,
           style: 0.0,
           use_speaker_boost: true,
@@ -42,17 +42,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Eleven Labs TTS failed' }, { status: 502 });
     }
 
-    const audioBuffer = await response.arrayBuffer();
-    const bytes = new Uint8Array(audioBuffer);
-    let binary = '';
-    const chunkSize = 8192;
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      binary += String.fromCharCode(...bytes.slice(i, i + chunkSize));
-    }
-    const base64 = btoa(binary);
-    const dataUrl = `data:audio/mpeg;base64,${base64}`;
-
-    return Response.json({ audio_url: dataUrl });
+    // Stream binary audio directly — no base64 conversion, minimal latency
+    return new Response(response.body, {
+      headers: {
+        'Content-Type': 'audio/mpeg',
+        'Cache-Control': 'no-cache',
+      },
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

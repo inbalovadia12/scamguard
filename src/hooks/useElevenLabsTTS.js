@@ -11,17 +11,21 @@ export function useElevenLabsTTS(lang = "en") {
     const next = queueRef.current.shift();
     if (!next) return;
     playingRef.current = true;
-    base44.functions.invoke("generateSpeech", { text: next, language: lang })
-      .then((res) => {
-        if (res.data?.audio_url) {
-          const audio = new Audio(res.data.audio_url);
-          audioRef.current = audio;
-          audio.onended = () => { audioRef.current = null; playNext(); };
-          audio.onerror = () => { audioRef.current = null; playNext(); };
-          audio.play().catch(() => { audioRef.current = null; playNext(); });
-        } else {
-          playNext();
-        }
+
+    base44.functions.fetch("/generateSpeech", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: next, language: lang }),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("TTS failed");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => { URL.revokeObjectURL(url); audioRef.current = null; playNext(); };
+        audio.onerror = () => { URL.revokeObjectURL(url); audioRef.current = null; playNext(); };
+        await audio.play().catch(() => { URL.revokeObjectURL(url); audioRef.current = null; playNext(); });
       })
       .catch(() => playNext());
   }, [lang]);
