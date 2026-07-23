@@ -20,11 +20,36 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Audio URL is required' }, { status: 400 });
     }
 
-    const transcriptionResult = await base44.integrations.Core.TranscribeAudio({
-      audio_url: audio_url,
+    const groqApiKey = Deno.env.get('GROQ_API_KEY');
+    if (!groqApiKey) return Response.json({ error: 'STT service not configured' }, { status: 500 });
+
+    // Fetch audio and transcribe via Groq (much faster than built-in Whisper)
+    const audioResponse = await fetch(audio_url);
+    const audioBlob = await audioResponse.blob();
+    const contentType = audioBlob.type || 'audio/webm';
+    const ext = contentType.includes('mp4') ? 'mp4' : contentType.includes('ogg') ? 'ogg' : 'webm';
+
+    const formData = new FormData();
+    formData.append('file', audioBlob, `audio.${ext}`);
+    formData.append('model', 'whisper-large-v3-turbo');
+    formData.append('language', language || 'en');
+    formData.append('temperature', '0');
+    formData.append('response_format', 'json');
+
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${groqApiKey}` },
+      body: formData,
+      signal: AbortSignal.timeout(15000),
     });
 
-    const transcript: string = typeof transcriptionResult === 'string' ? transcriptionResult : '';
+    if (!groqResponse.ok) {
+      const errText = await groqResponse.text().catch(() => 'unknown');
+      return Response.json({ error: `Groq STT failed: ${groqResponse.status} ${errText}` }, { status: 502 });
+    }
+
+    const groqResult = await groqResponse.json();
+    const transcript: string = groqResult.text || '';
 
     if (!transcript.trim()) {
       return Response.json({
