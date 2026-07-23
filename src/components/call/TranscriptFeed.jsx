@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
-import { MessageSquare, User, AlertTriangle, ThumbsUp, ThumbsDown, ShieldCheck } from "lucide-react";
+import { MessageSquare, User, AlertTriangle, ThumbsUp, ThumbsDown, Lightbulb } from "lucide-react";
+import { getFeedbackSentiment } from "./feedbackUtils";
 
 const RISK_COLORS = {
   low: "border-l-success",
@@ -11,6 +12,12 @@ const SPEAKER_CONFIG = {
   scammer: { label: "Scammer", icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/10" },
   victim: { label: "You", icon: User, color: "text-primary", bg: "bg-primary/10" },
   unknown: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
+};
+
+const FEEDBACK_STYLES = {
+  positive: { icon: ThumbsUp, color: "text-success", bg: "bg-success/5" },
+  warning: { icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/5" },
+  neutral: { icon: Lightbulb, color: "text-muted-foreground", bg: "bg-muted/40" },
 };
 
 export default function TranscriptFeed({ segments }) {
@@ -36,9 +43,10 @@ export default function TranscriptFeed({ segments }) {
             const cfg = SPEAKER_CONFIG[seg.speaker] || SPEAKER_CONFIG.unknown;
             const SpeakerIcon = cfg.icon;
             const isVictim = seg.speaker === "victim";
-            const isPositiveFeedback = seg.risk_level === "low";
-            const FeedbackIcon = isPositiveFeedback ? ThumbsUp : ThumbsDown;
-            const feedbackColor = isPositiveFeedback ? "text-primary" : "text-destructive";
+            const sentiment = getFeedbackSentiment(seg.feedback);
+            const fbStyle = FEEDBACK_STYLES[sentiment];
+            const FeedbackIcon = fbStyle.icon;
+            const feedbackColor = fbStyle.color;
             return (
               <div
                 key={i}

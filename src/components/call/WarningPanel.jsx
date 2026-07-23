@@ -1,10 +1,17 @@
 import React from "react";
-import { AlertTriangle, Zap, ThumbsUp, ThumbsDown, MessageCircle } from "lucide-react";
+import { AlertTriangle, Zap, ThumbsUp, Lightbulb, MessageCircle } from "lucide-react";
+import { getFeedbackSentiment } from "./feedbackUtils";
 
 const LEVEL_COLORS = {
   low: "bg-success/10 text-success border-success/30",
   medium: "bg-warning/10 text-warning border-warning/30",
   high: "bg-destructive/10 text-destructive border-destructive/30",
+};
+
+const COACHING_STYLES = {
+  positive: { icon: ThumbsUp, color: "text-success", border: "border-success/20", bg: "bg-success/5" },
+  warning: { icon: AlertTriangle, color: "text-destructive", border: "border-destructive/20", bg: "bg-destructive/5" },
+  neutral: { icon: Lightbulb, color: "text-muted-foreground", border: "border-border/50", bg: "bg-muted/30" },
 };
 
 export default function WarningPanel({ warnings, tactics, coaching }) {
@@ -18,15 +25,14 @@ export default function WarningPanel({ warnings, tactics, coaching }) {
       {coaching?.length > 0 && (
         <div className="space-y-2 mb-3">
           {coaching.map((c, i) => {
-            const isPositive = c.risk_level === "low";
-            const Icon = isPositive ? ThumbsUp : ThumbsDown;
-            const color = isPositive ? "text-primary" : "text-destructive";
-            const bg = isPositive ? "bg-primary/5 border-primary/20" : "bg-destructive/5 border-destructive/20";
+            const sentiment = getFeedbackSentiment(c.text);
+            const style = COACHING_STYLES[sentiment];
+            const Icon = style.icon;
             return (
-              <div key={i} className={`text-sm p-2.5 rounded-lg border ${bg}`}>
+              <div key={i} className={`text-sm p-2.5 rounded-lg border ${style.bg} ${style.border}`}>
                 <div className="flex items-start gap-1.5">
-                  <Icon className={`w-3.5 h-3.5 ${color} flex-shrink-0 mt-0.5`} />
-                  <p className={`${color} font-medium`}>{c.text}</p>
+                  <Icon className={`w-3.5 h-3.5 ${style.color} flex-shrink-0 mt-0.5`} />
+                  <p className={`${style.color} font-medium`}>{c.text}</p>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {new Date(c.timestamp).toLocaleTimeString()}
