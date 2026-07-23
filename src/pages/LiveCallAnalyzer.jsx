@@ -154,16 +154,21 @@ export default function LiveCallAnalyzer() {
 
         try {
           const blob = chunkQueueRef.current.shift();
-          const audioExt = audioMime.includes("mp4") ? "mp4" : audioMime.includes("ogg") ? "ogg" : "webm";
-          const audioFile = new File([blob], `chunk-${Date.now()}.${audioExt}`, { type: audioMime || "audio/webm" });
-          const uploadRes = await base44.integrations.Core.UploadFile({ file: audioFile });
+          const blobMime = blob.type || audioMime || "audio/webm";
+
+          const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result.split(",")[1]);
+            reader.readAsDataURL(blob);
+          });
 
           const lang = localStorage.getItem("vardin_language") || "en";
           const recentContext = transcriptRef.current.slice(-4).map((t) => `${t.speaker}: ${t.text}`).join("\n");
           const speakerHistory = transcriptRef.current.slice(-5).map((t) => t.speaker).filter(Boolean).join(",");
 
           const response = await base44.functions.invoke("analyzeCallChunk", {
-            audio_url: uploadRes.file_url,
+            audio_base64: base64,
+            audio_mime: blobMime,
             language: lang,
             session_context: recentContext,
             speaker_history: speakerHistory,
@@ -274,8 +279,8 @@ export default function LiveCallAnalyzer() {
       let silenceStart = 0;
       let isSpeaking = false;
       const SILENCE_THRESHOLD = 0.015;
-      const SILENCE_DURATION = 600;
-      const MAX_CHUNK_MS = 8000;
+      const SILENCE_DURATION = 400;
+      const MAX_CHUNK_MS = 6000;
 
       const checkAudioLevel = () => {
         if (userStoppedRef.current || !analyserRef.current) return;

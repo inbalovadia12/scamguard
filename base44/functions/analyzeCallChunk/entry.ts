@@ -14,19 +14,32 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { audio_url, language, session_context, speaker_history } = body;
-
-    if (!audio_url) {
-      return Response.json({ error: 'Audio URL is required' }, { status: 400 });
-    }
+    const { audio_url, audio_base64, audio_mime, language, session_context, speaker_history } = body;
 
     const groqApiKey = Deno.env.get('GROQ_API_KEY');
     if (!groqApiKey) return Response.json({ error: 'STT service not configured' }, { status: 500 });
 
-    // Fetch audio and transcribe via Groq (much faster than built-in Whisper)
-    const audioResponse = await fetch(audio_url);
-    const audioBlob = await audioResponse.blob();
-    const contentType = audioBlob.type || 'audio/webm';
+    let audioBlob: Blob;
+    let contentType: string;
+
+    if (audio_base64) {
+      // Audio sent directly as base64 — skips UploadFile + download roundtrip
+      const binaryString = atob(audio_base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      contentType = audio_mime || 'audio/webm';
+      audioBlob = new Blob([bytes], { type: contentType });
+    } else {
+      if (!audio_url) {
+        return Response.json({ error: 'Audio data is required' }, { status: 400 });
+      }
+      const audioResponse = await fetch(audio_url);
+      audioBlob = await audioResponse.blob();
+      contentType = audioBlob.type || 'audio/webm';
+    }
+
     const ext = contentType.includes('mp4') ? 'mp4' : contentType.includes('ogg') ? 'ogg' : 'webm';
 
     const formData = new FormData();
