@@ -148,18 +148,30 @@ export default function LiveCallAnalyzer() {
           const uploadRes = await base44.integrations.Core.UploadFile({ file: audioFile });
 
           const lang = localStorage.getItem("vardin_language") || "en";
-          const recentContext = transcriptRef.current.slice(-3).map((t) => t.text).join(" ");
+          const recentContext = transcriptRef.current.slice(-4).map((t) => `${t.speaker}: ${t.text}`).join("\n");
+          const speakerHistory = transcriptRef.current.slice(-5).map((t) => t.speaker).filter(Boolean).join(",");
 
           const response = await base44.functions.invoke("analyzeCallChunk", {
             audio_url: uploadRes.file_url,
             language: lang,
             session_context: recentContext,
+            speaker_history: speakerHistory,
           });
 
           if (response.data?.error) throw new Error(response.data.error);
           const result = response.data;
 
-          if (result.transcript) {
+          if (result.segments?.length) {
+            const newSegs = result.segments.map((seg) => ({
+              text: seg.text,
+              timestamp: new Date(),
+              risk_level: result.risk_level,
+              speaker: seg.speaker || "unknown",
+              feedback: seg.speaker === "victim" ? (result.feedback || "") : "",
+            }));
+            setTranscript((prev) => [...prev, ...newSegs]);
+            transcriptRef.current = [...transcriptRef.current, ...newSegs];
+          } else if (result.transcript) {
             const newSeg = { text: result.transcript, timestamp: new Date(), risk_level: result.risk_level, speaker: result.speaker || "unknown", feedback: result.feedback || "" };
             setTranscript((prev) => [...prev, newSeg]);
             transcriptRef.current = [...transcriptRef.current, newSeg];

@@ -35,25 +35,28 @@ export default function TranscriptFeed({ segments }) {
           segments.map((seg, i) => {
             const cfg = SPEAKER_CONFIG[seg.speaker] || SPEAKER_CONFIG.unknown;
             const SpeakerIcon = cfg.icon;
+            const isVictim = seg.speaker === "victim";
             return (
               <div
                 key={i}
-                className={`text-sm p-2.5 rounded-lg bg-muted/30 border-l-2 ${RISK_COLORS[seg.risk_level] || RISK_COLORS.low}`}
+                className={`flex flex-col ${isVictim ? "items-end" : "items-start"}`}
               >
-                <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${cfg.bg} ${cfg.color} text-xs font-medium mb-1.5`}>
-                  <SpeakerIcon className="w-3 h-3" />
-                  {cfg.label}
-                </div>
-                <p className="text-foreground">{seg.text}</p>
-                {seg.feedback && (
-                  <div className={`mt-2 flex items-start gap-1.5 p-2 rounded-lg ${seg.speaker === "victim" ? "bg-primary/5" : "bg-muted/40"}`}>
-                    <ThumbsUp className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-primary font-medium">{seg.feedback}</p>
+                <div className={`text-sm p-2.5 rounded-2xl border-l-2 max-w-[85%] ${isVictim ? "bg-primary/5 rounded-br-sm" : "bg-muted/30 rounded-bl-sm"} ${RISK_COLORS[seg.risk_level] || RISK_COLORS.low}`}>
+                  <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${cfg.bg} ${cfg.color} text-xs font-medium mb-1.5`}>
+                    <SpeakerIcon className="w-3 h-3" />
+                    {cfg.label}
                   </div>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(seg.timestamp).toLocaleTimeString()}
-                </p>
+                  <p className="text-foreground">{seg.text}</p>
+                  {seg.feedback && (
+                    <div className={`mt-2 flex items-start gap-1.5 p-2 rounded-lg ${isVictim ? "bg-primary/5" : "bg-muted/40"}`}>
+                      <ThumbsUp className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-primary font-medium">{seg.feedback}</p>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {new Date(seg.timestamp).toLocaleTimeString()}
+                  </p>
+                </div>
               </div>
             );
           })

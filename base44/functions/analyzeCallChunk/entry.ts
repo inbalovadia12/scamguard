@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { audio_url, language, session_context } = body;
+    const { audio_url, language, session_context, speaker_history } = body;
 
     if (!audio_url) {
       return Response.json({ error: 'Audio URL is required' }, { status: 400 });
@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
     if (!transcript.trim()) {
       return Response.json({
         transcript: '',
+        segments: [],
         red_flags: [],
         risk_level: 'low',
         warnings: [],
@@ -41,25 +42,32 @@ Deno.serve(async (req) => {
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
     const contextPrompt = session_context
-      ? `\n\nPREVIOUS CONTEXT from earlier in this call:\n${session_context}\n`
+      ? `\nPREVIOUS TRANSCRIPT (last few segments):\n${session_context}\n`
+      : '';
+    const historyPrompt = speaker_history
+      ? `\nSPEAKER HISTORY (who spoke recently, oldest→newest): ${speaker_history}\n`
       : '';
 
-    const prompt = `You are a real-time scam detection agent analyzing a live phone call or meeting transcript.
+    const prompt = `You are a real-time scam detection agent analyzing a live phone call or meeting.
 
-This is a CHUNK (segment) of an ongoing conversation.
+The audio was transcribed by speech recognition, which does NOT identify speakers. You must detect speaker turns from the text itself.
 
-CRITICAL CONTEXT: The user is the person being protected (the potential victim). They are using this tool to stay safe during calls. The "other party" is whoever they're talking to — could be a scammer OR a legitimate caller.
+CRITICAL CONTEXT: The "victim" is the person being protected (the app user). The "scammer" is the other party — who could be a scammer OR a legitimate caller (label them "scammer" regardless; the risk analysis determines if they're actually malicious).
 
 Your job:
-1. Identify WHO is speaking in this chunk — the USER (the protected person) or the OTHER PARTY (the person they're talking to)?
-2. If the OTHER PARTY is speaking, analyze for scam indicators.
-3. If the USER is speaking, evaluate their response — are they handling it well? Are they accidentally sharing sensitive info?
-4. Clearly state when this is NOT a scam (legitimate conversation).
-
-TRANSCRIPT CHUNK:
+1. SPLIT the transcript into speaker turns. A 5-second chunk may contain 1 or 2 speakers. Detect turn changes using:
+   - Questions followed by answers
+   - Abrupt topic shifts or tone changes
+   - Addressing the other party ("sir", "ma'am", names, "you")
+   - Acknowledgments ("yes", "okay", "I see") following a statement
+2. Label each turn: "scammer" (the other party) or "victim" (the protected user).
+3. Use the SPEAKER HISTORY to alternate — if the last turn was "scammer", the next is likely "victim", and vice versa. If history is empty, the first speaker is usually the "scammer" (they typically initiate calls).
+4. Clean up obvious transcription errors (filler artifacts, repeated words, misheard terms) using context, but preserve the original meaning.
+${contextPrompt}${historyPrompt}
+TRANSCRIPT CHUNK (raw, may contain errors):
 "${transcript}"
-${contextPrompt}
-When the OTHER PARTY speaks, analyze for:
+
+When the SCAMMER (other party) speaks, analyze for:
 - Urgency or pressure tactics ("act now", "don't hang up", "limited time")
 - Requests for gift cards, wire transfers, crypto, or unusual payment methods
 - Requests for personal info (SSN, bank details, passwords, OTP codes)
@@ -70,21 +78,21 @@ When the OTHER PARTY speaks, analyze for:
 - Romance/investment scam patterns
 - Requests to stay on the line or not tell anyone
 
-When the USER speaks, evaluate:
+When the VICTIM (user) speaks, evaluate:
 - Are they giving out sensitive info they shouldn't? (warning needed)
 - Are they pushing back appropriately? (encourage them!)
 - Are they asking good verification questions? (encourage them!)
 - Are they staying calm and not being pressured? (encourage them!)
 
 Return:
-- speaker: "scammer" if the other party is speaking, "victim" if the user is speaking, "unknown" if unclear
-- feedback: If the victim is speaking, give them direct, personal feedback — encouragement ("Great job not sharing your info!") or a warning ("Be careful — you just shared your address"). Empty string if the scammer is speaking.
-- is_scam: true if scam indicators are present, false if this is clearly a legitimate/normal conversation
-- red_flags: Specific concerning phrases or behaviors detected in THIS chunk (empty array if none)
-- risk_level: "low" (normal/legitimate conversation OR no concerns), "medium" (some concerning elements), "high" (clear scam indicators)
-- warnings: Short, actionable warning messages for the user (e.g., "Caller is pressuring you to act immediately — common scam tactic")
-- tactics_detected: Named tactics if any (e.g., "Urgency", "Impersonation", "Payment via Gift Cards")
-- analysis: Brief 1-2 sentence assessment. If NOT a scam, explicitly say so ("This appears to be a legitimate call about [topic]. No scam indicators detected.")
+- segments: Array of { speaker: "scammer"|"victim"|"unknown", text: string } — each detected turn in this chunk, in order. If only one person spoke, return a single segment. Clean up transcription errors in the text.
+- feedback: If the victim spoke in any segment, give direct personal feedback — encouragement ("Great job not sharing your info!") or a warning ("Be careful — you just shared your address"). Empty if only the scammer spoke.
+- is_scam: true if scam indicators are present, false if clearly legitimate/normal
+- red_flags: Specific concerning phrases or behaviors detected (empty if none)
+- risk_level: "low" (normal/legitimate OR no concerns), "medium" (some concerning elements), "high" (clear scam indicators)
+- warnings: Short, actionable warning messages for the user
+- tactics_detected: Named tactics if any (e.g., "Urgency", "Impersonation")
+- analysis: Brief 1-2 sentence assessment. If NOT a scam, explicitly say so.
 
 Respond entirely in ${languageName}.`;
 
@@ -93,7 +101,17 @@ Respond entirely in ${languageName}.`;
       response_json_schema: {
         type: 'object',
         properties: {
-          speaker: { type: 'string', enum: ['scammer', 'victim', 'unknown'] },
+          segments: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                speaker: { type: 'string', enum: ['scammer', 'victim', 'unknown'] },
+                text: { type: 'string' },
+              },
+              required: ['speaker', 'text'],
+            },
+          },
           feedback: { type: 'string' },
           is_scam: { type: 'boolean' },
           red_flags: { type: 'array', items: { type: 'string' } },
@@ -102,13 +120,18 @@ Respond entirely in ${languageName}.`;
           tactics_detected: { type: 'array', items: { type: 'string' } },
           analysis: { type: 'string' },
         },
-        required: ['risk_level', 'red_flags', 'warnings', 'speaker', 'is_scam'],
+        required: ['segments', 'risk_level', 'warnings', 'is_scam'],
       },
     });
 
+    const segments = analysis.segments || [];
+    const fullTranscript = segments.map((s: any) => s.text).join(' ');
+    const primarySpeaker = segments.length > 0 ? segments[0].speaker : 'unknown';
+
     return Response.json({
-      transcript,
-      speaker: analysis.speaker || 'unknown',
+      transcript: fullTranscript || transcript,
+      segments,
+      speaker: primarySpeaker,
       feedback: analysis.feedback || '',
       is_scam: analysis.is_scam ?? false,
       red_flags: analysis.red_flags || [],
