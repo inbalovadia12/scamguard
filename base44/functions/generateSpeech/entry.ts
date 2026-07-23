@@ -39,7 +39,8 @@ Deno.serve(async (req) => {
     });
 
     if (!response.ok) {
-      return Response.json({ error: 'Eleven Labs TTS failed' }, { status: 502 });
+      const errText = await response.text().catch(() => 'unknown');
+      return Response.json({ error: `Eleven Labs TTS failed: ${response.status} ${errText}` }, { status: 502 });
     }
 
     // Stream binary audio directly — no base64 conversion, minimal latency
