@@ -61,6 +61,10 @@ export default function LiveCallAnalyzer() {
   const screenIntervalRef = useRef(null);
   const videoRef = useRef(null);
   const chunkIntervalRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const vadFrameRef = useRef(null);
+  const chunkStartRef = useRef(0);
   const userStoppedRef = useRef(false);
   const chunkQueueRef = useRef([]);
   const isProcessingRef = useRef(false);
@@ -89,6 +93,12 @@ export default function LiveCallAnalyzer() {
       }
       if (chunkIntervalRef.current) {
         clearInterval(chunkIntervalRef.current);
+      }
+      if (vadFrameRef.current) {
+        cancelAnimationFrame(vadFrameRef.current);
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
       }
       if (screenIntervalRef.current) {
         clearInterval(screenIntervalRef.current);
@@ -233,6 +243,7 @@ export default function LiveCallAnalyzer() {
         if (!userStoppedRef.current) {
           try {
             recorderRef.current.start();
+            chunkStartRef.current = Date.now();
           } catch (e) {
             stream.getTracks().forEach((t) => t.stop());
             setIsListening(false);
@@ -249,11 +260,55 @@ export default function LiveCallAnalyzer() {
       };
 
       recorder.start();
-      chunkIntervalRef.current = setInterval(() => {
-        if (recorderRef.current && recorderRef.current.state === "recording") {
+      chunkStartRef.current = Date.now();
+
+      // VAD: split chunks at natural pauses instead of fixed timer
+      const audioContext = new AudioContext();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+
+      let silenceStart = 0;
+      let isSpeaking = false;
+      const SILENCE_THRESHOLD = 0.015;
+      const SILENCE_DURATION = 600;
+      const MAX_CHUNK_MS = 8000;
+
+      const checkAudioLevel = () => {
+        if (userStoppedRef.current || !analyserRef.current) return;
+        const data = new Uint8Array(analyser.fftSize);
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const val = (data[i] - 128) / 128;
+          sum += val * val;
+        }
+        const rms = Math.sqrt(sum / data.length);
+        const now = Date.now();
+
+        if (rms > SILENCE_THRESHOLD) {
+          isSpeaking = true;
+          silenceStart = 0;
+        } else if (isSpeaking) {
+          if (!silenceStart) silenceStart = now;
+          if (now - silenceStart > SILENCE_DURATION) {
+            isSpeaking = false;
+            if (recorderRef.current?.state === "recording") {
+              recorderRef.current.stop();
+            }
+          }
+        }
+
+        if (now - chunkStartRef.current > MAX_CHUNK_MS && recorderRef.current?.state === "recording") {
           recorderRef.current.stop();
         }
-      }, CHUNK_MS);
+
+        vadFrameRef.current = requestAnimationFrame(checkAudioLevel);
+      };
+      checkAudioLevel();
       setIsListening(true);
     } catch (e) {
       setError(e.message || "Failed to start listening.");
@@ -281,9 +336,14 @@ export default function LiveCallAnalyzer() {
       }).catch(() => {});
     }
 
-    if (chunkIntervalRef.current) {
-      clearInterval(chunkIntervalRef.current);
-      chunkIntervalRef.current = null;
+    if (vadFrameRef.current) {
+      cancelAnimationFrame(vadFrameRef.current);
+      vadFrameRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+      analyserRef.current = null;
     }
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
       recorderRef.current.stop();

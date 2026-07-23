@@ -34,7 +34,8 @@ Deno.serve(async (req) => {
     formData.append('model', 'whisper-large-v3-turbo');
     formData.append('language', language || 'en');
     formData.append('temperature', '0');
-    formData.append('response_format', 'json');
+    formData.append('response_format', 'verbose_json');
+    formData.append('timestamp_granularities[]', 'segment');
 
     const groqResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
@@ -50,6 +51,10 @@ Deno.serve(async (req) => {
 
     const groqResult = await groqResponse.json();
     const transcript: string = groqResult.text || '';
+    const groqSegments = groqResult.segments || [];
+    const formattedTranscript = groqSegments.length > 0
+      ? groqSegments.map((s: any) => `[${s.start.toFixed(1)}-${s.end.toFixed(1)}] "${s.text.trim()}"`).join('\n')
+      : transcript;
 
     if (!transcript.trim()) {
       return Response.json({
@@ -75,12 +80,13 @@ Deno.serve(async (req) => {
 
     const prompt = `You are a real-time scam detection agent analyzing a live phone call or meeting.
 
-The audio was transcribed by speech recognition, which does NOT identify speakers. You must detect speaker turns from the text itself.
+The audio was transcribed by speech recognition, which does NOT identify speakers. You must detect speaker turns from the text itself. The transcript is provided as Whisper segments with timestamps — each [start-end] line is a natural utterance boundary (a pause was detected between segments). Use these boundaries to help identify speaker turns.
 
 CRITICAL CONTEXT: The "victim" is the person being protected (the app user). The "scammer" is the other party — who could be a scammer OR a legitimate caller (label them "scammer" regardless; the risk analysis determines if they're actually malicious).
 
 Your job:
-1. SPLIT the transcript into speaker turns. A 5-second chunk may contain 1 or 2 speakers. Detect turn changes using:
+1. SPLIT the transcript into speaker turns. Each Whisper segment (timestamped line) is a natural utterance boundary — a new speaker often starts a new segment. Within a segment there is usually one speaker. Detect turn changes using:
+   - Segment boundaries (each timestamped line is a separate utterance)
    - Questions followed by answers
    - Abrupt topic shifts or tone changes
    - Addressing the other party ("sir", "ma'am", names, "you")
@@ -89,8 +95,8 @@ Your job:
 3. Use the SPEAKER HISTORY to alternate — if the last turn was "scammer", the next is likely "victim", and vice versa. If history is empty, the first speaker is usually the "scammer" (they typically initiate calls).
 4. Clean up obvious transcription errors (filler artifacts, repeated words, misheard terms) using context, but preserve the original meaning.
 ${contextPrompt}${historyPrompt}
-TRANSCRIPT CHUNK (raw, may contain errors):
-"${transcript}"
+TRANSCRIPT CHUNK (Whisper segments with timestamps, may contain errors):
+${formattedTranscript}
 
 When the SCAMMER (other party) speaks, analyze for:
 - Urgency or pressure tactics ("act now", "don't hang up", "limited time")
