@@ -10,7 +10,7 @@ import AIDisclaimer from "@/components/AIDisclaimer";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 
-const CHUNK_MS = 5000;
+const CHUNK_MS = 3000;
 const SCREEN_INTERVAL_OPTIONS = [
   { label: "1 sec", ms: 1000, credits: 8 },
   { label: "3 sec", ms: 3000, credits: 5 },
@@ -179,7 +179,7 @@ export default function LiveCallAnalyzer() {
           }
 
           if (result.feedback) {
-            setCoaching((prev) => [{ text: result.feedback, timestamp: new Date() }, ...prev]);
+            setCoaching((prev) => [{ text: result.feedback, timestamp: new Date(), risk_level: result.risk_level }, ...prev]);
           }
 
           if (result.warnings?.length) {
@@ -219,7 +219,12 @@ export default function LiveCallAnalyzer() {
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
-          chunkQueueRef.current.push(e.data);
+          // Drop stale chunks when backed up — keeps feedback real-time
+          if (chunkQueueRef.current.length > 0) {
+            chunkQueueRef.current = [e.data];
+          } else {
+            chunkQueueRef.current.push(e.data);
+          }
           processNextChunk();
         }
       };
@@ -418,7 +423,7 @@ export default function LiveCallAnalyzer() {
   const RiskIcon = cfg.icon;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-8">
+    <div className="max-w-4xl mx-auto space-y-6 pb-16">
       <div className="animate-slide-up">
         <div className="flex items-center gap-2.5 mb-2">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">

@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, Zap, ThumbsUp, MessageCircle } from "lucide-react";
+import { AlertTriangle, Zap, ThumbsUp, ThumbsDown, MessageCircle } from "lucide-react";
 
 const LEVEL_COLORS = {
   low: "bg-success/10 text-success border-success/30",
@@ -17,17 +17,23 @@ export default function WarningPanel({ warnings, tactics, coaching }) {
 
       {coaching?.length > 0 && (
         <div className="space-y-2 mb-3">
-          {coaching.map((c, i) => (
-            <div key={i} className="text-sm p-2.5 rounded-lg border bg-primary/5 border-primary/20">
-              <div className="flex items-start gap-1.5">
-                <ThumbsUp className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
-                <p className="text-primary font-medium">{c.text}</p>
+          {coaching.map((c, i) => {
+            const isPositive = c.risk_level === "low";
+            const Icon = isPositive ? ThumbsUp : ThumbsDown;
+            const color = isPositive ? "text-primary" : "text-destructive";
+            const bg = isPositive ? "bg-primary/5 border-primary/20" : "bg-destructive/5 border-destructive/20";
+            return (
+              <div key={i} className={`text-sm p-2.5 rounded-lg border ${bg}`}>
+                <div className="flex items-start gap-1.5">
+                  <Icon className={`w-3.5 h-3.5 ${color} flex-shrink-0 mt-0.5`} />
+                  <p className={`${color} font-medium`}>{c.text}</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {new Date(c.timestamp).toLocaleTimeString()}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {new Date(c.timestamp).toLocaleTimeString()}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
