@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Radio, Mic, Monitor, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye, Volume2, VolumeX } from "lucide-react";
+import { Radio, Mic, Monitor, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import TranscriptFeed from "@/components/call/TranscriptFeed";
 import WarningPanel from "@/components/call/WarningPanel";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useElevenLabsTTS } from "@/hooks/useElevenLabsTTS";
+
 
 const CHUNK_MS = 5000;
 const SCREEN_INTERVAL_OPTIONS = [
@@ -55,17 +55,6 @@ export default function LiveCallAnalyzer() {
   const [checkingPlan, setCheckingPlan] = useState(true);
   const [processingChunk, setProcessingChunk] = useState(false);
   const [callSeconds, setCallSeconds] = useState(0);
-  const [voiceAlerts, setVoiceAlerts] = useState(true);
-  const voiceAlertsRef = useRef(true);
-  const lang = localStorage.getItem("vardin_language") || "en";
-  const tts = useElevenLabsTTS(lang);
-
-  const toggleVoiceAlerts = () => {
-    const next = !voiceAlerts;
-    voiceAlertsRef.current = next;
-    setVoiceAlerts(next);
-    if (!next) tts.stop();
-  };
 
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
@@ -191,7 +180,6 @@ export default function LiveCallAnalyzer() {
 
           if (result.feedback) {
             setCoaching((prev) => [{ text: result.feedback, timestamp: new Date() }, ...prev]);
-            if (voiceAlertsRef.current) tts.speak(result.feedback);
           }
 
           if (result.warnings?.length) {
@@ -199,7 +187,6 @@ export default function LiveCallAnalyzer() {
               ...result.warnings.map((w) => ({ text: w, timestamp: new Date(), level: result.risk_level })),
               ...prev,
             ]);
-            if (voiceAlertsRef.current) result.warnings.forEach((w) => tts.speak(w));
           }
 
           if (RISK_ORDER[result.risk_level] > RISK_ORDER[overallRiskRef.current]) {
@@ -268,7 +255,6 @@ export default function LiveCallAnalyzer() {
 
   const handleStop = () => {
     userStoppedRef.current = true;
-    tts.stop();
 
     // Save session record
     if (transcript.length > 0 || warnings.length > 0) {
@@ -366,7 +352,6 @@ export default function LiveCallAnalyzer() {
             ...result.warnings.map((w) => ({ text: w, timestamp: new Date(), level: result.risk_level })),
             ...prev,
           ]);
-          if (voiceAlertsRef.current) result.warnings.forEach((w) => tts.speak(w));
         }
 
         if (RISK_ORDER[result.risk_level] > RISK_ORDER[overallRiskRef.current]) {
@@ -527,16 +512,6 @@ export default function LiveCallAnalyzer() {
                 </p>
               </div>
             </div>
-            <button
-              onClick={toggleVoiceAlerts}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                voiceAlerts ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-              }`}
-              title={voiceAlerts ? "Voice alerts on" : "Voice alerts off"}
-            >
-              {voiceAlerts ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-              {voiceAlerts ? "Voice On" : "Voice Off"}
-            </button>
             <Button variant="destructive" onClick={handleStop} className="gap-2">
               <Square className="w-4 h-4" />
               Stop
