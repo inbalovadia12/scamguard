@@ -109,6 +109,17 @@ export default function LiveCallAnalyzer() {
     };
   }, []);
 
+  const handleEditSegment = (index, updates) => {
+    setTranscript((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...updates };
+      return next;
+    });
+    transcriptRef.current = transcriptRef.current.map((t, i) =>
+      i === index ? { ...t, ...updates } : t
+    );
+  };
+
   const handleStart = async () => {
     setError(null);
     setTranscript([]);
@@ -623,7 +634,7 @@ export default function LiveCallAnalyzer() {
 
       {(transcript.length > 0 || warnings.length > 0) && (
         <div className="grid sm:grid-cols-2 gap-4">
-          <TranscriptFeed segments={transcript} />
+          <TranscriptFeed segments={transcript} onEditSegment={handleEditSegment} />
           <WarningPanel warnings={warnings} tactics={tactics} coaching={coaching} />
         </div>
       )}

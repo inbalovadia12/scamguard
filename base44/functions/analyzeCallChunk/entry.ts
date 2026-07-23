@@ -96,7 +96,7 @@ ${contextPrompt}${historyPrompt}
 TRANSCRIPT:
 ${formattedTranscript}
 
-Detect speaker turns: continue the SPEAKER HISTORY pattern; if empty, first speaker is usually "scammer" (they initiate calls). A question followed by an answer = speaker change. Clean up transcription errors. For scammer turns, check: urgency, payment requests (gift cards/crypto/wire), personal info (SSN/passwords/OTP), impersonation, threats, too-good-to-be-true offers, remote access. For victim turns, check if sharing sensitive info or pushing back well.
+Detect speaker turns: continue the SPEAKER HISTORY pattern; if empty, first speaker is usually "scammer" (they initiate calls). A question followed by an answer = speaker change. Fix Whisper errors: merge run-on words ("I R S" → "IRS"), correct obvious homophones, add missing punctuation, merge fragmented segments from the same speaker. For scammer turns, check: urgency, payment requests (gift cards/crypto/wire), personal info (SSN/passwords/OTP), impersonation, threats, too-good-to-be-true offers, remote access. For victim turns, check if sharing sensitive info or pushing back well.
 
 Return JSON: segments [{speaker, text}], feedback (advice to victim if they spoke, else ""), is_scam, red_flags, risk_level (low/medium/high), warnings, tactics_detected, analysis (1-2 sentences). Respond in ${languageName}.`;
 
