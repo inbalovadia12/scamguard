@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Radio, Mic, Monitor, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye } from "lucide-react";
+import { Radio, Mic, Monitor, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye, Smartphone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,17 @@ export default function LiveCallAnalyzer() {
     if (!isListening) return;
     const interval = setInterval(() => setCallSeconds((s) => s + 1), 1000);
     return () => clearInterval(interval);
+  }, [isListening]);
+
+  useEffect(() => {
+    if (!isListening) return;
+    const handleVisibility = () => {
+      if (!document.hidden && audioContextRef.current?.state === "suspended") {
+        audioContextRef.current.resume().catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [isListening]);
 
   useEffect(() => {
@@ -157,6 +168,13 @@ export default function LiveCallAnalyzer() {
       if (mode === "screen") {
         await startScreenCapture();
         return;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Your browser doesn't support microphone access. Try updating your browser.");
+      }
+      if (typeof MediaRecorder === "undefined") {
+        throw new Error("Your browser doesn't support audio recording. Try updating to iOS 14.3+ or a modern browser.");
       }
 
       let stream;
@@ -299,7 +317,11 @@ export default function LiveCallAnalyzer() {
       chunkStartRef.current = Date.now();
 
       // VAD: split chunks at natural pauses instead of fixed timer
-      const audioContext = new AudioContext();
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 512;
@@ -570,6 +592,14 @@ export default function LiveCallAnalyzer() {
                 <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "SMS, WhatsApp, Email"}</span>
               </button>
             </div>
+            {isMobile && mode === "mic" && (
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
+                <Smartphone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  Put your call on <strong>speakerphone</strong> and place the phone near the speaker. Live Guard will analyze the conversation in real time.
+                </p>
+              </div>
+            )}
             <Button onClick={handleStart} className="w-full gap-2 h-12" disabled={!creditStatus?.canAnalyze}>
               {mode === "screen" ? <Eye className="w-4 h-4" /> : <Radio className="w-4 h-4" />}
               {mode === "screen" ? "Start Watching" : "Start Listening"}
