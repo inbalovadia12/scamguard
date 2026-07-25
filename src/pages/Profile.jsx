@@ -12,12 +12,14 @@ import {
 import { Link } from "react-router-dom";
 import { getCreditStatus, PLAN_NAMES, PLAN_LIMITS } from "@/lib/credits";
 import { useAuth } from "@/lib/AuthContext";
+import { useKidMode } from "@/lib/KidModeContext";
 import { toast } from "@/components/ui/use-toast";
 import CommunityDataToggle from "@/components/community/CommunityDataToggle";
 import CreditPacks from "@/components/CreditPacks";
 
 export default function Profile() {
   const { user, checkUserAuth } = useAuth();
+  const { kidMode, setKidMode } = useKidMode();
   const [credits, setCredits] = useState(null);
   const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -27,7 +29,6 @@ export default function Profile() {
   const [textSize, setTextSize] = useState("normal");
   const [highContrast, setHighContrast] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [kidMode, setKidMode] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -35,7 +36,6 @@ export default function Profile() {
       setAlertPref(user.alert_preference || "all");
       setNotifyEmail(user.notify_email !== false);
       setPrivacyRedact(user.privacy_auto_redact !== false);
-      setKidMode(!!user.kid_mode);
     }
   }, [user]);
 
@@ -76,7 +76,6 @@ export default function Profile() {
         alert_preference: alertPref,
         notify_email: notifyEmail,
         privacy_auto_redact: privacyRedact,
-        kid_mode: kidMode,
       });
       await checkUserAuth();
       toast({ title: "Saved", description: "Your profile has been updated." });
