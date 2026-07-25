@@ -93,7 +93,7 @@ export default function AppLayout() {
   const { kidMode } = useKidMode();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const KID_HIDDEN_PATHS = ["/advanced-scanner", "/url-scanner", "/phone-lookup", "/caller-check", "/image-scanner", "/extension", "/ai-negotiator", "/scam-feed", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/analytics", "/feedback", "/projects", "/pricing"];
+  const KID_HIDDEN_PATHS = ["/url-scanner", "/phone-lookup", "/caller-check", "/ai-negotiator", "/scam-feed", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/analytics", "/feedback", "/projects", "/pricing"];
   const visibleSections = kidMode
     ? NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !KID_HIDDEN_PATHS.includes(i.path)) })).filter(s => s.items.length > 0)
     : NAV_SECTIONS;
