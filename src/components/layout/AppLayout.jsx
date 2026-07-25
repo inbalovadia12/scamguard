@@ -293,6 +293,10 @@ export default function AppLayout() {
 
       {/* Main Content */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen overflow-x-hidden">
+        <div className="kid-banner items-center gap-2 px-4 py-2 bg-primary/10 border-b border-primary/20 text-sm font-medium text-primary">
+          <span>🧒</span>
+          <span>Kid Mode is on — simpler language and extra protection enabled</span>
+        </div>
         <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-8 pt-20 pb-6 md:py-12" style={{ paddingTop: "max(5rem, calc(4rem + env(safe-area-inset-top)))" }}>
           <Outlet />
         </main>

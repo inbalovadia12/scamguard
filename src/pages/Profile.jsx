@@ -27,6 +27,7 @@ export default function Profile() {
   const [textSize, setTextSize] = useState("normal");
   const [highContrast, setHighContrast] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [kidMode, setKidMode] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -34,6 +35,7 @@ export default function Profile() {
       setAlertPref(user.alert_preference || "all");
       setNotifyEmail(user.notify_email !== false);
       setPrivacyRedact(user.privacy_auto_redact !== false);
+      setKidMode(!!user.kid_mode);
     }
   }, [user]);
 
@@ -74,6 +76,7 @@ export default function Profile() {
         alert_preference: alertPref,
         notify_email: notifyEmail,
         privacy_auto_redact: privacyRedact,
+        kid_mode: kidMode,
       });
       await checkUserAuth();
       toast({ title: "Saved", description: "Your profile has been updated." });
@@ -235,6 +238,21 @@ export default function Profile() {
             <p className="text-xs text-muted-foreground">Remove names, numbers & addresses before storing messages</p>
           </div>
           <Switch checked={privacyRedact} onCheckedChange={setPrivacyRedact} />
+        </div>
+      </Card>
+
+      {/* Kid Mode */}
+      <Card className="rounded-2xl border-border/50 p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-primary" />
+          <h2 className="font-semibold">Kid Mode</h2>
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Enable Kid Mode</p>
+            <p className="text-xs text-muted-foreground">Simpler language, bigger text, and kid-focused scam protection for online services and phone calls</p>
+          </div>
+          <Switch checked={kidMode} onCheckedChange={setKidMode} />
         </div>
       </Card>
 

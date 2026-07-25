@@ -18,6 +18,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
+  const [kidMode, setKidMode] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,6 +46,9 @@ export default function Register() {
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
       }
+      try {
+        await base44.auth.updateMe({ kid_mode: kidMode });
+      } catch {}
       window.location.href = "/dashboard";
     } catch (err) {
       setError(err.message || "Invalid verification code");
@@ -211,6 +215,18 @@ export default function Register() {
               required
             />
           </div>
+        </div>
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
+          <input
+            type="checkbox"
+            id="kidMode"
+            checked={kidMode}
+            onChange={(e) => setKidMode(e.target.checked)}
+            className="w-4 h-4 rounded accent-primary"
+          />
+          <label htmlFor="kidMode" className="text-sm font-medium cursor-pointer">
+            🧒 Kid Mode — simpler language and kid-friendly scam protection
+          </label>
         </div>
         <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
           {loading ? (

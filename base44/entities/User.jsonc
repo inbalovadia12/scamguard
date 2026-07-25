@@ -72,6 +72,11 @@
       "type": "boolean",
       "default": true,
       "description": "Whether to auto-redact PII in stored messages"
+    },
+    "kid_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether kid mode is enabled (simpler language, bigger text, kid-focused scam protection)"
     }
   },
   "required": [

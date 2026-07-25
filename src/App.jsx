@@ -8,6 +8,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { LanguageProvider } from '@/lib/i18n';
+import { KidModeProvider } from '@/lib/KidModeContext';
 
 // Auth pages
 import Login from '@/pages/Login';
@@ -131,7 +132,9 @@ function App() {
         <LanguageProvider>
         <Router>
           <ScrollToTop />
-          <AuthenticatedApp />
+          <KidModeProvider>
+            <AuthenticatedApp />
+          </KidModeProvider>
         </Router>
         </LanguageProvider>
         <Toaster />

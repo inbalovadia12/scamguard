@@ -1,95 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vardin Scam Guard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px;
+      background: linear-gradient(135deg, #0d9488, #0f766e);
+      color: white;
+    }
+    .header .logo { font-size: 24px; }
+    .header h1 { font-size: 18px; font-weight: 700; }
+    .kid-mode-card {
+      margin: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #e0f2fe;
+      border: 1px solid #7dd3fc;
+    }
+    .kid-mode-card.active {
+      background: #dbeafe;
+      border-color: #60a5fa;
+    }
+    .kid-mode-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .kid-mode-row input { width: 18px; height: 18px; accent-color: #2563eb; }
+    .kid-mode-row label { font-size: 14px; font-weight: 600; cursor: pointer; }
+    .kid-desc { font-size: 12px; color: #64748b; margin-top: 6px; margin-left: 26px; }
+    .scan-btn {
+      display: block;
+      width: calc(100% - 24px);
+      margin: 0 12px 12px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0d9488, #0f766e);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .scan-btn:hover { opacity: 0.9; }
+    .scan-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    #result { padding: 0 12px 12px; font-size: 13px; }
+    .result-safe { color: #16a34a; font-weight: 600; }
+    .result-warning { color: #ea580c; font-weight: 600; }
+    .result-danger { color: #dc2626; font-weight: 600; }
+    .loading { color: #64748b; }
+    .footer {
+      padding: 8px 12px;
+      text-align: center;
+      font-size: 11px;
+      color: #94a3b8;
+      border-top: 1px solid #e2e8f0;
+    }
+    .footer a { color: #0d9488; text-decoration: none; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div class="logo">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          <path d="m9 12 2 2 4-4"/>
-        </svg>
-        <span>Vardin</span>
-      </div>
-      <span id="plan-badge" class="badge hidden"></span>
-    </header>
-
-    <!-- Loading View -->
-    <div id="loading-view" class="view">
-      <div class="spinner"></div>
-      <p class="center-text">Checking access...</p>
-    </div>
-
-    <!-- Login View -->
-    <div id="login-view" class="view hidden">
-      <div class="icon-wrap lock">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-      </div>
-      <h2>Connect Your Account</h2>
-      <p>Log in to Vardin on your browser to start scanning webpages for scams.</p>
-      <button id="login-btn" class="btn-primary">Open Vardin Login</button>
-    </div>
-
-    <!-- Upgrade View -->
-    <div id="upgrade-view" class="view hidden">
-      <div class="icon-wrap crown">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/>
-          <path d="M5 21h14"/>
-        </svg>
-      </div>
-      <h2>Premium Required</h2>
-      <p>The Vardin Chrome extension requires a Premium subscription. Upgrade to unlock AI-powered scam scanning on any webpage.</p>
-      <button id="upgrade-btn" class="btn-primary">Upgrade to Premium</button>
-    </div>
-
-    <!-- Scan View -->
-    <div id="scan-view" class="view hidden">
-      <div class="field">
-        <label for="scan-mode">Scan Mode</label>
-        <select id="scan-mode">
-          <option value="text">Page Text</option>
-          <option value="screenshot">Screenshot</option>
-          <option value="both">Text + Screenshot</option>
-          <option value="url">URL Only</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="answer-type">Result Type</label>
-        <select id="answer-type">
-          <option value="quick">Quick Verdict</option>
-          <option value="detailed" selected>Detailed Report</option>
-          <option value="risk_score">Risk Score Only</option>
-          <option value="red_flags">Red Flags</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="custom-focus">Custom Focus <span class="optional">(optional)</span></label>
-        <input type="text" id="custom-focus" placeholder="e.g., Is this a phishing site?" maxlength="500">
-      </div>
-
-      <div class="field">
-        <label for="custom-instructions">Instructions <span class="optional">(optional)</span></label>
-        <textarea id="custom-instructions" placeholder="Additional instructions for the AI..." rows="2" maxlength="1000"></textarea>
-      </div>
-
-      <div id="credits-display" class="credits-bar"></div>
-
-      <button id="scan-btn" class="btn-primary">
-        <span id="scan-btn-text">Scan This Page</span>
-      </button>
-
-      <div id="results" class="results hidden"></div>
-    </div>
+  <div class="header">
+    <span class="logo">🛡️</span>
+    <h1>Vardin Scam Guard</h1>
   </div>
+
+  <div class="kid-mode-card" id="kidModeCard">
+    <div class="kid-mode-row">
+      <input type="checkbox" id="kidMode">
+      <label for="kidMode">🧒 Kid Mode</label>
+    </div>
+    <p class="kid-desc">Simpler language and extra protection for kids</p>
+  </div>
+
+  <button class="scan-btn" id="scanBtn">🔍 Scan this page</button>
+  <div id="result"></div>
+
+  <div class="footer">
+    <a href="https://vardin.app" target="_blank">Open Vardin App</a>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

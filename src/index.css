@@ -378,4 +378,25 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  /* === Kid Mode === */
+  .kid-mode {
+    --radius: 1.25rem;
+    --primary: 210 80% 50%;
+  }
+  .kid-mode body {
+    font-size: 1.0625rem;
+  }
+  .kid-mode h1, .kid-mode h2, .kid-mode h3 {
+    font-weight: 700;
+  }
+  .kid-banner {
+    display: none;
+  }
+  .kid-mode .kid-banner {
+    display: flex;
+  }
+  .kid-mode .luxury-gradient-btn {
+    background: linear-gradient(135deg, hsl(210 80% 55%) 0%, hsl(210 80% 40%) 100%);
+  }
 }
