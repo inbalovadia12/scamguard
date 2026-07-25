@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Radio, Phone, Monitor, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye } from "lucide-react";
+import { Radio, Phone, Monitor, Mic, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -164,20 +164,25 @@ export default function LiveCallAnalyzer() {
         return;
       }
 
-      if (!navigator.mediaDevices?.getDisplayMedia) {
-        throw new Error("Your browser doesn't support system audio capture. Try Chrome or Edge on desktop or Android. iOS Safari doesn't support this.");
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Your browser doesn't support audio capture. Try updating your browser.");
       }
       if (typeof MediaRecorder === "undefined") {
         throw new Error("Your browser doesn't support audio recording. Try updating your browser.");
       }
 
-      const displayStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
-      const audioTracks = displayStream.getAudioTracks();
-      if (audioTracks.length === 0) {
-        displayStream.getTracks().forEach((t) => t.stop());
-        throw new Error('No audio captured. Make sure to check "Share audio" / "Share system audio" when prompted.');
+      let stream;
+      if (mode === "mic") {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } else {
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+        const audioTracks = displayStream.getAudioTracks();
+        if (audioTracks.length === 0) {
+          displayStream.getTracks().forEach((t) => t.stop());
+          throw new Error('No audio captured. Make sure to check "Share audio" / "Share system audio" when prompted.');
+        }
+        stream = new MediaStream(audioTracks);
       }
-      const stream = new MediaStream(audioTracks);
 
       streamRef.current = stream;
       const audioMime = getSupportedAudioMime();
@@ -367,7 +372,7 @@ export default function LiveCallAnalyzer() {
 
     // Save session record
     if (transcript.length > 0 || warnings.length > 0) {
-      const sessionType = mode === "screen" ? "screen_view" : "system_audio";
+      const sessionType = mode === "mic" ? "microphone" : mode === "screen" ? "screen_view" : "system_audio";
       base44.entities.LiveGuardSession.create({
         session_type: sessionType,
         overall_risk: overallRisk,
@@ -547,7 +552,17 @@ export default function LiveCallAnalyzer() {
         {!isListening ? (
           <div className="space-y-3">
             <p className="text-sm font-medium">Choose audio source:</p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button
+                onClick={() => setMode("mic")}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  mode === "mic" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
+                }`}
+              >
+                <Mic className={`w-6 h-6 ${mode === "mic" ? "text-primary" : "text-muted-foreground"}`} />
+                <span className="text-sm font-medium">Microphone</span>
+                <span className="text-xs text-muted-foreground">Speakerphone</span>
+              </button>
               <button
                 onClick={() => setMode("system")}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
@@ -580,6 +595,14 @@ export default function LiveCallAnalyzer() {
                 <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "SMS, WhatsApp, Email"}</span>
               </button>
             </div>
+            {mode === "mic" && (
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
+                <Mic className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  Put your call on <strong>speakerphone</strong> and place the phone near the speaker. Live Guard will analyze the conversation in real time.
+                </p>
+              </div>
+            )}
             {(mode === "system" || mode === "phone_call") && (
               <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
                 <Phone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
@@ -615,7 +638,7 @@ export default function LiveCallAnalyzer() {
               </div>
             )}
             <p className="text-xs text-muted-foreground text-center">
-              System Audio & Phone Call require Chrome or Edge. Screen View is desktop only. iOS Safari doesn't support system audio capture.
+              Microphone works everywhere. System Audio & Phone Call require Chrome or Edge. Screen View is desktop only.
             </p>
             {!creditStatus?.canAnalyze && (
               <p className="text-xs text-warning text-center">You're out of AI credits for this month.</p>
@@ -629,7 +652,7 @@ export default function LiveCallAnalyzer() {
                 <div className="absolute inset-0 w-3 h-3 rounded-full bg-destructive animate-ping" />
               </div>
               <div>
-                <p className="text-sm font-semibold">{mode === "screen" ? "Watching Screen" : mode === "phone_call" ? "Guarding Phone Call" : "Listening via System Audio"}</p>
+                <p className="text-sm font-semibold">{mode === "screen" ? "Watching Screen" : mode === "phone_call" ? "Guarding Phone Call" : mode === "mic" ? "Listening via Microphone" : "Listening via System Audio"}</p>
                 <p className="text-xs text-muted-foreground">
                   {processingChunk ? "Analyzing..." : mode === "screen" ? "Capturing screen..." : "Capturing audio..."} • {Math.floor(callSeconds / 60)}:{String(callSeconds % 60).padStart(2, "0")}
                 </p>
