@@ -11,6 +11,7 @@ import { toast } from "@/components/ui/use-toast";
 export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [alertPref, setAlertPref] = useState("all");
   const [saving, setSaving] = useState(false);
 
@@ -22,6 +23,7 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
       await base44.entities.ProtectedSenior.create({
         name: name.trim(),
         email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
         guardian_id: user.id,
         guardian_email: user.email,
         guardian_name: user.full_name,
@@ -55,6 +57,7 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
       toast({ title: "Added!", description: email.trim() ? `${name.trim()} has been added and an invite was sent.` : `${name.trim()} has been added to your family.` });
       setName("");
       setEmail("");
+      setPhone("");
       setAlertPref("all");
       onOpenChange(false);
       if (onAdded) await onAdded();
@@ -86,6 +89,11 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
             <Label>Email (optional)</Label>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their email address" className="h-11" />
             <p className="text-xs text-muted-foreground">We'll send them an invite to connect their account.</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Phone (optional)</Label>
+            <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g., +1 555 123 4567" className="h-11" />
+            <p className="text-xs text-muted-foreground">Used for quick call & text actions from alerts.</p>
           </div>
           <div className="space-y-2">
             <Label>Alert me for</Label>

@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Senior's email for their account"
     },
+    "phone": {
+      "type": "string",
+      "description": "Senior's phone number for quick call & text actions from alerts"
+    },
     "guardian_id": {
       "type": "string",
       "description": "User ID of the guardian/family member"

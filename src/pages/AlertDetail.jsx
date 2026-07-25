@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CheckCircle, Loader2, Send } from "lucide-react";
+import { ArrowLeft, CheckCircle, Loader2, Send, Phone, MessageSquare, Flag } from "lucide-react";
 import AnalysisResult from "@/components/scam/AnalysisResult";
 
 export default function AlertDetail() {
@@ -17,6 +17,7 @@ export default function AlertDetail() {
   const [warningError, setWarningError] = useState(null);
   const [seniorEmail, setSeniorEmail] = useState(null);
   const [seniorName, setSeniorName] = useState("");
+  const [seniorPhone, setSeniorPhone] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -32,11 +33,13 @@ export default function AlertDetail() {
           const senior = await base44.entities.ProtectedSenior.get(data.senior_id);
           setSeniorEmail(senior.email);
           setSeniorName(senior.name || "");
+          setSeniorPhone(senior.phone || "");
         } catch {
           const seniors = await base44.entities.ProtectedSenior.filter({ senior_user_id: data.senior_id });
           if (seniors.length > 0) {
             setSeniorEmail(seniors[0].email);
             setSeniorName(seniors[0].name || "");
+            setSeniorPhone(seniors[0].phone || "");
           }
         }
       }
@@ -102,6 +105,10 @@ export default function AlertDetail() {
     );
   }
 
+  const reassuranceBody = encodeURIComponent(`Hi ${seniorName || "there"}, I got a scam alert about a ${analysis.message_type?.replace(/_/g, " ") || "suspicious message"} targeting you. Please don't click any links or share personal info. Delete the message and call me if you're unsure. Stay safe!`);
+  const telLink = seniorPhone ? `tel:${seniorPhone}` : null;
+  const smsLink = seniorPhone ? `sms:${seniorPhone}?body=${reassuranceBody}` : null;
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
@@ -120,6 +127,53 @@ export default function AlertDetail() {
 
       <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-6">
         <AnalysisResult analysis={analysis} />
+      </div>
+
+      <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-3">
+        <h3 className="font-semibold font-heading">Quick Actions</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <a
+            href={telLink || "#"}
+            className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${telLink ? "border-border/50 hover:bg-muted/30" : "border-border/30 opacity-50 pointer-events-none"}`}
+          >
+            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Phone className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">Call {seniorName || "Senior"}</p>
+              <p className="text-xs text-muted-foreground">Phone call</p>
+            </div>
+          </a>
+          <a
+            href={smsLink || "#"}
+            className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${smsLink ? "border-border/50 hover:bg-muted/30" : "border-border/30 opacity-50 pointer-events-none"}`}
+          >
+            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <MessageSquare className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">Send Reassurance Text</p>
+              <p className="text-xs text-muted-foreground">Pre-written message</p>
+            </div>
+          </a>
+          <a
+            href="https://reportfraud.ftc.gov/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 p-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-all"
+          >
+            <div className="w-9 h-9 rounded-full bg-destructive/10 flex items-center justify-center flex-shrink-0">
+              <Flag className="w-4 h-4 text-destructive" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">Report to Authorities</p>
+              <p className="text-xs text-muted-foreground">File a scam report</p>
+            </div>
+          </a>
+        </div>
+        {!seniorPhone && analysis.senior_id && (
+          <p className="text-xs text-muted-foreground">No phone number saved — add one in the Family page to enable call & text actions.</p>
+        )}
       </div>
 
       <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-4">
