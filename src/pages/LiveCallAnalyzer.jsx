@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Radio, Phone, Monitor, Mic, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye } from "lucide-react";
+import { Radio, Phone, Monitor, Mic, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ export default function LiveCallAnalyzer() {
   const isMobile = useIsMobile();
   const [mode, setMode] = useState("system");
   const [screenInterval, setScreenInterval] = useState(SCREEN_INTERVAL_OPTIONS[2]);
+  const supportsDisplayMedia = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState([]);
   const [warnings, setWarnings] = useState([]);
@@ -604,16 +605,25 @@ export default function LiveCallAnalyzer() {
               </div>
             )}
             {(mode === "system" || mode === "phone_call") && (
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
-                <Phone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-muted-foreground">
-                  {mode === "phone_call"
-                    ? "Start your call first (Zoom, Teams, Skype, or device call on Android), then tap Start. When prompted, share your system audio."
-                    : 'When prompted, share a tab or your entire screen and make sure to check "Share audio".'}
-                </p>
-              </div>
+              supportsDisplayMedia ? (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
+                  <Phone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    {mode === "phone_call"
+                      ? "Start your call first (Zoom, Teams, Skype, or device call on Android), then tap Start. When prompted, share your system audio."
+                      : 'When prompted, share a tab or your entire screen and make sure to check "Share audio".'}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-muted/30 border border-border/50">
+                  <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    System audio capture isn't available on this browser. iOS doesn't allow web apps to capture other apps' audio. Use <strong>Microphone</strong> mode instead, or try Chrome on Android or desktop.
+                  </p>
+                </div>
+              )
             )}
-            <Button onClick={handleStart} className="w-full gap-2 h-12" disabled={!creditStatus?.canAnalyze}>
+            <Button onClick={handleStart} className="w-full gap-2 h-12" disabled={!creditStatus?.canAnalyze || ((mode === "system" || mode === "phone_call") && !supportsDisplayMedia)}>
               {mode === "screen" ? <Eye className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
               {mode === "screen" ? "Start Watching" : mode === "phone_call" ? "Start Call Guard" : "Start Listening"}
             </Button>
@@ -638,7 +648,7 @@ export default function LiveCallAnalyzer() {
               </div>
             )}
             <p className="text-xs text-muted-foreground text-center">
-              Microphone works everywhere. System Audio & Phone Call require Chrome or Edge. Screen View is desktop only.
+              Microphone works on all devices. System Audio & Phone Call capture other apps' audio on Chrome/Edge (desktop & Android). iOS doesn't support system audio capture.
             </p>
             {!creditStatus?.canAnalyze && (
               <p className="text-xs text-warning text-center">You're out of AI credits for this month.</p>
