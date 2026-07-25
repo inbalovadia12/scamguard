@@ -13,6 +13,7 @@ import LanguageToggle from "@/components/LanguageToggle";
 import NudigoPopup from "@/components/NudigoPopup";
 import WrappedPopup from "@/components/WrappedPopup";
 import XPBar from "@/components/gamification/XPBar";
+import { useKidMode } from "@/lib/KidModeContext";
 
 const NAV_SECTIONS = [
   {
@@ -89,7 +90,13 @@ export default function AppLayout() {
 
   const location = useLocation();
   const { user } = useAuth();
+  const { kidMode } = useKidMode();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const KID_HIDDEN_PATHS = ["/advanced-scanner", "/url-scanner", "/phone-lookup", "/caller-check", "/image-scanner", "/extension", "/ai-negotiator", "/scam-feed", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/analytics", "/feedback", "/projects", "/pricing"];
+  const visibleSections = kidMode
+    ? NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !KID_HIDDEN_PATHS.includes(i.path)) })).filter(s => s.items.length > 0)
+    : NAV_SECTIONS;
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
@@ -134,7 +141,7 @@ export default function AppLayout() {
         </div>
 
         <nav className="flex-1 px-4 space-y-4 overflow-y-auto">
-          {NAV_SECTIONS.map((section) => (
+          {visibleSections.map((section) => (
             <div key={section.labelKey}>
               <p className="px-4 mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
                 {t(section.labelKey)}
@@ -161,7 +168,7 @@ export default function AppLayout() {
 
         <div className="px-4 pb-4 pt-2 space-y-3">
           <XPBar />
-          {plan !== "premium" && plan !== "plus" && (
+          {!kidMode && plan !== "premium" && plan !== "plus" && (
             <Link
               to="/pricing"
               className="block rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 p-4 hover:border-primary/40 transition-all"
@@ -224,7 +231,7 @@ export default function AppLayout() {
         <div className="md:hidden fixed inset-0 top-16 z-20 bg-background animate-fade-in overflow-y-auto" style={{ paddingBottom: "env(safe-area-inset-bottom)" }} onClick={() => setMobileOpen(false)}>
           <div className="px-4 py-4 space-y-6" onClick={(e) => e.stopPropagation()}>
             <div className="space-y-5">
-              {NAV_SECTIONS.map((section) => (
+              {visibleSections.map((section) => (
                 <div key={section.labelKey}>
                   <p className="px-4 mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
                     {t(section.labelKey)}
@@ -266,7 +273,7 @@ export default function AppLayout() {
                 </div>
                 <ChevronRight className="w-4 h-4 opacity-40" />
               </Link>
-              {plan !== "premium" && plan !== "plus" && (
+              {!kidMode && plan !== "premium" && plan !== "plus" && (
                 <Link
                   to="/pricing"
                   onClick={() => setMobileOpen(false)}

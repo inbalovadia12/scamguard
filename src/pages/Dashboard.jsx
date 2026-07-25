@@ -4,17 +4,24 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Search, Link2, Bot, Users, Bell, BarChart3, ArrowRight, ShieldCheck,
-  TrendingUp, Loader2, Zap, Sparkles,
+  TrendingUp, Loader2, Zap, Sparkles, Radio, GraduationCap,
 } from "lucide-react";
 import { getCreditStatus, PLAN_NAMES } from "@/lib/credits";
 import { useI18n } from "@/lib/i18n";
 import { isWrappedSeason } from "@/lib/wrappedSeason";
 import StreakBadges from "@/components/gamification/StreakBadges";
+import { useKidMode } from "@/lib/KidModeContext";
 
 export default function Dashboard() {
   const { t } = useI18n();
+  const { kidMode } = useKidMode();
 
-  const quickActions = [
+  const quickActions = kidMode ? [
+    { path: "/check", label: "Check a Message", desc: "Is it safe or a trick?", icon: Search, color: "from-primary to-primary/80" },
+    { path: "/lessons", label: "Learn & Play", desc: "Fun lessons about staying safe", icon: GraduationCap, color: "from-chart-2 to-chart-2/80" },
+    { path: "/live-guard", label: "Guard My Call", desc: "Get warned if a call is tricky", icon: Radio, color: "from-chart-3 to-chart-3/80" },
+    { path: "/agent", label: "Ask Vardin", desc: "Ask me anything!", icon: Bot, color: "from-chart-5 to-chart-5/80" },
+  ] : [
     { path: "/check", label: t("dash.check_message"), desc: t("dash.quick_check_desc"), icon: Search, color: "from-primary to-primary/80" },
     { path: "/check", label: t("dash.quick_scan_url"), desc: t("dash.quick_scan_desc"), icon: Link2, color: "from-chart-2 to-chart-2/80" },
     { path: "/agent", label: t("dash.quick_ask_ai"), desc: t("dash.quick_ask_desc"), icon: Bot, color: "from-chart-5 to-chart-5/80" },
@@ -58,15 +65,15 @@ export default function Dashboard() {
       {/* Welcome */}
       <div className="animate-slide-up">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">
-          {t("dash.welcome")}<span className="text-muted-foreground font-normal"> 👋</span>
+          {kidMode ? "Hey there, let's stay safe!" : t("dash.welcome")}<span className="text-muted-foreground font-normal"> 👋</span>
         </h1>
         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-          {t("dash.overview")}
+          {kidMode ? "Check if messages are tricks, learn about scams, and stay safe online!" : t("dash.overview")}
         </p>
       </div>
 
       {/* Wrapped banner */}
-      {isWrappedSeason() && (
+      {!kidMode && isWrappedSeason() && (
         <Link to="/wrapped" className="block animate-slide-up">
           <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-violet-500 via-primary to-cyan-500 p-5 text-white shadow-lg shadow-primary/30 luxury-card-hover">
             <div className="flex items-center gap-4">
@@ -84,6 +91,7 @@ export default function Dashboard() {
       )}
 
       {/* Stat cards */}
+      {!kidMode && (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={Zap}
@@ -97,6 +105,7 @@ export default function Dashboard() {
         <StatCard icon={Bell} label={t("dash.new_alerts")} value={alertCount} animate="anim-delay-2" />
         <StatCard icon={BarChart3} label={t("dash.total_checks")} value={recent.length} animate="anim-delay-2" />
       </div>
+      )}
 
       {/* Streaks & Badges */}
       <StreakBadges />
@@ -122,6 +131,7 @@ export default function Dashboard() {
       </div>
 
       {/* Recent activity + Tip */}
+      {!kidMode && (
       <div className="grid lg:grid-cols-3 gap-4 animate-slide-up anim-delay-3">
         <div className="lg:col-span-2 rounded-2xl border border-border/50 bg-card p-5">
           <div className="flex items-center justify-between mb-4">
@@ -170,6 +180,7 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+      )}
     </div>
   );
 }
