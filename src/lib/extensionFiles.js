@@ -504,6 +504,7 @@ html[dir="rtl"] .flag-list li::before, html[dir="rtl"] .action-list li::before {
 .error-sub { font-size: 12px; color: #64748b; margin-top: 4px; font-weight: 400; }
 
 .credits-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 8px; font-size: 12px; }
+.kid-mode-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 8px; font-size: 12px; font-weight: 600; color: #075985; }
 .credits-remaining { font-weight: 600; color: #0f766e; }
 .credits-cost { color: #64748b; font-size: 11px; }
 

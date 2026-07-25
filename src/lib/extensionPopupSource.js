@@ -61,6 +61,13 @@ export const POPUP_HTML = String.raw`<!DOCTYPE html>
     </div>
 
     <div id="scan-view" class="view hidden">
+      <div class="kid-mode-bar">
+        <span>\uD83D\uDC66 <span data-i18n="kid_mode">Kid Mode</span></span>
+        <label class="auto-scan-toggle" title="Kid Mode">
+          <input type="checkbox" id="kid-mode-toggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
       <div class="field">
         <label data-i18n="scan_type">Scan Type</label>
         <select id="scan-type">
@@ -147,6 +154,7 @@ var appId = null;
 var creditsRemaining = null;
 var creditsLimit = null;
 var currentLang = 'en';
+var kidMode = false;
 var uploadedFileData = null;
 var uploadedFileName = '';
 var decodedQR = '';
@@ -197,7 +205,7 @@ var I18N = {
     err_file_large: 'File too large (max 10MB).',
     err_unsupported: 'Unsupported file format.',
     copy_report: 'Copy', share_report: 'Share', download_report: 'Download', scan_again: 'Scan Again',
-    report_copied: 'Report copied!', auto_scan: 'Auto-Scan',
+    report_copied: 'Report copied!', auto_scan: 'Auto-Scan', kid_mode: 'Kid Mode',
     virustotal: 'VirusTotal', vt_detected: 'malicious detections', vt_reputation: 'reputation',
     qr_destination: 'QR Code Destination', decoded_content: 'Decoded Content',
     final_destination: 'Final Destination (After Redirects)', page_title: 'Page Title',
@@ -245,7 +253,7 @@ var I18N = {
     err_file_large: 'הקובץ גדול מדי (מקסימום 10MB).',
     err_unsupported: 'פורמט קובץ לא נתמך.',
     copy_report: 'העתק', share_report: 'שתף', download_report: 'הורד', scan_again: 'סרוק שוב',
-    report_copied: 'הדוח הועתק!', auto_scan: 'סריקה אוטומטית',
+    report_copied: 'הדוח הועתק!', auto_scan: 'סריקה אוטומטית', kid_mode: 'מצב ילדים',
     virustotal: 'VirusTotal', vt_detected: 'זיהויים זדוניים', vt_reputation: 'מוניטין',
     qr_destination: 'יעד קוד QR', decoded_content: 'תוכן מפוענח',
     final_destination: 'יעד סופי (לאחר הפניות)', page_title: 'כותרת דף',
@@ -293,7 +301,7 @@ var I18N = {
     err_file_large: 'Archivo demasiado grande (máx 10MB).',
     err_unsupported: 'Formato de archivo no compatible.',
     copy_report: 'Copiar', share_report: 'Compartir', download_report: 'Descargar', scan_again: 'Escanear de nuevo',
-    report_copied: '¡Informe copiado!', auto_scan: 'Auto-escaneo',
+    report_copied: '¡Informe copiado!', auto_scan: 'Auto-escaneo', kid_mode: 'Modo Niño',
     virustotal: 'VirusTotal', vt_detected: 'detecciones maliciosas', vt_reputation: 'reputación',
     qr_destination: 'Destino del código QR', decoded_content: 'Contenido decodificado',
     final_destination: 'Destino final (después de redirecciones)', page_title: 'Título de la página',
@@ -597,6 +605,7 @@ async function scanPage() {
           answer_type: answerType,
           custom_focus: customFocus,
           language: currentLang,
+          kid_mode: kidMode,
           decoded_content: scanType === 'qr' ? decodedQR : ''
         }
       })
@@ -804,12 +813,14 @@ async function init() {
   if (langSelect) langSelect.value = currentLang;
   applyTranslations();
 
-  var saved = await chrome.storage.local.get(['scanType', 'answerType', 'autoScan']);
+  var saved = await chrome.storage.local.get(['scanType', 'answerType', 'autoScan', 'kidMode']);
   var scanTypeSel = document.getElementById('scan-type');
   if (saved.scanType) scanTypeSel.value = saved.scanType;
   if (saved.answerType) document.getElementById('answer-type').value = saved.answerType;
   var autoToggle = document.getElementById('auto-scan-toggle');
   if (autoToggle) autoToggle.checked = !!saved.autoScan;
+  var kidToggle = document.getElementById('kid-mode-toggle');
+  if (kidToggle) { kidToggle.checked = !!saved.kidMode; kidMode = !!saved.kidMode; }
   onScanTypeChange();
 
   var stored = await getStoredAuth();
@@ -842,6 +853,15 @@ document.addEventListener('DOMContentLoaded', function() {
   if (autoToggle) {
     autoToggle.addEventListener('change', function(e) {
       chrome.storage.local.set({ autoScan: e.target.checked });
+    });
+  }
+
+  // Kid mode toggle
+  var kidToggle = document.getElementById('kid-mode-toggle');
+  if (kidToggle) {
+    kidToggle.addEventListener('change', function(e) {
+      kidMode = e.target.checked;
+      chrome.storage.local.set({ kidMode: e.target.checked });
     });
   }
 
