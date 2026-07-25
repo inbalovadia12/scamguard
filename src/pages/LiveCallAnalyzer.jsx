@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Radio, Mic, Monitor, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye, Smartphone } from "lucide-react";
+import { Radio, Phone, Monitor, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -36,14 +36,8 @@ const RISK_CONFIG = {
 
 export default function LiveCallAnalyzer() {
   const isMobile = useIsMobile();
-  const [mode, setMode] = useState("mic");
+  const [mode, setMode] = useState("system");
   const [screenInterval, setScreenInterval] = useState(SCREEN_INTERVAL_OPTIONS[2]);
-
-  useEffect(() => {
-    if (isMobile && (mode === "system" || mode === "screen")) {
-      setMode("mic");
-    }
-  }, [isMobile, mode]);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState([]);
   const [warnings, setWarnings] = useState([]);
@@ -170,25 +164,20 @@ export default function LiveCallAnalyzer() {
         return;
       }
 
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("Your browser doesn't support microphone access. Try updating your browser.");
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        throw new Error("Your browser doesn't support system audio capture. Try Chrome or Edge on desktop or Android. iOS Safari doesn't support this.");
       }
       if (typeof MediaRecorder === "undefined") {
-        throw new Error("Your browser doesn't support audio recording. Try updating to iOS 14.3+ or a modern browser.");
+        throw new Error("Your browser doesn't support audio recording. Try updating your browser.");
       }
 
-      let stream;
-      if (mode === "mic") {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } else {
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
-        const audioTracks = displayStream.getAudioTracks();
-        if (audioTracks.length === 0) {
-          displayStream.getTracks().forEach((t) => t.stop());
-          throw new Error('No audio captured. Make sure to check "Share audio" when sharing your screen.');
-        }
-        stream = new MediaStream(audioTracks);
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+      const audioTracks = displayStream.getAudioTracks();
+      if (audioTracks.length === 0) {
+        displayStream.getTracks().forEach((t) => t.stop());
+        throw new Error('No audio captured. Make sure to check "Share audio" / "Share system audio" when prompted.');
       }
+      const stream = new MediaStream(audioTracks);
 
       streamRef.current = stream;
       const audioMime = getSupportedAudioMime();
@@ -378,7 +367,7 @@ export default function LiveCallAnalyzer() {
 
     // Save session record
     if (transcript.length > 0 || warnings.length > 0) {
-      const sessionType = mode === "mic" ? "microphone" : mode === "system" ? "system_audio" : "screen_view";
+      const sessionType = mode === "screen" ? "screen_view" : "system_audio";
       base44.entities.LiveGuardSession.create({
         session_type: sessionType,
         overall_risk: overallRisk,
@@ -560,25 +549,24 @@ export default function LiveCallAnalyzer() {
             <p className="text-sm font-medium">Choose audio source:</p>
             <div className="grid grid-cols-3 gap-3">
               <button
-                onClick={() => setMode("mic")}
+                onClick={() => setMode("system")}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  mode === "mic" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
+                  mode === "system" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
                 }`}
               >
-                <Mic className={`w-6 h-6 ${mode === "mic" ? "text-primary" : "text-muted-foreground"}`} />
-                <span className="text-sm font-medium">Microphone</span>
-                <span className="text-xs text-muted-foreground">Phone calls via speaker</span>
+                <Monitor className={`w-6 h-6 ${mode === "system" ? "text-primary" : "text-muted-foreground"}`} />
+                <span className="text-sm font-medium">System Audio</span>
+                <span className="text-xs text-muted-foreground">Zoom, Teams, browser</span>
               </button>
               <button
-                onClick={() => !isMobile && setMode("system")}
-                disabled={isMobile}
+                onClick={() => setMode("phone_call")}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  isMobile ? "opacity-40 cursor-not-allowed border-border/30" : mode === "system" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
+                  mode === "phone_call" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
                 }`}
               >
-                <Monitor className={`w-6 h-6 ${mode === "system" && !isMobile ? "text-primary" : "text-muted-foreground"}`} />
-                <span className="text-sm font-medium">System Audio</span>
-                <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "Teams, Zoom, Meet"}</span>
+                <Phone className={`w-6 h-6 ${mode === "phone_call" ? "text-primary" : "text-muted-foreground"}`} />
+                <span className="text-sm font-medium">Phone Call</span>
+                <span className="text-xs text-muted-foreground">VoIP & device calls</span>
               </button>
               <button
                 onClick={() => !isMobile && setMode("screen")}
@@ -592,17 +580,19 @@ export default function LiveCallAnalyzer() {
                 <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "SMS, WhatsApp, Email"}</span>
               </button>
             </div>
-            {isMobile && mode === "mic" && (
+            {(mode === "system" || mode === "phone_call") && (
               <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
-                <Smartphone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <Phone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  Put your call on <strong>speakerphone</strong> and place the phone near the speaker. Live Guard will analyze the conversation in real time.
+                  {mode === "phone_call"
+                    ? "Start your call first (Zoom, Teams, Skype, or device call on Android), then tap Start. When prompted, share your system audio."
+                    : 'When prompted, share a tab or your entire screen and make sure to check "Share audio".'}
                 </p>
               </div>
             )}
             <Button onClick={handleStart} className="w-full gap-2 h-12" disabled={!creditStatus?.canAnalyze}>
-              {mode === "screen" ? <Eye className="w-4 h-4" /> : <Radio className="w-4 h-4" />}
-              {mode === "screen" ? "Start Watching" : "Start Listening"}
+              {mode === "screen" ? <Eye className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
+              {mode === "screen" ? "Start Watching" : mode === "phone_call" ? "Start Call Guard" : "Start Listening"}
             </Button>
             {mode === "screen" && !isMobile && (
               <div className="space-y-2">
@@ -625,7 +615,7 @@ export default function LiveCallAnalyzer() {
               </div>
             )}
             <p className="text-xs text-muted-foreground text-center">
-              System Audio and Screen View are only available on desktop browsers.
+              System Audio & Phone Call require Chrome or Edge. Screen View is desktop only. iOS Safari doesn't support system audio capture.
             </p>
             {!creditStatus?.canAnalyze && (
               <p className="text-xs text-warning text-center">You're out of AI credits for this month.</p>
@@ -639,7 +629,7 @@ export default function LiveCallAnalyzer() {
                 <div className="absolute inset-0 w-3 h-3 rounded-full bg-destructive animate-ping" />
               </div>
               <div>
-                <p className="text-sm font-semibold">{mode === "screen" ? "Watching Screen" : `Listening via ${mode === "mic" ? "Microphone" : "System Audio"}`}</p>
+                <p className="text-sm font-semibold">{mode === "screen" ? "Watching Screen" : mode === "phone_call" ? "Guarding Phone Call" : "Listening via System Audio"}</p>
                 <p className="text-xs text-muted-foreground">
                   {processingChunk ? "Analyzing..." : mode === "screen" ? "Capturing screen..." : "Capturing audio..."} • {Math.floor(callSeconds / 60)}:{String(callSeconds % 60).padStart(2, "0")}
                 </p>
