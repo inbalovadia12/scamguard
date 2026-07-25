@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Lock, Loader2, MessageSquare, Users, ShieldCheck, BarChart3, Star, Trash2,
-  Mail, AlertTriangle, CheckCircle2, Crown, TrendingUp, Activity,
+  Mail, AlertTriangle, CheckCircle2, Crown, TrendingUp, Activity, Megaphone,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -275,6 +275,121 @@ function SeniorsTab() {
   );
 }
 
+function BroadcastsTab() {
+  const [broadcasts, setBroadcasts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ title: "", message: "", type: "update", link_url: "", link_label: "" });
+
+  const load = async () => {
+    try {
+      const data = await base44.entities.AdminBroadcast.list("-created_date", 50);
+      setBroadcasts(data);
+    } catch (e) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const create = async () => {
+    if (!form.title.trim() || !form.message.trim()) return;
+    try {
+      await base44.entities.AdminBroadcast.create({
+        title: form.title.trim(),
+        message: form.message.trim(),
+        type: form.type,
+        link_url: form.link_url.trim(),
+        link_label: form.link_label.trim(),
+        active: true,
+      });
+      setForm({ title: "", message: "", type: "update", link_url: "", link_label: "" });
+      setShowForm(false);
+      load();
+      toast({ title: "Broadcast created", description: "Users will see this alert." });
+    } catch (e) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const toggleActive = async (id, current) => {
+    await base44.entities.AdminBroadcast.update(id, { active: !current });
+    load();
+  };
+
+  const handleDelete = async (id) => {
+    await base44.entities.AdminBroadcast.delete(id);
+    load();
+  };
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <Button onClick={() => setShowForm(!showForm)} className="gap-2">
+        <Megaphone className="w-4 h-4" />
+        {showForm ? "Cancel" : "New Broadcast"}
+      </Button>
+
+      {showForm && (
+        <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input placeholder="Title (e.g., Extension Updated)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <select className="border border-border rounded-md px-3 py-2 bg-background text-sm" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+              <option value="update">Update</option>
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+            </select>
+          </div>
+          <Textarea placeholder="Message (e.g., We've updated the Chrome extension. Please redownload it for new features.)" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} rows={3} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input placeholder="Link URL (optional, e.g., /extension)" value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} />
+            <Input placeholder="Link label (optional, e.g., Download Extension)" value={form.link_label} onChange={(e) => setForm({ ...form, link_label: e.target.value })} />
+          </div>
+          <Button onClick={create} disabled={!form.title.trim() || !form.message.trim()}>Publish Broadcast</Button>
+        </div>
+      )}
+
+      {broadcasts.length === 0 ? (
+        <p className="text-center text-muted-foreground py-12">No broadcasts yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {broadcasts.map((b) => (
+            <div key={b.id} className="bg-card rounded-2xl border border-border/50 p-4 flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    b.type === "update" ? "bg-primary/10 text-primary" :
+                    b.type === "warning" ? "bg-warning/10 text-warning" :
+                    "bg-chart-5/10 text-chart-5"
+                  }`}>{b.type}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.active ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
+                    {b.active ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <p className="font-medium">{b.title}</p>
+                <p className="text-sm text-muted-foreground mt-0.5">{b.message}</p>
+                {b.link_url && <p className="text-xs text-primary mt-1">{b.link_label || b.link_url}</p>}
+                <p className="text-xs text-muted-foreground mt-1">{new Date(b.created_date).toLocaleString()}</p>
+              </div>
+              <div className="flex flex-col gap-1">
+                <Button size="sm" variant="outline" onClick={() => toggleActive(b.id, b.active)}>
+                  {b.active ? "Deactivate" : "Activate"}
+                </Button>
+                <Button size="icon" variant="ghost" onClick={() => handleDelete(b.id)} className="text-muted-foreground hover:text-destructive">
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OverviewTab() {
   const [stats, setStats] = useState({ feedback: 0, users: 0, analyses: 0, seniors: 0, pendingFeedback: 0 });
   const [loading, setLoading] = useState(true);
@@ -375,6 +490,7 @@ export default function Admin() {
           <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" />Users</TabsTrigger>
           <TabsTrigger value="analyses" className="gap-1.5"><ShieldCheck className="w-4 h-4" />Analyses</TabsTrigger>
           <TabsTrigger value="seniors" className="gap-1.5"><Crown className="w-4 h-4" />Seniors</TabsTrigger>
+          <TabsTrigger value="broadcasts" className="gap-1.5"><Megaphone className="w-4 h-4" />Broadcasts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4"><OverviewTab /></TabsContent>
@@ -382,6 +498,7 @@ export default function Admin() {
         <TabsContent value="users" className="mt-4"><UsersTab /></TabsContent>
         <TabsContent value="analyses" className="mt-4"><AnalysesTab /></TabsContent>
         <TabsContent value="seniors" className="mt-4"><SeniorsTab /></TabsContent>
+        <TabsContent value="broadcasts" className="mt-4"><BroadcastsTab /></TabsContent>
       </Tabs>
     </div>
   );

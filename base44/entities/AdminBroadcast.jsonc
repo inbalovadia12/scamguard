@@ -1,0 +1,59 @@
+{
+  "name": "AdminBroadcast",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Broadcast title"
+    },
+    "message": {
+      "type": "string",
+      "description": "Broadcast message body"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "update",
+        "info",
+        "warning"
+      ],
+      "default": "info",
+      "description": "Broadcast type"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether the broadcast is currently shown to users"
+    },
+    "link_url": {
+      "type": "string",
+      "description": "Optional CTA link URL"
+    },
+    "link_label": {
+      "type": "string",
+      "description": "Optional CTA button label"
+    }
+  },
+  "required": [
+    "title",
+    "message"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

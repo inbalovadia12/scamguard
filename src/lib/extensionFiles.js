@@ -505,6 +505,12 @@ html[dir="rtl"] .flag-list li::before, html[dir="rtl"] .action-list li::before {
 
 .credits-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 8px; font-size: 12px; }
 .kid-mode-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 8px; font-size: 12px; font-weight: 600; color: #075985; }
+body.kid-mode-active { font-size: 15px; }
+body.kid-mode-active .btn-primary { font-size: 16px; padding: 14px 12px; }
+body.kid-mode-active .field label { font-size: 13px; }
+body.kid-mode-active .result-card { padding: 16px; }
+body.kid-mode-active .section-text { font-size: 13px; line-height: 1.6; }
+body.kid-mode-active .kid-mode-bar { background: #bae6fd; border-color: #0284c7; }
 .credits-remaining { font-weight: 600; color: #0f766e; }
 .credits-cost { color: #64748b; font-size: 11px; }
 

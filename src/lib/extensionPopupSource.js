@@ -62,7 +62,7 @@ export const POPUP_HTML = String.raw`<!DOCTYPE html>
 
     <div id="scan-view" class="view hidden">
       <div class="kid-mode-bar">
-        <span>\uD83D\uDC66 <span data-i18n="kid_mode">Kid Mode</span></span>
+        <span>🧒 <span data-i18n="kid_mode">Kid Mode</span></span>
         <label class="auto-scan-toggle" title="Kid Mode">
           <input type="checkbox" id="kid-mode-toggle">
           <span class="toggle-slider"></span>
@@ -820,7 +820,7 @@ async function init() {
   var autoToggle = document.getElementById('auto-scan-toggle');
   if (autoToggle) autoToggle.checked = !!saved.autoScan;
   var kidToggle = document.getElementById('kid-mode-toggle');
-  if (kidToggle) { kidToggle.checked = !!saved.kidMode; kidMode = !!saved.kidMode; }
+  if (kidToggle) { kidToggle.checked = !!saved.kidMode; kidMode = !!saved.kidMode; document.body.classList.toggle('kid-mode-active', kidMode); }
   onScanTypeChange();
 
   var stored = await getStoredAuth();
@@ -861,6 +861,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (kidToggle) {
     kidToggle.addEventListener('change', function(e) {
       kidMode = e.target.checked;
+      document.body.classList.toggle('kid-mode-active', kidMode);
       chrome.storage.local.set({ kidMode: e.target.checked });
     });
   }

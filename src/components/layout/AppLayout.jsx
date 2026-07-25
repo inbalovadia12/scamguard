@@ -13,6 +13,7 @@ import LanguageToggle from "@/components/LanguageToggle";
 import NudigoPopup from "@/components/NudigoPopup";
 import WrappedPopup from "@/components/WrappedPopup";
 import XPBar from "@/components/gamification/XPBar";
+import BroadcastBanner from "@/components/layout/BroadcastBanner";
 import { useKidMode } from "@/lib/KidModeContext";
 
 const NAV_SECTIONS = [
@@ -300,6 +301,7 @@ export default function AppLayout() {
 
       {/* Main Content */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen overflow-x-hidden">
+        <BroadcastBanner />
         <div className="kid-banner items-center gap-2 px-3 py-2 bg-primary/10 border-b border-primary/20 text-xs sm:text-sm font-medium text-primary min-w-0">
           <span>🧒</span>
           <span className="truncate">Kid Mode is on</span>
