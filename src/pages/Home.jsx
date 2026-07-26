@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ShieldCheck, Loader2, ArrowRight, MessageSquare, Mail, Briefcase, ShoppingCart,
   Heart, Landmark, HelpCircle, Lock, Link2, TrendingUp, Package, Gift, HeartHandshake, Globe,
-  AlertTriangle, Crown,
+  AlertTriangle, Crown, X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import TruncatedText from "@/components/TruncatedText";
@@ -19,6 +19,7 @@ import { redactMessage } from "@/lib/redact";
 import { getSeniorLink } from "@/lib/guardianAlerts";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import ImageUpload from "@/components/scam/ImageUpload";
 import { useKidMode } from "@/lib/KidModeContext";
 
 const messageTypes = [
@@ -60,6 +61,8 @@ export default function Home() {
   const [result, setResult] = useState(null);
   const [credits, setCredits] = useState(null);
   const [seniorLink, setSeniorLink] = useState(null);
+  const [images, setImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
 
   useEffect(() => {
     const load = async () => {
@@ -73,41 +76,52 @@ export default function Home() {
 
   const handleAnalyze = async () => {
     const input = mode === "url" ? urlText.trim() : messageText.trim();
-    if (!input) return;
+    if (!input && mode !== "url" && images.length === 0) return;
     const cost = mode === "url" ? CREDIT_COSTS.URL_SCAN : CREDIT_COSTS.MESSAGE;
     if (credits && credits.remaining < cost) return;
 
-    // Check cache first
-    const cached = getCachedAnalysis(input);
-    if (cached) {
-      setResult(cached);
-      return;
+    // Check cache first (text-only)
+    if (input) {
+      const cached = getCachedAnalysis(input);
+      if (cached) {
+        setResult(cached);
+        return;
+      }
     }
 
     setAnalyzing(true);
     setResult(null);
 
+    let fileUrls = [];
+    for (const img of images) {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: img });
+      fileUrls.push(file_url);
+    }
+
+    const effectiveInput = input || (fileUrls.length > 0 ? "Screenshot(s) uploaded for analysis" : "");
+
     let llmResult;
     if (mode === "url") {
-      const response = await base44.functions.invoke("scanUrl", { url: input });
+      const response = await base44.functions.invoke("scanUrl", { url: effectiveInput });
       llmResult = response.data;
     } else {
       llmResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Scam detection expert: analyze this ${messageType} message for scam risk.\nMessage: "${input}"\nRules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics when applicable (e.g. Urgency, Authority Impersonation, Scarcity, Love Bombing, Payment Red Flags) and concrete next steps (e.g. Do not reply, Block sender, Report to carrier).`,
+        prompt: `Scam detection expert: analyze this ${messageType} message for scam risk.\nMessage: "${effectiveInput}"\n${fileUrls.length > 0 ? 'Attached screenshots are provided for additional context — analyze both the pasted text and any uploaded images.\n' : ''}Rules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics when applicable (e.g. Urgency, Authority Impersonation, Scarcity, Love Bombing, Payment Red Flags) and concrete next steps (e.g. Do not reply, Block sender, Report to carrier).`,
         response_json_schema: RESPONSE_SCHEMA,
+        file_urls: fileUrls.length > 0 ? fileUrls : undefined,
       });
     }
 
     const analysisType = mode === "url" ? "url" : messageType;
     await base44.entities.ScamAnalysis.create({
-      message_text: mode === "url" ? input : redactMessage(input),
+      message_text: mode === "url" ? effectiveInput : redactMessage(effectiveInput),
       message_type: analysisType,
       submitted_by_senior: !!seniorLink,
       senior_id: seniorLink?.id,
       ...llmResult,
     });
 
-    cacheAnalysis(input, llmResult);
+    if (input) cacheAnalysis(input, llmResult);
     await incrementCreditUsage(cost);
     setCredits(await getCreditStatus());
     setResult(llmResult);
@@ -117,7 +131,21 @@ export default function Home() {
   const handleReset = () => {
     setMessageText("");
     setUrlText("");
+    setImages([]);
+    setImagePreviews([]);
     setResult(null);
+  };
+
+  const handleImageSelect = (file) => {
+    if (file) {
+      setImages((prev) => [...prev, file].slice(0, 2));
+      setImagePreviews((prev) => [...prev, URL.createObjectURL(file)].slice(0, 2));
+    }
+  };
+
+  const handleRemoveImage = (index) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const outOfCredits = credits && !credits.canAnalyze;
@@ -253,7 +281,13 @@ export default function Home() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Paste the message</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Paste the message</label>
+                    <div className="flex items-center gap-1.5">
+                      {images.length > 0 && <span className="text-xs text-muted-foreground">{images.length}/2</span>}
+                      <ImageUpload onImageSelected={handleImageSelect} disabled={images.length >= 2 || outOfCredits} />
+                    </div>
+                  </div>
                   <Textarea
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
@@ -270,6 +304,21 @@ export default function Home() {
                     className="min-h-[110px] sm:min-h-[160px] text-base resize-none rounded-xl"
                     disabled={outOfCredits}
                   />
+                  {imagePreviews.length > 0 && (
+                    <div className="flex gap-2 flex-wrap">
+                      {imagePreviews.map((preview, i) => (
+                        <div key={i} className="relative inline-block">
+                          <img src={preview} alt={`Screenshot ${i + 1}`} className="rounded-xl max-h-24" />
+                          <button
+                            onClick={() => handleRemoveImage(i)}
+                            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             ) : urlLocked ? (
@@ -313,7 +362,7 @@ export default function Home() {
             {!(mode === "url" && urlLocked) && (
               <Button
                 onClick={handleAnalyze}
-                disabled={(mode === "url" ? !urlText.trim() : !messageText.trim()) || analyzing || outOfCredits || insufficientCredits}
+                disabled={(mode === "url" ? !urlText.trim() : (!messageText.trim() && images.length === 0)) || analyzing || outOfCredits || insufficientCredits}
                 className="w-full h-11 sm:h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
                 size="lg"
               >

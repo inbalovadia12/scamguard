@@ -15,8 +15,8 @@ export default function AgentChat() {
   const [conversations, setConversations] = useState([]);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingConvs, setLoadingConvs] = useState(true);
@@ -102,17 +102,19 @@ export default function AgentChat() {
 
   const handleImageSelect = (file) => {
     if (file) {
-      setSelectedImage(file);
-      setImagePreview(URL.createObjectURL(file));
-    } else {
-      setSelectedImage(null);
-      setImagePreview(null);
+      setSelectedImages((prev) => [...prev, file].slice(0, 2));
+      setImagePreviews((prev) => [...prev, URL.createObjectURL(file)].slice(0, 2));
     }
   };
 
+  const handleRemoveImage = (index) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSend = async () => {
-    if ((!input.trim() && !selectedImage) || sending) return;
-    const cost = CREDIT_COSTS.MESSAGE + (selectedImage ? CREDIT_COSTS.IMAGE_UPLOAD : 0);
+    if ((!input.trim() && selectedImages.length === 0) || sending) return;
+    const cost = CREDIT_COSTS.MESSAGE + (selectedImages.length * CREDIT_COSTS.IMAGE_UPLOAD);
     if (credits && credits.remaining < cost) return;
 
     setSending(true);
@@ -120,11 +122,12 @@ export default function AgentChat() {
     setInput("");
 
     let fileUrls = [];
-    if (selectedImage) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: selectedImage });
-      fileUrls = [file_url];
-      handleImageSelect(null);
+    for (const img of selectedImages) {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: img });
+      fileUrls.push(file_url);
     }
+    setSelectedImages([]);
+    setImagePreviews([]);
 
     await base44.agents.addMessage(conversation, {
       role: "user",
@@ -256,15 +259,19 @@ export default function AgentChat() {
         </div>
 
         <div className="flex-shrink-0 space-y-2 p-3 border-t border-border/50">
-          {imagePreview && (
-            <div className="relative inline-block">
-              <img src={imagePreview} alt="Preview" className="rounded-xl max-h-24" />
-              <button
-                onClick={() => handleImageSelect(null)}
-                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+          {imagePreviews.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {imagePreviews.map((preview, i) => (
+                <div key={i} className="relative inline-block">
+                  <img src={preview} alt={`Preview ${i + 1}`} className="rounded-xl max-h-24" />
+                  <button
+                    onClick={() => handleRemoveImage(i)}
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
           <div className="flex items-end gap-2 bg-card rounded-2xl border border-border/50 p-2">
@@ -277,10 +284,10 @@ export default function AgentChat() {
               rows={1}
             />
             <div className="flex items-center gap-1 pb-1">
-              <ImageUpload onImageSelected={handleImageSelect} />
+              <ImageUpload onImageSelected={handleImageSelect} disabled={selectedImages.length >= 2} />
               <Button
                 onClick={handleSend}
-                disabled={(!input.trim() && !selectedImage) || sending}
+                disabled={(!input.trim() && selectedImages.length === 0) || sending}
                 size="icon"
                 className="rounded-xl bg-gradient-to-r from-primary to-primary/80"
               >
