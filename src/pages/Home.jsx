@@ -41,7 +41,7 @@ const RESPONSE_SCHEMA = {
   type: "object",
   properties: {
     risk_level: { type: "string", enum: ["low", "medium", "high"] },
-    risk_score: { type: "number" },
+    risk_score: { type: "number", description: "0-100 risk score. Low risk = 0-35, Medium risk = 36-70, High risk = 71-100. Must match the risk_level. Vary the score based on actual danger — do not default to a fixed number." },
     explanation: { type: "string" },
     tactics_detected: { type: "array", items: { type: "string" } },
     next_steps: { type: "array", items: { type: "string" } },
@@ -106,7 +106,7 @@ export default function Home() {
       llmResult = response.data;
     } else {
       llmResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Scam detection expert: analyze this ${messageType} message for scam risk.\nMessage: "${effectiveInput}"\n${fileUrls.length > 0 ? 'Attached screenshots are provided for additional context — analyze both the pasted text and any uploaded images.\n' : ''}Rules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics when applicable (e.g. Urgency, Authority Impersonation, Scarcity, Love Bombing, Payment Red Flags) and concrete next steps (e.g. Do not reply, Block sender, Report to carrier).`,
+        prompt: `Scam detection expert: analyze this ${messageType} message for scam risk.\nMessage: "${effectiveInput}"\n${fileUrls.length > 0 ? 'Attached screenshots are provided for additional context — analyze both the pasted text and any uploaded images.\n' : ''}Rules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics when applicable (e.g. Urgency, Authority Impersonation, Scarcity, Love Bombing, Payment Red Flags) and concrete next steps (e.g. Do not reply, Block sender, Report to carrier).\n\nRISK SCORE: Set risk_score as a whole number 0-100 that reflects the ACTUAL danger of this message. Low risk = 0-35, Medium risk = 36-70, High risk = 71-100. The score MUST match the risk_level. Do NOT default to 10 or any fixed number — vary it based on how many scam indicators are present and how severe they are.`,
         response_json_schema: RESPONSE_SCHEMA,
         file_urls: fileUrls.length > 0 ? fileUrls : undefined,
       });

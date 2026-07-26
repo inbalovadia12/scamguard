@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Megaphone, X } from "lucide-react";
+import { Megaphone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { toast } from "@/components/ui/use-toast";
 
 const TYPE_STYLES = {
   update: { icon: "text-primary", label: "Update" },
@@ -17,7 +16,6 @@ export default function BroadcastBanner() {
   const [seen, setSeen] = useState(() => {
     try { return JSON.parse(localStorage.getItem("seen_broadcasts") || "[]"); } catch { return []; }
   });
-  const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
     base44.entities.AdminBroadcast.filter({ active: true }, "-created_date", 10)
@@ -26,30 +24,19 @@ export default function BroadcastBanner() {
   }, []);
 
   const unseen = broadcasts.filter((b) => !seen.includes(b.id));
-  const current = unseen[currentIndex];
-
-  useEffect(() => {
-    if (current) {
-      const style = TYPE_STYLES[current.type] || TYPE_STYLES.info;
-      toast({
-        title: `${style.label}: ${current.title}`,
-        description: current.message,
-      });
-    }
-  }, [current?.id]);
+  const current = unseen[0];
 
   const dismiss = () => {
     if (!current) return;
     const next = [...seen, current.id];
     setSeen(next);
     localStorage.setItem("seen_broadcasts", JSON.stringify(next));
-    setCurrentIndex(0);
   };
 
   return (
     <Dialog open={!!current} onOpenChange={(open) => { if (!open) dismiss(); }}>
       {current && (
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <div className="flex items-center gap-2 mb-1">
               <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -71,6 +58,9 @@ export default function BroadcastBanner() {
               </Button>
             </DialogFooter>
           )}
+          <Button onClick={dismiss} variant="outline" size="sm" className="w-full">
+            Got it
+          </Button>
         </DialogContent>
       )}
     </Dialog>
