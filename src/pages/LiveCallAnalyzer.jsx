@@ -36,9 +36,17 @@ const RISK_CONFIG = {
 
 export default function LiveCallAnalyzer() {
   const isMobile = useIsMobile();
-  const [mode, setMode] = useState("system");
+  const [mode, setMode] = useState(() => {
+    // Default to Microphone on mobile — only mode that works on mobile browsers
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
+      return "mic";
+    }
+    return "system";
+  });
   const [screenInterval, setScreenInterval] = useState(SCREEN_INTERVAL_OPTIONS[2]);
   const supportsDisplayMedia = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
+  // Microphone is the only mode that works on mobile browsers.
+  // System Audio, Phone Call, and Screen View all rely on getDisplayMedia (desktop-only).
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState([]);
   const [warnings, setWarnings] = useState([]);
@@ -91,6 +99,13 @@ export default function LiveCallAnalyzer() {
     };
     init();
   }, []);
+
+  // On mobile, only Microphone mode works — auto-switch away from desktop-only modes
+  useEffect(() => {
+    if (isMobile && mode !== "mic") {
+      setMode("mic");
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     return () => {
@@ -565,24 +580,26 @@ export default function LiveCallAnalyzer() {
                 <span className="text-xs text-muted-foreground">Speakerphone</span>
               </button>
               <button
-                onClick={() => setMode("system")}
+                onClick={() => !isMobile && setMode("system")}
+                disabled={isMobile}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  mode === "system" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
+                  isMobile ? "opacity-40 cursor-not-allowed border-border/30" : mode === "system" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
                 }`}
               >
-                <Monitor className={`w-6 h-6 ${mode === "system" ? "text-primary" : "text-muted-foreground"}`} />
+                <Monitor className={`w-6 h-6 ${mode === "system" && !isMobile ? "text-primary" : "text-muted-foreground"}`} />
                 <span className="text-sm font-medium">System Audio</span>
-                <span className="text-xs text-muted-foreground">Zoom, Teams, browser</span>
+                <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "Zoom, Teams, browser"}</span>
               </button>
               <button
-                onClick={() => setMode("phone_call")}
+                onClick={() => !isMobile && setMode("phone_call")}
+                disabled={isMobile}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  mode === "phone_call" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
+                  isMobile ? "opacity-40 cursor-not-allowed border-border/30" : mode === "phone_call" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
                 }`}
               >
-                <Phone className={`w-6 h-6 ${mode === "phone_call" ? "text-primary" : "text-muted-foreground"}`} />
+                <Phone className={`w-6 h-6 ${mode === "phone_call" && !isMobile ? "text-primary" : "text-muted-foreground"}`} />
                 <span className="text-sm font-medium">Phone Call</span>
-                <span className="text-xs text-muted-foreground">VoIP & device calls</span>
+                <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "VoIP & device calls"}</span>
               </button>
               <button
                 onClick={() => !isMobile && setMode("screen")}
