@@ -27,10 +27,14 @@ export default function BroadcastBanner() {
   const current = unseen[0];
 
   const dismiss = () => {
-    if (!current) return;
-    const next = [...seen, current.id];
-    setSeen(next);
-    localStorage.setItem("seen_broadcasts", JSON.stringify(next));
+    // Mark ALL currently active broadcasts as seen — prevents the same alert
+    // or queued alerts from reappearing after "Got it" is clicked.
+    setSeen((prev) => {
+      const allIds = broadcasts.map((b) => b.id);
+      const next = [...new Set([...prev, ...allIds])];
+      localStorage.setItem("seen_broadcasts", JSON.stringify(next));
+      return next;
+    });
   };
 
   return (
