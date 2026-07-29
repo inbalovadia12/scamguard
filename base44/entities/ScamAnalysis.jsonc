@@ -91,6 +91,11 @@
       "type": "string",
       "description": "Notes from the guardian"
     },
+    "is_false_positive": {
+      "type": "boolean",
+      "default": false,
+      "description": "User marked this scan result as a false positive (was actually legitimate)"
+    },
     "description": {
       "type": "string",
       "maxLength": 1000,

@@ -280,6 +280,31 @@ export default function GuardianDashboard() {
         ))}
       </div>
 
+      {/* Quick Tips */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-1 animate-slide-up" style={{ animationDelay: "120ms" }}>
+          Guardian Quick Tips
+        </h2>
+        <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-3 animate-slide-up" style={{ animationDelay: "140ms" }}>
+          {[
+            { icon: ShieldCheck, title: "Agree on a safe word", desc: "Use a family safe word to verify identity if someone claims to be a relative in trouble." },
+            { icon: AlertTriangle, title: "No legitimate org asks for gift cards", desc: "Remind seniors: real banks, governments, and companies never demand gift cards or wire transfers." },
+            { icon: Bell, title: "Check alerts promptly", desc: "Quick action on pending alerts can prevent financial loss — review them within 24 hours." },
+            { icon: Users, title: "Adjust alert preferences", desc: "Set 'high risk only' for members who scan often to avoid alert fatigue." },
+          ].map((tip, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <tip.icon className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{tip.title}</p>
+                <p className="text-xs text-muted-foreground">{tip.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Manage link */}
       <div className="flex justify-center pt-2">
         <Link to="/family">

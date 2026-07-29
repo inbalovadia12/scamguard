@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard,
+  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard, Scan, Siren, History,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -26,6 +26,7 @@ const NAV_SECTIONS = [
   {
     labelKey: "nav.tools",
     items: [
+      { path: "/universal-scan", labelKey: "nav.universal_scan", icon: Scan },
       { path: "/check", labelKey: "nav.check", icon: Search },
       { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
       { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
@@ -49,6 +50,7 @@ const NAV_SECTIONS = [
     items: [
       { path: "/alerts", labelKey: "nav.alerts", icon: Bell },
       { path: "/guardian-dashboard", labelKey: "nav.guardian_dashboard", icon: LayoutDashboard },
+      { path: "/emergency-response", labelKey: "nav.emergency_response", icon: Siren },
       { path: "/family", labelKey: "nav.family", icon: Users },
       { path: "/scam-feed", labelKey: "nav.scam_feed", icon: Megaphone },
       { path: "/local-intel", labelKey: "nav.local_intel", icon: Radar },
@@ -67,6 +69,7 @@ const NAV_SECTIONS = [
       { path: "/wrapped", labelKey: "nav.wrapped", icon: Sparkles },
       { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
       { path: "/scam-trends", labelKey: "nav.scam_trends", icon: LineChart },
+      { path: "/trust-history", labelKey: "nav.trust_history", icon: History },
       { path: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
       { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },
     ],

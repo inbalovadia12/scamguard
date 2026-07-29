@@ -30,6 +30,9 @@ import Landing from '@/pages/Landing';
 import Onboarding from '@/pages/Onboarding';
 import Analytics from '@/pages/Analytics';
 import ScamTrends from '@/pages/ScamTrends';
+import UniversalScan from '@/pages/UniversalScan';
+import EmergencyResponse from '@/pages/EmergencyResponse';
+import TrustHistory from '@/pages/TrustHistory';
 import Feedback from '@/pages/Feedback';
 import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
@@ -116,6 +119,9 @@ const AuthenticatedApp = () => {
           <Route path="/extension" element={<Extension />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/scam-trends" element={<ScamTrends />} />
+          <Route path="/universal-scan" element={<UniversalScan />} />
+          <Route path="/emergency-response" element={<EmergencyResponse />} />
+          <Route path="/trust-history" element={<TrustHistory />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/admin" element={<Admin />} />
