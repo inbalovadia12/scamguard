@@ -22,6 +22,7 @@ import Home from '@/pages/Home';
 import Alerts from '@/pages/Alerts';
 import AlertDetail from '@/pages/AlertDetail';
 import Family from '@/pages/Family';
+import GuardianDashboard from '@/pages/GuardianDashboard';
 import Pricing from '@/pages/Pricing';
 import AgentChat from '@/pages/AgentChat';
 import UrlScanner from '@/pages/UrlScanner';
@@ -98,6 +99,7 @@ const AuthenticatedApp = () => {
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/alerts/:id" element={<AlertDetail />} />
           <Route path="/family" element={<Family />} />
+          <Route path="/guardian-dashboard" element={<GuardianDashboard />} />
           <Route path="/scam-feed" element={<ScamFeed />} />
           <Route path="/local-intel" element={<LocalScamIntel />} />
           <Route path="/local-dashboard" element={<LocalScamDashboard />} />

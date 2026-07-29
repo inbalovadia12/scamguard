@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart,
+  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -48,6 +48,7 @@ const NAV_SECTIONS = [
     labelKey: "nav.protection",
     items: [
       { path: "/alerts", labelKey: "nav.alerts", icon: Bell },
+      { path: "/guardian-dashboard", labelKey: "nav.guardian_dashboard", icon: LayoutDashboard },
       { path: "/family", labelKey: "nav.family", icon: Users },
       { path: "/scam-feed", labelKey: "nav.scam_feed", icon: Megaphone },
       { path: "/local-intel", labelKey: "nav.local_intel", icon: Radar },
