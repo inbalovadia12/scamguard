@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import {
   Loader2, BarChart3, TrendingUp, TrendingDown, Minus, AlertTriangle,
-  MapPin, Globe2, LineChart as LineChartIcon,
+  MapPin, Globe2,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   AreaChart, Area, CartesianGrid, Cell,
 } from "recharts";
-import { useI18n } from "@/lib/i18n";
 
 const SCAM_TYPE_LABELS = {
   phishing_email: "Phishing Email",
@@ -33,8 +30,7 @@ const TYPE_COLORS = [
   "hsl(var(--warning))", "hsl(var(--success))",
 ];
 
-export default function ScamTrends() {
-  const { t } = useI18n();
+export default function ScamTrendsPanel() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [country, setCountry] = useState("all");
@@ -107,14 +103,14 @@ export default function ScamTrends() {
   }, [filtered]);
 
   const trendDirection = useMemo(() => {
-    if (trendData.length < 2) return { dir: "stable", pct: 0, last: 0, prev: 0 };
+    if (trendData.length < 2) return { dir: "stable", pct: 0, last: 0 };
     const last = trendData[trendData.length - 1].count;
     const prev = trendData[trendData.length - 2].count;
-    if (prev === 0) return { dir: last > 0 ? "rising" : "stable", pct: last > 0 ? 100 : 0, last, prev };
+    if (prev === 0) return { dir: last > 0 ? "rising" : "stable", pct: last > 0 ? 100 : 0, last };
     const pct = Math.round(((last - prev) / prev) * 100);
-    if (pct > 10) return { dir: "rising", pct, last, prev };
-    if (pct < -10) return { dir: "falling", pct, last, prev };
-    return { dir: "stable", pct, last, prev };
+    if (pct > 10) return { dir: "rising", pct, last };
+    if (pct < -10) return { dir: "falling", pct, last };
+    return { dir: "stable", pct, last };
   }, [trendData]);
 
   const topType = typeData[0];
@@ -130,19 +126,14 @@ export default function ScamTrends() {
 
   if (records.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-center py-16 space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
-            <BarChart3 className="w-8 h-8 text-primary" />
-          </div>
-          <h2 className="text-lg font-semibold">No scam data collected yet</h2>
-          <p className="text-muted-foreground max-w-sm mx-auto">
-            Once scam reports and community stories are submitted, this dashboard will show common scam types in your area and whether they're rising or falling.
-          </p>
-          <Link to="/scam-feed">
-            <Button className="bg-gradient-to-r from-primary to-primary/80">Browse Scam Feed</Button>
-          </Link>
+      <div className="text-center py-16 space-y-4">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
+          <BarChart3 className="w-8 h-8 text-primary" />
         </div>
+        <h2 className="text-lg font-semibold">No scam data collected yet</h2>
+        <p className="text-muted-foreground max-w-sm mx-auto">
+          Once scam reports and community stories are submitted, trends will appear here.
+        </p>
       </div>
     );
   }
@@ -153,22 +144,9 @@ export default function ScamTrends() {
   const trendLabel = trendDirection.dir === "rising" ? "Rising" : trendDirection.dir === "falling" ? "Falling" : "Stable";
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-8">
-      {/* Header */}
-      <div className="animate-slide-up">
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
-            <LineChartIcon className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">Scam Trends</h1>
-        </div>
-        <p className="text-sm text-muted-foreground max-w-md">
-          Common scam types in your area based on reports from the Vardin community. See what's rising and falling.
-        </p>
-      </div>
-
+    <div className="space-y-5">
       {/* Country Filter */}
-      <div className="flex flex-wrap items-center gap-2 animate-slide-up" style={{ animationDelay: "30ms" }}>
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
           <MapPin className="w-3.5 h-3.5" /> Area
         </span>
@@ -208,7 +186,7 @@ export default function ScamTrends() {
       ) : (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 animate-slide-up" style={{ animationDelay: "50ms" }}>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             <div className="p-4 rounded-2xl border border-border/50 bg-card">
               <BarChart3 className="w-5 h-5 mb-2 text-primary" />
               <div className="text-2xl font-bold font-heading">{totalReports}</div>
@@ -231,7 +209,7 @@ export default function ScamTrends() {
           </div>
 
           {/* Trend Chart */}
-          <div className="p-5 rounded-2xl border border-border/50 bg-card animate-slide-up" style={{ animationDelay: "100ms" }}>
+          <div className="p-5 rounded-2xl border border-border/50 bg-card">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-semibold text-sm">Monthly Trend</h3>
@@ -256,17 +234,14 @@ export default function ScamTrends() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: "12px" }}
-                  labelStyle={{ color: "hsl(var(--foreground))" }}
-                />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: "12px" }} />
                 <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#trendGradient)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
           {/* Common Scam Types Chart */}
-          <div className="p-5 rounded-2xl border border-border/50 bg-card animate-slide-up" style={{ animationDelay: "150ms" }}>
+          <div className="p-5 rounded-2xl border border-border/50 bg-card">
             <h3 className="font-semibold text-sm mb-4">Most Common Scam Types</h3>
             {typeData.length > 0 ? (
               <ResponsiveContainer width="100%" height={Math.max(200, typeData.length * 36)}>
@@ -274,10 +249,7 @@ export default function ScamTrends() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} horizontal={false} />
                   <XAxis type="number" hide />
                   <YAxis dataKey="type" type="category" width={120} tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: "12px" }}
-                    cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
-                  />
+                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: "12px" }} cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }} />
                   <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={24}>
                     {typeData.map((_, i) => (
                       <Cell key={i} fill={TYPE_COLORS[i % TYPE_COLORS.length]} />
@@ -293,7 +265,7 @@ export default function ScamTrends() {
           {country === "all" && countries.length > 0 && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
               <Globe2 className="w-3.5 h-3.5" />
-              Showing data across {countries.length} {countries.length === 1 ? "area" : "areas"}. Filter above to focus on a specific location.
+              Showing data across {countries.length} {countries.length === 1 ? "area" : "areas"}.
             </div>
           )}
         </>

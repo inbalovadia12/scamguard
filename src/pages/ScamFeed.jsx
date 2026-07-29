@@ -3,9 +3,11 @@ import { Megaphone, Plus, Search, TrendingUp, AlertTriangle, Loader2, Filter, Sh
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ScamReportCard, { SCAM_TYPE_META } from "@/components/scam/ScamReportCard";
 import ReportScamDialog from "@/components/scam/ReportScamDialog";
+import ScamTrendsPanel from "@/components/scam/ScamTrendsPanel";
 
 export default function ScamFeed() {
   const [reports, setReports] = useState([]);
@@ -82,10 +84,10 @@ export default function ScamFeed() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
               <Megaphone className="w-5 h-5 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight font-heading">Community Scam Feed</h1>
+            <h1 className="text-2xl font-bold tracking-tight font-heading">Scam Feed & Trends</h1>
           </div>
           <p className="text-sm text-muted-foreground max-w-md">
-            Real-world scams reported by the community. See what's trending and help others by sharing what you've encountered.
+            Community-reported scams and aggregate trends. See what's happening and help others by reporting what you've encountered.
           </p>
         </div>
         <Button onClick={() => setDialogOpen(true)} className="gap-2 flex-shrink-0">
@@ -94,75 +96,90 @@ export default function ScamFeed() {
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 animate-slide-up" style={{ animationDelay: "50ms" }}>
-        <StatCard icon={Megaphone} label="Total Reports" value={stats.total} />
-        <StatCard icon={TrendingUp} label="This Week" value={stats.thisWeek} />
-        <StatCard icon={AlertTriangle} label="Top Type" value={stats.topType} small />
-      </div>
+      <Tabs defaultValue="feed">
+        <TabsList className="bg-card border border-border/50">
+          <TabsTrigger value="feed">Feed</TabsTrigger>
+          <TabsTrigger value="trends">Trends</TabsTrigger>
+        </TabsList>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 animate-slide-up" style={{ animationDelay: "100ms" }}>
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search scams..."
-            className="pl-9"
-          />
-        </div>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-full sm:w-44"><Filter className="w-3.5 h-3.5 mr-2" /><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {Object.entries(SCAM_TYPE_META).map(([v, m]) => <SelectItem key={v} value={v}>{m.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterRisk} onValueChange={setFilterRisk}>
-          <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Risk</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="low">Low</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Feed */}
-      {loading ? (
-        <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <p className="text-sm">Loading community reports...</p>
-        </div>
-      ) : error ? (
-        <div className="bg-destructive/5 border border-destructive/20 rounded-2xl p-6 text-center">
-          <AlertTriangle className="w-6 h-6 text-destructive mx-auto mb-2" />
-          <p className="text-sm text-destructive">{error}</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={loadReports}>Retry</Button>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16 space-y-3">
-          <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto">
-            <ShieldOff className="w-6 h-6 text-muted-foreground" />
+        {/* Feed Tab */}
+        <TabsContent value="feed" className="space-y-6 mt-4">
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3 animate-slide-up" style={{ animationDelay: "50ms" }}>
+            <StatCard icon={Megaphone} label="Total Reports" value={stats.total} />
+            <StatCard icon={TrendingUp} label="This Week" value={stats.thisWeek} />
+            <StatCard icon={AlertTriangle} label="Top Type" value={stats.topType} small />
           </div>
-          <p className="text-sm text-muted-foreground">
-            {reports.length === 0 ? "No scams reported yet. Be the first to help the community!" : "No reports match your filters."}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((report) => (
-            <ScamReportCard
-              key={report.id}
-              report={report}
-              onVerify={() => handleVerify(report)}
-              verifying={verifyingId === report.id}
-            />
-          ))}
-        </div>
-      )}
+
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-3 animate-slide-up" style={{ animationDelay: "100ms" }}>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search scams..."
+                className="pl-9"
+              />
+            </div>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-full sm:w-44"><Filter className="w-3.5 h-3.5 mr-2" /><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                {Object.entries(SCAM_TYPE_META).map(([v, m]) => <SelectItem key={v} value={v}>{m.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterRisk} onValueChange={setFilterRisk}>
+              <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Risk</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Feed */}
+          {loading ? (
+            <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              <p className="text-sm">Loading community reports...</p>
+            </div>
+          ) : error ? (
+            <div className="bg-destructive/5 border border-destructive/20 rounded-2xl p-6 text-center">
+              <AlertTriangle className="w-6 h-6 text-destructive mx-auto mb-2" />
+              <p className="text-sm text-destructive">{error}</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={loadReports}>Retry</Button>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16 space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto">
+                <ShieldOff className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {reports.length === 0 ? "No scams reported yet. Be the first to help the community!" : "No reports match your filters."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filtered.map((report) => (
+                <ScamReportCard
+                  key={report.id}
+                  report={report}
+                  onVerify={() => handleVerify(report)}
+                  verifying={verifyingId === report.id}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Trends Tab */}
+        <TabsContent value="trends" className="mt-4">
+          <ScamTrendsPanel />
+        </TabsContent>
+      </Tabs>
 
       <ReportScamDialog open={dialogOpen} onOpenChange={setDialogOpen} onSubmitted={loadReports} />
     </div>

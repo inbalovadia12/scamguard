@@ -54,7 +54,6 @@ const NAV_SECTIONS = [
       { path: "/family", labelKey: "nav.family", icon: Users },
       { path: "/scam-feed", labelKey: "nav.scam_feed", icon: Megaphone },
       { path: "/local-intel", labelKey: "nav.local_intel", icon: Radar },
-      { path: "/local-dashboard", labelKey: "nav.local_dashboard", icon: Globe2 },
     ],
   },
   {
@@ -68,7 +67,6 @@ const NAV_SECTIONS = [
     items: [
       { path: "/wrapped", labelKey: "nav.wrapped", icon: Sparkles },
       { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
-      { path: "/scam-trends", labelKey: "nav.scam_trends", icon: LineChart },
       { path: "/trust-history", labelKey: "nav.trust_history", icon: History },
       { path: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
       { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },

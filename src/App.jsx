@@ -29,7 +29,6 @@ import UrlScanner from '@/pages/UrlScanner';
 import Landing from '@/pages/Landing';
 import Onboarding from '@/pages/Onboarding';
 import Analytics from '@/pages/Analytics';
-import ScamTrends from '@/pages/ScamTrends';
 import UniversalScan from '@/pages/UniversalScan';
 import EmergencyResponse from '@/pages/EmergencyResponse';
 import TrustHistory from '@/pages/TrustHistory';
@@ -44,7 +43,6 @@ import Projects from '@/pages/Projects';
 import Extension from '@/pages/Extension';
 import ScamFeed from '@/pages/ScamFeed';
 import LocalScamIntel from '@/pages/LocalScamIntel';
-import LocalScamDashboard from '@/pages/LocalScamDashboard';
 import PhoneLookup from '@/pages/PhoneLookup';
 import ImageScanner from '@/pages/ImageScanner';
 import AINegotiator from '@/pages/AINegotiator';
@@ -105,7 +103,6 @@ const AuthenticatedApp = () => {
           <Route path="/guardian-dashboard" element={<GuardianDashboard />} />
           <Route path="/scam-feed" element={<ScamFeed />} />
           <Route path="/local-intel" element={<LocalScamIntel />} />
-          <Route path="/local-dashboard" element={<LocalScamDashboard />} />
           <Route path="/phone-lookup" element={<PhoneLookup />} />
           <Route path="/caller-check" element={<CallerCheck />} />
           <Route path="/live-guard" element={<LiveCallAnalyzer />} />
@@ -118,7 +115,7 @@ const AuthenticatedApp = () => {
           <Route path="/projects" element={<Projects />} />
           <Route path="/extension" element={<Extension />} />
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/scam-trends" element={<ScamTrends />} />
+
           <Route path="/universal-scan" element={<UniversalScan />} />
           <Route path="/emergency-response" element={<EmergencyResponse />} />
           <Route path="/trust-history" element={<TrustHistory />} />
