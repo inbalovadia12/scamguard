@@ -28,6 +28,7 @@ import UrlScanner from '@/pages/UrlScanner';
 import Landing from '@/pages/Landing';
 import Onboarding from '@/pages/Onboarding';
 import Analytics from '@/pages/Analytics';
+import ScamTrends from '@/pages/ScamTrends';
 import Feedback from '@/pages/Feedback';
 import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
@@ -112,6 +113,7 @@ const AuthenticatedApp = () => {
           <Route path="/projects" element={<Projects />} />
           <Route path="/extension" element={<Extension />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/scam-trends" element={<ScamTrends />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/admin" element={<Admin />} />
