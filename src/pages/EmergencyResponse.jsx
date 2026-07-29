@@ -1,9 +1,12 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Siren, DollarSign, Lock, CreditCard, MousePointerClick, Monitor, IdCard,
   ChevronDown, Phone, AlertTriangle, CheckCircle2, ExternalLink, ShieldAlert,
+  Loader2, Sparkles, Wand2,
 } from "lucide-react";
 
 const SCENARIOS = [
@@ -130,6 +133,54 @@ const COLOR_MAP = {
 
 export default function EmergencyResponse() {
   const [selected, setSelected] = useState(null);
+  const [elaboration, setElaboration] = useState("");
+  const [aiSteps, setAiSteps] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
+  const handlePersonalizedHelp = async () => {
+    if (!elaboration.trim()) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiSteps(null);
+
+    try {
+      const scenario = SCENARIOS.find((s) => s.id === selected);
+      const prompt = `You are Vardin, an AI scam recovery assistant. A user may have already been scammed and needs immediate, personalized help.
+
+${scenario ? `Situation category: "${scenario.title}" — ${scenario.subtitle}` : "No specific category selected — infer from their description."}
+
+The user described their exact situation:
+"${elaboration.trim()}"
+
+Provide specific, personalized recovery steps for THIS user's exact situation. Be calm, practical, and actionable. Reference any specific services, banks, apps, or websites they mentioned by name. Focus on what they can do RIGHT NOW to minimize damage, then follow-up steps.
+
+Respond with:
+- do_now: 3-5 specific immediate steps tailored to their situation
+- follow_up: 2-4 steps for the coming days
+- contacts: specific organizations, services, or hotlines to contact (with brief context on why)
+- reassurance: a brief, calming 1-2 sentence message acknowledging their situation`;
+
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            do_now: { type: "array", items: { type: "string" } },
+            follow_up: { type: "array", items: { type: "string" } },
+            contacts: { type: "array", items: { type: "string" } },
+            reassurance: { type: "string" },
+          },
+        },
+      });
+
+      setAiSteps(result);
+    } catch (e) {
+      setAiError(e.message || "Could not generate personalized steps. Please try again.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-8">
@@ -188,6 +239,111 @@ export default function EmergencyResponse() {
           })}
         </div>
       </div>
+
+      {/* Elaborate with AI */}
+      <div className="bg-card rounded-2xl border border-primary/20 p-5 space-y-3 animate-slide-up" style={{ animationDelay: "70ms" }}>
+        <div className="flex items-center gap-2">
+          <Wand2 className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-semibold">Describe your exact situation</h3>
+          <span className="text-xs text-primary font-medium ml-auto">AI-Powered</span>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {selected
+            ? "Add details about what happened to get personalized recovery steps."
+            : "Tell us what happened and we'll generate personalized recovery steps for your situation."}
+        </p>
+        <Textarea
+          value={elaboration}
+          onChange={(e) => setElaboration(e.target.value)}
+          placeholder="e.g., I sent $500 via Zelle to someone claiming to be from my bank. They called from 1-800-XXX-XXXX and said my account was compromised. I also gave them my online banking username..."
+          className="min-h-[100px] resize-none text-sm"
+          disabled={aiLoading}
+        />
+        <Button
+          onClick={handlePersonalizedHelp}
+          disabled={!elaboration.trim() || aiLoading}
+          className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80"
+        >
+          {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+          {aiLoading ? "Analyzing your situation..." : "Get Personalized Recovery Steps"}
+        </Button>
+        {aiError && (
+          <div className="flex items-center gap-2 text-sm text-destructive">
+            <AlertTriangle className="w-4 h-4" />
+            {aiError}
+          </div>
+        )}
+      </div>
+
+      {/* AI Personalized Results */}
+      {aiSteps && (
+        <div className="space-y-4 animate-slide-up">
+          {aiSteps.reassurance && (
+            <div className="flex items-start gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/20">
+              <Sparkles className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-foreground/90 leading-relaxed">{aiSteps.reassurance}</p>
+            </div>
+          )}
+          {aiSteps.do_now?.length > 0 && (
+            <div className="bg-card rounded-2xl border-2 border-destructive/30 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                </div>
+                <h3 className="font-semibold">Do This Now</h3>
+                <span className="text-xs text-primary font-medium ml-auto">Personalized</span>
+              </div>
+              <div className="space-y-3">
+                {aiSteps.do_now.map((step, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {i + 1}
+                    </div>
+                    <p className="text-sm text-foreground/90 pt-0.5">{step}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {aiSteps.follow_up?.length > 0 && (
+            <div className="bg-card rounded-2xl border border-border/50 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold">Follow Up</h3>
+                <span className="text-xs text-primary font-medium ml-auto">Personalized</span>
+              </div>
+              <div className="space-y-3">
+                {aiSteps.follow_up.map((step, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {i + 1}
+                    </div>
+                    <p className="text-sm text-foreground/90 pt-0.5">{step}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {aiSteps.contacts?.length > 0 && (
+            <div className="bg-card rounded-2xl border border-border/50 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Phone className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-semibold">Who to Contact</h3>
+              </div>
+              <div className="space-y-2">
+                {aiSteps.contacts.map((contact, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-foreground/90">
+                    <span className="text-primary font-bold flex-shrink-0">•</span>
+                    {contact}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Steps */}
       {selected && (() => {
