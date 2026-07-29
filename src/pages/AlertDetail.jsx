@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CheckCircle, Loader2, Send, Phone, MessageSquare, Flag } from "lucide-react";
+import { ArrowLeft, CheckCircle, Loader2, Send, Phone, MessageSquare, Flag, Share2 } from "lucide-react";
 import AnalysisResult from "@/components/scam/AnalysisResult";
 
 export default function AlertDetail() {
@@ -18,6 +18,7 @@ export default function AlertDetail() {
   const [seniorEmail, setSeniorEmail] = useState(null);
   const [seniorName, setSeniorName] = useState("");
   const [seniorPhone, setSeniorPhone] = useState("");
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -109,6 +110,31 @@ export default function AlertDetail() {
   const telLink = seniorPhone ? `tel:${seniorPhone}` : null;
   const smsLink = seniorPhone ? `sms:${seniorPhone}?body=${reassuranceBody}` : null;
 
+  const alertUrl = `${window.location.origin}/alerts/${id}`;
+  const shareSummary = `⚠️ Scam Alert — ${(analysis.risk_level || "unknown").toUpperCase()} RISK\nType: ${(analysis.message_type || "suspicious message").replace(/_/g, " ")}\n\n${analysis.explanation || "This message shows signs of being a scam."}${analysis.tactics_detected?.length ? `\n\nTactics detected:\n${analysis.tactics_detected.map((t) => `• ${t}`).join("\n")}` : ""}${analysis.next_steps?.length ? `\n\nWhat to do:\n${analysis.next_steps.map((s) => `• ${s}`).join("\n")}` : ""}\n\nView full alert: ${alertUrl}`;
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Scam Alert from Vardin Scamguard",
+          text: shareSummary,
+          url: alertUrl,
+        });
+      } catch {
+        // User cancelled share — no action needed
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareSummary);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      } catch {
+        // Clipboard not available
+      }
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
@@ -131,7 +157,7 @@ export default function AlertDetail() {
 
       <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-3">
         <h3 className="font-semibold font-heading">Quick Actions</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <a
             href={telLink || "#"}
             className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${telLink ? "border-border/50 hover:bg-muted/30" : "border-border/30 opacity-50 pointer-events-none"}`}
@@ -170,6 +196,18 @@ export default function AlertDetail() {
               <p className="text-xs text-muted-foreground">File a scam report</p>
             </div>
           </a>
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-3 p-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-all text-left"
+          >
+            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Share2 className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{shareCopied ? "Copied!" : "Share Alert"}</p>
+              <p className="text-xs text-muted-foreground">{shareCopied ? "Summary copied" : "Send to family"}</p>
+            </div>
+          </button>
         </div>
         {!seniorPhone && analysis.senior_id && (
           <p className="text-xs text-muted-foreground">No phone number saved — add one in the Family page to enable call & text actions.</p>
