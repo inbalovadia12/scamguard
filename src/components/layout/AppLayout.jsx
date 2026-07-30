@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon,   MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard, Scan, Siren, History, MessagesSquare,
+  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon,   MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard, Scan, Siren, History, MessagesSquare, EyeOff,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -30,6 +30,7 @@ const NAV_SECTIONS = [
       { path: "/check", labelKey: "nav.check", icon: Search },
       { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
       { path: "/conversation-analyzer", labelKey: "nav.conversation_analyzer", icon: MessagesSquare },
+      { path: "/incognito-search", labelKey: "nav.incognito_search", icon: EyeOff },
       { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
       { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
       { path: "/live-guard", labelKey: "nav.live_guard", icon: Radio },

@@ -41,6 +41,11 @@
       "default": "all",
       "description": "What types of alerts the guardian receives"
     },
+    "incognito_allowed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the guardian allows this senior to use Incognito Search (private scans with no history or alerts)"
+    },
     "senior_user_id": {
       "type": "string",
       "description": "The senior's user ID once they create an account"

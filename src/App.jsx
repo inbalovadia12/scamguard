@@ -48,6 +48,7 @@ import ImageScanner from '@/pages/ImageScanner';
 import AINegotiator from '@/pages/AINegotiator';
 import AdvancedScanner from '@/pages/AdvancedScanner';
 import ConversationAnalyzer from '@/pages/ConversationAnalyzer';
+import IncognitoSearch from '@/pages/IncognitoSearch';
 import Wrapped from '@/pages/Wrapped';
 import Community from '@/pages/Community';
 import LiveCallAnalyzer from '@/pages/LiveCallAnalyzer';
@@ -110,6 +111,7 @@ const AuthenticatedApp = () => {
           <Route path="/ai-negotiator" element={<AINegotiator />} />
           <Route path="/advanced-scanner" element={<AdvancedScanner />} />
           <Route path="/conversation-analyzer" element={<ConversationAnalyzer />} />
+          <Route path="/incognito-search" element={<IncognitoSearch />} />
           <Route path="/lessons" element={<Lessons />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/projects" element={<Projects />} />

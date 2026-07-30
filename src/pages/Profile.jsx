@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import {
-  ShieldCheck, Crown, Mail, Loader2, Bell, Lock, LogOut, ChevronRight, Accessibility, Type, Eye, Zap, Users, AlertTriangle,
+  ShieldCheck, Crown, Mail, Loader2, Bell, Lock, LogOut, ChevronRight, Accessibility, Type, Eye, Zap, Users, AlertTriangle, Trash2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getCreditStatus, PLAN_NAMES, PLAN_LIMITS } from "@/lib/credits";
@@ -29,6 +29,9 @@ export default function Profile() {
   const [textSize, setTextSize] = useState("normal");
   const [highContrast, setHighContrast] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -88,6 +91,19 @@ export default function Profile() {
 
   const handleLogout = () => {
     base44.auth.logout("/login");
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await base44.functions.invoke("deleteAccountData", {});
+      toast({ title: "Account data deleted", description: "All your data has been removed." });
+      setTimeout(() => base44.auth.logout("/login"), 1500);
+    } catch (err) {
+      toast({ title: "Deletion failed", description: err.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (!user) {
@@ -318,6 +334,34 @@ export default function Profile() {
           </div>
           <Switch checked={reducedMotion} onCheckedChange={setReducedMotion} />
         </div>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="rounded-2xl border-destructive/30 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-destructive" />
+          <h2 className="font-semibold text-destructive">Danger Zone</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Permanently delete your account and all data — scan history, family members, reports, and settings. This cannot be undone.
+        </p>
+        {!showDelete ? (
+          <Button variant="outline" onClick={() => setShowDelete(true)} className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10">
+            <Trash2 className="w-4 h-4" /> Delete Account & Data
+          </Button>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Type DELETE to confirm:</p>
+            <Input value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} placeholder="DELETE" className="h-11" />
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => { setShowDelete(false); setDeleteConfirm(""); }}>Cancel</Button>
+              <Button variant="destructive" disabled={deleteConfirm !== "DELETE" || deleting} onClick={handleDeleteAccount} className="gap-2">
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Permanently Delete
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Actions */}

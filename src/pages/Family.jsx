@@ -3,9 +3,10 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import {
   Users, Plus, ShieldCheck, ShieldAlert, Mail, Settings, Trash2, Loader2,
-  Clock, CheckCircle2, UserCog, BadgeCheck,
+  Clock, CheckCircle2, UserCog, BadgeCheck, EyeOff,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import AddSeniorDialog from "@/components/family/AddSeniorDialog";
 import { PLAN_FAMILY_LIMITS } from "@/lib/credits";
 import { Link } from "react-router-dom";
@@ -24,7 +25,7 @@ function MemberAvatar({ name }) {
   );
 }
 
-function MemberCard({ senior, index, onUpdatePref, onDelete }) {
+function MemberCard({ senior, index, onUpdatePref, onUpdateIncognito, onDelete }) {
   const isActive = senior.consent_given && senior.senior_user_id;
   const delayClass = index === 0 ? "" : index === 1 ? "anim-delay-1" : index === 2 ? "anim-delay-2" : "anim-delay-3";
 
@@ -86,6 +87,18 @@ function MemberCard({ senior, index, onUpdatePref, onDelete }) {
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
+          {isActive && (
+            <div className="flex items-center justify-between pt-1 border-t border-border/30">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <EyeOff className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium">Allow Incognito Search</p>
+                  <p className="text-[10px] text-muted-foreground truncate">Private scans, no alerts or history</p>
+                </div>
+              </div>
+              <Switch checked={senior.incognito_allowed || false} onCheckedChange={(val) => onUpdateIncognito(senior.id, val)} />
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -137,6 +150,13 @@ export default function Family() {
       prev.map((s) => (s.id === id ? { ...s, alert_preference: pref } : s))
     );
     await base44.entities.ProtectedSenior.update(id, { alert_preference: pref });
+  };
+
+  const handleUpdateIncognito = async (id, allowed) => {
+    setSeniors((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, incognito_allowed: allowed } : s))
+    );
+    await base44.entities.ProtectedSenior.update(id, { incognito_allowed: allowed });
   };
 
   const activeMembers = seniors.filter((s) => s.consent_given && s.senior_user_id);
@@ -213,6 +233,7 @@ export default function Family() {
                   senior={senior}
                   index={i}
                   onUpdatePref={handleUpdatePref}
+                  onUpdateIncognito={handleUpdateIncognito}
                   onDelete={handleDelete}
                 />
               ))}
@@ -232,6 +253,7 @@ export default function Family() {
                   senior={senior}
                   index={i}
                   onUpdatePref={handleUpdatePref}
+                  onUpdateIncognito={handleUpdateIncognito}
                   onDelete={handleDelete}
                 />
               ))}
