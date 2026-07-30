@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Loader2, Crown, Sparkles, Trophy, Phone, ChevronRight } from "lucide-react";
+import { GraduationCap, Loader2, Crown, Sparkles, Trophy, Phone, ChevronRight, Scan } from "lucide-react";
 import { Link } from "react-router-dom";
 import LockedFeature from "@/components/LockedFeature";
 import LessonCard from "@/components/lessons/LessonCard";
@@ -194,6 +194,23 @@ export default function Lessons() {
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-white text-sm sm:text-base">Practice Call Simulator</h3>
             <p className="text-xs text-white/80 mt-0.5">Roleplay against an AI scammer and get scored on your performance</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-white/70 flex-shrink-0" />
+        </div>
+      </Link>
+
+      {/* Spot the Scam Banner */}
+      <Link
+        to="/spot-the-scam"
+        className="block bg-gradient-to-r from-primary to-primary/80 rounded-2xl p-5 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all animate-slide-up anim-delay-1"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
+            <Scan className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-white text-sm sm:text-base">Spot the Scam Game</h3>
+            <p className="text-xs text-white/80 mt-0.5">Test your scam detection skills — 10 rounds, can you get a perfect score?</p>
           </div>
           <ChevronRight className="w-5 h-5 text-white/70 flex-shrink-0" />
         </div>

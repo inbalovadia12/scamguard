@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import {
   Gamepad2, Gift, Star, UserCircle, Download, MessageCircle, Diamond,
   Loader2, ShieldCheck, AlertTriangle, ShieldAlert, RotateCcw, Heart, Send,
+  MessageSquare, Globe, Image as ImageIcon, Upload, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import AIDisclaimer from "@/components/AIDisclaimer";
 
 const CATEGORIES = [
@@ -28,6 +30,12 @@ const CATEGORY_DESC = {
   social: "a message received on Discord, Instagram, TikTok, Snapchat, or other social media",
 };
 
+const INPUT_TYPES = [
+  { id: "message", icon: MessageSquare, label: "Paste Message" },
+  { id: "link", icon: Globe, label: "Enter Link" },
+  { id: "screenshot", icon: ImageIcon, label: "Screenshot" },
+];
+
 const RISK_DISPLAY = {
   low: { emoji: "✅", color: "text-success", bg: "bg-success/10", border: "border-success/30", icon: ShieldCheck },
   medium: { emoji: "⚠️", color: "text-warning", bg: "bg-warning/10", border: "border-warning/30", icon: AlertTriangle },
@@ -36,22 +44,37 @@ const RISK_DISPLAY = {
 
 export default function KidScanner() {
   const [category, setCategory] = useState(null);
+  const [inputType, setInputType] = useState("message");
   const [text, setText] = useState("");
+  const [url, setUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const fileInputRef = useRef(null);
 
-  const handleScan = async () => {
-    if (!text.trim()) return;
-    setScanning(true);
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setError("Please select an image file."); return; }
+    if (file.size > 10 * 1024 * 1024) { setError("Image must be under 10MB."); return; }
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
     setError(null);
-    setResult(null);
-    try {
-      const res = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are Vardin Kid Guard, a friendly AI that helps kids stay safe online. A kid is checking something they saw and wants to know if it's safe.
+  };
+
+  const clearImage = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const buildPrompt = (contentDesc) =>
+    `You are Vardin Kid Guard, a friendly AI that helps kids stay safe online. A kid is checking something they saw and wants to know if it's safe.
 
 What the kid is checking: ${CATEGORY_DESC[category]}
-The message or thing they saw: """${text.trim().slice(0, 3000)}"""
+The thing they saw: ${contentDesc}
 
 Analyze this for scam risk. Use simple, friendly language that a 10-year-old can understand. Be encouraging, not scary.
 
@@ -61,19 +84,52 @@ Provide:
 - title: a short friendly title (like "This looks safe!" or "Watch out!" or "This is a scam!")
 - explanation: simple kid-friendly explanation of why this is safe or dangerous (2-3 sentences)
 - what_to_do: simple steps the kid should take (array of strings, kid-friendly)
-- tell_parent: true if the kid should tell a parent about this, false if it's totally safe`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            risk_level: { type: "string", enum: ["low", "medium", "high"] },
-            is_safe: { type: "boolean" },
-            title: { type: "string" },
-            explanation: { type: "string" },
-            what_to_do: { type: "array", items: { type: "string" } },
-            tell_parent: { type: "boolean" },
-          },
-        },
-      });
+- tell_parent: true if the kid should tell a parent about this, false if it's totally safe`;
+
+  const SCHEMA = {
+    type: "object",
+    properties: {
+      risk_level: { type: "string", enum: ["low", "medium", "high"] },
+      is_safe: { type: "boolean" },
+      title: { type: "string" },
+      explanation: { type: "string" },
+      what_to_do: { type: "array", items: { type: "string" } },
+      tell_parent: { type: "boolean" },
+    },
+  };
+
+  const handleScan = async () => {
+    setScanning(true);
+    setError(null);
+    setResult(null);
+    try {
+      let res;
+      if (inputType === "message") {
+        res = await base44.integrations.Core.InvokeLLM({
+          prompt: buildPrompt(`"""${text.trim().slice(0, 3000)}"""`),
+          response_json_schema: SCHEMA,
+        });
+      } else if (inputType === "link") {
+        res = await base44.integrations.Core.InvokeLLM({
+          prompt: buildPrompt(`A link/website: ${url.trim()}`),
+          add_context_from_internet: true,
+          model: "gemini_3_flash",
+          response_json_schema: SCHEMA,
+        });
+      } else if (inputType === "screenshot") {
+        let image_url = null;
+        if (selectedFile) {
+          const uploadRes = await base44.integrations.Core.UploadFile({ file: selectedFile });
+          image_url = uploadRes.file_url;
+        }
+        res = await base44.integrations.Core.InvokeLLM({
+          prompt: buildPrompt("A screenshot/image of what they saw (analyze the image)"),
+          add_context_from_internet: true,
+          model: "gemini_3_flash",
+          file_urls: [image_url],
+          response_json_schema: SCHEMA,
+        });
+      }
       setResult(res);
     } catch (e) {
       setError(e.message || "Something went wrong. Try again.");
@@ -81,9 +137,20 @@ Provide:
     setScanning(false);
   };
 
+  const canScan = () => {
+    if (scanning) return false;
+    if (inputType === "message") return text.trim().length > 10;
+    if (inputType === "link") return url.trim().length > 3;
+    if (inputType === "screenshot") return !!selectedFile;
+    return false;
+  };
+
   const reset = () => {
     setCategory(null);
+    setInputType("message");
     setText("");
+    setUrl("");
+    clearImage();
     setResult(null);
     setError(null);
   };
@@ -131,17 +198,79 @@ Provide:
       </div>
 
       {!result && !scanning && (
-        <div className="space-y-3 animate-slide-up" style={{ animationDelay: "50ms" }}>
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Paste the message or thing you want to check..."
-            className="min-h-[140px] resize-y text-base leading-relaxed rounded-2xl"
-            autoFocus
-          />
+        <div className="space-y-4 animate-slide-up" style={{ animationDelay: "50ms" }}>
+          {/* Input Type Selector */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">How do you want to show it?</p>
+            <div className="grid grid-cols-3 gap-2">
+              {INPUT_TYPES.map((it) => (
+                <button
+                  key={it.id}
+                  onClick={() => setInputType(it.id)}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
+                    inputType === it.id
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border/50 bg-card text-muted-foreground hover:border-primary/30"
+                  }`}
+                >
+                  <it.icon className="w-5 h-5" />
+                  <span className="text-xs font-medium">{it.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Input Area */}
+          {inputType === "message" && (
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Paste the message you want to check..."
+              className="min-h-[140px] resize-y text-base leading-relaxed rounded-2xl"
+              autoFocus
+            />
+          )}
+
+          {inputType === "link" && (
+            <div className="relative">
+              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && canScan() && handleScan()}
+                placeholder="https://suspicious-link.com"
+                className="pl-10 h-12 text-base rounded-2xl"
+                autoFocus
+              />
+            </div>
+          )}
+
+          {inputType === "screenshot" && (
+            <div className="space-y-3">
+              {previewUrl ? (
+                <div className="relative rounded-2xl overflow-hidden border border-border/50">
+                  <img src={previewUrl} alt="Preview" className="w-full max-h-64 object-contain bg-muted/30" />
+                  <button onClick={clearImage} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center hover:bg-background">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full rounded-2xl border-2 border-dashed border-border/50 p-8 text-center hover:border-primary/40 hover:bg-primary/5 transition-all"
+                >
+                  <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm font-medium">Upload a screenshot</p>
+                  <p className="text-xs text-muted-foreground mt-1">Take a screenshot of the message or link</p>
+                </button>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+            </div>
+          )}
+
           <Button
             onClick={handleScan}
-            disabled={!text.trim()}
+            disabled={!canScan()}
             className="w-full h-12 text-base gap-2 bg-gradient-to-r from-primary to-primary/80 rounded-2xl"
           >
             <Send className="w-5 h-5" /> Check It!
@@ -152,10 +281,8 @@ Provide:
 
       {scanning && (
         <div className="flex flex-col items-center justify-center py-16 space-y-3">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <span className="text-3xl animate-bounce">🔍</span>
-            </div>
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <span className="text-3xl animate-bounce">🔍</span>
           </div>
           <p className="text-sm text-muted-foreground font-medium">Checking if this is safe...</p>
           <Loader2 className="w-5 h-5 animate-spin text-primary" />

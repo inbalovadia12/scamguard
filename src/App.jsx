@@ -49,6 +49,7 @@ import AINegotiator from '@/pages/AINegotiator';
 import KidScanner from '@/pages/KidScanner';
 import KidGames from '@/pages/KidGames';
 import KidLibrary from '@/pages/KidLibrary';
+import SpotTheScam from '@/pages/SpotTheScam';
 import ConversationAnalyzer from '@/pages/ConversationAnalyzer';
 import IncognitoSearch from '@/pages/IncognitoSearch';
 import Wrapped from '@/pages/Wrapped';
@@ -115,6 +116,7 @@ const AuthenticatedApp = () => {
           <Route path="/kid-scanner" element={<KidScanner />} />
           <Route path="/kid-games" element={<KidGames />} />
           <Route path="/kid-library" element={<KidLibrary />} />
+          <Route path="/spot-the-scam" element={<SpotTheScam />} />
           <Route path="/conversation-analyzer" element={<ConversationAnalyzer />} />
           <Route path="/incognito-search" element={<IncognitoSearch />} />
           <Route path="/lessons" element={<Lessons />} />
