@@ -32,7 +32,6 @@ const NAV_SECTIONS = [
       { path: "/conversation-analyzer", labelKey: "nav.conversation_analyzer", icon: MessagesSquare },
       { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
       { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
-      { path: "/caller-check", labelKey: "nav.caller_check", icon: PhoneIncoming },
       { path: "/live-guard", labelKey: "nav.live_guard", icon: Radio },
       { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
       { path: "/extension", labelKey: "nav.extension", icon: Puzzle },
@@ -98,7 +97,7 @@ export default function AppLayout() {
   const { kidMode } = useKidMode();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const KID_HIDDEN_PATHS = ["/url-scanner", "/phone-lookup", "/caller-check", "/ai-negotiator", "/scam-feed", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/analytics", "/feedback", "/projects", "/pricing"];
+  const KID_HIDDEN_PATHS = ["/url-scanner", "/phone-lookup", "/ai-negotiator", "/scam-feed", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/analytics", "/feedback", "/projects", "/pricing"];
   const visibleSections = kidMode
     ? NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !KID_HIDDEN_PATHS.includes(i.path)) })).filter(s => s.items.length > 0)
     : NAV_SECTIONS;

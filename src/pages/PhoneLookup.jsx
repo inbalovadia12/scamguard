@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { Phone, Search, Loader2, History, Clock, ChevronRight, Crown, AlertTriangle } from "lucide-react";
+import { Phone, Search, Loader2, History, Clock, ChevronRight, AlertTriangle, ShieldCheck, ShieldAlert } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PhoneResultView from "@/components/scam/PhoneResultView";
+import PlanGate from "@/components/PlanGate";
 import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import AIDisclaimer from "@/components/AIDisclaimer";
+
+const RISK_CONFIG = {
+  low: { color: "text-success", bg: "bg-success/10", border: "border-success/30", icon: ShieldCheck, label: "Likely Safe" },
+  medium: { color: "text-warning", bg: "bg-warning/10", border: "border-warning/30", icon: AlertTriangle, label: "Be Cautious" },
+  high: { color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30", icon: ShieldAlert, label: "Likely Scam" },
+};
 
 export default function PhoneLookup() {
   const [phoneInput, setPhoneInput] = useState("");
@@ -18,15 +24,15 @@ export default function PhoneLookup() {
   const [selectedId, setSelectedId] = useState(null);
   const [error, setError] = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
-  const [isPremium, setIsPremium] = useState(false);
+  const [creditStatus, setCreditStatus] = useState(null);
   const [checkingPlan, setCheckingPlan] = useState(true);
 
   useEffect(() => {
     const init = async () => {
       const status = await getCreditStatus();
-      setIsPremium(status.isPremiumPlan);
+      setCreditStatus(status);
       setCheckingPlan(false);
-      if (status.isPremiumPlan) loadHistory();
+      if (status.isPaid) loadHistory();
       else setLoadingHistory(false);
     };
     init();
@@ -102,27 +108,19 @@ export default function PhoneLookup() {
     );
   }
 
-  if (!isPremium) {
+  if (!creditStatus?.isPaid) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-card rounded-2xl border border-border/50 p-8 text-center space-y-4 animate-slide-up">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-            <Phone className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-xl font-bold font-heading">Phone Number Lookup</h1>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-            Check any phone number's reputation score, carrier, country, and scam reports from real users.
-          </p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
-            <Crown className="w-4 h-4" /> Premium Feature
-          </div>
-          <Button asChild>
-            <Link to="/pricing">Upgrade to Premium</Link>
-          </Button>
-        </div>
-      </div>
+      <PlanGate
+        icon={Phone}
+        title="Phone Number Lookup"
+        description="Check any phone number's reputation score, carrier, country, and scam reports from real users."
+        plan="Plus"
+      />
     );
   }
+
+  const cfg = currentResult ? (RISK_CONFIG[currentResult.risk_level] || RISK_CONFIG.low) : null;
+  const RiskIcon = cfg?.icon;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -135,7 +133,7 @@ export default function PhoneLookup() {
           <h1 className="text-2xl font-bold tracking-tight font-heading">Phone Number Lookup</h1>
         </div>
         <p className="text-sm text-muted-foreground max-w-md">
-          Check any phone number's reputation, carrier, and scam reports. Powered by AI with live web data.
+          Unknown number calling? Check it instantly — reputation, carrier, and scam reports powered by AI with live web data.
         </p>
       </div>
 
@@ -148,13 +146,14 @@ export default function PhoneLookup() {
               value={phoneInput}
               onChange={(e) => setPhoneInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-              placeholder="555 123 4567"
-              className="pl-9"
+              placeholder="Enter phone number..."
+              className="pl-9 h-12 text-base"
+              autoFocus
             />
           </div>
-          <Button onClick={handleLookup} disabled={looking || !phoneInput.trim()} className="gap-2">
+          <Button onClick={handleLookup} disabled={looking || !phoneInput.trim()} className="gap-2 h-12 px-6">
             {looking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            Lookup
+            Check
           </Button>
         </div>
         {error && (
@@ -170,10 +169,20 @@ export default function PhoneLookup() {
       {/* Loading state */}
       {looking && <LongLoadingScreen type="phone" />}
 
-      {/* Result */}
-      {!looking && currentResult && (
-        <div className="bg-card rounded-2xl border border-border/50 p-5 animate-slide-up">
-          <PhoneResultView data={currentResult} />
+      {/* Result — quick risk badge + full details */}
+      {!looking && currentResult && cfg && RiskIcon && (
+        <div className="space-y-4 animate-slide-up">
+          <div className={`rounded-2xl border-2 ${cfg.border} ${cfg.bg} p-6 text-center`}>
+            <div className={`w-16 h-16 rounded-full ${cfg.bg} flex items-center justify-center mx-auto mb-3`}>
+              <RiskIcon className={`w-8 h-8 ${cfg.color}`} />
+            </div>
+            <h2 className={`text-2xl font-bold font-heading ${cfg.color}`}>{cfg.label}</h2>
+            <p className="text-sm text-muted-foreground mt-1">Risk Score: {currentResult.reputation_score}/100</p>
+          </div>
+
+          <div className="bg-card rounded-2xl border border-border/50 p-5">
+            <PhoneResultView data={currentResult} />
+          </div>
         </div>
       )}
 

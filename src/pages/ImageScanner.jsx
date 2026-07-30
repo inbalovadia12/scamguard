@@ -8,6 +8,7 @@ import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import CommunityIntel from "@/components/community/CommunityIntel";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import PlanGate from "@/components/PlanGate";
 
 const USE_CASES = [
   { value: "romance", label: "Romance Scam", desc: "Dating app profile photo" },
@@ -32,10 +33,14 @@ export default function ImageScanner() {
   const [error, setError] = useState(null);
   const [credits, setCredits] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [checkingPlan, setCheckingPlan] = useState(true);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    getCreditStatus().then(setCredits);
+    getCreditStatus().then((s) => {
+      setCredits(s);
+      setCheckingPlan(false);
+    });
   }, []);
 
   const handleFileSelect = (e) => {
@@ -99,6 +104,25 @@ export default function ImageScanner() {
       setScanning(false);
     }
   };
+
+  if (checkingPlan) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (credits && !credits.isPaid) {
+    return (
+      <PlanGate
+        icon={ImageIcon}
+        title="Reverse Image Scam Detector"
+        description="Upload a profile photo to check if it appears elsewhere online or resembles common scam profiles."
+        plan="Plus"
+      />
+    );
+  }
 
   const canScan = credits && credits.remaining >= CREDIT_COST;
 

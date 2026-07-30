@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
 import { formatDistanceToNow } from "date-fns";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import PlanGate from "@/components/PlanGate";
 
 const CONVERSATION_TYPES = [
   { value: "sms", label: "SMS / Text Messages" },
@@ -38,10 +39,14 @@ export default function ConversationAnalyzer() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [creditStatus, setCreditStatus] = useState(null);
+  const [checkingPlan, setCheckingPlan] = useState(true);
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    getCreditStatus().then(setCreditStatus);
+    getCreditStatus().then((s) => {
+      setCreditStatus(s);
+      setCheckingPlan(false);
+    });
     loadHistory();
   }, []);
 
@@ -159,6 +164,25 @@ Respond entirely in ${langName}.`;
     setTranscript(item.transcript || "");
     setConversationType(item.conversation_type || "other");
   };
+
+  if (checkingPlan) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (creditStatus && !creditStatus.isPaid) {
+    return (
+      <PlanGate
+        icon={MessagesSquare}
+        title="Conversation Analyzer"
+        description="Paste an entire chat conversation to detect scam patterns, escalation, and manipulation over time."
+        plan="Plus"
+      />
+    );
+  }
 
   const charCount = transcript.length;
   const overLimit = charCount > MAX_CHARS;

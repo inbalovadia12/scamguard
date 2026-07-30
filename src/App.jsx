@@ -50,7 +50,6 @@ import AdvancedScanner from '@/pages/AdvancedScanner';
 import ConversationAnalyzer from '@/pages/ConversationAnalyzer';
 import Wrapped from '@/pages/Wrapped';
 import Community from '@/pages/Community';
-import CallerCheck from '@/pages/CallerCheck';
 import LiveCallAnalyzer from '@/pages/LiveCallAnalyzer';
 import CallSimulator from '@/pages/CallSimulator';
 
@@ -105,7 +104,6 @@ const AuthenticatedApp = () => {
           <Route path="/scam-feed" element={<ScamFeed />} />
           <Route path="/local-intel" element={<LocalScamIntel />} />
           <Route path="/phone-lookup" element={<PhoneLookup />} />
-          <Route path="/caller-check" element={<CallerCheck />} />
           <Route path="/live-guard" element={<LiveCallAnalyzer />} />
           <Route path="/call-simulator" element={<CallSimulator />} />
           <Route path="/image-scanner" element={<ImageScanner />} />

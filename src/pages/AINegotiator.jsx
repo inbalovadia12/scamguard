@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import PlanGate from "@/components/PlanGate";
 
 const CREDIT_COST = 3;
 const EXAMPLES = [
@@ -24,10 +25,14 @@ export default function AINegotiator() {
   const [credits, setCredits] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [checkingPlan, setCheckingPlan] = useState(true);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    getCreditStatus().then(setCredits);
+    getCreditStatus().then((s) => {
+      setCredits(s);
+      setCheckingPlan(false);
+    });
   }, []);
 
   const handleFileSelect = (e) => {
@@ -80,6 +85,25 @@ export default function AINegotiator() {
       setLoading(false);
     }
   };
+
+  if (checkingPlan) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (credits && !credits.isPaid) {
+    return (
+      <PlanGate
+        icon={MessageCircle}
+        title="Scam Exposer"
+        description="Not sure if a seller is legitimate? Describe the situation and get questions that will expose a scammer."
+        plan="Plus"
+      />
+    );
+  }
 
   const canGenerate = credits && credits.remaining >= CREDIT_COST;
 

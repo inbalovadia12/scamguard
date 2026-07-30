@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Radar, MapPin, Loader2, Search, History, Clock, AlertTriangle, ChevronRight, Crosshair } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { base44 } from "@/api/base44Client";
+import { getCreditStatus } from "@/lib/credits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,6 +10,7 @@ import ScanResultView from "@/components/scam/ScanResultView";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import CommunityIntel from "@/components/community/CommunityIntel";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import PlanGate from "@/components/PlanGate";
 import LocalDashboardPanel from "@/components/local-scam/LocalDashboardPanel";
 
 export default function LocalScamIntel() {
@@ -23,6 +25,8 @@ export default function LocalScamIntel() {
   // Shared scans list (used by both scan history and dashboard)
   const [allScans, setAllScans] = useState([]);
   const [loadingScans, setLoadingScans] = useState(true);
+  const [creditStatus, setCreditStatus] = useState(null);
+  const [checkingPlan, setCheckingPlan] = useState(true);
 
   const loadScans = async () => {
     try {
@@ -36,7 +40,14 @@ export default function LocalScamIntel() {
   };
 
   useEffect(() => {
-    loadScans();
+    const init = async () => {
+      const status = await getCreditStatus();
+      setCreditStatus(status);
+      setCheckingPlan(false);
+      if (status.isPremiumPlan) loadScans();
+      else setLoadingScans(false);
+    };
+    init();
   }, []);
 
   const ipGeolocate = async () => {
@@ -157,6 +168,25 @@ export default function LocalScamIntel() {
       created_date: scan.created_date,
     });
   };
+
+  if (checkingPlan) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (creditStatus && !creditStatus.isPremiumPlan) {
+    return (
+      <PlanGate
+        icon={Radar}
+        title="Local Scam Intelligence"
+        description="Discover what scams are common in your area and visualize trends across locations."
+        plan="Premium"
+      />
+    );
+  }
 
   const history = allScans.slice(0, 20);
 
