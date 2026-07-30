@@ -26,18 +26,21 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    labelKey: "nav.tools",
+    labelKey: "nav.scan",
     items: [
       { path: "/universal-scan", labelKey: "nav.universal_scan", icon: Scan, kidLabel: "Everything Scanner" },
       { path: "/kid-scanner", labelKey: "nav.kid_scanner", icon: Gamepad2, kidOnly: true },
-      { path: "/check", labelKey: "nav.check", icon: Search },
+      { path: "/check", labelKey: "nav.message_check", icon: Search },
       { path: "/conversation-analyzer", labelKey: "nav.conversation_analyzer", icon: MessagesSquare },
       { path: "/incognito-search", labelKey: "nav.incognito_search", icon: EyeOff, kidLabel: "Safe Search" },
-      { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
-      { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
-      { path: "/live-guard", labelKey: "nav.live_guard", icon: Radio },
       { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
       { path: "/extension", labelKey: "nav.extension", icon: Puzzle, kidLabel: "Vardin Kid Guard" },
+    ],
+  },
+  {
+    labelKey: "nav.phone",
+    items: [
+      { path: "/phone-lookup", labelKey: "nav.phone_guard", icon: Phone },
     ],
   },
   {

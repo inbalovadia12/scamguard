@@ -29,7 +29,7 @@ import UrlScanner from '@/pages/UrlScanner';
 import Landing from '@/pages/Landing';
 import Onboarding from '@/pages/Onboarding';
 import Analytics from '@/pages/Analytics';
-import UniversalScan from '@/pages/UniversalScan';
+import AdvancedScanner from '@/pages/AdvancedScanner';
 import EmergencyResponse from '@/pages/EmergencyResponse';
 import TrustHistory from '@/pages/TrustHistory';
 import Feedback from '@/pages/Feedback';
@@ -44,6 +44,7 @@ import Extension from '@/pages/Extension';
 import ScamFeed from '@/pages/ScamFeed';
 import LocalScamIntel from '@/pages/LocalScamIntel';
 import PhoneLookup from '@/pages/PhoneLookup';
+import PhoneGuard from '@/pages/PhoneGuard';
 import ImageScanner from '@/pages/ImageScanner';
 import AINegotiator from '@/pages/AINegotiator';
 import KidScanner from '@/pages/KidScanner';
@@ -107,8 +108,8 @@ const AuthenticatedApp = () => {
           <Route path="/guardian-dashboard" element={<GuardianDashboard />} />
           <Route path="/scam-feed" element={<ScamFeed />} />
           <Route path="/local-intel" element={<LocalScamIntel />} />
-          <Route path="/phone-lookup" element={<PhoneLookup />} />
-          <Route path="/live-guard" element={<LiveCallAnalyzer />} />
+          <Route path="/phone-lookup" element={<PhoneGuard />} />
+          <Route path="/live-guard" element={<Navigate to="/phone-lookup?tab=live" replace />} />
           <Route path="/call-simulator" element={<CallSimulator />} />
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/ai-negotiator" element={<AINegotiator />} />
@@ -125,7 +126,7 @@ const AuthenticatedApp = () => {
           <Route path="/extension" element={<Extension />} />
           <Route path="/analytics" element={<Analytics />} />
 
-          <Route path="/universal-scan" element={<UniversalScan />} />
+          <Route path="/universal-scan" element={<AdvancedScanner />} />
           <Route path="/emergency-response" element={<EmergencyResponse />} />
           <Route path="/trust-history" element={<TrustHistory />} />
           <Route path="/profile" element={<Profile />} />

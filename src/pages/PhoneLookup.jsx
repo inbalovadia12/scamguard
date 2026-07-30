@@ -125,18 +125,6 @@ export default function PhoneLookup() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
-      <div className="animate-slide-up">
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
-            <Phone className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">Phone Number Lookup</h1>
-        </div>
-        <p className="text-sm text-muted-foreground max-w-md">
-          Unknown number calling? Check it instantly — reputation, carrier, and scam reports powered by AI with live web data.
-        </p>
-      </div>
-
       {/* Input */}
       <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-4 animate-slide-up" style={{ animationDelay: "50ms" }}>
         <div className="flex flex-col sm:flex-row gap-3">

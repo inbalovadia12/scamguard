@@ -552,17 +552,7 @@ export default function LiveCallAnalyzer() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-16">
-      <div className="animate-slide-up">
-        <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
-            <Radio className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">Live Guard</h1>
-        </div>
-        <p className="text-sm text-muted-foreground max-w-md">
-          Real-time scam detection during calls, meetings, and on-screen messages. AI analyzes audio or screen content and warns you of red flags as they happen.
-        </p>
-      </div>
+
 
       <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-4 animate-slide-up" style={{ animationDelay: "50ms" }}>
         {!isListening ? (

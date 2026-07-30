@@ -10,6 +10,7 @@ import { getCreditStatus, PLAN_NAMES } from "@/lib/credits";
 import { useI18n } from "@/lib/i18n";
 import { isWrappedSeason } from "@/lib/wrappedSeason";
 import StreakBadges from "@/components/gamification/StreakBadges";
+import Analytics from "@/pages/Analytics";
 import { useKidMode } from "@/lib/KidModeContext";
 
 export default function Dashboard() {
@@ -27,6 +28,7 @@ export default function Dashboard() {
     { path: "/agent", label: t("dash.quick_ask_ai"), desc: t("dash.quick_ask_desc"), icon: Bot, color: "from-chart-5 to-chart-5/80" },
     { path: "/family", label: t("dash.quick_family"), desc: t("dash.quick_family_desc"), icon: Users, color: "from-chart-3 to-chart-3/80" },
   ];
+  const [view, setView] = useState("overview");
   const [credits, setCredits] = useState(null);
   const [recent, setRecent] = useState([]);
   const [familyCount, setFamilyCount] = useState(0);
@@ -63,6 +65,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Welcome */}
+      {view === "overview" && (
       <div className="animate-slide-up">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">
           {kidMode ? "Hey there, let's stay safe!" : t("dash.welcome")}<span className="text-muted-foreground font-normal"> 👋</span>
@@ -71,7 +74,18 @@ export default function Dashboard() {
           {kidMode ? "Check if messages are tricks, learn about scams, and stay safe online!" : t("dash.overview")}
         </p>
       </div>
+      )}
 
+      {/* Tab toggle */}
+      {!kidMode && (
+        <div className="flex gap-1 p-1 bg-card rounded-2xl border border-border/50 w-fit animate-slide-up">
+          <button onClick={() => setView("overview")} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${view === "overview" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>Overview</button>
+          <button onClick={() => setView("analytics")} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${view === "analytics" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>Analytics</button>
+        </div>
+      )}
+
+      {view === "overview" ? (
+      <>
       {/* Wrapped banner */}
       {!kidMode && isWrappedSeason() && (
         <Link to="/wrapped" className="block animate-slide-up">
@@ -180,6 +194,10 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+      )}
+      </>
+      ) : (
+        <Analytics />
       )}
     </div>
   );
