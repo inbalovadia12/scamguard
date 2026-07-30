@@ -47,6 +47,7 @@ import PhoneLookup from '@/pages/PhoneLookup';
 import ImageScanner from '@/pages/ImageScanner';
 import AINegotiator from '@/pages/AINegotiator';
 import AdvancedScanner from '@/pages/AdvancedScanner';
+import ConversationAnalyzer from '@/pages/ConversationAnalyzer';
 import Wrapped from '@/pages/Wrapped';
 import Community from '@/pages/Community';
 import CallerCheck from '@/pages/CallerCheck';
@@ -110,6 +111,7 @@ const AuthenticatedApp = () => {
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/ai-negotiator" element={<AINegotiator />} />
           <Route path="/advanced-scanner" element={<AdvancedScanner />} />
+          <Route path="/conversation-analyzer" element={<ConversationAnalyzer />} />
           <Route path="/lessons" element={<Lessons />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/projects" element={<Projects />} />

@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon, MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard, Scan, Siren, History,
+  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon,   MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard, Scan, Siren, History, MessagesSquare,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -29,6 +29,7 @@ const NAV_SECTIONS = [
       { path: "/universal-scan", labelKey: "nav.universal_scan", icon: Scan },
       { path: "/check", labelKey: "nav.check", icon: Search },
       { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
+      { path: "/conversation-analyzer", labelKey: "nav.conversation_analyzer", icon: MessagesSquare },
       { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
       { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
       { path: "/caller-check", labelKey: "nav.caller_check", icon: PhoneIncoming },
@@ -139,12 +140,13 @@ export default function AppLayout() {
           <Link to="/dashboard" className="flex items-center gap-2.5 group">
             <div className="w-9 h-9 rounded-xl luxury-gradient-btn flex items-center justify-center shadow-md shadow-primary/20 transition-transform group-hover:scale-105">
               <ShieldCheck className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-lg tracking-tight font-heading">Vardin</span>
-          </Link>
-        </div>
+              </div>
+              <span className="font-bold text-lg tracking-tight font-heading">Vardin</span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400 text-white tracking-wider shadow-sm flex-shrink-0">BETA</span>
+              </Link>
+              </div>
 
-        <nav className="flex-1 px-4 space-y-4 overflow-y-auto">
+              <nav className="flex-1 px-4 space-y-4 overflow-y-auto">
           {visibleSections.map((section) => (
             <div key={section.labelKey}>
               <p className="px-4 mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -219,6 +221,7 @@ export default function AppLayout() {
               <ShieldCheck className="w-4.5 h-4.5 text-primary-foreground" />
             </div>
             <span className="font-bold text-lg tracking-tight font-heading">Vardin</span>
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400 text-white tracking-wider shadow-sm flex-shrink-0">BETA</span>
           </Link>
           <div className="flex items-center gap-1">
             <LanguageToggle className="rounded-lg" />

@@ -1,0 +1,124 @@
+{
+  "name": "ConversationAnalysis",
+  "type": "object",
+  "properties": {
+    "transcript": {
+      "type": "string",
+      "description": "The full chat transcript analyzed for scam patterns"
+    },
+    "conversation_type": {
+      "type": "string",
+      "enum": [
+        "sms",
+        "whatsapp",
+        "email",
+        "phone",
+        "social_media",
+        "dating",
+        "other"
+      ],
+      "default": "other",
+      "description": "Type of conversation analyzed"
+    },
+    "overall_risk": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Overall scam risk level based on patterns across the conversation"
+    },
+    "risk_score": {
+      "type": "number",
+      "description": "0-100 risk score based on cumulative patterns"
+    },
+    "is_likely_scam": {
+      "type": "boolean",
+      "description": "Whether the conversation shows scam patterns over time"
+    },
+    "patterns_detected": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Manipulation patterns detected across the conversation"
+    },
+    "red_flag_messages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Specific messages that are red flags with explanations of why"
+    },
+    "escalation_summary": {
+      "type": "string",
+      "description": "How the scam progressed and escalated over the conversation"
+    },
+    "what_they_want": {
+      "type": "string",
+      "description": "What the scammer is ultimately trying to get from the victim"
+    },
+    "recommended_actions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Recommended next steps for the user"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Overall assessment of the conversation"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
+    }
+  },
+  "required": [
+    "transcript",
+    "overall_risk"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

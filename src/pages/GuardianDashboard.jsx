@@ -158,6 +158,22 @@ export default function GuardianDashboard() {
     return highest;
   }, [seniorStats]);
 
+  const urgentAlerts = useMemo(() => {
+    return analyses
+      .filter((a) => a.guardian_status === "new")
+      .sort((a, b) => {
+        const order = { high: 3, medium: 2, low: 1 };
+        return (order[b.risk_level] || 0) - (order[a.risk_level] || 0);
+      })
+      .slice(0, 5)
+      .map((alert) => ({
+        ...alert,
+        senior: seniors.find(
+          (s) => s.id === alert.senior_id || (s.senior_user_id && s.senior_user_id === alert.created_by_id)
+        ),
+      }));
+  }, [analyses, seniors]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -265,6 +281,53 @@ export default function GuardianDashboard() {
               Review <ChevronRight className="w-3.5 h-3.5" />
             </Button>
           </Link>
+        </div>
+      )}
+
+      {/* Urgent Alerts */}
+      {urgentAlerts.length > 0 && (
+        <div className="space-y-3 animate-slide-up" style={{ animationDelay: "70ms" }}>
+          <h2 className="text-sm font-semibold text-destructive uppercase tracking-wider px-1 flex items-center gap-1.5">
+            <Bell className="w-3.5 h-3.5" />
+            Urgent Alerts ({urgentAlerts.length})
+          </h2>
+          <div className="space-y-2">
+            {urgentAlerts.map((alert) => {
+              const riskCfg = RISK_CONFIG[alert.risk_level];
+              const seniorName = alert.senior?.name || "Unknown member";
+              return (
+                <Link
+                  key={alert.id}
+                  to={`/alerts/${alert.id}`}
+                  className={`block bg-card rounded-2xl border p-3.5 hover:shadow-md transition-all ${
+                    alert.risk_level === "high" ? "border-destructive/40" : "border-border/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${riskCfg?.dot || "bg-muted-foreground"} flex-shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold truncate">{seniorName}</p>
+                        {riskCfg && (
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${riskCfg.bg} ${riskCfg.color}`}>
+                            {riskCfg.label.replace(" Risk", "")}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                        {alert.message_text?.slice(0, 80) || "Scam alert"}...
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/70 mt-0.5 flex items-center gap-1">
+                        <Clock className="w-2.5 h-2.5" />
+                        {timeAgo(alert.created_date)}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
 
