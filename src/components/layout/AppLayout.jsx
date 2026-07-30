@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
   BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon,   MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard, Scan, Siren, History, MessagesSquare, EyeOff,
+  Gamepad2, BookOpen,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -14,6 +15,7 @@ import NudigoPopup from "@/components/NudigoPopup";
 import WrappedPopup from "@/components/WrappedPopup";
 import XPBar from "@/components/gamification/XPBar";
 import BroadcastBanner from "@/components/layout/BroadcastBanner";
+import AskParentButton from "@/components/kid/AskParentButton";
 import { useKidMode } from "@/lib/KidModeContext";
 
 const NAV_SECTIONS = [
@@ -26,16 +28,16 @@ const NAV_SECTIONS = [
   {
     labelKey: "nav.tools",
     items: [
-      { path: "/universal-scan", labelKey: "nav.universal_scan", icon: Scan },
+      { path: "/universal-scan", labelKey: "nav.universal_scan", icon: Scan, kidLabel: "Everything Scanner" },
+      { path: "/kid-scanner", labelKey: "nav.kid_scanner", icon: Gamepad2, kidOnly: true },
       { path: "/check", labelKey: "nav.check", icon: Search },
-      { path: "/advanced-scanner", labelKey: "nav.advanced_scanner", icon: Layers },
       { path: "/conversation-analyzer", labelKey: "nav.conversation_analyzer", icon: MessagesSquare },
-      { path: "/incognito-search", labelKey: "nav.incognito_search", icon: EyeOff },
+      { path: "/incognito-search", labelKey: "nav.incognito_search", icon: EyeOff, kidLabel: "Safe Search" },
       { path: "/url-scanner", labelKey: "nav.url_scan", icon: Globe },
       { path: "/phone-lookup", labelKey: "nav.phone_lookup", icon: Phone },
       { path: "/live-guard", labelKey: "nav.live_guard", icon: Radio },
       { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
-      { path: "/extension", labelKey: "nav.extension", icon: Puzzle },
+      { path: "/extension", labelKey: "nav.extension", icon: Puzzle, kidLabel: "Vardin Kid Guard" },
     ],
   },
   {
@@ -44,6 +46,8 @@ const NAV_SECTIONS = [
       { path: "/lessons", labelKey: "nav.lessons", icon: GraduationCap },
       { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
       { path: "/ai-negotiator", labelKey: "nav.ai_negotiator", icon: MessageCircle },
+      { path: "/kid-games", labelKey: "nav.kid_games", icon: Gamepad2, kidOnly: true },
+      { path: "/kid-library", labelKey: "nav.kid_library", icon: BookOpen, kidOnly: true },
     ],
   },
   {
@@ -51,7 +55,7 @@ const NAV_SECTIONS = [
     items: [
       { path: "/alerts", labelKey: "nav.alerts", icon: Bell },
       { path: "/guardian-dashboard", labelKey: "nav.guardian_dashboard", icon: LayoutDashboard },
-      { path: "/emergency-response", labelKey: "nav.emergency_response", icon: Siren },
+      { path: "/emergency-response", labelKey: "nav.emergency_response", icon: Siren, kidLabel: "Get Help" },
       { path: "/family", labelKey: "nav.family", icon: Users },
       { path: "/scam-feed", labelKey: "nav.scam_feed", icon: Megaphone },
       { path: "/local-intel", labelKey: "nav.local_intel", icon: Radar },
@@ -101,7 +105,8 @@ export default function AppLayout() {
   const KID_HIDDEN_PATHS = ["/url-scanner", "/phone-lookup", "/ai-negotiator", "/scam-feed", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/analytics", "/feedback", "/projects", "/pricing"];
   const visibleSections = kidMode
     ? NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !KID_HIDDEN_PATHS.includes(i.path)) })).filter(s => s.items.length > 0)
-    : NAV_SECTIONS;
+    : NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !i.kidOnly) })).filter(s => s.items.length > 0);
+  const itemLabel = (item) => (kidMode && item.kidLabel) ? item.kidLabel : t(item.labelKey);
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
@@ -164,7 +169,7 @@ export default function AppLayout() {
                     }`}
                   >
                     <item.icon className="w-4.5 h-4.5" />
-                    {t(item.labelKey)}
+                    {itemLabel(item)}
                   </Link>
                 ))}
               </div>
@@ -256,7 +261,7 @@ export default function AppLayout() {
                         }`}
                       >
                         <item.icon className="w-5 h-5" />
-                        {t(item.labelKey)}
+                        {itemLabel(item)}
                       </Link>
                     ))}
                   </div>
@@ -318,6 +323,7 @@ export default function AppLayout() {
 
         <NudigoPopup />
         <WrappedPopup />
+        {kidMode && <AskParentButton />}
 
         <footer className="border-t border-border/50 py-6 px-4 mt-auto" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">

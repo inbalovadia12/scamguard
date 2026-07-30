@@ -46,7 +46,9 @@ import LocalScamIntel from '@/pages/LocalScamIntel';
 import PhoneLookup from '@/pages/PhoneLookup';
 import ImageScanner from '@/pages/ImageScanner';
 import AINegotiator from '@/pages/AINegotiator';
-import AdvancedScanner from '@/pages/AdvancedScanner';
+import KidScanner from '@/pages/KidScanner';
+import KidGames from '@/pages/KidGames';
+import KidLibrary from '@/pages/KidLibrary';
 import ConversationAnalyzer from '@/pages/ConversationAnalyzer';
 import IncognitoSearch from '@/pages/IncognitoSearch';
 import Wrapped from '@/pages/Wrapped';
@@ -109,7 +111,10 @@ const AuthenticatedApp = () => {
           <Route path="/call-simulator" element={<CallSimulator />} />
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/ai-negotiator" element={<AINegotiator />} />
-          <Route path="/advanced-scanner" element={<AdvancedScanner />} />
+          <Route path="/advanced-scanner" element={<Navigate to="/universal-scan" replace />} />
+          <Route path="/kid-scanner" element={<KidScanner />} />
+          <Route path="/kid-games" element={<KidGames />} />
+          <Route path="/kid-library" element={<KidLibrary />} />
           <Route path="/conversation-analyzer" element={<ConversationAnalyzer />} />
           <Route path="/incognito-search" element={<IncognitoSearch />} />
           <Route path="/lessons" element={<Lessons />} />
