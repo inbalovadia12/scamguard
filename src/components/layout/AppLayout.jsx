@@ -23,6 +23,11 @@ const NAV_SECTIONS = [
     labelKey: "nav.main",
     items: [
       { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
+      { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
+      { path: "/ai-negotiator", labelKey: "nav.ai_negotiator", icon: MessageCircle },
+      { path: "/extension", labelKey: "nav.extension", icon: Puzzle, kidLabel: "Vardin Kid Guard" },
+      { path: "/phone-lookup", labelKey: "nav.phone_guard", icon: Phone },
+      { path: "/emergency-response", labelKey: "nav.emergency_response", icon: Siren, kidLabel: "Get Help" },
     ],
   },
   {
@@ -31,24 +36,13 @@ const NAV_SECTIONS = [
       { path: "/universal-scan", labelKey: "nav.universal_scan", icon: Scan, kidLabel: "Everything Scanner" },
       { path: "/kid-scanner", labelKey: "nav.kid_scanner", icon: Gamepad2, kidOnly: true },
       { path: "/check", labelKey: "nav.message_check", icon: Search },
-      { path: "/conversation-analyzer", labelKey: "nav.conversation_analyzer", icon: MessagesSquare },
-      { path: "/incognito-search", labelKey: "nav.incognito_search", icon: EyeOff, kidLabel: "Safe Search" },
       { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
-      { path: "/extension", labelKey: "nav.extension", icon: Puzzle, kidLabel: "Vardin Kid Guard" },
-    ],
-  },
-  {
-    labelKey: "nav.phone",
-    items: [
-      { path: "/phone-lookup", labelKey: "nav.phone_guard", icon: Phone },
     ],
   },
   {
     labelKey: "nav.learn",
     items: [
       { path: "/lessons", labelKey: "nav.lessons", icon: GraduationCap },
-      { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
-      { path: "/ai-negotiator", labelKey: "nav.ai_negotiator", icon: MessageCircle },
       { path: "/kid-games", labelKey: "nav.kid_games", icon: Gamepad2, kidOnly: true },
       { path: "/kid-library", labelKey: "nav.kid_library", icon: BookOpen, kidOnly: true },
     ],
@@ -57,10 +51,7 @@ const NAV_SECTIONS = [
     labelKey: "nav.protection",
     items: [
       { path: "/alerts", labelKey: "nav.alerts", icon: Bell },
-      { path: "/guardian-dashboard", labelKey: "nav.guardian_dashboard", icon: LayoutDashboard },
-      { path: "/emergency-response", labelKey: "nav.emergency_response", icon: Siren, kidLabel: "Get Help" },
       { path: "/family", labelKey: "nav.family", icon: Users },
-      { path: "/scam-feed", labelKey: "nav.scam_feed", icon: Megaphone },
       { path: "/local-intel", labelKey: "nav.local_intel", icon: Radar },
     ],
   },
@@ -74,7 +65,6 @@ const NAV_SECTIONS = [
     labelKey: "nav.more",
     items: [
       { path: "/wrapped", labelKey: "nav.wrapped", icon: Sparkles },
-      { path: "/analytics", labelKey: "nav.analytics", icon: BarChart3 },
       { path: "/trust-history", labelKey: "nav.trust_history", icon: History },
       { path: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
       { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },
@@ -105,7 +95,7 @@ export default function AppLayout() {
   const { kidMode } = useKidMode();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const KID_HIDDEN_PATHS = ["/url-scanner", "/phone-lookup", "/ai-negotiator", "/scam-feed", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/analytics", "/feedback", "/projects", "/pricing"];
+  const KID_HIDDEN_PATHS = ["/ai-negotiator", "/phone-lookup", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/feedback", "/projects", "/pricing"];
   const visibleSections = kidMode
     ? NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !KID_HIDDEN_PATHS.includes(i.path)) })).filter(s => s.items.length > 0)
     : NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !i.kidOnly) })).filter(s => s.items.length > 0);

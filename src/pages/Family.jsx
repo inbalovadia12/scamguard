@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import AddSeniorDialog from "@/components/family/AddSeniorDialog";
 import { PLAN_FAMILY_LIMITS } from "@/lib/credits";
 import { Link } from "react-router-dom";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import GuardianDashboardPanel from "@/components/family/GuardianDashboardPanel";
 
 function MemberAvatar({ name }) {
   const initials = (name || "?")
@@ -191,6 +193,12 @@ export default function Family() {
         </Button>
       </div>
 
+      <Tabs defaultValue="members" className="w-full">
+        <TabsList className="grid grid-cols-2 w-full mb-2">
+          <TabsTrigger value="members">Members</TabsTrigger>
+          <TabsTrigger value="guardian">Guardian Dashboard</TabsTrigger>
+        </TabsList>
+        <TabsContent value="members" className="space-y-8 mt-0">
       {familyLimit !== Infinity && seniors.length >= familyLimit && (
         <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 text-center space-y-2 animate-fade-in">
           <p className="text-sm text-muted-foreground">
@@ -265,6 +273,11 @@ export default function Family() {
           )}
         </div>
       )}
+        </TabsContent>
+        <TabsContent value="guardian" className="mt-0">
+          <GuardianDashboardPanel />
+        </TabsContent>
+      </Tabs>
 
       <AddSeniorDialog open={showAdd} onOpenChange={setShowAdd} onAdded={loadSeniors} />
     </div>

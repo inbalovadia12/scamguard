@@ -9,7 +9,7 @@ export const SCAN_TYPES = [
   { value: "qr", label: "QR Code", icon: QrCode, inputType: "image" },
   { value: "email", label: "Email", icon: Mail, inputType: "textarea" },
   { value: "chat", label: "Chat / SMS", icon: MessageSquare, inputType: "textarea" },
-  { value: "marketplace", label: "Marketplace", icon: ShoppingCart, inputType: "textarea" },
+  { value: "marketplace", label: "Marketplace", icon: ShoppingCart, inputType: "both" },
   { value: "file", label: "File", icon: FileIcon, inputType: "file" },
 ];
 

@@ -41,6 +41,7 @@ export default function AdvancedScanner() {
   const canScan = () => {
     if (!selectedType) return false;
     if (selectedType.inputType === "textarea") return text.trim().length > 0;
+    if (selectedType.inputType === "both") return text.trim().length > 0 || !!fileData;
     if (selectedType.inputType === "url") return url.trim().length > 0;
     if (selectedType.inputType === "image" || selectedType.inputType === "file") return !!fileData;
     return false;
@@ -85,6 +86,10 @@ export default function AdvancedScanner() {
         },
       };
       if (selectedType.inputType === "textarea") payload.page_text = text.trim();
+      if (selectedType.inputType === "both") {
+        payload.page_text = text.trim();
+        if (fileData) payload.screenshot_data_url = fileData;
+      }
       if (selectedType.inputType === "url") payload.page_url = url.trim();
       if (selectedType.inputType === "image") payload.screenshot_data_url = fileData;
       if (selectedType.inputType === "file") { payload.file_data = fileData; payload.file_name = fileName; }
@@ -224,10 +229,27 @@ export default function AdvancedScanner() {
                     placeholder={
                       scanType === "email" ? "Paste the email content here..." :
                       scanType === "chat" ? "Paste the chat or SMS messages here..." :
-                      scanType === "marketplace" ? "Paste the marketplace listing here..." :
                       "Paste the webpage content here..."
                     }
                     className="min-h-[120px] text-base resize-none rounded-xl"
+                  />
+                </>
+              )}
+              {selectedType?.inputType === "both" && (
+                <>
+                  <label className="text-sm font-medium">Listing text <span className="text-muted-foreground text-xs">(optional)</span></label>
+                  <Textarea
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="Paste the marketplace listing text here (optional)..."
+                    className="min-h-[100px] text-base resize-none rounded-xl"
+                  />
+                  <label className="text-sm font-medium">Listing screenshot <span className="text-muted-foreground text-xs">(optional)</span></label>
+                  <FileDropzone
+                    onFileSelect={handleFileSelect}
+                    accept="image/*"
+                    label="Upload listing screenshot"
+                    sublabel="PNG, JPG, WebP — max 10MB"
                   />
                 </>
               )}

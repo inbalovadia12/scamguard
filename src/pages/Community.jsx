@@ -5,6 +5,8 @@ import { Loader2, Users, PenSquare, Filter, Globe, TrendingUp } from "lucide-rea
 import StoryCard from "@/components/community/StoryCard";
 import ShareStoryDialog from "@/components/community/ShareStoryDialog";
 import Leaderboard from "@/components/community/Leaderboard";
+import ScamFeedPanel from "@/components/community/ScamFeedPanel";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const FILTER_OPTIONS = [
   { value: "", label: "All Stories" },
@@ -90,6 +92,12 @@ export default function Community() {
         </p>
       </div>
 
+      <Tabs defaultValue="stories" className="w-full">
+        <TabsList className="grid grid-cols-2 w-full mb-2">
+          <TabsTrigger value="stories">Stories</TabsTrigger>
+          <TabsTrigger value="feed">Scam Feed</TabsTrigger>
+        </TabsList>
+        <TabsContent value="stories" className="space-y-6 mt-0">
       {/* AI learning banner */}
       <div className="flex items-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-primary/5 to-cyan-500/5 border border-primary/15 animate-slide-up anim-delay-1">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -152,6 +160,11 @@ export default function Community() {
           ))}
         </div>
       )}
+        </TabsContent>
+        <TabsContent value="feed" className="mt-0">
+          <ScamFeedPanel />
+        </TabsContent>
+      </Tabs>
 
       <ShareStoryDialog open={shareOpen} onOpenChange={setShareOpen} onSubmitted={loadStories} />
     </div>

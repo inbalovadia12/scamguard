@@ -5,9 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ShieldCheck, Loader2, ArrowRight, MessageSquare, Mail, Briefcase, ShoppingCart,
+  ShieldCheck, Loader2, ArrowRight, MessageSquare, MessagesSquare, Mail, Briefcase, ShoppingCart,
   Heart, Landmark, HelpCircle, Lock, Link2, TrendingUp, Package, Gift, HeartHandshake, Globe,
-  AlertTriangle, Crown, X,
+  AlertTriangle, Crown, X, EyeOff,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import TruncatedText from "@/components/TruncatedText";
@@ -20,6 +20,8 @@ import { getSeniorLink } from "@/lib/guardianAlerts";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import ImageUpload from "@/components/scam/ImageUpload";
+import ConversationPanel from "@/components/scam/ConversationPanel";
+import { Switch } from "@/components/ui/switch";
 import { useKidMode } from "@/lib/KidModeContext";
 
 const messageTypes = [
@@ -63,6 +65,7 @@ export default function Home() {
   const [seniorLink, setSeniorLink] = useState(null);
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [incognito, setIncognito] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -78,10 +81,10 @@ export default function Home() {
     const input = mode === "url" ? urlText.trim() : messageText.trim();
     if (!input && mode !== "url" && images.length === 0) return;
     const cost = mode === "url" ? CREDIT_COSTS.URL_SCAN : CREDIT_COSTS.MESSAGE;
-    if (credits && credits.remaining < cost) return;
+    if (!incognito && credits && credits.remaining < cost) return;
 
-    // Check cache first (text-only)
-    if (input) {
+    // Check cache first (text-only, not in incognito)
+    if (input && !incognito) {
       const cached = getCachedAnalysis(input);
       if (cached) {
         setResult(cached);
@@ -112,18 +115,19 @@ export default function Home() {
       });
     }
 
-    const analysisType = mode === "url" ? "url" : messageType;
-    await base44.entities.ScamAnalysis.create({
-      message_text: mode === "url" ? effectiveInput : redactMessage(effectiveInput),
-      message_type: analysisType,
-      submitted_by_senior: !!seniorLink,
-      senior_id: seniorLink?.id,
-      ...llmResult,
-    });
-
-    if (input) cacheAnalysis(input, llmResult);
-    await incrementCreditUsage(cost);
-    setCredits(await getCreditStatus());
+    if (!incognito) {
+      const analysisType = mode === "url" ? "url" : messageType;
+      await base44.entities.ScamAnalysis.create({
+        message_text: mode === "url" ? effectiveInput : redactMessage(effectiveInput),
+        message_type: analysisType,
+        submitted_by_senior: !!seniorLink,
+        senior_id: seniorLink?.id,
+        ...llmResult,
+      });
+      if (input) cacheAnalysis(input, llmResult);
+      await incrementCreditUsage(cost);
+      setCredits(await getCreditStatus());
+    }
     setResult(llmResult);
     setAnalyzing(false);
   };
@@ -203,7 +207,7 @@ export default function Home() {
         </div>
       )}
 
-      {outOfCredits && !result && (
+      {outOfCredits && !result && mode !== "conversation" && (
         <div className="mb-6 p-6 rounded-2xl bg-warning/10 border border-warning/20 text-center space-y-5 animate-scale-in">
           <div className="space-y-3">
             <Lock className="w-8 h-8 text-warning mx-auto" />
@@ -218,6 +222,29 @@ export default function Home() {
               Upgrade Now
             </Button>
           </Link>
+        </div>
+      )}
+
+      {credits && !result && !kidMode && mode !== "conversation" && (
+        <div className={`flex items-center justify-between mb-4 sm:mb-6 px-4 py-3 rounded-xl border animate-fade-in ${incognito ? "bg-primary/5 border-primary/30" : "bg-card border-border/50"}`}>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <EyeOff className={`w-4 h-4 flex-shrink-0 ${incognito ? "text-primary" : "text-muted-foreground"}`} />
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Incognito Mode</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {incognito ? "Private — nothing saved, no alerts" : "Scan privately — nothing saved, no guardian alerts"}
+              </p>
+            </div>
+          </div>
+          {credits.isPremiumPlan ? (
+            <Switch checked={incognito} onCheckedChange={setIncognito} />
+          ) : (
+            <Link to="/pricing" className="flex-shrink-0">
+              <Button size="sm" variant="outline" className="gap-1.5">
+                <Crown className="w-3.5 h-3.5" /> Premium
+              </Button>
+            </Link>
+          )}
         </div>
       )}
 
@@ -236,7 +263,7 @@ export default function Home() {
           </div>
 
           {/* Mode toggle */}
-          <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl animate-slide-up anim-delay-1">
+          <div className="grid grid-cols-3 gap-2 p-1 bg-muted rounded-xl animate-slide-up anim-delay-1">
             <button
               onClick={() => setMode("message")}
               className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
@@ -244,7 +271,7 @@ export default function Home() {
               }`}
             >
               <MessageSquare className="w-4 h-4" />
-              Message
+              <span className="hidden sm:inline">Message</span>
             </button>
             <button
               onClick={() => setMode("url")}
@@ -253,11 +280,24 @@ export default function Home() {
               }`}
             >
               <Link2 className="w-4 h-4" />
-              Link / URL
+              <span className="hidden sm:inline">Link</span>
               {urlLocked && <Lock className="w-3 h-3 text-warning" />}
+            </button>
+            <button
+              onClick={() => setMode("conversation")}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                mode === "conversation" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              <MessagesSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">Chat</span>
             </button>
           </div>
 
+          {mode === "conversation" ? (
+            <ConversationPanel />
+          ) : (
+          <>
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-5 animate-slide-up anim-delay-2">
             {mode === "message" ? (
               <>
@@ -391,6 +431,8 @@ export default function Home() {
           <div className="rounded-xl border border-border/50 bg-card/50 p-3 animate-fade-in anim-delay-3">
             <CommunityDataToggle />
           </div>
+          </>
+          )}
         </div>
       ) : (
         <div className="space-y-6 animate-scale-in">
