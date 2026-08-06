@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Radio, Phone, Monitor, Mic, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye, Info } from "lucide-react";
+import { Radio, Phone, Monitor, Mic, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye, Info, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,8 @@ export default function LiveCallAnalyzer() {
   const [checkingPlan, setCheckingPlan] = useState(true);
   const [processingChunk, setProcessingChunk] = useState(false);
   const [callSeconds, setCallSeconds] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
@@ -107,7 +109,7 @@ export default function LiveCallAnalyzer() {
 
   // On mobile, only Microphone mode works — auto-switch away from desktop-only modes
   useEffect(() => {
-    if (isMobile && mode !== "mic") {
+    if (isMobile && mode !== "mic" && mode !== "upload") {
       setMode("mic");
     }
   }, [isMobile]);
@@ -190,6 +192,89 @@ export default function LiveCallAnalyzer() {
     }
   };
 
+  // Shared mapping of an analyzeCallChunk result into the transcript/warnings/risk UI
+  const populateResult = (result) => {
+    if (result.segments?.length) {
+      const newSegs = result.segments.map((seg) => ({
+        text: seg.text,
+        timestamp: new Date(),
+        risk_level: result.risk_level,
+        speaker: seg.speaker || "unknown",
+        feedback: seg.speaker === "victim" ? (result.feedback || "") : "",
+      }));
+      setTranscript((prev) => [...prev, ...newSegs]);
+      transcriptRef.current = [...transcriptRef.current, ...newSegs];
+    } else if (result.transcript) {
+      const newSeg = { text: result.transcript, timestamp: new Date(), risk_level: result.risk_level, speaker: result.speaker || "unknown", feedback: result.feedback || "" };
+      setTranscript((prev) => [...prev, newSeg]);
+      transcriptRef.current = [...transcriptRef.current, newSeg];
+    }
+    if (result.feedback) {
+      setCoaching((prev) => [{ text: result.feedback, timestamp: new Date(), risk_level: result.risk_level }, ...prev]);
+    }
+    if (result.warnings?.length) {
+      setWarnings((prev) => [...result.warnings.map((w) => ({ text: w, timestamp: new Date(), level: result.risk_level })), ...prev]);
+    }
+    if (RISK_ORDER[result.risk_level] > RISK_ORDER[overallRiskRef.current]) {
+      overallRiskRef.current = result.risk_level;
+      setOverallRisk(result.risk_level);
+    }
+    if (result.tactics_detected?.length) {
+      setTactics((prev) => {
+        const set = new Set(prev);
+        result.tactics_detected.forEach((t) => set.add(t));
+        return [...set];
+      });
+    }
+  };
+
+  // Replacement path when live mic capture is blocked by an active phone call:
+  // the user records the call with their phone's call recorder, then uploads the audio.
+  const analyzeUploadedRecording = async (file) => {
+    setError(null);
+    setTranscript([]);
+    setWarnings([]);
+    setOverallRisk("low");
+    setTactics([]);
+    setCoaching([]);
+    transcriptRef.current = [];
+    overallRiskRef.current = "low";
+    setUploading(true);
+    try {
+      if (!file.type.startsWith("audio/")) {
+        throw new Error("Please choose an audio file (m4a, mp3, wav, etc.).");
+      }
+      const uploadRes = await base44.integrations.Core.UploadFile({ file });
+      const lang = localStorage.getItem("vardin_language") || "en";
+      const response = await base44.functions.invoke("analyzeCallChunk", {
+        audio_url: uploadRes.file_url,
+        language: lang,
+      });
+      if (response.data?.error) throw new Error(response.data.error);
+      const result = response.data;
+      if (!result.transcript && !result.segments?.length) {
+        setError("Couldn't transcribe this recording. Try a clearer or shorter recording.");
+      } else {
+        populateResult(result);
+      }
+      base44.entities.LiveGuardSession.create({
+        session_type: "uploaded_recording",
+        overall_risk: overallRiskRef.current,
+        tactics_detected: result.tactics_detected || [],
+        warnings: result.warnings || [],
+        transcript: JSON.stringify((result.segments || []).map((s) => ({ text: s.text, risk_level: result.risk_level, speaker: s.speaker }))),
+        segment_count: result.segments?.length || (result.transcript ? 1 : 0),
+      }).catch(() => {});
+      await incrementCreditUsage(CREDIT_COSTS.CALL_CHUNK);
+      setCreditStatus(await getCreditStatus());
+    } catch (e) {
+      setError(e.message || "Failed to analyze recording.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleStart = async () => {
     setError(null);
     setTranscript([]);
@@ -265,45 +350,7 @@ export default function LiveCallAnalyzer() {
           if (response.data?.error) throw new Error(response.data.error);
           const result = response.data;
 
-          if (result.segments?.length) {
-            const newSegs = result.segments.map((seg) => ({
-              text: seg.text,
-              timestamp: new Date(),
-              risk_level: result.risk_level,
-              speaker: seg.speaker || "unknown",
-              feedback: seg.speaker === "victim" ? (result.feedback || "") : "",
-            }));
-            setTranscript((prev) => [...prev, ...newSegs]);
-            transcriptRef.current = [...transcriptRef.current, ...newSegs];
-          } else if (result.transcript) {
-            const newSeg = { text: result.transcript, timestamp: new Date(), risk_level: result.risk_level, speaker: result.speaker || "unknown", feedback: result.feedback || "" };
-            setTranscript((prev) => [...prev, newSeg]);
-            transcriptRef.current = [...transcriptRef.current, newSeg];
-          }
-
-          if (result.feedback) {
-            setCoaching((prev) => [{ text: result.feedback, timestamp: new Date(), risk_level: result.risk_level }, ...prev]);
-          }
-
-          if (result.warnings?.length) {
-            setWarnings((prev) => [
-              ...result.warnings.map((w) => ({ text: w, timestamp: new Date(), level: result.risk_level })),
-              ...prev,
-            ]);
-          }
-
-          if (RISK_ORDER[result.risk_level] > RISK_ORDER[overallRiskRef.current]) {
-            overallRiskRef.current = result.risk_level;
-            setOverallRisk(result.risk_level);
-          }
-
-          if (result.tactics_detected?.length) {
-            setTactics((prev) => {
-              const set = new Set(prev);
-              result.tactics_detected.forEach((t) => set.add(t));
-              return [...set];
-            });
-          }
+          populateResult(result);
 
           incrementCreditUsage(CREDIT_COSTS.CALL_CHUNK)
             .then(() => getCreditStatus())
@@ -409,7 +456,13 @@ export default function LiveCallAnalyzer() {
       setIsListening(true);
       requestWakeLock();
     } catch (e) {
-      setError(e.message || "Failed to start listening.");
+      const name = e?.name || "";
+      const msg = e?.message || "Failed to start listening.";
+      if (name === "NotReadableError" || name === "SecurityError" || /could not start|in use|not allowed|denied|permission/i.test(msg)) {
+        setError("Your phone won't let the browser record audio during an active call — the call app keeps the mic. End the call and try Microphone mode, or use \"Upload Recording\" to analyze a recording of the call instead.");
+      } else {
+        setError(msg);
+      }
     }
   };
 
@@ -589,7 +642,7 @@ export default function LiveCallAnalyzer() {
         {!isListening ? (
           <div className="space-y-3">
             <p className="text-sm font-medium">Choose audio source:</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <button
                 onClick={() => setMode("mic")}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
@@ -633,7 +686,27 @@ export default function LiveCallAnalyzer() {
                 <span className="text-sm font-medium">Screen View</span>
                 <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "SMS, WhatsApp, Email"}</span>
               </button>
+              <button
+                onClick={() => setMode("upload")}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  mode === "upload" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"
+                }`}
+              >
+                <Upload className={`w-6 h-6 ${mode === "upload" ? "text-primary" : "text-muted-foreground"}`} />
+                <span className="text-sm font-medium">Upload Recording</span>
+                <span className="text-xs text-muted-foreground">Recorded call audio</span>
+              </button>
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) analyzeUploadedRecording(f);
+              }}
+            />
             {mode === "mic" && (
               <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
                 <Mic className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
@@ -661,9 +734,21 @@ export default function LiveCallAnalyzer() {
                 </div>
               )
             )}
-            <Button onClick={handleStart} className="w-full gap-2 h-12" disabled={!creditStatus?.canAnalyze || ((mode === "system" || mode === "phone_call") && !supportsDisplayMedia)}>
-              {mode === "screen" ? <Eye className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
-              {mode === "screen" ? "Start Watching" : mode === "phone_call" ? "Start Call Guard" : "Start Listening"}
+            {mode === "upload" && (
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
+                <Upload className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  Record your call using your phone's built-in call recorder (where legal), then choose the audio file here. Vardin transcribes and analyzes the whole conversation. Best with recordings under a few minutes.
+                </p>
+              </div>
+            )}
+            <Button
+              onClick={mode === "upload" ? () => fileInputRef.current?.click() : handleStart}
+              className="w-full gap-2 h-12"
+              disabled={uploading || !creditStatus?.canAnalyze || ((mode === "system" || mode === "phone_call") && !supportsDisplayMedia)}
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === "screen" ? <Eye className="w-4 h-4" /> : mode === "upload" ? <Upload className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
+              {uploading ? "Analyzing recording..." : mode === "screen" ? "Start Watching" : mode === "upload" ? "Choose Recording" : mode === "phone_call" ? "Start Call Guard" : "Start Listening"}
             </Button>
             {mode === "screen" && !isMobile && (
               <div className="space-y-2">
