@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Search, Link2, Bot, Users, Bell, BarChart3, ArrowRight, ShieldCheck,
-  TrendingUp, Loader2, Zap, Sparkles, Radio, GraduationCap,
+  TrendingUp, Loader2, Zap, Sparkles, Radio, GraduationCap, PhoneCall,
 } from "lucide-react";
 import { getCreditStatus, PLAN_NAMES } from "@/lib/credits";
 import { useI18n } from "@/lib/i18n";
@@ -27,6 +27,7 @@ export default function Dashboard() {
     { path: "/check", label: t("dash.quick_scan_url"), desc: t("dash.quick_scan_desc"), icon: Link2, color: "from-chart-2 to-chart-2/80" },
     { path: "/agent", label: t("dash.quick_ask_ai"), desc: t("dash.quick_ask_desc"), icon: Bot, color: "from-chart-5 to-chart-5/80" },
     { path: "/family", label: t("dash.quick_family"), desc: t("dash.quick_family_desc"), icon: Users, color: "from-chart-3 to-chart-3/80" },
+    { path: "/phone-lookup?tab=live&mode=upload", label: "Analyze Past Call", desc: "Check a recording before calling back", icon: PhoneCall, color: "from-chart-4 to-chart-4/80" },
   ];
   const [view, setView] = useState("overview");
   const [credits, setCredits] = useState(null);

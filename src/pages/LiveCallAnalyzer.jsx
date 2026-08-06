@@ -37,9 +37,13 @@ const RISK_CONFIG = {
 export default function LiveCallAnalyzer() {
   const isMobile = useIsMobile();
   const [mode, setMode] = useState(() => {
-    // Default to Microphone on mobile — only mode that works on mobile browsers
-    if (typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches) {
-      return "mic";
+    // Deep-link: ?mode=upload jumps straight to the "past call recording" flow (works on mobile too)
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("mode") === "upload") return "upload";
+      if (window.matchMedia("(max-width: 767px)").matches) {
+        return "mic";
+      }
     }
     return "system";
   });
@@ -459,7 +463,7 @@ export default function LiveCallAnalyzer() {
       const name = e?.name || "";
       const msg = e?.message || "Failed to start listening.";
       if (name === "NotReadableError" || name === "SecurityError" || /could not start|in use|not allowed|denied|permission/i.test(msg)) {
-        setError("Your phone won't let the browser record audio during an active call — the call app keeps the mic. End the call and try Microphone mode, or use \"Upload Recording\" to analyze a recording of the call instead.");
+        setError("Your phone keeps the mic for the call app, so the browser can't listen in during an active call. For real-time warnings, put the call on speakerphone and run Vardin's Microphone mode on a second device. Otherwise, end the call and use \"Upload Recording\" to analyze a recording of it.");
       } else {
         setError(msg);
       }
