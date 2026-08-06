@@ -67,6 +67,8 @@ export default function LiveCallAnalyzer() {
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const vadFrameRef = useRef(null);
+  const vadIntervalRef = useRef(null);
+  const wakeLockRef = useRef(null);
   const chunkStartRef = useRef(0);
   const userStoppedRef = useRef(false);
   const chunkQueueRef = useRef([]);
@@ -83,8 +85,11 @@ export default function LiveCallAnalyzer() {
   useEffect(() => {
     if (!isListening) return;
     const handleVisibility = () => {
-      if (!document.hidden && audioContextRef.current?.state === "suspended") {
-        audioContextRef.current.resume().catch(() => {});
+      if (!document.hidden) {
+        if (audioContextRef.current?.state === "suspended") {
+          audioContextRef.current.resume().catch(() => {});
+        }
+        requestWakeLock();
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
@@ -115,8 +120,11 @@ export default function LiveCallAnalyzer() {
       if (chunkIntervalRef.current) {
         clearInterval(chunkIntervalRef.current);
       }
-      if (vadFrameRef.current) {
-        cancelAnimationFrame(vadFrameRef.current);
+      if (vadIntervalRef.current) {
+        clearInterval(vadIntervalRef.current);
+      }
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
       }
       if (audioContextRef.current) {
         audioContextRef.current.close().catch(() => {});
@@ -158,6 +166,27 @@ export default function LiveCallAnalyzer() {
       transcriptRef.current[index].feedback = newFeedback;
     } catch {
       // Keep old feedback if regeneration fails
+    }
+  };
+
+  // Keep the screen awake while on a speakerphone call so analysis isn't paused
+  const requestWakeLock = async () => {
+    try {
+      if ("wakeLock" in navigator && !wakeLockRef.current) {
+        wakeLockRef.current = await navigator.wakeLock.request("screen");
+        wakeLockRef.current.addEventListener("release", () => {
+          wakeLockRef.current = null;
+        });
+      }
+    } catch {
+      // Wake lock not supported or denied — analysis still works, screen may turn off
+    }
+  };
+
+  const releaseWakeLock = () => {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
     }
   };
 
@@ -373,11 +402,12 @@ export default function LiveCallAnalyzer() {
         if (now - chunkStartRef.current > MAX_CHUNK_MS && recorderRef.current?.state === "recording") {
           recorderRef.current.stop();
         }
-
-        vadFrameRef.current = requestAnimationFrame(checkAudioLevel);
       };
-      checkAudioLevel();
+      // setInterval (not requestAnimationFrame) keeps VAD running when the tab
+      // loses focus during a phone call — rAF pauses entirely on hidden tabs.
+      vadIntervalRef.current = setInterval(checkAudioLevel, 200);
       setIsListening(true);
+      requestWakeLock();
     } catch (e) {
       setError(e.message || "Failed to start listening.");
     }
@@ -404,10 +434,11 @@ export default function LiveCallAnalyzer() {
       }).catch(() => {});
     }
 
-    if (vadFrameRef.current) {
-      cancelAnimationFrame(vadFrameRef.current);
-      vadFrameRef.current = null;
+    if (vadIntervalRef.current) {
+      clearInterval(vadIntervalRef.current);
+      vadIntervalRef.current = null;
     }
+    releaseWakeLock();
     if (audioContextRef.current) {
       audioContextRef.current.close().catch(() => {});
       audioContextRef.current = null;
