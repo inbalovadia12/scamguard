@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
   BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon,   MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard, Scan, Siren, History, MessagesSquare, EyeOff,
-  Gamepad2, BookOpen,
+  Gamepad2, BookOpen, Bitcoin, Smartphone,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -37,6 +37,7 @@ const NAV_SECTIONS = [
       { path: "/kid-scanner", labelKey: "nav.kid_scanner", icon: Gamepad2, kidOnly: true },
       { path: "/check", labelKey: "nav.message_check", icon: Search },
       { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
+      { path: "/crypto-scanner", label: "Crypto Scanner", icon: Bitcoin },
     ],
   },
   {
@@ -68,6 +69,7 @@ const NAV_SECTIONS = [
       { path: "/trust-history", labelKey: "nav.trust_history", icon: History },
       { path: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
       { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },
+      { path: "/mobile-app", label: "Mobile App", icon: Smartphone },
     ],
   },
 ];
@@ -100,7 +102,7 @@ export default function AppLayout() {
   const visibleSections = kidMode
     ? NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !KID_HIDDEN_PATHS.includes(i.path)) })).filter(s => s.items.length > 0)
     : NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !i.kidOnly) })).filter(s => s.items.length > 0);
-  const itemLabel = (item) => (kidMode && item.kidLabel) ? item.kidLabel : t(item.labelKey);
+  const itemLabel = (item) => (kidMode && item.kidLabel) ? item.kidLabel : (item.label || t(item.labelKey));
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {

@@ -55,8 +55,9 @@ import ConversationAnalyzer from '@/pages/ConversationAnalyzer';
 import IncognitoSearch from '@/pages/IncognitoSearch';
 import Wrapped from '@/pages/Wrapped';
 import Community from '@/pages/Community';
-import LiveCallAnalyzer from '@/pages/LiveCallAnalyzer';
 import CallSimulator from '@/pages/CallSimulator';
+import CryptoScanner from '@/pages/CryptoScanner';
+import MobileApp from '@/pages/MobileApp';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -111,6 +112,8 @@ const AuthenticatedApp = () => {
           <Route path="/phone-lookup" element={<PhoneGuard />} />
           <Route path="/live-guard" element={<Navigate to="/phone-lookup?tab=live" replace />} />
           <Route path="/call-simulator" element={<CallSimulator />} />
+          <Route path="/crypto-scanner" element={<CryptoScanner />} />
+          <Route path="/mobile-app" element={<MobileApp />} />
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/ai-negotiator" element={<AINegotiator />} />
           <Route path="/advanced-scanner" element={<Navigate to="/universal-scan" replace />} />
