@@ -48,9 +48,7 @@
     "content"
   ],
   "rls": {
-    "create": {
-      "created_by_id": "{{user.id}}"
-    },
+    "create": null,
     "read": {
       "$or": [
         {
