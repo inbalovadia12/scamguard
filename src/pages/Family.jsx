@@ -35,7 +35,7 @@ function MemberCard({ senior, index, onUpdatePref, onUpdateIncognito, onUpdateSe
   const delayClass = index === 0 ? "" : index === 1 ? "anim-delay-1" : index === 2 ? "anim-delay-2" : "anim-delay-3";
 
   return (
-    <div className={`bg-card rounded-2xl border border-border/50 p-5 animate-slide-up ${delayClass} hover:shadow-md transition-shadow`}>
+    <div className={`bg-card rounded-2xl border border-border/50 p-5 sm:p-6 animate-slide-up ${delayClass} hover:shadow-md transition-shadow`}>
       <div className="flex items-start gap-4">
         <MemberAvatar name={senior.name} />
         <div className="flex-1 min-w-0 space-y-3">
@@ -74,7 +74,7 @@ function MemberCard({ senior, index, onUpdatePref, onUpdateIncognito, onUpdateSe
             </div>
           </div>
 
-          <div className="flex items-center gap-3 pt-1 border-t border-border/30">
+          <div className="flex items-center gap-3 pt-3 border-t border-border/30">
             <div className="flex items-center gap-2 flex-1">
               <Settings className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
               <Select value={senior.alert_preference || "all"} onValueChange={(val) => onUpdatePref(senior.id, val)}>
@@ -93,7 +93,7 @@ function MemberCard({ senior, index, onUpdatePref, onUpdateIncognito, onUpdateSe
             </Button>
           </div>
           {isActive && (
-            <div className="flex items-center justify-between pt-1 border-t border-border/30">
+            <div className="flex items-center justify-between pt-3 border-t border-border/30">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <EyeOff className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                 <div className="min-w-0">
@@ -105,7 +105,7 @@ function MemberCard({ senior, index, onUpdatePref, onUpdateIncognito, onUpdateSe
             </div>
           )}
 
-          <div className="pt-1 border-t border-border/30">
+          <div className="pt-3 border-t border-border/30">
             <button onClick={() => setExpanded((e) => !e)} className="flex items-center gap-2 w-full text-left py-1">
               <Shield className="w-3.5 h-3.5 text-primary" />
               <span className="text-xs font-medium flex-1">Protection Settings</span>

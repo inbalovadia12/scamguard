@@ -97,7 +97,7 @@ export default function Pricing() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-10">
       <div className="text-center space-y-3">
         <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
           <ShieldCheck className="w-8 h-8 text-primary-foreground" />
@@ -130,15 +130,15 @@ export default function Pricing() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-3 gap-5">
+      <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
         {plans.map((plan, i) => {
           const isCurrent = credits?.plan === plan.id;
           return (
             <div
               key={plan.id}
-              className={`relative rounded-2xl p-6 border transition-all duration-300 animate-slide-up ${i === 1 ? "anim-delay-1" : i === 2 ? "anim-delay-2" : ""} ${
+              className={`relative rounded-2xl p-6 sm:p-7 border transition-all duration-300 animate-slide-up ${i === 1 ? "anim-delay-1" : i === 2 ? "anim-delay-2" : ""} ${
                 plan.highlighted
-                  ? "border-primary bg-gradient-to-b from-primary/10 to-transparent shadow-lg shadow-primary/10 lg:scale-[1.03]"
+                  ? "border-primary bg-gradient-to-b from-primary/10 to-transparent shadow-lg shadow-primary/10"
                   : "border-border/50 bg-card hover:border-border hover:shadow-md"
               }`}
             >
@@ -183,7 +183,7 @@ export default function Pricing() {
                   `Choose ${plan.name} · $${computeFamilyTotal(plan.id, memberCounts[plan.id] || 1).totalMonthly.toFixed(2)}/mo`
                 )}
               </Button>
-              <div className="mt-5 space-y-2">
+              <div className="mt-6 space-y-2.5">
                 {plan.features.map((feature, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <Check className="w-3.5 h-3.5 text-success flex-shrink-0 mt-0.5" />

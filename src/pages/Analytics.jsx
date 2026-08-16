@@ -122,7 +122,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight font-heading">Analytics Dashboard</h1>
@@ -134,7 +134,7 @@ export default function Analytics() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <SummaryCard icon={ShieldCheck} label="Total Analyses" value={total} color="text-primary" />
         <SummaryCard icon={AlertTriangle} label="High Risk" value={riskCounts.high} color="text-destructive" />
         <SummaryCard icon={TrendingUp} label="Avg Risk Score" value={Math.round(analyses.reduce((s, a) => s + (a.risk_score || 0), 0) / total)} color="text-warning" />
@@ -143,7 +143,7 @@ export default function Analytics() {
 
       <div className="grid md:grid-cols-2 gap-4">
         {riskData.length > 0 && (
-          <div className="p-5 rounded-2xl border border-border/50 bg-card">
+          <div className="p-5 sm:p-6 rounded-2xl border border-border/50 bg-card">
             <h3 className="font-semibold text-sm mb-4">Risk Distribution</h3>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
@@ -157,7 +157,7 @@ export default function Analytics() {
           </div>
         )}
         {typeData.length > 0 && (
-          <div className="p-5 rounded-2xl border border-border/50 bg-card">
+          <div className="p-5 sm:p-6 rounded-2xl border border-border/50 bg-card">
             <h3 className="font-semibold text-sm mb-4">Scam Types Encountered</h3>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={typeData} layout="vertical" margin={{ left: 10 }}>
@@ -172,14 +172,14 @@ export default function Analytics() {
       </div>
 
       {tacticData.length > 0 && (
-        <div className="p-5 rounded-2xl border border-border/50 bg-card">
+        <div className="p-5 sm:p-6 rounded-2xl border border-border/50 bg-card">
           <h3 className="font-semibold text-sm mb-4">Top Manipulation Tactics</h3>
           <div className="space-y-2">
             {tacticData.map((tactic, i) => {
               const pct = Math.round((tactic.count / total) * 100);
               return (
                 <div key={i} className="flex items-center gap-3">
-                  <span className="text-sm font-medium w-40 flex-shrink-0">{tactic.tactic}</span>
+                  <span className="text-sm font-medium w-28 sm:w-40 flex-shrink-0 truncate">{tactic.tactic}</span>
                   <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                   </div>
@@ -192,7 +192,7 @@ export default function Analytics() {
       )}
 
       {highRisk.length > 0 && (
-        <div className="p-5 rounded-2xl border border-border/50 bg-card">
+        <div className="p-5 sm:p-6 rounded-2xl border border-border/50 bg-card">
           <h3 className="font-semibold text-sm mb-4 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-destructive" />
             Recent High-Risk Messages

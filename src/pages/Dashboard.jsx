@@ -107,7 +107,7 @@ export default function Dashboard() {
 
       {/* Stat cards */}
       {!kidMode && (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         <StatCard
           icon={Zap}
           label={t("dash.credits_left")}
@@ -126,7 +126,7 @@ export default function Dashboard() {
       <StreakBadges />
 
       {/* Quick actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-slide-up anim-delay-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5 animate-slide-up anim-delay-2">
         {quickActions.map((action, i) => (
           <Link
             key={i}
@@ -147,8 +147,8 @@ export default function Dashboard() {
 
       {/* Recent activity + Tip */}
       {!kidMode && (
-      <div className="grid lg:grid-cols-3 gap-4 animate-slide-up anim-delay-3">
-        <div className="lg:col-span-2 rounded-2xl border border-border/50 bg-card p-5">
+      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 animate-slide-up anim-delay-3">
+        <div className="lg:col-span-2 rounded-2xl border border-border/50 bg-card p-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-sm font-heading">{t("dash.recent_activity")}</h2>
             <Link to="/alerts" className="text-xs text-primary hover:underline">{t("dash.view_all")}</Link>
@@ -206,7 +206,7 @@ export default function Dashboard() {
 
 function StatCard({ icon: Icon, label, value, sub, pct, animate = "" }) {
   return (
-    <div className={`p-4 rounded-2xl border border-border/50 bg-card animate-slide-up ${animate}`}>
+    <div className={`p-4 sm:p-5 rounded-2xl border border-border/50 bg-card animate-slide-up ${animate}`}>
       <div className="flex items-center justify-between mb-2">
         <Icon className="w-4 h-4 text-muted-foreground" />
         {sub && <span className="text-xs text-muted-foreground">{sub}</span>}

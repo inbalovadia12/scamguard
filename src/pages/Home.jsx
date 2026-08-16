@@ -301,7 +301,7 @@ export default function Home() {
             <ConversationPanel />
           ) : (
           <>
-          <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-5 animate-slide-up anim-delay-2">
+          <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-7 space-y-4 sm:space-y-6 animate-slide-up anim-delay-2">
             {mode === "message" ? (
               <>
                 <div className="space-y-2">
