@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import {
   ShieldCheck, Crown, Mail, Loader2, Bell, Lock, LogOut, ChevronRight, Accessibility, Type, Eye, Zap, Users, AlertTriangle, Trash2,
-  CalendarClock, RotateCcw, Gift, Copy, Check,
+  CalendarClock, RotateCcw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getCreditStatus, PLAN_NAMES, PLAN_LIMITS } from "@/lib/credits";
@@ -17,6 +17,7 @@ import { useKidMode } from "@/lib/KidModeContext";
 import { toast } from "@/components/ui/use-toast";
 import CommunityDataToggle from "@/components/community/CommunityDataToggle";
 import CreditPacks from "@/components/CreditPacks";
+import ReferralSection from "@/components/referral/ReferralSection";
 
 export default function Profile() {
   const { user, checkUserAuth } = useAuth();
@@ -35,7 +36,6 @@ export default function Profile() {
   const [deleting, setDeleting] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [renewalDate, setRenewalDate] = useState(null);
-  const [copied, setCopied] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -162,14 +162,6 @@ export default function Profile() {
     .toUpperCase();
 
   const plan = credits?.plan || user.subscription_plan || "starter";
-  const referralLink = `${window.location.origin}/register?ref=${user.id}`;
-  const bonusCredits = user.referral_bonus_credits || 0;
-  const copyReferral = () => {
-    navigator.clipboard?.writeText(referralLink).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    }).catch(() => {});
-  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -300,28 +292,8 @@ export default function Profile() {
         <CreditPacks />
       </Card>
 
-      {/* Refer & Earn */}
-      <Card className="rounded-2xl border-border/50 p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <Gift className="w-4 h-4 text-primary" />
-          <h2 className="font-semibold">Refer & Earn</h2>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Share your referral link. When someone you invite pays for a paid plan, you earn <span className="font-semibold text-primary">+30 bonus credits/month</span> — permanently.
-        </p>
-        <div className="flex items-center gap-2">
-          <Input readOnly value={referralLink} className="h-11 bg-muted/50 font-mono text-xs" />
-          <Button size="sm" onClick={copyReferral} className="gap-1.5 flex-shrink-0">
-            {copied ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
-          </Button>
-        </div>
-        {bonusCredits > 0 && (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">+{bonusCredits} bonus credits/mo</span>
-            <span className="text-xs text-muted-foreground">from successful referrals</span>
-          </div>
-        )}
-      </Card>
+      {/* Referral */}
+      <ReferralSection user={user} />
 
       {/* Account Info */}
       <Card className="rounded-2xl border-border/50 p-6 space-y-5">

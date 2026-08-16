@@ -148,6 +148,15 @@ async function processEvent(base44, event) {
               const newBonus = (referrer.referral_bonus_credits || 0) + REFERRAL_BONUS_CREDITS;
               await base44.asServiceRole.entities.User.update(referrer.id, { referral_bonus_credits: newBonus });
               console.log(`Referral bonus awarded: ${referrer.id} +${REFERRAL_BONUS_CREDITS} (referral: ${userId})`);
+              // Record the referral so the referrer can track it
+              try {
+                const existing = await base44.asServiceRole.entities.Referral.filter({ referred_user_id: userId, status: "pending" });
+                if (existing.length > 0) {
+                  await base44.asServiceRole.entities.Referral.update(existing[0].id, { status: "awarded", bonus_credits: REFERRAL_BONUS_CREDITS, plan: planKey, awarded_date: new Date().toISOString() });
+                } else {
+                  await base44.asServiceRole.entities.Referral.create({ referrer_id: referrer.id, referred_user_id: userId, referred_email: payer.email || "", referred_name: payer.full_name || "", status: "awarded", bonus_credits: REFERRAL_BONUS_CREDITS, plan: planKey, awarded_date: new Date().toISOString() });
+                }
+              } catch (e) { console.log("Referral record error:", e.message); }
             }
             await base44.asServiceRole.entities.User.update(userId, { referral_awarded: true });
           }

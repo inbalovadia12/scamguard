@@ -1,0 +1,91 @@
+{
+  "name": "Referral",
+  "type": "object",
+  "properties": {
+    "referrer_id": {
+      "type": "string",
+      "description": "User ID of the person who shared the invite link"
+    },
+    "referred_user_id": {
+      "type": "string",
+      "description": "User ID of the person who signed up using the referral"
+    },
+    "referred_email": {
+      "type": "string",
+      "description": "Email of the referred user (for display to the referrer)"
+    },
+    "referred_name": {
+      "type": "string",
+      "description": "Display name of the referred user"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "awarded",
+        "cancelled"
+      ],
+      "default": "pending",
+      "description": "pending = signed up, not yet paid; awarded = paid plan activated and bonus granted"
+    },
+    "bonus_credits": {
+      "type": "number",
+      "default": 0,
+      "description": "Monthly bonus credits awarded to the referrer for this referral"
+    },
+    "plan": {
+      "type": "string",
+      "enum": [
+        "starter",
+        "plus",
+        "premium"
+      ],
+      "description": "The paid plan that triggered the award"
+    },
+    "awarded_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the referral bonus was awarded"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
+    }
+  },
+  "required": [
+    "referrer_id",
+    "referred_user_id",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.referrer_id": "{{user.id}}"
+        },
+        {
+          "data.referred_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

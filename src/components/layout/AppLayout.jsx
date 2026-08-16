@@ -140,7 +140,22 @@ export default function AppLayout() {
       return;
     }
     base44.auth.updateMe({ referred_by: ref })
-      .then(() => { try { localStorage.removeItem("vardin_ref"); } catch {} })
+      .then(async () => {
+        try {
+          const existing = await base44.entities.Referral.filter({ referred_user_id: user.id });
+          if (existing.length === 0) {
+            await base44.entities.Referral.create({
+              referrer_id: ref,
+              referred_user_id: user.id,
+              referred_email: user.email || "",
+              referred_name: user.full_name || "",
+              status: "pending",
+              bonus_credits: 0,
+            });
+          }
+        } catch {}
+        try { localStorage.removeItem("vardin_ref"); } catch {}
+      })
       .catch(() => {});
   }, [user]);
 
