@@ -254,7 +254,7 @@ export default function AppLayout() {
       {/* Mobile Menu */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 top-16 z-20 bg-background animate-fade-in overflow-y-auto" style={{ paddingBottom: "env(safe-area-inset-bottom)" }} onClick={() => setMobileOpen(false)}>
-          <div className="px-4 py-4 space-y-6" onClick={(e) => e.stopPropagation()}>
+          <div className="px-5 py-5 space-y-6" onClick={(e) => e.stopPropagation()}>
             <div className="space-y-5">
               {visibleSections.map((section) => (
                 <div key={section.labelKey}>
@@ -333,7 +333,7 @@ export default function AppLayout() {
           <span>🧒</span>
           <span className="truncate">Kid Mode is on</span>
         </div>
-        <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-8 pt-20 pb-6 md:py-12 min-w-0" style={{ paddingTop: "max(5rem, calc(4rem + env(safe-area-inset-top)))" }}>
+        <main className="flex-1 max-w-4xl mx-auto w-full px-5 sm:px-8 pt-20 pb-8 md:py-12 min-w-0" style={{ paddingTop: "max(5rem, calc(4rem + env(safe-area-inset-top)))" }}>
           <Outlet />
         </main>
 
@@ -341,7 +341,7 @@ export default function AppLayout() {
         <WrappedPopup />
         {kidMode && <AskParentButton />}
 
-        <footer className="border-t border-border/50 py-6 px-4 mt-auto" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
+        <footer className="border-t border-border/50 py-6 px-5 mt-auto" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
             <p>{t("footer.copyright")}</p>
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">

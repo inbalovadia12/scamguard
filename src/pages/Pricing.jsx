@@ -99,11 +99,11 @@ export default function Pricing() {
   return (
     <div className="max-w-5xl mx-auto space-y-10">
       <div className="text-center space-y-3">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
-          <ShieldCheck className="w-8 h-8 text-primary-foreground" />
+        <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
+          <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8 text-primary-foreground" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight font-heading">Choose Your Plan</h1>
-        <p className="text-muted-foreground text-lg max-w-md mx-auto">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Choose Your Plan</h1>
+        <p className="text-muted-foreground text-base sm:text-lg max-w-md mx-auto">
           Protect yourself and your loved ones from scams.
         </p>
       </div>
@@ -153,7 +153,7 @@ export default function Pricing() {
               <h2 className="font-bold text-lg font-heading">{plan.name}</h2>
               <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>
               <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-3xl font-bold font-heading">{plan.price}</span>
+                <span className="text-2xl sm:text-3xl font-bold font-heading">{plan.price}</span>
                 <span className="text-sm text-muted-foreground">{plan.period}</span>
               </div>
               <p className="text-xs font-medium text-primary mt-1">{plan.credits}</p>

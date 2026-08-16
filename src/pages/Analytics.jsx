@@ -125,7 +125,7 @@ export default function Analytics() {
     <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">Analytics Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-heading">Analytics Dashboard</h1>
           <p className="text-muted-foreground mt-1">Your scam detection insights and trends.</p>
         </div>
         <Button variant="outline" onClick={exportCSV} className="gap-2">
@@ -218,7 +218,7 @@ function SummaryCard({ icon: Icon, label, value, color }) {
   return (
     <div className="p-4 rounded-2xl border border-border/50 bg-card">
       <Icon className={`w-5 h-5 mb-2 ${color}`} />
-      <div className="text-2xl font-bold font-heading">{value}</div>
+      <div className="text-xl sm:text-2xl font-bold font-heading">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );
