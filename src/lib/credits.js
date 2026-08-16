@@ -1,4 +1,5 @@
 import { base44 } from "@/api/base44Client";
+import { resolveFamilyLimit } from "@/lib/planPricing";
 
 export const CREDIT_COSTS = {
   MESSAGE: 3,
@@ -58,7 +59,7 @@ export const PLAN_FEATURES = {
     "Marketplace listing analysis",
     "AI explanations & tactic breakdowns",
     "AI Agent chat",
-    "5 protected family members",
+    "1 member included · add more at $2/mo each",
     "Guardian email alerts",
     "Priority support",
   ],
@@ -67,7 +68,7 @@ export const PLAN_FEATURES = {
     "400 AI credits per month (~133 analyses)",
     "Live Guard — real-time call & screen monitoring",
     "Local scam intelligence by location",
-    "Unlimited family members",
+    "1 member included · add more at $2/mo each",
     "Full analytics dashboard with trends",
     "CSV export of your analysis history",
     "Premium Learning Center with interactive lessons",
@@ -118,7 +119,7 @@ export async function getFamilyStatus() {
   if (plan === "free") plan = "starter";
   if (plan === "elite") plan = "premium";
   const seniors = await base44.entities.ProtectedSenior.filter({ guardian_id: user.id });
-  const limit = PLAN_FAMILY_LIMITS[plan] ?? PLAN_FAMILY_LIMITS.starter;
+  const { limit } = resolveFamilyLimit(plan, user);
   return {
     plan,
     count: seniors.length,
@@ -170,8 +171,8 @@ export function cacheAnalysis(input, result) {
   }
 }
 
-export async function startPaypalCheckout(planName) {
-  const response = await base44.functions.invoke("createPaypalSubscription", { plan: planName });
+export async function startPaypalCheckout(planName, members) {
+  const response = await base44.functions.invoke("createPaypalSubscription", { plan: planName, members });
   if (response.data?.error) {
     throw new Error(response.data.error);
   }

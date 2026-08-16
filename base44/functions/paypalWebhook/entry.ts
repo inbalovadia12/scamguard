@@ -60,9 +60,16 @@ async function verifyWebhookSignature(headers, body) {
   return result.verification_status === "SUCCESS";
 }
 
-function extractUserId(event) {
+function parseCustomId(event) {
   const resource = event.resource || {};
-  return resource.custom_id || resource.subscriber?.custom_id || null;
+  const raw = resource.custom_id || resource.subscriber?.custom_id || "";
+  if (!raw) return { userId: null, members: null };
+  if (raw.includes("::")) {
+    const [uid, m] = raw.split("::");
+    const members = parseInt(m, 10);
+    return { userId: uid, members: Number.isNaN(members) ? null : members };
+  }
+  return { userId: raw, members: null };
 }
 
 async function determinePlanKey(accessToken, event) {
@@ -97,7 +104,7 @@ async function determinePlanKey(accessToken, event) {
 }
 
 async function processEvent(base44, event) {
-  const userId = extractUserId(event);
+  const { userId, members } = parseCustomId(event);
   if (!userId) {
     console.log(`No user ID found in event ${event.id}`);
     return;
@@ -113,12 +120,17 @@ async function processEvent(base44, event) {
     case "BILLING.SUBSCRIPTION.UPDATED":
     case "PAYMENT.SALE.COMPLETED": {
       const planKey = await determinePlanKey(accessToken, event);
-      await base44.asServiceRole.entities.User.update(userId, {
+      const update = {
         subscription_plan: planKey,
         subscription_status: "active",
         credits_used: 0,
         credits_reset_month: new Date().toISOString().slice(0, 7),
-      });
+      };
+      // Only set the paid member count for subscriptions created under the new
+      // family pricing model (custom_id encodes "userId::members"). Legacy
+      // subscribers (plain "userId") keep their prior limit via the fallback.
+      if (members != null) update.family_members_paid = members;
+      await base44.asServiceRole.entities.User.update(userId, update);
       console.log(`User ${userId} upgraded to ${planKey} (event: ${eventType})`);
       break;
     }
@@ -136,6 +148,7 @@ async function processEvent(base44, event) {
       await base44.asServiceRole.entities.User.update(userId, {
         subscription_plan: "starter",
         subscription_status: "inactive",
+        family_members_paid: 1,
       });
       console.log(`User ${userId} downgraded to starter (event: ${eventType})`);
       break;

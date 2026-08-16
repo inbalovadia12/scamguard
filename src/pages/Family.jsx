@@ -8,7 +8,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import AddSeniorDialog from "@/components/family/AddSeniorDialog";
-import { PLAN_FAMILY_LIMITS } from "@/lib/credits";
+import { resolveFamilyLimit } from "@/lib/planPricing";
 import { Link } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import GuardianDashboardPanel from "@/components/family/GuardianDashboardPanel";
@@ -132,7 +132,7 @@ export default function Family() {
     let plan = user.subscription_plan || "starter";
     if (plan === "free") plan = "starter";
     if (plan === "elite") plan = "premium";
-    setFamilyLimit(PLAN_FAMILY_LIMITS[plan] ?? PLAN_FAMILY_LIMITS.starter);
+    setFamilyLimit(resolveFamilyLimit(plan, user).limit);
     const data = await base44.entities.ProtectedSenior.filter({ guardian_id: user.id });
     seniorsRef.current = data;
     setSeniors(data);

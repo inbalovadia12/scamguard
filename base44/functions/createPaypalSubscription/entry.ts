@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { computeFamilyTotal, FAMILY_PRICING } from "../../shared/familyPricing.ts";
 
 const PAYPAL_API_BASE = "https://api-m.paypal.com";
 
@@ -9,8 +10,8 @@ const PRODUCT_NAME = "Vardin Subscription";
 const PRODUCT_DESC = "AI-powered scam detection and family protection";
 
 const PLAN_CONFIGS = {
-  plus: { name: "Vardin Plus", price: "40.00", credits: "100 credits/month" },
-  premium: { name: "Vardin Premium", price: "80.00", credits: "250 credits/month + all features" },
+  plus: { name: "Vardin Plus", credits: "150 credits/month" },
+  premium: { name: "Vardin Premium", credits: "400 credits/month + all features" },
 };
 
 async function getAccessToken() {
@@ -94,7 +95,7 @@ async function getOrCreatePlan(accessToken, productId, planKey) {
           sequence: 1,
           total_cycles: 0,
           pricing_scheme: {
-            fixed_price: { value: config.price, currency_code: "USD" },
+            fixed_price: { value: FAMILY_PRICING.plans[planKey].baseAnnual.toFixed(2), currency_code: "USD" },
           },
         },
       ],
@@ -130,6 +131,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: `Invalid plan: ${planKey}` }, { status: 400 });
     }
 
+    const requestedMembers = Math.max(1, parseInt(body.members, 10) || FAMILY_PRICING.plans[planKey].includedMembers);
+    const { members, totalAnnual } = computeFamilyTotal(planKey, requestedMembers);
+    const totalAnnualStr = totalAnnual.toFixed(2);
+
     const origin = req.headers.get("origin") || "https://vardin.app";
     const returnUrl = `${origin}/pricing?paypal=approved`;
     const cancelUrl = `${origin}/pricing?paypal=cancelled`;
@@ -146,7 +151,20 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         plan_id: planId,
-        custom_id: user.id,
+        custom_id: `${user.id}::${members}`,
+        plan: {
+          billing_cycles: [
+            {
+              frequency: { interval_unit: "YEAR", interval_count: 1 },
+              tenure_type: "REGULAR",
+              sequence: 1,
+              total_cycles: 0,
+              pricing_scheme: {
+                fixed_price: { value: totalAnnualStr, currency_code: "USD" },
+              },
+            },
+          ],
+        },
         application_context: {
           brand_name: "Vardin",
           user_action: "SUBSCRIBE_NOW",

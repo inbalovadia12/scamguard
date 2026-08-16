@@ -3,6 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Check, Shield, Loader2, Zap, Sparkles, ShieldCheck } from "lucide-react";
 import { getCreditStatus, startPaypalCheckout, PLAN_FEATURES, captureCreditPurchase } from "@/lib/credits";
+import { computeFamilyTotal } from "@/lib/planPricing";
+import FamilyMemberSelector from "@/components/pricing/FamilyMemberSelector";
 import CreditPacks from "@/components/CreditPacks";
 
 const plans = [
@@ -48,6 +50,7 @@ export default function Pricing() {
   const [paypalStatus, setPaypalStatus] = useState(null);
   const [creditStatus, setCreditStatus] = useState(null);
   const [capturing, setCapturing] = useState(false);
+  const [memberCounts, setMemberCounts] = useState({ plus: 1, premium: 1 });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -86,7 +89,7 @@ export default function Pricing() {
     if (planName === "starter") return;
     setSubscribing(planName);
     try {
-      await startPaypalCheckout(planName);
+      await startPaypalCheckout(planName, memberCounts[planName] || 1);
     } catch (error) {
       setSubscribing(null);
       setPaypalStatus("error");
@@ -154,6 +157,13 @@ export default function Pricing() {
                 <span className="text-sm text-muted-foreground">{plan.period}</span>
               </div>
               <p className="text-xs font-medium text-primary mt-1">{plan.credits}</p>
+              {plan.id !== "starter" && (
+                <FamilyMemberSelector
+                  plan={plan.id}
+                  members={memberCounts[plan.id]}
+                  onChange={(m) => setMemberCounts((prev) => ({ ...prev, [plan.id]: m }))}
+                />
+              )}
               <Button
                 onClick={() => handleSubscribe(plan.id)}
                 disabled={subscribing !== null || isCurrent || plan.id === "starter"}
@@ -170,7 +180,7 @@ export default function Pricing() {
                 ) : plan.id === "starter" ? (
                   "Free Plan"
                 ) : (
-                  "Choose " + plan.name
+                  `Choose ${plan.name} · $${computeFamilyTotal(plan.id, memberCounts[plan.id] || 1).totalMonthly.toFixed(2)}/mo`
                 )}
               </Button>
               <div className="mt-5 space-y-2">
