@@ -57,6 +57,7 @@ import Community from '@/pages/Community';
 import CallSimulator from '@/pages/CallSimulator';
 import CryptoScanner from '@/pages/CryptoScanner';
 import MobileApp from '@/pages/MobileApp';
+import CallDirectoryDocs from '@/pages/CallDirectoryDocs';
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -135,6 +136,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin" element={<Admin />} />
           <Route path="/wrapped" element={<Wrapped />} />
           <Route path="/community" element={<Community />} />
+          <Route path="/call-directory-docs" element={<CallDirectoryDocs />} />
         </Route>
         <Route path="/onboarding" element={<Onboarding />} />
       </Route>

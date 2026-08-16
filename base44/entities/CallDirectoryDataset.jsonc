@@ -1,0 +1,78 @@
+{
+  "name": "CallDirectoryDataset",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "description": "Monotonically increasing dataset version"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "entry_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of phone numbers published in this dataset version"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "generated",
+        "error"
+      ],
+      "default": "generated"
+    },
+    "error_message": {
+      "type": "string"
+    },
+    "added_count": {
+      "type": "number",
+      "default": 0
+    },
+    "updated_count": {
+      "type": "number",
+      "default": 0
+    },
+    "removed_count": {
+      "type": "number",
+      "default": 0
+    },
+    "triggered_by": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "auto"
+      ],
+      "default": "manual"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "version"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

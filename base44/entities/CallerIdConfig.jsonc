@@ -1,0 +1,77 @@
+{
+  "name": "CallerIdConfig",
+  "type": "object",
+  "properties": {
+    "scam_label": {
+      "type": "string",
+      "default": "Vardin: Scam Likely"
+    },
+    "spam_label": {
+      "type": "string",
+      "default": "Vardin: Spam"
+    },
+    "suspicious_label": {
+      "type": "string",
+      "default": "Vardin: Suspicious"
+    },
+    "safe_label": {
+      "type": "string",
+      "default": "Vardin: Safe"
+    },
+    "unknown_label": {
+      "type": "string",
+      "default": ""
+    },
+    "min_confidence": {
+      "type": "number",
+      "default": 60,
+      "description": "0-100 minimum confidence required to publish a caller-ID entry"
+    },
+    "include_safe": {
+      "type": "boolean",
+      "default": false,
+      "description": "Publish SAFE (non-verified) numbers. Off by default to keep the dataset focused on threats."
+    },
+    "include_verified_businesses": {
+      "type": "boolean",
+      "default": true
+    },
+    "entitled_plans": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "plus",
+        "premium"
+      ]
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

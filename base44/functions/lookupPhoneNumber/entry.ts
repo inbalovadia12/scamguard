@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
 Deno.serve(async (req) => {
   try {
@@ -129,6 +130,24 @@ Respond entirely in ${languageName}.`;
       summary: result.summary || '',
       sources: result.sources || [],
     });
+
+    // Feed Vardin's canonical caller-ID reputation index (the source of truth for
+    // the iOS Call Directory dataset). Uses the service role so the canonical record
+    // is global, not tied to the requesting user. Never breaks the existing lookup.
+    try {
+      await upsertPhoneReputation(base44.asServiceRole, {
+        normalized_number: phone_number,
+        phone_number: displayFormat,
+        country: result.country || '',
+        carrier: result.carrier || '',
+        reputation_score: result.reputation_score || 0,
+        risk_level: result.risk_level || 'low',
+        scam_categories: result.scam_categories || [],
+        summary: result.summary || '',
+        sources: result.sources || [],
+        last_external_check_at: new Date().toISOString(),
+      });
+    } catch {}
 
     return Response.json({ result, lookup: saved });
   } catch (error) {

@@ -1,0 +1,67 @@
+{
+  "name": "CallDirectoryChange",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "description": "Dataset version this change belongs to"
+    },
+    "phone_number": {
+      "type": "string",
+      "description": "Normalized E.164 phone number"
+    },
+    "display_number": {
+      "type": "string"
+    },
+    "operation": {
+      "type": "string",
+      "enum": [
+        "ADD",
+        "UPDATE",
+        "REMOVE"
+      ]
+    },
+    "label": {
+      "type": "string",
+      "description": "New caller-ID label (empty for REMOVE)"
+    },
+    "previous_label": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "description": "Reputation status that produced this change"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "version",
+    "phone_number",
+    "operation"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

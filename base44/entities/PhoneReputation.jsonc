@@ -1,0 +1,151 @@
+{
+  "name": "PhoneReputation",
+  "type": "object",
+  "properties": {
+    "normalized_number": {
+      "type": "string",
+      "description": "Canonical E.164 key (+digits). One record per number."
+    },
+    "phone_number": {
+      "type": "string",
+      "description": "Display phone number"
+    },
+    "country": {
+      "type": "string",
+      "description": "Country where the number is registered"
+    },
+    "country_code": {
+      "type": "string",
+      "description": "Dialing country code (e.g. 1, 972)"
+    },
+    "carrier": {
+      "type": "string",
+      "description": "Telecom carrier/provider"
+    },
+    "reputation_score": {
+      "type": "number",
+      "description": "0-100 scam risk score from Vardin's existing lookup engine"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "low",
+      "description": "Raw risk level from the source lookup"
+    },
+    "caller_id_status": {
+      "type": "string",
+      "enum": [
+        "SCAM",
+        "SPAM",
+        "SUSPICIOUS",
+        "SAFE",
+        "UNKNOWN"
+      ],
+      "default": "UNKNOWN",
+      "description": "Caller-ID classification used by the Call Directory dataset"
+    },
+    "confidence_score": {
+      "type": "number",
+      "default": 0,
+      "description": "0-100 confidence in the classification (report volume / verification)"
+    },
+    "report_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Total community reports"
+    },
+    "scam_report_count": {
+      "type": "number",
+      "default": 0
+    },
+    "spam_report_count": {
+      "type": "number",
+      "default": 0
+    },
+    "suspicious_report_count": {
+      "type": "number",
+      "default": 0
+    },
+    "safe_report_count": {
+      "type": "number",
+      "default": 0
+    },
+    "verified_business": {
+      "type": "boolean",
+      "default": false
+    },
+    "business_name": {
+      "type": "string"
+    },
+    "scam_categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "last_checked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_external_check_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "caller_id_label": {
+      "type": "string",
+      "description": "Published caller-ID label (e.g. 'Vardin: Scam Likely')"
+    },
+    "in_call_directory": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this number is currently published in the iOS Call Directory dataset"
+    },
+    "dataset_version": {
+      "type": "number",
+      "default": 0,
+      "description": "Dataset version in which this record last changed"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "normalized_number"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
