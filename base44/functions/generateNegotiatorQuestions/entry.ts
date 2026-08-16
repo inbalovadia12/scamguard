@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     const currentMonth = new Date().toISOString().slice(0, 7);
     let creditsUsed = user.credits_used || 0;
     if (user.credits_reset_month !== currentMonth) creditsUsed = 0;
-    const creditLimit = PLAN_LIMITS[plan] || PLAN_LIMITS.starter;
+    const creditLimit = (PLAN_LIMITS[plan] || PLAN_LIMITS.starter) + (user.referral_bonus_credits || 0);
     const creditsRemaining = Math.max(0, creditLimit - creditsUsed);
 
     if (creditsRemaining < CREDIT_COST) {

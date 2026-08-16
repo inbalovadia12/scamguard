@@ -95,7 +95,7 @@ export async function getCreditStatus() {
     });
   }
 
-  const limit = PLAN_LIMITS[plan] || PLAN_LIMITS.starter;
+  const limit = (PLAN_LIMITS[plan] || PLAN_LIMITS.starter) + (user.referral_bonus_credits || 0);
   const remaining = Math.max(0, limit - creditsUsed);
   const lowThreshold = Math.ceil(limit * LOW_CREDIT_THRESHOLD);
 

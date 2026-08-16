@@ -6,6 +6,10 @@ const PAYPAL_CLIENT_ID = Deno.env.get("PAYPAL_CLIENT_ID");
 const PAYPAL_CLIENT_SECRET = Deno.env.get("PAYPAL_CLIENT_SECRET");
 const PAYPAL_WEBHOOK_ID = Deno.env.get("PAYPAL_WEBHOOK_ID");
 
+// Permanent monthly credit bonus awarded to a referrer when their referral
+// first activates a paid plan. Additive to the referrer's monthly credit limit.
+const REFERRAL_BONUS_CREDITS = 30;
+
 async function getPayPalAccessToken() {
   const auth = btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`);
   const response = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
@@ -132,6 +136,47 @@ async function processEvent(base44, event) {
       if (members != null) update.family_members_paid = members;
       await base44.asServiceRole.entities.User.update(userId, update);
       console.log(`User ${userId} upgraded to ${planKey} (event: ${eventType})`);
+
+      // Referral credit bonus: when a referred user first activates a paid plan,
+      // award the referrer a permanent monthly credit bonus (once per referral).
+      if (eventType === "BILLING.SUBSCRIPTION.ACTIVATED" && (planKey === "plus" || planKey === "premium")) {
+        try {
+          const payer = await base44.asServiceRole.entities.User.get(userId);
+          if (payer?.referred_by && !payer.referral_awarded) {
+            const referrer = await base44.asServiceRole.entities.User.get(payer.referred_by);
+            if (referrer && referrer.id !== userId) {
+              const newBonus = (referrer.referral_bonus_credits || 0) + REFERRAL_BONUS_CREDITS;
+              await base44.asServiceRole.entities.User.update(referrer.id, { referral_bonus_credits: newBonus });
+              console.log(`Referral bonus awarded: ${referrer.id} +${REFERRAL_BONUS_CREDITS} (referral: ${userId})`);
+            }
+            await base44.asServiceRole.entities.User.update(userId, { referral_awarded: true });
+          }
+        } catch (e) {
+          console.log("Referral award error:", e.message);
+        }
+      }
+
+      // Family perk propagation: extend the paid plan to joined family members
+      if (planKey === "plus" || planKey === "premium") {
+        try {
+          const seniors = await base44.asServiceRole.entities.ProtectedSenior.filter({ guardian_id: userId });
+          for (const s of seniors) {
+            if (s.senior_user_id) {
+              try {
+                const seniorUser = await base44.asServiceRole.entities.User.get(s.senior_user_id);
+                const sp = seniorUser?.subscription_plan || "starter";
+                // Only upgrade seniors still on starter — never override their own paid plan
+                if (sp === "starter" || sp === "free") {
+                  await base44.asServiceRole.entities.User.update(s.senior_user_id, { subscription_plan: planKey, subscription_status: "active" });
+                }
+              } catch {}
+            }
+            if (s.guardian_plan !== planKey) {
+              try { await base44.asServiceRole.entities.ProtectedSenior.update(s.id, { guardian_plan: planKey }); } catch {}
+            }
+          }
+        } catch (e) { console.log("Family perk propagation error:", e.message); }
+      }
       break;
     }
 
@@ -150,6 +195,21 @@ async function processEvent(base44, event) {
         subscription_status: "inactive",
         family_members_paid: 1,
       });
+      // Revoke inherited perks from family members who were on the guardian's plan
+      try {
+        const seniors = await base44.asServiceRole.entities.ProtectedSenior.filter({ guardian_id: userId });
+        for (const s of seniors) {
+          if (s.guardian_plan && s.guardian_plan !== "starter" && s.senior_user_id) {
+            try {
+              const seniorUser = await base44.asServiceRole.entities.User.get(s.senior_user_id);
+              if ((seniorUser?.subscription_plan) === s.guardian_plan) {
+                await base44.asServiceRole.entities.User.update(s.senior_user_id, { subscription_plan: "starter", subscription_status: "inactive" });
+              }
+            } catch {}
+          }
+          try { await base44.asServiceRole.entities.ProtectedSenior.update(s.id, { guardian_plan: "starter" }); } catch {}
+        }
+      } catch (e) { console.log("Family perk revocation error:", e.message); }
       console.log(`User ${userId} downgraded to starter (event: ${eventType})`);
       break;
 

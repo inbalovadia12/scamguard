@@ -26,6 +26,15 @@
       "type": "string",
       "description": "Guardian's display name"
     },
+    "guardian_plan": {
+      "type": "string",
+      "enum": [
+        "starter",
+        "plus",
+        "premium"
+      ],
+      "description": "The guardian's current plan, propagated so the senior inherits the same perks"
+    },
     "consent_given": {
       "type": "boolean",
       "default": false,

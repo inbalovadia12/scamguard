@@ -130,6 +130,36 @@ export default function AppLayout() {
     return () => unsubscribe();
   }, []);
 
+  // Apply a pending referral code (from ?ref=) to the user's account once
+  useEffect(() => {
+    if (!user) return;
+    const ref = localStorage.getItem("vardin_ref");
+    if (!ref) return;
+    if (user.referred_by || ref === user.id) {
+      try { localStorage.removeItem("vardin_ref"); } catch {}
+      return;
+    }
+    base44.auth.updateMe({ referred_by: ref })
+      .then(() => { try { localStorage.removeItem("vardin_ref"); } catch {} })
+      .catch(() => {});
+  }, [user]);
+
+  // Inherit a paid plan from a guardian if this user is a protected senior
+  useEffect(() => {
+    if (!user?.email) return;
+    const myPlan = user.subscription_plan || "starter";
+    if (myPlan === "plus" || myPlan === "premium") return;
+    (async () => {
+      try {
+        const seniors = await base44.entities.ProtectedSenior.filter({ email: user.email });
+        const guardianPlan = seniors.find((s) => s.guardian_plan === "plus" || s.guardian_plan === "premium")?.guardian_plan;
+        if (guardianPlan) {
+          await base44.auth.updateMe({ subscription_plan: guardianPlan, subscription_status: "active" });
+        }
+      } catch {}
+    })();
+  }, [user]);
+
   const handleLogout = () => {
     base44.auth.logout("/login");
   };
