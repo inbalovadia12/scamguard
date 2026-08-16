@@ -4,8 +4,8 @@ export const FAMILY_PRICING = {
   addonAnnual: 24,
   plans: {
     starter: { baseAnnual: 0, includedMembers: 1, maxMembers: 1 },
-    plus: { baseAnnual: 59, includedMembers: 1, maxMembers: 10 },
-    premium: { baseAnnual: 119, includedMembers: 1, maxMembers: 10 },
+    plus: { baseAnnual: 75, includedMembers: 1, maxMembers: 10 },
+    premium: { baseAnnual: 149, includedMembers: 1, maxMembers: 10 },
   } as Record<string, { baseAnnual: number; includedMembers: number; maxMembers: number }>,
 };
 

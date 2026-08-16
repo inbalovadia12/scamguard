@@ -16,7 +16,7 @@ const plans = [
   },
   {
     name: "Plus",
-    price: "$40",
+    price: "$75",
     period: "/year",
     description: "For proactive individuals",
     credits: "100 analyses/month",
@@ -27,7 +27,7 @@ const plans = [
   },
   {
     name: "Premium",
-    price: "$80",
+    price: "$149",
     period: "/year",
     description: "Complete family protection",
     credits: "250 analyses/month",

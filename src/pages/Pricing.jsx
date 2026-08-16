@@ -22,7 +22,7 @@ const plans = [
   {
     id: "plus",
     name: "Plus",
-    price: "$59",
+    price: "$75",
     period: "/year",
     description: "For proactive individuals",
     credits: "150 AI credits/month",
@@ -34,7 +34,7 @@ const plans = [
   {
     id: "premium",
     name: "Premium",
-    price: "$119",
+    price: "$149",
     period: "/year",
     description: "Complete family protection",
     credits: "400 AI credits/month",

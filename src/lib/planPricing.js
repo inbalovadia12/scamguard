@@ -5,8 +5,8 @@ export const FAMILY_PRICING = {
   addonAnnual: 24, // extra cost per additional member per year (USD). $24/yr = $2/mo.
   plans: {
     starter: { baseAnnual: 0,   includedMembers: 1, maxMembers: 1 },
-    plus:    { baseAnnual: 59,  includedMembers: 1, maxMembers: 10 },
-    premium: { baseAnnual: 119, includedMembers: 1, maxMembers: 10 },
+    plus:    { baseAnnual: 75,  includedMembers: 1, maxMembers: 10 },
+    premium: { baseAnnual: 149, includedMembers: 1, maxMembers: 10 },
   },
 };
 

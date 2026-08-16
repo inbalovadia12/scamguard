@@ -22,8 +22,8 @@ export const PLAN_LIMITS = {
 
 export const PLAN_PRICES = {
   starter: 0,
-  plus: 59,
-  premium: 119,
+  plus: 75,
+  premium: 149,
 };
 
 export const PLAN_NAMES = {
