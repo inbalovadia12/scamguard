@@ -1,0 +1,122 @@
+{
+  "name": "FamilyAlert",
+  "type": "object",
+  "properties": {
+    "analysis_id": {
+      "type": "string",
+      "description": "ID of the source analysis record the alert was raised from"
+    },
+    "analysis_type": {
+      "type": "string",
+      "enum": [
+        "scam_analysis",
+        "conversation",
+        "image",
+        "live_guard"
+      ],
+      "description": "Which kind of scan produced this alert"
+    },
+    "member_id": {
+      "type": "string",
+      "description": "FK to the ProtectedSenior record of the member who asked"
+    },
+    "guardian_id": {
+      "type": "string",
+      "description": "User ID of the guardian who should respond"
+    },
+    "threat_excerpt": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Short excerpt of the flagged content"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Vardin risk level of the flagged content"
+    },
+    "scam_type": {
+      "type": "string",
+      "description": "Category of scam (matches ScamReport/ScamAnalysis types)"
+    },
+    "member_note": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Optional note the member added when asking"
+    },
+    "guardian_action": {
+      "type": "string",
+      "enum": [
+        "mark_safe",
+        "confirm_scam",
+        "ignore",
+        "guidance"
+      ],
+      "description": "The guardian's chosen response action"
+    },
+    "guardian_note": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Free-text guidance from the guardian"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_guardian",
+        "resolved"
+      ],
+      "default": "pending_guardian",
+      "description": "Whether the guardian has responded"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
+    }
+  },
+  "required": [
+    "analysis_type",
+    "member_id",
+    "guardian_id",
+    "risk_level",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.guardian_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.guardian_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.guardian_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
+}

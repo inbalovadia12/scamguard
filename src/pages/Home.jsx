@@ -21,6 +21,7 @@ import LongLoadingScreen from "@/components/LongLoadingScreen";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import ImageUpload from "@/components/scam/ImageUpload";
 import ConversationPanel from "@/components/scam/ConversationPanel";
+import PostScamResponsePanel from "@/components/scam/PostScamResponsePanel";
 import { Switch } from "@/components/ui/switch";
 import { useKidMode } from "@/lib/KidModeContext";
 
@@ -66,6 +67,7 @@ export default function Home() {
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [incognito, setIncognito] = useState(false);
+  const [showPostScam, setShowPostScam] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -122,6 +124,7 @@ export default function Home() {
         message_type: analysisType,
         submitted_by_senior: !!seniorLink,
         senior_id: seniorLink?.id,
+        guardian_id: seniorLink?.guardian_id,
         ...llmResult,
       });
       if (input) cacheAnalysis(input, llmResult);
@@ -420,6 +423,18 @@ export default function Home() {
               </Button>
             )}
           </div>
+
+          {!showPostScam ? (
+            <button
+              onClick={() => setShowPostScam(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-warning/40 bg-warning/5 text-warning text-sm font-medium hover:bg-warning/10 transition-all animate-fade-in anim-delay-3"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              I already interacted with this
+            </button>
+          ) : (
+            <PostScamResponsePanel onBack={() => setShowPostScam(false)} />
+          )}
 
           <div className="flex items-center justify-center gap-4 sm:gap-6 text-xs text-muted-foreground animate-fade-in anim-delay-3">
             <span>🔒 Auto-redacted before storage</span>

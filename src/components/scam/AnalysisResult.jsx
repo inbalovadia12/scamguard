@@ -3,6 +3,8 @@ import { Volume2, VolumeX, ChevronDown, ChevronUp, Ban, Phone, Flag, BookOpen, S
 import { Button } from "@/components/ui/button";
 import RiskBadge, { getRiskLevelFromScore, getRiskBarColor } from "@/components/scam/RiskBadge";
 import TacticTag from "@/components/scam/TacticTag";
+import ThreatExplanation from "@/components/scam/ThreatExplanation";
+import ResultActions from "@/components/scam/ResultActions";
 import CommunityIntel from "@/components/community/CommunityIntel";
 import { useKidMode } from "@/lib/KidModeContext";
 
@@ -134,11 +136,8 @@ export default function AnalysisResult({ analysis, showEducation = true, message
       {/* Score bar */}
       <AnimatedScoreBar score={riskScore} />
 
-      {/* Explanation */}
-      <div className="bg-muted/50 rounded-2xl p-5 space-y-2">
-        <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">What we found</h3>
-        <p className="text-base leading-relaxed">{analysis.explanation}</p>
-      </div>
+      {/* Structured threat breakdown */}
+      <ThreatExplanation analysis={analysis} />
 
       {/* Marketplace info */}
       {analysis.marketplace_platform && (
@@ -179,6 +178,9 @@ export default function AnalysisResult({ analysis, showEducation = true, message
           </div>
         </div>
       )}
+
+      {/* Ask Family + Report Scam actions (medium/high risk) */}
+      <ResultActions analysis={analysis} analysisType="scam_analysis" messageType={messageType} />
 
       {/* Education section */}
       {showEducation && !kidMode && analysis.why_scammers_do_this && (

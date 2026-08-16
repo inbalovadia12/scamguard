@@ -1,24 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { base64UrlEncode, getGmailSenderEmail, sendGmail } from "../../shared/gmailMime.ts";
 
 const FINANCIAL_TYPES = ["bank_government", "marketplace", "crypto_investment", "lottery_prize", "job_offer"];
-
-function base64UrlEncode(str: string): string {
-  const bytes = new TextEncoder().encode(str);
-  let binary = '';
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function encodeSubject(subject: string): string {
-  if (/^[\x00-\x7F]*$/.test(subject)) return subject;
-  const bytes = new TextEncoder().encode(subject);
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return '=?UTF-8?B?' + btoa(binary) + '?=';
-}
 
 Deno.serve(async (req) => {
   try {
@@ -60,13 +43,7 @@ Deno.serve(async (req) => {
 
     // Get Gmail access token (SHARED connection)
     const { accessToken } = await base44.asServiceRole.connectors.getConnection('gmail');
-
-    // Get the authorized user's email for the From header
-    const profileRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    const profile = await profileRes.json();
-    const senderEmail = profile.emailAddress || 'me';
+    const senderEmail = await getGmailSenderEmail(accessToken);
 
     // Build the email content
     const riskLabel = (analysis.risk_level || 'unknown').toUpperCase();
@@ -108,21 +85,9 @@ Deno.serve(async (req) => {
       bodyText,
     ].join('\r\n');
 
-    const raw = base64UrlEncode(mimeMessage);
-
-    // Send via Gmail API
-    const sendRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ raw }),
-    });
-
-    if (!sendRes.ok) {
-      const errText = await sendRes.text();
-      return Response.json({ error: 'Gmail send failed', details: errText }, { status: 500 });
+    const sent = await sendGmail(accessToken, mimeMessage);
+    if (!sent) {
+      return Response.json({ error: 'Gmail send failed' }, { status: 500 });
     }
 
     // Mark as reviewed to prevent duplicate alerts

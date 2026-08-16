@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import {
   Users, Plus, ShieldCheck, ShieldAlert, Mail, Settings, Trash2, Loader2,
-  Clock, CheckCircle2, UserCog, BadgeCheck, EyeOff,
+  Clock, CheckCircle2, UserCog, BadgeCheck, EyeOff, Shield, ChevronDown, ChevronUp, Bell,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -12,6 +12,8 @@ import { PLAN_FAMILY_LIMITS } from "@/lib/credits";
 import { Link } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import GuardianDashboardPanel from "@/components/family/GuardianDashboardPanel";
+import ProtectionSettingsPanel from "@/components/family/ProtectionSettingsPanel";
+import FamilyAlertsPanel from "@/components/family/FamilyAlertsPanel";
 
 function MemberAvatar({ name }) {
   const initials = (name || "?")
@@ -27,8 +29,9 @@ function MemberAvatar({ name }) {
   );
 }
 
-function MemberCard({ senior, index, onUpdatePref, onUpdateIncognito, onDelete }) {
+function MemberCard({ senior, index, onUpdatePref, onUpdateIncognito, onUpdateSettings, onDelete }) {
   const isActive = senior.consent_given && senior.senior_user_id;
+  const [expanded, setExpanded] = useState(false);
   const delayClass = index === 0 ? "" : index === 1 ? "anim-delay-1" : index === 2 ? "anim-delay-2" : "anim-delay-3";
 
   return (
@@ -101,6 +104,15 @@ function MemberCard({ senior, index, onUpdatePref, onUpdateIncognito, onDelete }
               <Switch checked={senior.incognito_allowed || false} onCheckedChange={(val) => onUpdateIncognito(senior.id, val)} />
             </div>
           )}
+
+          <div className="pt-1 border-t border-border/30">
+            <button onClick={() => setExpanded((e) => !e)} className="flex items-center gap-2 w-full text-left py-1">
+              <Shield className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-medium flex-1">Protection Settings</span>
+              {expanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+            </button>
+            {expanded && <ProtectionSettingsPanel senior={senior} onUpdate={onUpdateSettings} />}
+          </div>
         </div>
       </div>
     </div>
@@ -112,6 +124,7 @@ export default function Family() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [familyLimit, setFamilyLimit] = useState(1);
+  const [pendingAlerts, setPendingAlerts] = useState(0);
   const seniorsRef = useRef([]);
 
   const loadSeniors = async () => {
@@ -124,6 +137,11 @@ export default function Family() {
     seniorsRef.current = data;
     setSeniors(data);
     setLoading(false);
+
+    try {
+      const alerts = await base44.entities.FamilyAlert.list("-created_date", 100);
+      setPendingAlerts(alerts.filter((a) => a.status === "pending_guardian").length);
+    } catch {}
   };
 
   useEffect(() => {
@@ -140,7 +158,9 @@ export default function Family() {
       }
     });
 
-    return () => unsubscribe();
+    const unsubAlerts = base44.entities.FamilyAlert.subscribe(() => loadSeniors());
+
+    return () => { unsubscribe(); unsubAlerts(); };
   }, []);
 
   const handleDelete = async (id) => {
@@ -159,6 +179,12 @@ export default function Family() {
       prev.map((s) => (s.id === id ? { ...s, incognito_allowed: allowed } : s))
     );
     await base44.entities.ProtectedSenior.update(id, { incognito_allowed: allowed });
+  };
+
+  const handleUpdateSettings = (id, settings) => {
+    setSeniors((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, protection_settings: settings } : s))
+    );
   };
 
   const activeMembers = seniors.filter((s) => s.consent_given && s.senior_user_id);
@@ -194,9 +220,16 @@ export default function Family() {
       </div>
 
       <Tabs defaultValue="members" className="w-full">
-        <TabsList className="grid grid-cols-2 w-full mb-2">
+        <TabsList className="grid grid-cols-3 w-full mb-2">
           <TabsTrigger value="members">Members</TabsTrigger>
           <TabsTrigger value="guardian">Guardian Dashboard</TabsTrigger>
+          <TabsTrigger value="alerts" className="relative">
+            <Bell className="w-3.5 h-3.5" />
+            Alerts
+            {pendingAlerts > 0 && (
+              <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-destructive" />
+            )}
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="members" className="space-y-8 mt-0">
       {familyLimit !== Infinity && seniors.length >= familyLimit && (
@@ -242,6 +275,7 @@ export default function Family() {
                   index={i}
                   onUpdatePref={handleUpdatePref}
                   onUpdateIncognito={handleUpdateIncognito}
+                  onUpdateSettings={handleUpdateSettings}
                   onDelete={handleDelete}
                 />
               ))}
@@ -262,6 +296,7 @@ export default function Family() {
                   index={i}
                   onUpdatePref={handleUpdatePref}
                   onUpdateIncognito={handleUpdateIncognito}
+                  onUpdateSettings={handleUpdateSettings}
                   onDelete={handleDelete}
                 />
               ))}
@@ -276,6 +311,9 @@ export default function Family() {
         </TabsContent>
         <TabsContent value="guardian" className="mt-0">
           <GuardianDashboardPanel />
+        </TabsContent>
+        <TabsContent value="alerts" className="mt-0">
+          <FamilyAlertsPanel seniors={seniors} />
         </TabsContent>
       </Tabs>
 

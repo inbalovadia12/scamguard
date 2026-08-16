@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,17 +7,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SCAM_TYPE_OPTIONS, CHANNEL_OPTIONS, RISK_OPTIONS } from "@/components/scam/ScamReportCard";
 
-export default function ReportScamDialog({ open, onOpenChange, onSubmitted }) {
+export default function ReportScamDialog({ open, onOpenChange, onSubmitted, prefill }) {
   const [form, setForm] = useState({
-    scam_type: "phishing_email",
-    title: "",
-    summary: "",
-    risk_level: "high",
-    channel: "email",
+    scam_type: prefill?.scam_type || "phishing_email",
+    title: prefill?.title || "",
+    summary: prefill?.summary || "",
+    risk_level: prefill?.risk_level || "high",
+    channel: prefill?.channel || "email",
     country: "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+
+  // Re-apply prefill each time the dialog opens (e.g. from different result cards)
+  useEffect(() => {
+    if (open && prefill) {
+      setForm((f) => ({
+        ...f,
+        scam_type: prefill.scam_type || f.scam_type,
+        title: prefill.title || f.title,
+        summary: prefill.summary || f.summary,
+        risk_level: prefill.risk_level || f.risk_level,
+        channel: prefill.channel || f.channel,
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 

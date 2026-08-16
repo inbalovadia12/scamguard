@@ -46,6 +46,53 @@
       "default": false,
       "description": "Whether the guardian allows this senior to use Incognito Search (private scans with no history or alerts)"
     },
+    "protection_settings": {
+      "type": "object",
+      "description": "Per-member protection toggles and level",
+      "properties": {
+        "link_protection": {
+          "type": "boolean",
+          "default": true
+        },
+        "message_protection": {
+          "type": "boolean",
+          "default": true
+        },
+        "image_scanning": {
+          "type": "boolean",
+          "default": true
+        },
+        "qr_scanning": {
+          "type": "boolean",
+          "default": true
+        },
+        "email_protection": {
+          "type": "boolean",
+          "default": true
+        },
+        "call_protection": {
+          "type": "boolean",
+          "default": true
+        },
+        "ask_family": {
+          "type": "boolean",
+          "default": true
+        },
+        "guardian_notifications": {
+          "type": "boolean",
+          "default": true
+        },
+        "protection_level": {
+          "type": "string",
+          "enum": [
+            "basic",
+            "standard",
+            "maximum"
+          ],
+          "default": "standard"
+        }
+      }
+    },
     "senior_user_id": {
       "type": "string",
       "description": "The senior's user ID once they create an account"

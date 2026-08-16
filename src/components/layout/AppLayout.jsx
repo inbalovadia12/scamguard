@@ -94,6 +94,7 @@ export default function AppLayout() {
   const { user } = useAuth();
   const { kidMode } = useKidMode();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [alertBadge, setAlertBadge] = useState(0);
 
   const KID_HIDDEN_PATHS = ["/ai-negotiator", "/phone-lookup", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/feedback", "/projects", "/pricing"];
   const visibleSections = kidMode
@@ -115,6 +116,20 @@ export default function AppLayout() {
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
+
+  // Pending family-alert badge on the Alerts nav item
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const user = await base44.auth.me();
+        const alerts = await base44.entities.FamilyAlert.list("-created_date", 50);
+        setAlertBadge(alerts.filter((a) => a.status === "pending_guardian" && a.guardian_id === user.id).length);
+      } catch {}
+    };
+    load();
+    const unsubscribe = base44.entities.FamilyAlert.subscribe(load);
+    return () => unsubscribe();
+  }, []);
 
   const handleLogout = () => {
     base44.auth.logout("/login");
@@ -163,6 +178,9 @@ export default function AppLayout() {
                   >
                     <item.icon className="w-4.5 h-4.5" />
                     {itemLabel(item)}
+                    {item.path === "/alerts" && alertBadge > 0 && (
+                      <span className="ml-auto min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">{alertBadge}</span>
+                    )}
                   </Link>
                 ))}
               </div>
@@ -255,6 +273,9 @@ export default function AppLayout() {
                       >
                         <item.icon className="w-5 h-5" />
                         {itemLabel(item)}
+                        {item.path === "/alerts" && alertBadge > 0 && (
+                          <span className="ml-auto min-w-4 h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">{alertBadge}</span>
+                        )}
                       </Link>
                     ))}
                   </div>

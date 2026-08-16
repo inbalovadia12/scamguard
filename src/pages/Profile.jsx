@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import {
   ShieldCheck, Crown, Mail, Loader2, Bell, Lock, LogOut, ChevronRight, Accessibility, Type, Eye, Zap, Users, AlertTriangle, Trash2,
+  CalendarClock, RotateCcw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getCreditStatus, PLAN_NAMES, PLAN_LIMITS } from "@/lib/credits";
@@ -32,6 +33,10 @@ export default function Profile() {
   const [showDelete, setShowDelete] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+  const [renewalDate, setRenewalDate] = useState(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -39,6 +44,8 @@ export default function Profile() {
       setAlertPref(user.alert_preference || "all");
       setNotifyEmail(user.notify_email !== false);
       setPrivacyRedact(user.privacy_auto_redact !== false);
+      setCanceling(!!user.cancel_at_period_end);
+      setRenewalDate(user.cancellation_renewal_date || null);
     }
   }, [user]);
 
@@ -91,6 +98,38 @@ export default function Profile() {
 
   const handleLogout = () => {
     base44.auth.logout("/login");
+  };
+
+  const handleCancelPlan = async () => {
+    setCancelling(true);
+    try {
+      const res = await base44.functions.invoke("managePaypalSubscription", { action: "cancel" });
+      const data = res.data || {};
+      setCanceling(true);
+      setRenewalDate(data.next_billing || renewalDate);
+      setShowCancelConfirm(false);
+      await checkUserAuth();
+      toast({ title: "Plan set to cancel", description: "Your benefits continue until your next renewal." });
+    } catch (e) {
+      toast({ title: "Couldn't cancel", description: e.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleReactivatePlan = async () => {
+    setCancelling(true);
+    try {
+      await base44.functions.invoke("managePaypalSubscription", { action: "reactivate" });
+      setCanceling(false);
+      setRenewalDate(null);
+      await checkUserAuth();
+      toast({ title: "Plan reactivated", description: "Your subscription will continue as normal." });
+    } catch (e) {
+      toast({ title: "Couldn't reactivate", description: e.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -185,6 +224,60 @@ export default function Profile() {
                 </span>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Cancel / Reactivate subscription */}
+        {(plan === "plus" || plan === "premium") && (
+          <div className="pt-4 border-t border-border/50">
+            {canceling ? (
+              <div className="space-y-3">
+                <div className="flex items-start gap-2.5 text-sm">
+                  <CalendarClock className="w-4 h-4 text-warning mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">Canceling {PLAN_NAMES[plan] || "your plan"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Your benefits continue until{renewalDate ? ` ${new Date(renewalDate).toLocaleDateString()}` : " your next renewal"}, then your plan changes to Starter.
+                    </p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleReactivatePlan} disabled={cancelling} className="gap-2">
+                  {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                  Keep My Plan
+                </Button>
+              </div>
+            ) : !showCancelConfirm ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCancelConfirm(true)}
+                className="gap-2 text-muted-foreground border-border/50 hover:text-destructive hover:border-destructive/30"
+              >
+                <AlertTriangle className="w-4 h-4" /> Cancel Plan
+              </Button>
+            ) : (
+              <div className="space-y-3 rounded-xl border border-border/50 p-4 bg-muted/20">
+                <p className="text-sm font-medium">Cancel {PLAN_NAMES[plan]}?</p>
+                <p className="text-xs text-muted-foreground">
+                  Your plan stays active until your next renewal date, then downgrades to Starter. You can reactivate any time before then.
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowCancelConfirm(false)} disabled={cancelling}>
+                    Keep Plan
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelPlan}
+                    disabled={cancelling}
+                    className="gap-2 text-destructive border-destructive/40 hover:bg-destructive/10"
+                  >
+                    {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
+                    Confirm Cancellation
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Card>
