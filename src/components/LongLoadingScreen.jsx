@@ -50,7 +50,7 @@ const THEMES = {
   image: {
     title: "Analyzing Image",
     gradient: "from-primary to-primary/80",
-    estimatedDuration: 20000,
+    estimatedDuration: 110000,
     steps: [
       { label: "Processing uploaded image...", at: 0 },
       { label: "Extracting visual features...", at: 15 },

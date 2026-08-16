@@ -93,6 +93,7 @@ export default function ImageScanner() {
         similar_images_found: r.similar_images_found || [],
         sources: r.sources || [],
         red_flags: r.red_flags || [],
+        methods_checked: r.methods_checked || [],
         created_date: new Date().toISOString(),
       });
       if (response.data?.credits_remaining != null) {
@@ -245,8 +246,8 @@ export default function ImageScanner() {
 function ImageScanResult({ data, previewUrl }) {
   const risk = RISK_META[data.risk_level] || RISK_META.medium;
   const score = data.risk_score || 0;
-  const scoreColor = score >= 71 ? "text-destructive" : score >= 31 ? "text-warning" : "text-success";
-  const barColor = score >= 71 ? "bg-destructive" : score >= 31 ? "bg-warning" : "bg-success";
+  const scoreColor = score >= 71 ? "text-destructive" : score >= 36 ? "text-warning" : "text-success";
+  const barColor = score >= 71 ? "bg-destructive" : score >= 36 ? "bg-warning" : "bg-success";
 
   return (
     <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-5 animate-slide-up">
@@ -305,18 +306,29 @@ function ImageScanResult({ data, previewUrl }) {
         </div>
       )}
 
-      {data.sources?.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sources</p>
+      {data.methods_checked?.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-semibold uppercase tracking-wider">Checked via</span>
+          {data.methods_checked.map((m, i) => (
+            <span key={i} className="px-2 py-0.5 rounded-full bg-muted">{m}</span>
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sources</p>
+        {data.sources?.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {data.sources.map((source, i) => (
-              <a key={i} href={source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-full sm:max-w-[200px]">
-                {source}
+              <a key={i} href={source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-full sm:max-w-[200px] inline-flex items-center gap-1">
+                <ExternalLink className="w-3 h-3 flex-shrink-0" /> {source}
               </a>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-sm text-muted-foreground">No public appearances found via web search — nothing to cite.</p>
+        )}
+      </div>
 
       {/* Community Intel */}
       {USE_CASE_TO_SCAM[data.use_case] && (

@@ -289,6 +289,16 @@ function InviteFamilyStep({ emails, setEmails, onNext, onBack, inviting }) {
 }
 
 function ChoosePlanStep({ onComplete, onBack }) {
+  const navigate = useNavigate();
+  const plans = [
+    { name: "Starter", price: "$0", icon: ShieldCheck, features: "10 analyses/mo", paid: false, highlight: false },
+    { name: "Plus", price: "$59/yr", icon: Zap, features: "150 analyses/mo", paid: true, highlight: true },
+    { name: "Premium", price: "$119/yr", icon: Sparkles, features: "400 analyses/mo", paid: true, highlight: false },
+  ];
+  const choose = (plan) => {
+    onComplete();
+    if (plan.paid) navigate("/pricing");
+  };
   return (
     <div className="w-full space-y-6 animate-fade-in">
       <div className="text-center space-y-3">
@@ -296,26 +306,23 @@ function ChoosePlanStep({ onComplete, onBack }) {
           <Sparkles className="w-7 h-7 text-primary" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight font-heading">Choose a Plan</h1>
-        <p className="text-muted-foreground max-w-md mx-auto">Start free and upgrade anytime. Plus is recommended for most users.</p>
+        <p className="text-muted-foreground max-w-md mx-auto">Start free and upgrade anytime. Tap a plan to continue — paid plans take you to checkout.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {[
-          { name: "Starter", price: "$0", icon: ShieldCheck, features: "10 analyses/mo", highlight: false },
-          { name: "Plus", price: "$40", icon: Zap, features: "100 analyses/mo", highlight: true },
-          { name: "Premium", price: "$80", icon: Sparkles, features: "250 analyses/mo", highlight: false },
-        ].map((plan) => (
-          <div key={plan.name} className={`p-4 rounded-xl border text-center transition-all ${plan.highlight ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border/50 bg-card"}`}>
+        {plans.map((plan) => (
+          <button key={plan.name} onClick={() => choose(plan)} className={`p-4 rounded-xl border text-center transition-all hover:shadow-md ${plan.highlight ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border/50 bg-card hover:border-primary/40"}`}>
             {plan.highlight && <div className="text-xs font-bold text-primary mb-1">RECOMMENDED</div>}
             <plan.icon className={`w-6 h-6 mx-auto mb-2 ${plan.highlight ? "text-primary" : "text-muted-foreground"}`} />
             <div className="font-bold text-sm font-heading">{plan.name}</div>
             <div className="text-lg font-bold font-heading">{plan.price}</div>
             <div className="text-xs text-muted-foreground">{plan.features}</div>
-          </div>
+            <div className="mt-3 text-xs font-semibold text-primary">{plan.paid ? "Continue to checkout →" : "Start free"}</div>
+          </button>
         ))}
       </div>
       <div className="flex items-center justify-between pt-2">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" />Back</Button>
-        <Button onClick={onComplete} className="bg-gradient-to-r from-primary to-primary/80"><Check className="w-4 h-4 mr-1" />Complete Setup</Button>
+        <Button variant="outline" onClick={onComplete}>Skip for now</Button>
       </div>
     </div>
   );

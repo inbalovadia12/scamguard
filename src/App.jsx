@@ -39,7 +39,6 @@ import Lessons from '@/pages/Lessons';
 import Privacy from '@/pages/Privacy';
 import About from '@/pages/About';
 import Contact from '@/pages/Contact';
-import Projects from '@/pages/Projects';
 import Extension from '@/pages/Extension';
 import ScamFeed from '@/pages/ScamFeed';
 import LocalScamIntel from '@/pages/LocalScamIntel';
@@ -125,7 +124,6 @@ const AuthenticatedApp = () => {
           <Route path="/incognito-search" element={<IncognitoSearch />} />
           <Route path="/lessons" element={<Lessons />} />
           <Route path="/privacy" element={<Privacy />} />
-          <Route path="/projects" element={<Projects />} />
           <Route path="/extension" element={<Extension />} />
           <Route path="/analytics" element={<Analytics />} />
 

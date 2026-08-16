@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Loader2, History, ShieldCheck, AlertTriangle, ShieldAlert,
-  ThumbsDown, TrendingUp, Scan, BarChart3, Users, Bell,
+  ThumbsDown, TrendingUp, Scan, BarChart3, Users, Bell, ArrowRight,
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -41,6 +41,7 @@ export default function TrustHistory() {
   const [seniors, setSeniors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("mine");
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -206,7 +207,7 @@ export default function TrustHistory() {
           const RiskIcon = scan.risk_level === "high" ? ShieldAlert : scan.risk_level === "medium" ? AlertTriangle : ShieldCheck;
           const mName = memberName(scan);
           return (
-            <Link key={scan.id} to="/alerts" className="block bg-card rounded-2xl border border-border/50 p-4 hover:shadow-md transition-all">
+            <div key={scan.id} onClick={() => setExpandedId(expandedId === scan.id ? null : scan.id)} className="block bg-card rounded-2xl border border-border/50 p-4 hover:shadow-md transition-all cursor-pointer">
               <div className="flex items-start gap-3">
                 <div className={`w-9 h-9 rounded-lg ${cfg.bg} flex items-center justify-center flex-shrink-0`}>
                   <RiskIcon className={`w-4 h-4 ${cfg.text}`} />
@@ -227,10 +228,15 @@ export default function TrustHistory() {
                     )}
                     <span className="text-xs text-muted-foreground ml-auto">{timeAgo(scan.created_date)}</span>
                   </div>
-                  <p className="text-sm text-foreground/80 mt-1 line-clamp-2">{scan.message_text}</p>
+                  <p className={`text-sm text-foreground/80 mt-1 ${expandedId === scan.id ? "whitespace-pre-wrap" : "line-clamp-2"}`}>{scan.message_text}</p>
+                  {expandedId === scan.id && (
+                    <Link to="/alerts" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-primary mt-2 hover:underline">
+                      Open in Alerts <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  )}
                 </div>
               </div>
-            </Link>
+            </div>
           );
         })}
       </div>

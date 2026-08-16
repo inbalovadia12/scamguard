@@ -170,6 +170,7 @@ export default function Extension() {
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
+            <p className="text-xs text-muted-foreground">You can download the ZIP on any device, then load it in Chrome on a computer.</p>
           </div>
         )}
       </div>

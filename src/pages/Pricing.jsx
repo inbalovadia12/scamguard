@@ -51,6 +51,7 @@ export default function Pricing() {
   const [creditStatus, setCreditStatus] = useState(null);
   const [capturing, setCapturing] = useState(false);
   const [memberCounts, setMemberCounts] = useState({ plus: 1, premium: 1 });
+  const [billing, setBilling] = useState("yearly");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -130,6 +131,13 @@ export default function Pricing() {
         </div>
       )}
 
+      <div className="flex justify-center">
+        <div className="inline-flex gap-1 p-1 bg-card rounded-2xl border border-border/50">
+          <button onClick={() => setBilling("yearly")} className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${billing === "yearly" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>Yearly</button>
+          <button onClick={() => setBilling("monthly")} className={`px-5 py-2 rounded-xl text-sm font-medium transition-all ${billing === "monthly" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>Monthly</button>
+        </div>
+      </div>
+
       <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
         {plans.map((plan, i) => {
           const isCurrent = credits?.plan === plan.id;
@@ -153,10 +161,13 @@ export default function Pricing() {
               <h2 className="font-bold text-lg font-heading">{plan.name}</h2>
               <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>
               <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-2xl sm:text-3xl font-bold font-heading">{plan.price}</span>
-                <span className="text-sm text-muted-foreground">{plan.period}</span>
+                <span className="text-2xl sm:text-3xl font-bold font-heading">
+                  {billing === "monthly" ? `$${computeFamilyTotal(plan.id, 1).baseMonthly.toFixed(2)}` : `$${computeFamilyTotal(plan.id, 1).baseAnnual}`}
+                </span>
+                <span className="text-sm text-muted-foreground">{billing === "monthly" ? "/month" : "/year"}</span>
               </div>
               <p className="text-xs font-medium text-primary mt-1">{plan.credits}</p>
+              {billing === "monthly" && <p className="text-[11px] text-muted-foreground">billed annually</p>}
               {plan.id !== "starter" && (
                 <FamilyMemberSelector
                   plan={plan.id}

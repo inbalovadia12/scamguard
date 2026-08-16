@@ -11,8 +11,6 @@ import { useAuth } from "@/lib/AuthContext";
 import { useI18n } from "@/lib/i18n";
 import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
-import NudigoPopup from "@/components/NudigoPopup";
-import WrappedPopup from "@/components/WrappedPopup";
 import XPBar from "@/components/gamification/XPBar";
 import BroadcastBanner from "@/components/layout/BroadcastBanner";
 import AskParentButton from "@/components/kid/AskParentButton";
@@ -68,7 +66,6 @@ const NAV_SECTIONS = [
       { path: "/wrapped", labelKey: "nav.wrapped", icon: Sparkles },
       { path: "/trust-history", labelKey: "nav.trust_history", icon: History },
       { path: "/feedback", labelKey: "nav.feedback", icon: MessageSquare },
-      { path: "/projects", labelKey: "nav.more_projects", icon: LayoutGrid },
       { path: "/mobile-app", label: "Mobile App", icon: Smartphone },
     ],
   },
@@ -337,8 +334,6 @@ export default function AppLayout() {
           <Outlet />
         </main>
 
-        <NudigoPopup />
-        <WrappedPopup />
         {kidMode && <AskParentButton />}
 
         <footer className="border-t border-border/50 py-6 px-5 mt-auto" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
