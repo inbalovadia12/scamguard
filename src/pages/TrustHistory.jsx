@@ -68,11 +68,11 @@ export default function TrustHistory() {
   }, [allScans, seniors]);
 
   const isFamily = view === "family" && seniors.length > 0;
-  const scans = isFamily ? familyScans : allScans.filter((s) => s.created_by_id === (allScans[0] && true) ? s.created_by_id : s.created_by_id);
 
-  // For "mine", show scans created by the current user only
+  // "Mine" = scans not created by any of the guardian's protected members
   const mineScans = useMemo(() => {
-    return allScans.filter((s) => !seniors.map((x) => x.senior_user_id).includes(s.created_by_id));
+    const seniorUserIds = seniors.map((x) => x.senior_user_id).filter(Boolean);
+    return allScans.filter((s) => !seniorUserIds.includes(s.created_by_id));
   }, [allScans, seniors]);
 
   const activeScans = isFamily ? familyScans : mineScans;
