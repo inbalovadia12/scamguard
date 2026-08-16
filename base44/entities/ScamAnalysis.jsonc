@@ -75,7 +75,11 @@
     },
     "senior_id": {
       "type": "string",
-      "description": "ID of the senior who submitted (if applicable)"
+      "description": "ID of the ProtectedSenior record who submitted (if applicable)"
+    },
+    "guardian_id": {
+      "type": "string",
+      "description": "User ID of the senior's guardian, so the guardian can see this scan"
     },
     "guardian_status": {
       "type": "string",
@@ -114,6 +118,9 @@
       "$or": [
         {
           "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.guardian_id": "{{user.id}}"
         },
         {
           "user_condition": {
