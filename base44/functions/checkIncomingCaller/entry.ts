@@ -21,20 +21,24 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
-    const config = await getConfig(base44);
+    const body = await req.json().catch(() => ({}));
+    const { phone_number } = body;
+    const nn = normalizePhoneNumber(phone_number);
+    if (!nn) return Response.json({ error: 'A valid phone number is required' }, { status: 400 });
+
+    // Run the config fetch and the cache lookup in parallel — the fast path (known
+    // number) now completes in a single round-trip instead of two sequential ones.
+    const [config, existing] = await Promise.all([
+      getConfig(base44),
+      base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: nn }),
+    ]);
+
     if (!isCallerIdEntitled(user, config) && user.role !== 'admin') {
       return Response.json({
         error: 'Caller identification requires a Vardin Plus or Premium plan',
         upgrade_url: 'https://vardin.base44.app/pricing',
       }, { status: 403 });
     }
-
-    const body = await req.json().catch(() => ({}));
-    const { phone_number } = body;
-    const nn = normalizePhoneNumber(phone_number);
-    if (!nn) return Response.json({ error: 'A valid phone number is required' }, { status: 400 });
-
-    const existing = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: nn });
     const STALE_MS = 1000 * 60 * 60 * 24 * 30;
     const rep = existing[0];
     const fresh = rep && rep.last_external_check_at &&
