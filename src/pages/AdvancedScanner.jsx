@@ -169,7 +169,7 @@ export default function AdvancedScanner() {
       </div>
 
       {scanning ? (
-        <LongLoadingScreen type="scanner" />
+        <LongLoadingScreen type={scanType === "url" || scanType === "qr" ? "url" : "scanner"} />
       ) : result ? (
         <div className="space-y-6 animate-scale-in">
           <div className="flex items-center justify-between">

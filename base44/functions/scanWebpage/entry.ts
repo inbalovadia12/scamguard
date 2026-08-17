@@ -347,7 +347,12 @@ Deno.serve(async (req) => {
         };
     }
 
-    const llmOptions: any = { prompt, response_json_schema: responseSchema, add_context_from_internet: true, model: 'gemini_3_flash' };
+    // Web search is only valuable (and fast enough) for scans that depend on external
+    // reputation lookups: URLs, QR destinations, and marketplace listings. Content-only
+    // scans (email, chat, page text, screenshots, files) are analyzed from the provided
+    // content, so we skip web search — same accuracy, much faster (seconds, not 10s+).
+    const useWebSearch = scanType === 'url' || (scanType === 'page' && scanMode === 'url') || scanType === 'qr' || scanType === 'marketplace';
+    const llmOptions: any = { prompt, response_json_schema: responseSchema, add_context_from_internet: useWebSearch, model: 'gemini_3_flash' };
 
     // === Upload screenshot/QR image for vision analysis ===
     if ((scanType === 'screenshot' || scanType === 'qr' || (scanType === 'page' && (scanMode === 'screenshot' || scanMode === 'both'))) && screenshot_data_url) {
