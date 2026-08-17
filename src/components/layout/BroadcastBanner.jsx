@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Megaphone } from "lucide-react";
+import { Megaphone, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -40,7 +40,14 @@ export default function BroadcastBanner() {
   return (
     <Dialog open={!!current} onOpenChange={(open) => { if (!open) dismiss(); }}>
       {current && (
-        <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogContent className="max-w-md">
+          <button
+            onClick={dismiss}
+            className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors z-10"
+            aria-label="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
           <DialogHeader>
             <div className="flex items-center gap-2 mb-1">
               <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
