@@ -1,6 +1,13 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { waitUntil } from 'base44:runtime';
 import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
+// Manual phone-number reputation lookup.
+//   Fast path (instant):  canonical PhoneReputation index hit (fresh) -> accurate, no LLM.
+//   First-try path (<5s): cache miss -> quick LLM pass WITHOUT web search -> provisional
+//                         answer returned immediately. A deep web-research lookup runs in
+//                         the background (waitUntil) and upserts the canonical index, so the
+//                         NEXT lookup on this number is instant + accurate. No retry needed.
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -21,37 +28,36 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Phone number is required' }, { status: 400 });
     }
 
-    // Fast path: return the canonical reputation index if this number is already known.
-    // Instant + accurate (the cached record came from a prior deep web-research lookup),
-    // and keeps repeated lookups well under 5s.
+    const cacheKey = '+' + phone_number.trim().replace(/[^\d]/g, '');
+
+    // ---- Fast path: return the canonical reputation index if this number is already known ----
     try {
-      const cacheKey = '+' + phone_number.trim().replace(/[^\d]/g, '');
       const cached = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
       const STALE_MS = 1000 * 60 * 60 * 24 * 30;
       const r = cached[0];
       if (r && r.last_external_check_at && (Date.now() - new Date(r.last_external_check_at).getTime() < STALE_MS)) {
+        const result = {
+          country: r.country || '',
+          carrier: r.carrier || '',
+          reputation_score: r.reputation_score || 0,
+          risk_level: r.risk_level || 'low',
+          user_reports: [],
+          scam_categories: r.scam_categories || [],
+          summary: r.summary || '',
+          sources: r.sources || [],
+        };
         return Response.json({
-          result: {
-            country: r.country || '',
-            carrier: r.carrier || '',
-            reputation_score: r.reputation_score || 0,
-            risk_level: r.risk_level || 'low',
-            user_reports: [],
-            scam_categories: r.scam_categories || [],
-            summary: r.summary || '',
-            sources: r.sources || [],
-          },
+          result,
           lookup: { id: r.id, phone_number: r.phone_number, cached: true },
           cached: true,
+          provisional: false,
         });
       }
     } catch {}
 
-    // Clean to digits only
+    // ---- First-try path: instant provisional answer, deep lookup runs in background ----
     const cleaned = phone_number.trim().replace(/[^\d]/g, '');
 
-    // Format for PhoneRegistry.org: 10 digits, NOT starting with 1
-    // US/NANP numbers: strip leading country code 1, take 10 digits
     let tenDigit: string;
     if (cleaned.length === 10) {
       tenDigit = cleaned;
@@ -63,66 +69,91 @@ Deno.serve(async (req) => {
       tenDigit = cleaned;
     }
 
-    // Validate NANP format: 10 digits, not starting with 0 or 1
     const isValidNANP = tenDigit.length === 10 && !tenDigit.startsWith('0') && !tenDigit.startsWith('1');
-
-    // Display format: XXX-XXX-XXXX
     const displayFormat = isValidNANP
       ? `${tenDigit.slice(0, 3)}-${tenDigit.slice(3, 6)}-${tenDigit.slice(6)}`
       : phone_number.trim();
-
-    // International format for broader search
     const intlFormat = isValidNANP ? `+1${tenDigit}` : `+${cleaned}`;
-
-    // PhoneRegistry.org direct lookup URL
-    const phoneregistryUrl = `https://www.phoneregistry.org/?phone=${tenDigit}`;
 
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
+    // Quick provisional pass — NO web search, so it returns in 1-3s. Gives a real,
+    // useful first-try answer (country/carrier from the area code + honest baseline risk).
+    const provisional = await base44.integrations.Core.InvokeLLM({
+      prompt: `Phone number area-code analysis for ${displayFormat} (international ${intlFormat}).
+Based ONLY on the area code / country code (no web search), respond in ${languageName} with JSON:
+- country: where the number is registered (from the area/country code)
+- carrier: typical carrier for that area code, or "Unknown"
+- reputation_score: 5-15 if no documented high-risk pattern, 0-100 otherwise
+- risk_level: "low" (0-30), "medium" (31-70), or "high" (71-100)
+- user_reports: empty array (no web data available yet)
+- scam_categories: empty array
+- summary: one sentence in ${languageName}: "No scam reports in our index yet for this number. A deeper check is running in the background."
+- sources: empty array`,
+      model: 'gemini_3_flash',
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          country: { type: 'string' },
+          carrier: { type: 'string' },
+          reputation_score: { type: 'number' },
+          risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
+          user_reports: { type: 'array', items: { type: 'string' } },
+          scam_categories: { type: 'array', items: { type: 'string' } },
+          summary: { type: 'string' },
+          sources: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['reputation_score', 'risk_level', 'summary'],
+      },
+    });
+
+    const provisionalResult = {
+      country: provisional.country || '',
+      carrier: provisional.carrier || '',
+      reputation_score: provisional.reputation_score || 5,
+      risk_level: provisional.risk_level || 'low',
+      user_reports: provisional.user_reports || [],
+      scam_categories: provisional.scam_categories || [],
+      summary: provisional.summary || 'No scam reports in our index yet for this number. A deeper check is running in the background.',
+      sources: provisional.sources || [],
+    };
+
+    const saved = await base44.entities.PhoneLookup.create({
+      phone_number: displayFormat,
+      country: provisionalResult.country,
+      carrier: provisionalResult.carrier,
+      reputation_score: provisionalResult.reputation_score,
+      risk_level: provisionalResult.risk_level,
+      user_reports: provisionalResult.user_reports,
+      scam_categories: provisionalResult.scam_categories,
+      summary: provisionalResult.summary,
+      sources: provisionalResult.sources,
+    });
+
+    // Deep web research runs in the background; upserts the canonical index so the
+    // NEXT lookup on this number is instant + accurate. Never blocks the response.
+    waitUntil(deepLookupAndUpsert(base44, cacheKey, displayFormat, intlFormat, languageName));
+
+    return Response.json({ result: provisionalResult, lookup: saved, cached: false, provisional: true });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+});
+
+// Background deep lookup: full web research against public scam/spam databases, then upsert.
+async function deepLookupAndUpsert(base44: any, nn: string, displayFormat: string, intlFormat: string, languageName: string) {
+  try {
     const prompt = `You are a phone number reputation analyst. Research the phone number: ${displayFormat} (international: ${intlFormat})
 
 CRITICAL RULES — VIOLATING THESE INVALIDATES YOUR RESPONSE:
+1. Report ONLY information SPECIFIC to THIS EXACT number regarding scam calls, spam, or robocalls.
+2. Only include a source URL if that page's PRIMARY topic is this number as a scam/spam caller.
+3. If no specific reports exist: reputation_score 5-15, risk_level "low", empty user_reports/scam_categories/sources, and say "No scam reports found for this number."
 
-1. You must ONLY report information that is SPECIFICALLY and DIRECTLY about THIS EXACT phone number in the context of scam calls, robocalls, spam, or caller reputation.
+Check: 800notes.com, whocallsme.com, nomorobo.com, truecaller.com, reportfraud.ftc.gov, Reddit r/scams and r/phonescams (only posts whose title or body mention this exact number).
 
-2. You must ONLY include a source URL if that page's PRIMARY TOPIC is this phone number being discussed as a scam/spam caller. Do NOT include:
-   - URLs where the number appears as part of a Reddit comment ID (e.g., /comments/1dd2k3e/...)
-   - URLs where the number appears coincidentally in a post, comment, or unrelated discussion
-   - URLs where the number is part of another longer number
-   - Social media posts unrelated to scam calls from this number
-   - Any source you did not actually verify discusses THIS number
-
-3. If you cannot find any legitimate, specific reports about this exact number, you MUST:
-   - Set reputation_score to a LOW value (5-15)
-   - Set risk_level to "low"
-   - Return EMPTY arrays for user_reports, scam_categories, and sources
-   - State in summary: "No scam reports found for this number. It appears to be unreported."
-
-SOURCES TO CHECK (search these specifically):
-1. PhoneRegistry.org — ${phoneregistryUrl} — check for carrier and reputation data
-2. 800notes.com — search for "${displayFormat}" or "${tenDigit}"
-3. WhoCallsMe — whocallsme.com
-4. CallerComplaints — callercomplaints.com
-5. FTC — reportfraud.ftc.gov, donotcall.gov
-6. Nomorobo — nomorobo.com phone lookup
-7. Truecaller — truecaller.com search for this number
-8. Reddit — ONLY r/scams, r/phonescams, r/ScamNumbers — search for the EXACT number "${displayFormat}" — the post TITLE or BODY must mention this number
-
-AREA CODE ANALYSIS:
-- Area code ${tenDigit.slice(0, 3)} — determine the geographic region and carrier type
-- Use this for the country and carrier fields even if no scam reports exist
-
-RETURN:
-- country: Where the number is registered (from area code analysis)
-- carrier: Telecom provider if known
-- reputation_score: 0-100 (0=safe/unreported, 100=confirmed scam). If no reports: use 5-15.
-- risk_level: "low" (0-30), "medium" (31-70), "high" (71-100)
-- user_reports: ONLY verified reports from real users who received calls from this number. Empty array if none.
-- scam_categories: Scam types if any found. Empty array if none.
-- summary: Honest assessment. If unreported, say so clearly.
-- sources: ONLY URLs specifically about this phone number. Empty array if none found.
-
+Return: country, carrier, reputation_score (0-100), risk_level (low/medium/high), user_reports[], scam_categories[], summary, sources[].
 Respond entirely in ${languageName}.`;
 
     const result = await base44.integrations.Core.InvokeLLM({
@@ -134,49 +165,30 @@ Respond entirely in ${languageName}.`;
         properties: {
           country: { type: 'string' },
           carrier: { type: 'string' },
-          reputation_score: { type: 'number', description: '0-100 scam risk score' },
+          reputation_score: { type: 'number' },
           risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
           user_reports: { type: 'array', items: { type: 'string' } },
           scam_categories: { type: 'array', items: { type: 'string' } },
           summary: { type: 'string' },
-          sources: { type: 'array', items: { type: 'string' }, description: 'URLs where information was found — only pages specifically about this phone number' },
+          sources: { type: 'array', items: { type: 'string' } },
         },
         required: ['reputation_score', 'risk_level', 'summary'],
       },
     });
 
-    const saved = await base44.entities.PhoneLookup.create({
+    await upsertPhoneReputation(base44, {
+      normalized_number: nn,
       phone_number: displayFormat,
       country: result.country || '',
       carrier: result.carrier || '',
       reputation_score: result.reputation_score || 0,
       risk_level: result.risk_level || 'low',
-      user_reports: result.user_reports || [],
       scam_categories: result.scam_categories || [],
       summary: result.summary || '',
       sources: result.sources || [],
+      last_external_check_at: new Date().toISOString(),
     });
-
-    // Feed Vardin's canonical caller-ID reputation index (the source of truth for
-    // the iOS Call Directory dataset). Uses the service role so the canonical record
-    // is global, not tied to the requesting user. Never breaks the existing lookup.
-    try {
-      await upsertPhoneReputation(base44, {
-        normalized_number: phone_number,
-        phone_number: displayFormat,
-        country: result.country || '',
-        carrier: result.carrier || '',
-        reputation_score: result.reputation_score || 0,
-        risk_level: result.risk_level || 'low',
-        scam_categories: result.scam_categories || [],
-        summary: result.summary || '',
-        sources: result.sources || [],
-        last_external_check_at: new Date().toISOString(),
-      });
-    } catch {}
-
-    return Response.json({ result, lookup: saved });
-  } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+  } catch {
+    // background enrichment is best-effort; never throw after the response is sent
   }
-});
+}
