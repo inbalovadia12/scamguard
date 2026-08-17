@@ -105,18 +105,22 @@ Deno.serve(async (req) => {
     }
 
     const marketplace = detectMarketplace(targetUrl);
-    const vtReport = await getVirusTotalReport(targetUrl);
 
+    // Parallelize VirusTotal lookup and website fetch so neither blocks the other.
+    // Caps total pre-LLM time at max(VT ~10s, fetch ~8s) instead of VT + fetch serially.
+    let vtReport: any = null;
     let websiteContent = '';
     let httpStatus = 0;
     let finalUrl = targetUrl;
     let fetchError = null;
     let redirectCount = 0;
 
+    const vtPromise = getVirusTotalReport(targetUrl);
+
     try {
       let currentUrl = targetUrl;
       let response: Response | null = null;
-      const maxRedirects = 5;
+      const maxRedirects = 3;
 
       for (let i = 0; i <= maxRedirects; i++) {
         const validation = await validateUrlSafe(currentUrl);
@@ -144,7 +148,7 @@ Deno.serve(async (req) => {
         response = await fetch(fetchUrl, {
           headers: fetchHeaders,
           redirect: 'manual',
-          signal: AbortSignal.timeout(15000),
+          signal: AbortSignal.timeout(8000),
         });
 
         // Handle redirects manually to validate each jump
@@ -170,6 +174,9 @@ Deno.serve(async (req) => {
     } catch (e) {
       fetchError = e.message;
     }
+
+    // Await the parallel VT lookup (already started above); non-blocking if fetch was slower.
+    vtReport = await vtPromise;
 
     const marketplaceContext = marketplace
       ? `\n\nMARKETPLACE DETECTED: ${marketplace}\nThis is a listing from ${marketplace}. Provide marketplace-specific analysis:\n- Seller reputation indicators (ratings, reviews, account age if visible)\n- Pricing anomalies (price significantly below market value = red flag)\n- Listing description quality and consistency\n- Common ${marketplace} scam patterns\n- Payment method red flags (gift cards, wire transfers, crypto)\n- Stock photos vs real photos\n- Return policy and buyer protection availability`

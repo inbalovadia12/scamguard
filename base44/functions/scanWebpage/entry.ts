@@ -41,7 +41,7 @@ async function followRedirects(url: string): Promise<{ finalUrl: string; pageTit
   try {
     const response = await fetch(url, {
       redirect: 'follow',
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(8000),
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VardinScanner/1.0)' },
     });
     const finalUrl = response.url || url;
@@ -192,13 +192,19 @@ Deno.serve(async (req) => {
           error: 'Could not decode this QR code. Please try a clearer or higher-resolution image.',
         }, { status: 400 });
       }
-      // Follow redirects + VirusTotal for URL-type content
+      // Follow redirects + VirusTotal in parallel (both depend only on the QR URL)
       if (qrDecodedContent.startsWith('http://') || qrDecodedContent.startsWith('https://')) {
-        const redirectResult = await followRedirects(qrDecodedContent);
+        const redirectPromise = followRedirects(qrDecodedContent);
+        const vtPromise = vtReport ? Promise.resolve(vtReport) : getVirusTotalReport(qrDecodedContent);
+        const [redirectResult, vtResult] = await Promise.all([redirectPromise, vtPromise]);
         qrFinalUrl = redirectResult.finalUrl;
         qrPageTitle = redirectResult.pageTitle;
-        if (!vtReport) {
-          vtReport = await getVirusTotalReport(qrFinalUrl);
+        // If the redirect revealed a different final URL, prefer a VT report on that.
+        if (!vtReport && vtResult && qrFinalUrl !== qrDecodedContent) {
+          const finalVt = await getVirusTotalReport(qrFinalUrl);
+          vtReport = finalVt || vtResult;
+        } else {
+          vtReport = vtResult;
         }
       }
     }
