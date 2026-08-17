@@ -18,11 +18,12 @@ export default function FamilyMemberSelector({ plan, members, onChange }) {
 
   return (
     <div className="mt-4 rounded-xl border border-border/50 bg-muted/20 p-3 space-y-2.5 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium flex items-center gap-1.5">
-          <Users className="w-3.5 h-3.5 text-primary" /> Protected members
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium flex items-center gap-1.5 min-w-0">
+          <Users className="w-3.5 h-3.5 text-primary shrink-0" />
+          <span className="truncate">Protected members</span>
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => onChange(Math.max(p.includedMembers, members - 1))}

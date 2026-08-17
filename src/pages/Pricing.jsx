@@ -208,7 +208,7 @@ export default function Pricing() {
                 ) : plan.id === "starter" ? (
                   "Free Plan"
                 ) : (
-                  `Choose ${plan.name} · $${computeFamilyTotal(plan.id, memberCounts[plan.id] || 1).totalMonthly.toFixed(2)}/mo`
+                  `Choose ${plan.name}`
                 )}
               </Button>
               <div className="mt-6 space-y-2.5">
