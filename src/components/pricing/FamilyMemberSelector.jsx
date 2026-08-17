@@ -52,12 +52,12 @@ export default function FamilyMemberSelector({ plan, members, onChange }) {
         />
       </div>
 
-      <div className="flex items-baseline justify-between pt-1.5 border-t border-border/40">
-        <span className="text-xs font-medium">Total</span>
-        <span className="text-sm font-bold text-primary">
-          ${t.totalMonthly.toFixed(2)}/mo
-          <span className="text-xs font-normal text-muted-foreground"> · ${t.totalAnnual}/yr billed</span>
-        </span>
+      <div className="flex items-center justify-between pt-2 border-t border-border/40">
+        <span className="text-xs font-medium text-muted-foreground">Total</span>
+        <div className="text-right leading-tight">
+          <span className="block text-sm font-bold text-primary">${t.totalAnnual}/yr</span>
+          <span className="block text-[10px] text-muted-foreground">${t.totalMonthly.toFixed(2)}/mo · billed annually</span>
+        </div>
       </div>
 
       {members >= p.maxMembers && (

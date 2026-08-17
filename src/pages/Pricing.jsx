@@ -144,7 +144,7 @@ export default function Pricing() {
           return (
             <div
               key={plan.id}
-              className={`relative rounded-2xl p-6 sm:p-7 border transition-all duration-300 animate-slide-up ${i === 1 ? "anim-delay-1" : i === 2 ? "anim-delay-2" : ""} ${
+              className={`relative flex flex-col rounded-2xl p-6 sm:p-7 border transition-all duration-300 animate-slide-up ${i === 1 ? "anim-delay-1" : i === 2 ? "anim-delay-2" : ""} ${
                 plan.highlighted
                   ? "border-primary bg-gradient-to-b from-primary/10 to-transparent shadow-lg shadow-primary/10"
                   : "border-border/50 bg-card hover:border-border hover:shadow-md"
@@ -162,26 +162,18 @@ export default function Pricing() {
               <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>
               {(() => {
                 const t = computeFamilyTotal(plan.id, memberCounts[plan.id] || 1);
-                const hasAddons = t.additionalMembers > 0;
                 return (
-                  <div className="mt-3 space-y-1.5">
+                  <div className="mt-4 space-y-1">
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl sm:text-3xl font-bold font-heading">
+                      <span className="text-3xl font-bold font-heading">
                         {billing === "monthly" ? `$${t.totalMonthly.toFixed(2)}` : `$${t.totalAnnual}`}
                       </span>
                       <span className="text-sm text-muted-foreground">{billing === "monthly" ? "/month" : "/year"}</span>
                     </div>
                     {billing === "monthly" && (
-                      <p className="text-[11px] text-muted-foreground">
-                        {hasAddons ? `billed annually · ${t.members} members` : "billed annually"}
-                      </p>
+                      <p className="text-[11px] text-muted-foreground">billed annually</p>
                     )}
-                    {hasAddons && billing === "yearly" && (
-                      <p className="text-[11px] text-muted-foreground">
-                        ${t.baseAnnual} base + ${t.additionalCostAnnual} for {t.additionalMembers} extra member{t.additionalMembers > 1 ? "s" : ""}
-                      </p>
-                    )}
-                    <p className="text-xs font-medium text-primary">{plan.credits}</p>
+                    <p className="text-xs font-medium text-primary pt-0.5">{plan.credits}</p>
                   </div>
                 );
               })()}
