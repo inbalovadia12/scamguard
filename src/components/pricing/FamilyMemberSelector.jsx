@@ -21,7 +21,7 @@ export default function FamilyMemberSelector({ plan, members, onChange }) {
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium flex items-center gap-1.5 min-w-0">
           <Users className="w-3.5 h-3.5 text-primary shrink-0" />
-          <span className="truncate">Protected members</span>
+          Protected members
         </span>
         <div className="flex items-center gap-2 shrink-0">
           <button
