@@ -160,14 +160,31 @@ export default function Pricing() {
               </div>
               <h2 className="font-bold text-lg font-heading">{plan.name}</h2>
               <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>
-              <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-2xl sm:text-3xl font-bold font-heading">
-                  {billing === "monthly" ? `$${computeFamilyTotal(plan.id, 1).baseMonthly.toFixed(2)}` : `$${computeFamilyTotal(plan.id, 1).baseAnnual}`}
-                </span>
-                <span className="text-sm text-muted-foreground">{billing === "monthly" ? "/month" : "/year"}</span>
-              </div>
-              <p className="text-xs font-medium text-primary mt-1">{plan.credits}</p>
-              {billing === "monthly" && <p className="text-[11px] text-muted-foreground">billed annually</p>}
+              {(() => {
+                const t = computeFamilyTotal(plan.id, memberCounts[plan.id] || 1);
+                const hasAddons = t.additionalMembers > 0;
+                return (
+                  <div className="mt-3 space-y-1.5">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-2xl sm:text-3xl font-bold font-heading">
+                        {billing === "monthly" ? `$${t.totalMonthly.toFixed(2)}` : `$${t.totalAnnual}`}
+                      </span>
+                      <span className="text-sm text-muted-foreground">{billing === "monthly" ? "/month" : "/year"}</span>
+                    </div>
+                    {billing === "monthly" && (
+                      <p className="text-[11px] text-muted-foreground">
+                        {hasAddons ? `billed annually · ${t.members} members` : "billed annually"}
+                      </p>
+                    )}
+                    {hasAddons && billing === "yearly" && (
+                      <p className="text-[11px] text-muted-foreground">
+                        ${t.baseAnnual} base + ${t.additionalCostAnnual} for {t.additionalMembers} extra member{t.additionalMembers > 1 ? "s" : ""}
+                      </p>
+                    )}
+                    <p className="text-xs font-medium text-primary">{plan.credits}</p>
+                  </div>
+                );
+              })()}
               {plan.id !== "starter" && (
                 <FamilyMemberSelector
                   plan={plan.id}
