@@ -21,6 +21,32 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Phone number is required' }, { status: 400 });
     }
 
+    // Fast path: return the canonical reputation index if this number is already known.
+    // Instant + accurate (the cached record came from a prior deep web-research lookup),
+    // and keeps repeated lookups well under 5s.
+    try {
+      const cacheKey = '+' + phone_number.trim().replace(/[^\d]/g, '');
+      const cached = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
+      const STALE_MS = 1000 * 60 * 60 * 24 * 30;
+      const r = cached[0];
+      if (r && r.last_external_check_at && (Date.now() - new Date(r.last_external_check_at).getTime() < STALE_MS)) {
+        return Response.json({
+          result: {
+            country: r.country || '',
+            carrier: r.carrier || '',
+            reputation_score: r.reputation_score || 0,
+            risk_level: r.risk_level || 'low',
+            user_reports: [],
+            scam_categories: r.scam_categories || [],
+            summary: r.summary || '',
+            sources: r.sources || [],
+          },
+          lookup: { id: r.id, phone_number: r.phone_number, cached: true },
+          cached: true,
+        });
+      }
+    } catch {}
+
     // Clean to digits only
     const cleaned = phone_number.trim().replace(/[^\d]/g, '');
 
@@ -102,7 +128,7 @@ Respond entirely in ${languageName}.`;
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,
       add_context_from_internet: true,
-      model: 'gemini_3_1_pro',
+      model: 'gemini_3_flash',
       response_json_schema: {
         type: 'object',
         properties: {
@@ -135,7 +161,7 @@ Respond entirely in ${languageName}.`;
     // the iOS Call Directory dataset). Uses the service role so the canonical record
     // is global, not tied to the requesting user. Never breaks the existing lookup.
     try {
-      await upsertPhoneReputation(base44.asServiceRole, {
+      await upsertPhoneReputation(base44, {
         normalized_number: phone_number,
         phone_number: displayFormat,
         country: result.country || '',

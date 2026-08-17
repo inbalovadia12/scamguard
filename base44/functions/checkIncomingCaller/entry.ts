@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { waitUntil } from 'base44:runtime';
 import {
   normalizePhoneNumber,
   statusFromReputation,
@@ -10,9 +11,10 @@ import {
 } from '../../shared/phoneReputation.ts';
 
 // Live caller check for the native iOS caller-ID flow.
-// Fast path: read the canonical PhoneReputation index (no LLM cost).
-// Live path: if no record / stale (>30d), run a web-research lookup, upsert the
-// canonical index, and return the scam/not-scam classification + caller-ID label.
+//   Fast path (instant):  canonical PhoneReputation index hit (fresh)  -> accurate, no LLM.
+//   Live path (<5s):       cache miss -> quick LLM pass WITHOUT web search -> provisional answer.
+//                         a deep web-research lookup runs in the background (waitUntil) and upserts
+//                         the canonical index, so the NEXT check on this number is instant + accurate.
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -38,6 +40,7 @@ Deno.serve(async (req) => {
     const fresh = rep && rep.last_external_check_at &&
       (Date.now() - new Date(rep.last_external_check_at).getTime() < STALE_MS);
 
+    // ---- Fast path: accurate, instant ----
     if (rep && fresh) {
       const status = rep.caller_id_status || statusFromReputation(rep);
       return Response.json({
@@ -53,10 +56,16 @@ Deno.serve(async (req) => {
         country: rep.country || '',
         carrier: rep.carrier || '',
         cached: true,
+        provisional: false,
       });
     }
 
-    // Live lookup against public scam/spam databases via web research.
+    // ---- Live path: instant provisional answer, deep lookup runs in background ----
+    // A synchronous LLM call can't reliably hit <5s, so for an uncached number we
+    // return UNKNOWN immediately and enrich the canonical index in the background.
+    // The next check on this number is then instant + accurate. Known scam numbers
+    // are already in the cache (and in the on-device Call Directory dataset), so the
+    // fast path covers the cases that matter for a ringing phone.
     const cleaned = nn.replace('+', '');
     let tenDigit: string;
     if (cleaned.length === 10) tenDigit = cleaned;
@@ -69,6 +78,31 @@ Deno.serve(async (req) => {
       : (phone_number || nn);
     const intlFormat = isValidNANP ? `+1${tenDigit}` : nn;
 
+    waitUntil(deepLookupAndUpsert(base44, nn, displayFormat, intlFormat));
+
+    return Response.json({
+      phone_number: displayFormat,
+      normalized_number: nn,
+      status: 'UNKNOWN',
+      risk_level: 'low',
+      reputation_score: 0,
+      caller_id_label: computeLabel('UNKNOWN', config),
+      confidence: 0,
+      summary: 'No cached reputation yet — verifying this number in the background. Check again shortly.',
+      sources: [],
+      country: '',
+      carrier: '',
+      cached: false,
+      provisional: true,
+    });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+});
+
+// Background deep lookup: full web research against public scam/spam databases, then upsert.
+async function deepLookupAndUpsert(base44: any, nn: string, displayFormat: string, intlFormat: string) {
+  try {
     const prompt = `You are a phone-number reputation analyst. Research the number ${displayFormat} (international ${intlFormat}).
 Rules:
 - Report ONLY information SPECIFIC to THIS EXACT number regarding scam calls, spam, or robocalls.
@@ -97,38 +131,19 @@ Return JSON with: country, carrier, reputation_score (0-100), risk_level (low/me
       },
     });
 
-    let upserted: any = null;
-    try {
-      upserted = await upsertPhoneReputation(base44.asServiceRole, {
-        normalized_number: nn,
-        phone_number: displayFormat,
-        country: result.country || '',
-        carrier: result.carrier || '',
-        reputation_score: result.reputation_score || 0,
-        risk_level: result.risk_level || 'low',
-        scam_categories: result.scam_categories || [],
-        summary: result.summary || '',
-        sources: result.sources || [],
-        last_external_check_at: new Date().toISOString(),
-      });
-    } catch {}
-
-    const status = upserted?.caller_id_status || statusFromReputation(result);
-    return Response.json({
-      phone_number: displayFormat,
+    await upsertPhoneReputation(base44, {
       normalized_number: nn,
-      status,
-      risk_level: result.risk_level || 'low',
-      reputation_score: result.reputation_score || 0,
-      caller_id_label: computeLabel(status, config),
-      confidence: upserted?.confidence_score ?? computeConfidence(result),
-      summary: result.summary || '',
-      sources: result.sources || [],
+      phone_number: displayFormat,
       country: result.country || '',
       carrier: result.carrier || '',
-      cached: false,
+      reputation_score: result.reputation_score || 0,
+      risk_level: result.risk_level || 'low',
+      scam_categories: result.scam_categories || [],
+      summary: result.summary || '',
+      sources: result.sources || [],
+      last_external_check_at: new Date().toISOString(),
     });
-  } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+  } catch {
+    // background enrichment is best-effort; never throw after the response is sent
   }
-});
+}
