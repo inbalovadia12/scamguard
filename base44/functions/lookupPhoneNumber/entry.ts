@@ -237,5 +237,9 @@ function countryFromNumber(intl: string): string {
     const prefix = d.slice(0, len);
     if (COUNTRY_CODES[prefix]) return COUNTRY_CODES[prefix];
   }
+  // No dialing code matched — the number was entered in local format without a
+  // country code (starts with a trunk '0'). Vardin's primary market is Israel, so
+  // default there; the background deep lookup confirms/overrides it.
+  if (d.startsWith('0')) return 'Israel';
   return '';
 }
