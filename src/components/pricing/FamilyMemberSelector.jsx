@@ -2,6 +2,15 @@ import React from "react";
 import { Users, Minus, Plus } from "lucide-react";
 import { getPlanPricing, computeFamilyTotal } from "@/lib/planPricing";
 
+function Row({ label, value }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-[11px] text-muted-foreground leading-5 min-w-0">{label}</span>
+      <span className="text-[11px] font-medium text-foreground leading-5 text-right whitespace-nowrap tabular-nums">{value}</span>
+    </div>
+  );
+}
+
 export default function FamilyMemberSelector({ plan, members, onChange }) {
   if (plan === "starter") return null;
   const p = getPlanPricing(plan);
@@ -9,7 +18,7 @@ export default function FamilyMemberSelector({ plan, members, onChange }) {
   const extra = t.additionalMembers;
 
   return (
-    <div className="mt-4 rounded-xl border border-border/50 bg-muted/30 p-3 animate-fade-in">
+    <div className="mt-4 rounded-xl border border-border/50 bg-muted/30 p-3 space-y-2.5 animate-fade-in">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium flex items-center gap-1.5 min-w-0">
           <Users className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -37,13 +46,25 @@ export default function FamilyMemberSelector({ plan, members, onChange }) {
           </button>
         </div>
       </div>
-      <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-        {extra > 0
-          ? `1 included · ${extra} extra × $${t.addonAnnual}/yr`
-          : `1 included · $${t.addonAnnual}/yr per extra member`}
-      </p>
+
+      <div className="space-y-1">
+        <Row label={`Base plan (1 member)`} value={`$${t.baseAnnual}/yr`} />
+        <Row
+          label={extra > 0 ? `Extra members (${extra} × $${t.addonAnnual}/yr)` : `Extra members ($${t.addonAnnual}/yr each)`}
+          value={extra > 0 ? `$${t.additionalCostAnnual}/yr` : "—"}
+        />
+      </div>
+
+      <div className="flex items-center justify-between pt-2 border-t border-border/40">
+        <span className="text-xs font-semibold">Total</span>
+        <div className="text-right leading-tight">
+          <span className="block text-sm font-bold text-primary tabular-nums">${t.totalAnnual}/yr</span>
+          <span className="block text-[10px] text-muted-foreground tabular-nums">${t.totalMonthly.toFixed(2)}/mo · billed annually</span>
+        </div>
+      </div>
+
       {members >= p.maxMembers && (
-        <p className="mt-1 text-[10px] text-muted-foreground">Max {p.maxMembers} members on this plan.</p>
+        <p className="text-[10px] text-muted-foreground">Max {p.maxMembers} members on this plan.</p>
       )}
     </div>
   );
