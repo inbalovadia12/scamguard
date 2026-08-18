@@ -147,8 +147,8 @@ export default function Dashboard() {
 
       {/* Recent activity + Tip */}
       {!kidMode && (
-      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 animate-slide-up anim-delay-3">
-        <div className="lg:col-span-2 rounded-2xl border border-border/50 bg-card p-5 sm:p-6">
+      <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 animate-slide-up anim-delay-3 min-w-0">
+        <div className="lg:col-span-2 rounded-2xl border border-border/50 bg-card p-5 sm:p-6 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-sm font-heading">{t("dash.recent_activity")}</h2>
             <Link to="/alerts" className="text-xs text-primary hover:underline">{t("dash.view_all")}</Link>
@@ -171,7 +171,7 @@ export default function Dashboard() {
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                     a.risk_level === "high" ? "bg-destructive" : a.risk_level === "medium" ? "bg-warning" : "bg-success"
                   }`} />
-                  <p className="text-sm flex-1 truncate">{a.message_text}</p>
+                  <p className="text-sm flex-1 min-w-0 truncate">{a.message_text}</p>
                   <span className="text-xs font-bold text-muted-foreground flex-shrink-0">{a.risk_score}/100</span>
                 </div>
               ))}
