@@ -216,17 +216,19 @@ export default function LiveCallAnalyzer() {
     if (result.feedback) {
       setCoaching((prev) => [{ text: result.feedback, timestamp: new Date(), risk_level: result.risk_level }, ...prev]);
     }
-    if (result.warnings?.length) {
-      setWarnings((prev) => [...result.warnings.map((w) => ({ text: w, timestamp: new Date(), level: result.risk_level })), ...prev]);
+    const warningsArr = Array.isArray(result.warnings) ? result.warnings : [];
+    if (warningsArr.length) {
+      setWarnings((prev) => [...warningsArr.map((w) => ({ text: w, timestamp: new Date(), level: result.risk_level })), ...prev]);
     }
     if (RISK_ORDER[result.risk_level] > RISK_ORDER[overallRiskRef.current]) {
       overallRiskRef.current = result.risk_level;
       setOverallRisk(result.risk_level);
     }
-    if (result.tactics_detected?.length) {
+    const tacticsArr = Array.isArray(result.tactics_detected) ? result.tactics_detected : [];
+    if (tacticsArr.length) {
       setTactics((prev) => {
         const set = new Set(prev);
-        result.tactics_detected.forEach((t) => set.add(t));
+        tacticsArr.forEach((t) => set.add(t));
         return [...set];
       });
     }
@@ -570,9 +572,10 @@ export default function LiveCallAnalyzer() {
         setTranscript((prev) => [...prev, newSeg]);
         transcriptRef.current = [...transcriptRef.current, newSeg];
 
-        if (result.warnings?.length) {
+        const warningsArr = Array.isArray(result.warnings) ? result.warnings : [];
+        if (warningsArr.length) {
           setWarnings((prev) => [
-            ...result.warnings.map((w) => ({ text: w, timestamp: new Date(), level: result.risk_level })),
+            ...warningsArr.map((w) => ({ text: w, timestamp: new Date(), level: result.risk_level })),
             ...prev,
           ]);
         }
@@ -582,10 +585,11 @@ export default function LiveCallAnalyzer() {
           setOverallRisk(result.risk_level);
         }
 
-        if (result.tactics_detected?.length) {
+        const tacticsArr = Array.isArray(result.tactics_detected) ? result.tactics_detected : [];
+        if (tacticsArr.length) {
           setTactics((prev) => {
             const set = new Set(prev);
-            result.tactics_detected.forEach((t) => set.add(t));
+            tacticsArr.forEach((t) => set.add(t));
             return [...set];
           });
         }
