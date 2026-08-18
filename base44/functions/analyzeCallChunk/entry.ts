@@ -98,14 +98,30 @@ Deno.serve(async (req) => {
       ? `\nSPEAKER HISTORY (who spoke recently, oldest→newest): ${speaker_history}\n`
       : '';
 
-    const prompt = `Real-time scam detector analyzing a phone call chunk. "Victim" = app user. "Scammer" = other party. Whisper segments with [start-end] timestamps — a gap between segments (end < next start) = pause = likely speaker change. Short replies ("yes", "okay", "I see", "right", "sure") = the listener responding, not the current speaker continuing.
-${contextPrompt}${historyPrompt}
-TRANSCRIPT:
+    const systemPrompt = `Real-time scam detection agent on a live phone call. Determine WHO is speaking and detect scam tactics.
+
+SPEAKERS: "scammer" = the other party (caller, makes requests, asks for money/info, creates urgency, threatens, offers deals). "victim" = app user (responds, provides info, asks questions, expresses doubt).
+
+SPEAKER DETECTION (apply in priority order):
+1. CONTENT IS PRIMARY: requests/money/urgency/threats/offers → scammer; info-sharing/agreement/questions/doubt → victim.
+2. PATTERN: follow SPEAKER HISTORY — 2+ consecutive same speaker → next is likely the other.
+3. QUESTION → ANSWER = speaker change.
+4. No history → first speaker usually "scammer" (incoming calls).
+5. Short replies ("yes", "okay", "I see", "sure", "right", "uh-huh") = listener responding = usually victim.
+6. Timing gaps (end < next start) = possible speaker change, NOT certain — could be same speaker pausing.
+
+FIX WHISPER ERRORS: merge "I R S" → "IRS", fix homophones, add missing punctuation, merge fragmented segments from the same speaker (same tone, no speaker-change signals).
+
+SCAM CHECKS (scammer turns): urgency/time pressure, payment requests (gift cards/crypto/wire/prepaid), personal info (SSN/passwords/OTP/bank), impersonation (government/bank/tech support/family), threats (arrest/account closure/fines), too-good-to-be-true offers, remote access requests, secrecy demands ("don't tell anyone").
+VICTIM CHECKS: sharing sensitive info? Pushing back well? Being manipulated?
+
+Return JSON: segments [{speaker, text}], feedback (advice to victim if they spoke, else ""), is_scam, red_flags, risk_level (low/medium/high), warnings, tactics_detected, analysis (1-2 sentences).`;
+
+    const userPrompt = `${contextPrompt}${historyPrompt}
+TRANSCRIPT (Whisper segments with [start-end] timestamps):
 ${formattedTranscript}
 
-Detect speaker turns: continue the SPEAKER HISTORY pattern; if empty, first speaker is usually "scammer" (they initiate calls). A question followed by an answer = speaker change. Fix Whisper errors: merge run-on words ("I R S" → "IRS"), correct obvious homophones, add missing punctuation, merge fragmented segments from the same speaker. For scammer turns, check: urgency, payment requests (gift cards/crypto/wire), personal info (SSN/passwords/OTP), impersonation, threats, too-good-to-be-true offers, remote access. For victim turns, check if sharing sensitive info or pushing back well.
-
-Return JSON: segments [{speaker, text}], feedback (advice to victim if they spoke, else ""), is_scam, red_flags, risk_level (low/medium/high), warnings, tactics_detected, analysis (1-2 sentences). Respond in ${languageName}.`;
+Respond entirely in ${languageName}.`;
 
     const llmResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -115,11 +131,15 @@ Return JSON: segments [{speaker, text}], feedback (advice to victim if they spok
       },
       body: JSON.stringify({
         model: 'openai/gpt-oss-120b',
-        messages: [{ role: 'user', content: prompt }],
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
         response_format: { type: 'json_object' },
         temperature: 0,
+        max_tokens: 1000,
       }),
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(12000),
     });
 
     if (!llmResponse.ok) {

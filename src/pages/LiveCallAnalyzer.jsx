@@ -342,8 +342,8 @@ export default function LiveCallAnalyzer() {
           });
 
           const lang = localStorage.getItem("vardin_language") || "en";
-          const recentContext = transcriptRef.current.slice(-4).map((t) => `${t.speaker}: ${t.text}`).join("\n");
-          const speakerHistory = transcriptRef.current.slice(-5).map((t) => t.speaker).filter(Boolean).join(",");
+          const recentContext = transcriptRef.current.slice(-6).map((t) => `${t.speaker}: ${t.text}`).join("\n");
+          const speakerHistory = transcriptRef.current.slice(-8).map((t) => t.speaker).filter(Boolean).join(",");
 
           const response = await base44.functions.invoke("analyzeCallChunk", {
             audio_base64: base64,
@@ -424,8 +424,8 @@ export default function LiveCallAnalyzer() {
       let silenceStart = 0;
       let isSpeaking = false;
       const SILENCE_THRESHOLD = 0.015;
-      const SILENCE_DURATION = 400;
-      const MAX_CHUNK_MS = 6000;
+      const SILENCE_DURATION = 350;
+      const MAX_CHUNK_MS = 4500;
 
       const checkAudioLevel = () => {
         if (userStoppedRef.current || !analyserRef.current) return;
