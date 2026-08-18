@@ -2,12 +2,9 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 import { waitUntil } from 'base44:runtime';
 import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
-// Manual phone-number reputation lookup.
-//   Fast path (instant):  canonical PhoneReputation index hit (fresh) -> accurate, no LLM.
-//   First-try path (<5s): cache miss -> quick LLM pass WITHOUT web search -> provisional
-//                         answer returned immediately. A deep web-research lookup runs in
-//                         the background (waitUntil) and upserts the canonical index, so the
-//                         NEXT lookup on this number is instant + accurate. No retry needed.
+// Single web-search phone-number reputation lookup. Returns the full, verified
+// result in one pass (target <20s). Caches to the canonical PhoneReputation index
+// so repeat lookups on the same number are instant.
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -61,12 +58,11 @@ Deno.serve(async (req) => {
           result,
           lookup: { id: r.id, phone_number: r.phone_number, cached: true },
           cached: true,
-          provisional: false,
         });
       }
     } catch {}
 
-    // ---- First-try path: instant provisional answer, deep lookup runs in background ----
+    // ---- Single web-search lookup ----
     const cleaned = phone_number.trim().replace(/[^\d]/g, '');
 
     let tenDigit: string;
@@ -89,90 +85,13 @@ Deno.serve(async (req) => {
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
-    // Instant provisional answer — NO LLM round-trip on the critical path. Country is
-    // derived deterministically from the country code (more reliable than an LLM guess);
-    // carrier is "Unknown" until the background deep lookup fills in the real one.
-    // Accuracy is preserved: the deep lookup (below) still runs, and the NEXT lookup on
-    // this number returns the full, verified result from the canonical index.
-    // If a STALE PhoneReputation record exists, merge its community report counts and
-    // caller-id status so the user still sees known scam reports while the refresh runs.
-    let stale: any = null;
-    try {
-      const staleRecs = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
-      stale = staleRecs[0];
-    } catch {}
+    const prompt = `Research phone number ${displayFormat} (${intlFormat}) for scam/spam reports. Check 800notes.com, nomorobo.com, truecaller.com, Reddit r/scams for this exact number.
 
-    const provisionalResult = {
-      country: stale?.country || countryFromNumber(intlFormat),
-      carrier: stale?.carrier || 'Unknown',
-      reputation_score: stale?.reputation_score || 5,
-      risk_level: (stale?.risk_level || 'low') as 'low' | 'medium' | 'high',
-      user_reports: [] as string[],
-      scam_categories: stale?.scam_categories || [],
-      summary: stale?.summary || 'No scam reports in our index yet for this number. A deeper check is running in the background.',
-      sources: stale?.sources || [],
-      report_count: stale?.report_count || 0,
-      scam_report_count: stale?.scam_report_count || 0,
-      spam_report_count: stale?.spam_report_count || 0,
-      suspicious_report_count: stale?.suspicious_report_count || 0,
-      safe_report_count: stale?.safe_report_count || 0,
-      caller_id_status: stale?.caller_id_status || 'UNKNOWN',
-      confidence_score: stale?.confidence_score || 0,
-      verified_business: stale?.verified_business || false,
-      business_name: stale?.business_name || '',
-      caller_id_label: stale?.caller_id_label || '',
-      last_checked_at: stale?.last_checked_at || stale?.last_updated_at || '',
-    };
+If no reports: reputation_score 5-15, risk_level "low", summary "No scam reports found for this number."
+If reports found: reputation_score (0-100), risk_level (low/medium/high), user_reports (max 3), scam_categories, summary, sources, report counts (scam/spam/suspicious/safe).
+If verified business: verified_business=true, business_name.
 
-    const saved = await base44.entities.PhoneLookup.create({
-      phone_number: displayFormat,
-      country: provisionalResult.country,
-      carrier: provisionalResult.carrier,
-      reputation_score: provisionalResult.reputation_score,
-      risk_level: provisionalResult.risk_level,
-      user_reports: provisionalResult.user_reports,
-      scam_categories: provisionalResult.scam_categories,
-      summary: provisionalResult.summary,
-      sources: provisionalResult.sources,
-      report_count: provisionalResult.report_count,
-      scam_report_count: provisionalResult.scam_report_count,
-      spam_report_count: provisionalResult.spam_report_count,
-      suspicious_report_count: provisionalResult.suspicious_report_count,
-      safe_report_count: provisionalResult.safe_report_count,
-      caller_id_status: provisionalResult.caller_id_status,
-      confidence_score: provisionalResult.confidence_score,
-      verified_business: provisionalResult.verified_business,
-      business_name: provisionalResult.business_name,
-      caller_id_label: provisionalResult.caller_id_label,
-    });
-
-    // Deep web research runs in the background; upserts the canonical index so the
-    // NEXT lookup on this number is instant + accurate. Never blocks the response.
-    waitUntil(deepLookupAndUpsert(base44, cacheKey, displayFormat, intlFormat, languageName));
-
-    return Response.json({ result: provisionalResult, lookup: saved, cached: false, provisional: true });
-  } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
-  }
-});
-
-// Background deep lookup: full web research against public scam/spam databases, then upsert.
-async function deepLookupAndUpsert(base44: any, nn: string, displayFormat: string, intlFormat: string, languageName: string) {
-  try {
-    const prompt = `You are a phone number reputation analyst. Research the phone number: ${displayFormat} (international: ${intlFormat})
-
-CRITICAL RULES — VIOLATING THESE INVALIDATES YOUR RESPONSE:
-1. Report ONLY information SPECIFIC to THIS EXACT number regarding scam calls, spam, or robocalls.
-2. Only include a source URL if that page's PRIMARY topic is this number as a scam/spam caller.
-3. If no specific reports exist: reputation_score 5-15, risk_level "low", empty user_reports/scam_categories/sources, and say "No scam reports found for this number."
-
-Check: 800notes.com, whocallsme.com, nomorobo.com, truecaller.com, reportfraud.ftc.gov, Reddit r/scams and r/phonescams (only posts whose title or body mention this exact number).
-
-Return: country, carrier, reputation_score (0-100), risk_level (low/medium/high), user_reports[] (concise excerpts of real complaints found, max 5), scam_categories[], summary, sources[].
-Also estimate report counts from what you found: scam_report_count (people reporting it as a scam), spam_report_count (telemarketing/robocalls), suspicious_report_count (unwanted but unclear), safe_report_count (confirmed legitimate).
-If the number belongs to a known verified business, set verified_business=true and business_name accordingly.
-
-Respond entirely in ${languageName}.`;
+Respond in ${languageName}.`;
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,
@@ -200,103 +119,83 @@ Respond entirely in ${languageName}.`;
       },
     });
 
-    await upsertPhoneReputation(base44, {
-      normalized_number: nn,
-      phone_number: displayFormat,
+    const fullResult = {
       country: result.country || '',
       carrier: result.carrier || '',
       reputation_score: result.reputation_score || 0,
-      risk_level: result.risk_level || 'low',
+      risk_level: (result.risk_level || 'low') as 'low' | 'medium' | 'high',
+      user_reports: result.user_reports || [],
       scam_categories: result.scam_categories || [],
       summary: result.summary || '',
       sources: result.sources || [],
-      last_external_check_at: new Date().toISOString(),
+      report_count: (result.scam_report_count || 0) + (result.spam_report_count || 0) + (result.suspicious_report_count || 0) + (result.safe_report_count || 0),
+      scam_report_count: result.scam_report_count || 0,
+      spam_report_count: result.spam_report_count || 0,
+      suspicious_report_count: result.suspicious_report_count || 0,
+      safe_report_count: result.safe_report_count || 0,
+      caller_id_status: 'UNKNOWN',
+      confidence_score: 0,
       verified_business: result.verified_business || false,
       business_name: result.business_name || '',
-      report_counts: {
-        scam: result.scam_report_count || 0,
-        spam: result.spam_report_count || 0,
-        suspicious: result.suspicious_report_count || 0,
-        safe: result.safe_report_count || 0,
-      },
-    });
-  } catch {
-    // background enrichment is best-effort; never throw after the response is sent
-  }
-}
+      caller_id_label: '',
+      last_checked_at: new Date().toISOString(),
+    };
 
-// Deterministic country lookup from the international dialing code. Used for the
-// instant provisional answer (no LLM needed); the background deep lookup overrides
-// it with the verified value. Longest-prefix-first matching handles variable-length
-// country codes (1-4 digits).
-const COUNTRY_CODES: Record<string, string> = {
-  '1': 'United States / Canada',
-  '7': 'Russia / Kazakhstan',
-  '20': 'Egypt', '27': 'South Africa', '30': 'Greece', '31': 'Netherlands',
-  '32': 'Belgium', '33': 'France', '34': 'Spain', '36': 'Hungary',
-  '39': 'Italy', '40': 'Romania', '41': 'Switzerland', '44': 'United Kingdom',
-  '45': 'Denmark', '46': 'Sweden', '47': 'Norway', '48': 'Poland',
-  '49': 'Germany', '51': 'Peru', '52': 'Mexico', '53': 'Cuba',
-  '54': 'Argentina', '55': 'Brazil', '56': 'Chile', '57': 'Colombia',
-  '58': 'Venezuela', '60': 'Malaysia', '61': 'Australia', '62': 'Indonesia',
-  '63': 'Philippines', '64': 'New Zealand', '65': 'Singapore', '66': 'Thailand',
-  '81': 'Japan', '82': 'South Korea', '84': 'Vietnam', '86': 'China',
-  '90': 'Turkey', '91': 'India', '92': 'Pakistan', '93': 'Afghanistan',
-  '94': 'Sri Lanka', '95': 'Myanmar', '98': 'Iran',
-  '212': 'Morocco', '213': 'Algeria', '216': 'Tunisia', '218': 'Libya',
-  '220': 'Gambia', '221': 'Senegal', '222': 'Mauritania', '223': 'Mali',
-  '224': 'Guinea', '225': 'Ivory Coast', '226': 'Burkina Faso', '227': 'Niger',
-  '228': 'Togo', '229': 'Benin', '230': 'Mauritius', '231': 'Liberia',
-  '232': 'Sierra Leone', '233': 'Ghana', '234': 'Nigeria', '235': 'Chad',
-  '236': 'Central African Republic', '237': 'Cameroon', '238': 'Cape Verde',
-  '239': 'Sao Tome', '240': 'Equatorial Guinea', '241': 'Gabon', '242': 'Congo',
-  '243': 'DR Congo', '244': 'Angola', '245': 'Guinea-Bissau', '248': 'Seychelles',
-  '249': 'Sudan', '250': 'Rwanda', '251': 'Ethiopia', '252': 'Somalia',
-  '253': 'Djibouti', '254': 'Kenya', '255': 'Tanzania', '256': 'Uganda',
-  '257': 'Burundi', '258': 'Mozambique', '260': 'Zambia', '261': 'Madagascar',
-  '263': 'Zimbabwe', '264': 'Namibia', '265': 'Malawi', '266': 'Lesotho',
-  '267': 'Botswana', '268': 'Eswatini', '269': 'Comoros',
-  '290': 'Saint Helena', '291': 'Eritrea', '297': 'Aruba', '298': 'Faroe Islands',
-  '299': 'Greenland',
-  '350': 'Gibraltar', '351': 'Portugal', '352': 'Luxembourg', '353': 'Ireland',
-  '354': 'Iceland', '355': 'Albania', '356': 'Malta', '357': 'Cyprus',
-  '358': 'Finland', '359': 'Bulgaria', '370': 'Lithuania', '371': 'Latvia',
-  '372': 'Estonia', '373': 'Moldova', '374': 'Armenia', '375': 'Belarus',
-  '376': 'Andorra', '377': 'Monaco', '378': 'San Marino', '380': 'Ukraine',
-  '381': 'Serbia', '382': 'Montenegro', '383': 'Kosovo', '385': 'Croatia',
-  '386': 'Slovenia', '387': 'Bosnia and Herzegovina', '389': 'North Macedonia',
-  '420': 'Czech Republic', '421': 'Slovakia', '423': 'Liechtenstein',
-  '500': 'Falkland Islands', '501': 'Belize', '502': 'Guatemala',
-  '503': 'El Salvador', '504': 'Honduras', '505': 'Nicaragua',
-  '506': 'Costa Rica', '507': 'Panama', '508': 'Saint Pierre and Miquelon',
-  '509': 'Haiti', '590': 'Guadeloupe', '591': 'Bolivia', '592': 'Guyana',
-  '593': 'Ecuador', '594': 'French Guiana', '595': 'Paraguay',
-  '596': 'Martinique', '597': 'Suriname', '598': 'Uruguay',
-  '670': 'East Timor', '672': 'Norfolk Island', '673': 'Brunei',
-  '674': 'Nauru', '675': 'Papua New Guinea', '676': 'Tonga',
-  '677': 'Solomon Islands', '678': 'Vanuatu', '679': 'Fiji', '680': 'Palau',
-  '682': 'Cook Islands', '685': 'Samoa', '686': 'Kiribati',
-  '687': 'New Caledonia', '688': 'Tuvalu', '689': 'French Polynesia',
-  '691': 'Micronesia', '692': 'Marshall Islands',
-  '850': 'North Korea', '852': 'Hong Kong', '853': 'Macau', '855': 'Cambodia',
-  '856': 'Laos', '880': 'Bangladesh', '886': 'Taiwan',
-  '960': 'Maldives', '961': 'Lebanon', '962': 'Jordan', '963': 'Syria',
-  '964': 'Iraq', '965': 'Kuwait', '966': 'Saudi Arabia', '967': 'Yemen',
-  '968': 'Oman', '971': 'United Arab Emirates', '972': 'Israel', '973': 'Bahrain',
-  '974': 'Qatar', '975': 'Bhutan', '976': 'Mongolia', '977': 'Nepal',
-  '992': 'Tajikistan', '993': 'Turkmenistan', '994': 'Azerbaijan',
-  '995': 'Georgia', '996': 'Kyrgyzstan', '998': 'Uzbekistan',
-};
+    // Persist to cache index + history in the background so the response returns immediately
+    waitUntil((async () => {
+      try {
+        const rep = await upsertPhoneReputation(base44, {
+          normalized_number: cacheKey,
+          phone_number: displayFormat,
+          country: result.country || '',
+          carrier: result.carrier || '',
+          reputation_score: result.reputation_score || 0,
+          risk_level: result.risk_level || 'low',
+          scam_categories: result.scam_categories || [],
+          summary: result.summary || '',
+          sources: result.sources || [],
+          last_external_check_at: new Date().toISOString(),
+          verified_business: result.verified_business || false,
+          business_name: result.business_name || '',
+          report_counts: {
+            scam: result.scam_report_count || 0,
+            spam: result.spam_report_count || 0,
+            suspicious: result.suspicious_report_count || 0,
+            safe: result.safe_report_count || 0,
+          },
+        });
 
-function countryFromNumber(intl: string): string {
-  const d = intl.replace(/^\+/, '');
-  for (let len = 4; len >= 1; len--) {
-    const prefix = d.slice(0, len);
-    if (COUNTRY_CODES[prefix]) return COUNTRY_CODES[prefix];
+        // Reconcile derived fields from the upserted record so history matches the index
+        fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
+        fullResult.confidence_score = rep?.confidence_score || 0;
+        fullResult.caller_id_label = rep?.caller_id_label || '';
+
+        await base44.entities.PhoneLookup.create({
+          phone_number: displayFormat,
+          country: fullResult.country,
+          carrier: fullResult.carrier,
+          reputation_score: fullResult.reputation_score,
+          risk_level: fullResult.risk_level,
+          user_reports: fullResult.user_reports,
+          scam_categories: fullResult.scam_categories,
+          summary: fullResult.summary,
+          sources: fullResult.sources,
+          report_count: fullResult.report_count,
+          scam_report_count: fullResult.scam_report_count,
+          spam_report_count: fullResult.spam_report_count,
+          suspicious_report_count: fullResult.suspicious_report_count,
+          safe_report_count: fullResult.safe_report_count,
+          caller_id_status: fullResult.caller_id_status,
+          confidence_score: fullResult.confidence_score,
+          verified_business: fullResult.verified_business,
+          business_name: fullResult.business_name,
+          caller_id_label: fullResult.caller_id_label,
+        });
+      } catch {}
+    })());
+
+    return Response.json({ result: fullResult, lookup: { phone_number: displayFormat, cached: false }, cached: false });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
   }
-  // No dialing code matched — the number was entered in local format without a
-  // country code (starts with a trunk '0'). Vardin's primary market is Israel, so
-  // default there; the background deep lookup confirms/overrides it.
-  if (d.startsWith('0')) return 'Israel';
-  return '';
-}
+});
