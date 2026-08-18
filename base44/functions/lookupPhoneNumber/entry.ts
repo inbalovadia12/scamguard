@@ -87,8 +87,13 @@ Deno.serve(async (req) => {
 
     const prompt = `Research phone number ${displayFormat} (${intlFormat}) for scam/spam reports. Check 800notes.com, nomorobo.com, truecaller.com, Reddit r/scams for this exact number.
 
-If no reports: reputation_score 5-15, risk_level "low", summary "No scam reports found for this number."
-If reports found: reputation_score (0-100), risk_level (low/medium/high), user_reports (max 3), scam_categories, summary, sources, report counts (scam/spam/suspicious/safe).
+Score and risk_level MUST be consistent:
+- low risk = reputation_score 0-35
+- medium risk = reputation_score 36-70
+- high risk = reputation_score 71-100
+
+If no reports found: reputation_score 5-15, risk_level "low", summary "No scam reports found for this number."
+If reports found: set risk_level and reputation_score consistently using the ranges above, plus user_reports (max 3), scam_categories, summary, sources, report counts (scam/spam/suspicious/safe).
 If verified business: verified_business=true, business_name.
 
 Respond in ${languageName}.`;
