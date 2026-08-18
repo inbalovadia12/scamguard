@@ -162,7 +162,7 @@ export default function AdvancedScanner() {
         <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
           <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-primary-foreground" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Scanner U</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Universal </h1>
         <p className="text-muted-foreground text-sm sm:text-base max-w-md mx-auto hidden sm:block">
           All extension scan types in one place — pages, URLs, screenshots, QR codes, emails, chats, marketplace listings, and files.
         </p>
