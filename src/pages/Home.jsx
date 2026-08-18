@@ -310,7 +310,7 @@ export default function Home() {
           {mode === "conversation" ? (
             <ConversationPanel />
           ) : mode === "bulk" ? (
-            <BulkPhoneScanner credits={credits} />
+            <BulkPhoneScanner credits={credits} onCreditsChange={setCredits} />
           ) : (
           <>
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-7 space-y-4 sm:space-y-6 animate-slide-up anim-delay-2">
