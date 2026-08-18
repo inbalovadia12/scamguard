@@ -190,35 +190,21 @@ Deno.serve(async (req) => {
       ? `\n\nVIRUSTOTAL REPORT:\n- Malicious detections: ${vtReport.malicious}/${vtReport.total_engines} security engines\n- Suspicious detections: ${vtReport.suspicious}\n- Harmless: ${vtReport.harmless}\n- Community reputation: ${vtReport.reputation}\n${Object.keys(vtReport.categories).length > 0 ? '- Categories: ' + Object.values(vtReport.categories).join(', ') + '\n' : ''}`
       : '\n\n(VirusTotal report unavailable — analyze based on URL and content only)';
 
-    const prompt = `You are a scam detection expert. Analyze this URL and its website content for scam/phishing risk.
+    const prompt = `Analyze this URL and website content for scam/phishing risk.
 
 URL: ${targetUrl}
-Final URL (after redirects): ${finalUrl}
-HTTP Status: ${httpStatus}
-${fetchError ? `Website fetch error: ${fetchError}` : 'Website fetched successfully.'}
+Final URL: ${finalUrl} | HTTP Status: ${httpStatus}
+${fetchError ? `Fetch error: ${fetchError}` : ''}
 
-Website content extracted:
-${websiteContent || '(Could not fetch website content — analyze based on URL structure and domain only)'}
+Website content:
+${websiteContent || '(Could not fetch — analyze URL structure and domain only)'}
 ${marketplaceContext}${redirectInfo}${vtInfo}
 
-Analyze:
-- Domain: typosquatting, suspicious TLDs, recently registered domains, non-matching brand domains, IDN homograph attacks
-- URL structure: suspicious paths, excessive subdomains, URL shortener services, tracking parameters
-- Website content: product listings, pricing anomalies (too good to be true), payment methods (gift cards, crypto, wire), contact info legitimacy, trust signals
-- For marketplace listings: compare price vs market value, seller reputation, stock photos vs real photos, listing age indicators
-- Phishing patterns: login forms, credential harvesting, fake payment portals, brand impersonation
-- Urgency/scarcity tactics in the content
-- Missing legal pages (terms, privacy, refund policy)
-- Redirect chains: legitimate sites rarely chain multiple redirects
-- Domain age and reputation indicators
+Check: typosquatting, suspicious TLDs, URL shorteners, phishing forms (login/credential harvesting), brand impersonation, pricing anomalies, risky payment methods (gift cards/crypto/wire), urgency tactics, missing legal pages, redirect chain cloaking. For marketplace listings, compare price vs market value and check seller reputation.
 
-${marketplace ? `Since this is a ${marketplace} listing, focus your explanation on marketplace-specific scam indicators and provide actionable advice for that platform.` : 'If this appears to be a marketplace listing (eBay, Amazon, Etsy, etc.), analyze it as such.'}
+IMPORTANT: risk_score must be a whole number 0-100 (100 = most dangerous), never decimals. If not a marketplace listing, leave marketplace_platform empty.
 
-IMPORTANT: The risk_score MUST be a whole number between 0 and 100 (where 100 is most dangerous). Never use decimals like 0.98 — use 98 instead.
-
-If this is NOT a marketplace listing, leave the marketplace_platform field empty (do not fill it with "N/A" or any text).
-
-Rules: never say "definitely a scam" — use "likely" or "highly likely". Be educational and plain-English. Include concrete next steps. If the site is legitimate, say so clearly.`;
+Rules: never say "definitely a scam" — use "likely". Be educational, plain-English, include concrete next steps. If legitimate, say so clearly.`;
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,

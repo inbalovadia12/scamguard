@@ -16,19 +16,13 @@ Deno.serve(async (req) => {
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
-    const prompt = `You are a scam intelligence analyst. Research scams targeting: ${location_name}
+    const prompt = `Research scams targeting: ${location_name}
 
-Find:
-1. Common scams in this location (city/country). Include locally-specific scams.
-2. Seasonal patterns — which months (1-12) each scam peaks.
-3. Local reporting resources — government agencies, hotlines, websites with real URLs and phone numbers.
-4. Current trending scams in this area.
-5. Cultural factors — holidays, tax seasons, events that attract scammers.
+Find: common scams (including locally-specific), seasonal peak months, local reporting resources (real agency names/phones/URLs), current trends, and cultural factors (holidays, tax seasons, events).
 
-Include real agency names, phone numbers, and URLs. Do not invent resources.
-Provide sources — URLs where you found this information.
+Prioritize high-signal results — do not search exhaustively. Do not invent resources. Include source URLs.
 
-Respond entirely in ${languageName}.`;
+Respond in ${languageName}.`;
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,

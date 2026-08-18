@@ -46,36 +46,22 @@ Deno.serve(async (req) => {
       general: 'The user is checking if this photo is associated with scams.',
     };
 
-    const prompt = `You are a reverse image scam detection analyst. Analyze the uploaded photo.
+    const prompt = `Analyze this uploaded photo for scam risk. Context: ${USE_CASE_CONTEXT[use_case] || USE_CASE_CONTEXT.general}
 
-Context: ${USE_CASE_CONTEXT[use_case] || USE_CASE_CONTEXT.general}
+RULES:
+- Analyze ONLY visible image pixels. Do NOT read file names or URL paths.
+- The upload URL/domain (base44.app, googleusercontent, amazonaws, etc.) is private storage — NEVER cite it as a source.
+- In "sources", include ONLY real public URLs where this image genuinely appears online. If none found, return empty array.
+- Never fabricate URLs, sources, or findings. Only report what you can verify.
 
-CRITICAL RULES — SOURCES (MUST FOLLOW):
-- The image was uploaded by the user to Vardin's private storage. Its upload URL and domain (e.g. base44.app, googleusercontent, amazonaws, vardin.app, firebase, storage.googleapis.com) are NOT public hosts. NEVER cite the upload URL/domain or claim the image is "hosted on" it. Never mention the upload URL or its domain in sources, similar_images_found, or explanation.
-- Do NOT read or infer anything from the file name or the URL path. Analyze ONLY the visible image pixels.
-- In "sources", include ONLY real, verifiable public URLs you actually found via web search where this image (or a near-identical one) genuinely appears. If web search returns no real public appearances, return an EMPTY sources array and state in "explanation" that no public appearances were found.
-- Never fabricate URLs, domains, or "similar images found". If you are unsure whether a source is real, omit it.
-- Do not claim the image is "commonly associated with X scams" unless you found concrete evidence via web search.
+STEPS:
+1. Describe what you see (real person, stock photo, AI-generated, etc.)
+2. Search the web to find if this image appears elsewhere (stock photo sites, social media, scam reports)
+3. Check for scam profile patterns (overly attractive people, military uniforms, generic headshots)
+4. Identify red flags (stock photo indicators, AI artifacts, multiple unrelated profiles)
 
-Using web search and vision analysis:
-1. Describe what you see in the image (real person, stock photo, AI-generated, generic, etc.)
-2. Search the web to determine if this image appears elsewhere — stock photo sites, social media, scam reports, news
-3. Check if it resembles common scam profile photos (overly attractive people, military uniforms, generic professional headshots)
-4. Identify red flags: stock photo indicators, AI generation artifacts, photos on multiple unrelated profiles
-
-Return:
-- risk_level: low, medium, or high
-- risk_score: 0-100 (100 = definitely a scam profile photo). Low = 0-35, Medium = 36-70, High = 71-100.
-- is_likely_scam_profile: boolean
-- explanation: Detailed analysis. If no public appearances were found, say so explicitly.
-- similar_images_found: Descriptions of where similar/identical images genuinely appear online (empty array if none found)
-- sources: Real public URLs where similar images or scam reports were found (empty array if none)
-- red_flags: Specific warning signs detected
-- methods_checked: The real checks you actually performed, e.g. ["Google web search", "Visual analysis of image content", "Stock-photo pattern recognition"]. Only list methods you actually used.
-
-Only report what you can see or verify. Do not invent findings.
-
-Respond entirely in ${languageName}.`;
+risk_score: 0-100 (100 = scam profile). Low 0-35, Medium 36-70, High 71-100.
+Only report verifiable findings. Respond in ${languageName}.`;
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,

@@ -41,8 +41,8 @@ Deno.serve(async (req) => {
     }
 
     const prompt = mode === "address"
-      ? `You are a crypto security expert. Assess this ${blockchain || "blockchain"} wallet/contract address for scam signals.\nAddress/Contract: "${input}"\nSearch live data: block explorers, scam databases, honeypot detectors, token contract reputation, liquidity lock status, verified status, and community reports. Determine if this is a known scam, honeypot, or rug-pull risk. Respond in plain English. Always provide source URLs in "sources". If data is limited, say so and score conservatively.`
-      : `You are a crypto scam expert. Analyze this "investment opportunity" for scam patterns.\nContent: "${input}"\nSearch live data for the token, project, team, giveaway, exchange, or celebrity mentioned. Identify: pig-butchering romance-investment scams, fake giveaways ("send X get 2X"), impersonation of celebrities/exchanges, rug-pull tokens, phishing links, unrealistic guaranteed returns, and pressure tactics. Respond in plain English. Always provide source URLs in "sources".`;
+      ? `Assess this ${blockchain || "blockchain"} wallet/contract address for scam signals.\nAddress/Contract: "${input}"\nSearch live data: block explorers, scam databases, honeypot detectors, liquidity lock status, verified status, community reports. Determine if this is a known scam, honeypot, or rug-pull risk. Prioritize high-signal results — do not search exhaustively. Respond in plain English. Always provide source URLs in "sources". If data is limited, say so and score conservatively.`
+      : `Analyze this "investment opportunity" for crypto scam patterns.\nContent: "${input}"\nSearch live data for the token, project, team, giveaway, exchange, or celebrity mentioned. Identify: pig-butchering scams, fake giveaways ("send X get 2X"), celebrity/exchange impersonation, rug-pull tokens, phishing links, unrealistic guaranteed returns, pressure tactics. Prioritize high-signal results — do not search exhaustively. Respond in plain English. Always provide source URLs in "sources".`;
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,
