@@ -1,6 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { secrets } from 'base44:runtime';
 
-Deno.serve(async (req) => {
+export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -16,14 +17,13 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { audio_url, audio_base64, audio_mime, language, session_context, speaker_history } = body;
 
-    const groqApiKey = Deno.env.get('GROQ_API_KEY');
+    const groqApiKey = secrets.get('GROQ_API_KEY');
     if (!groqApiKey) return Response.json({ error: 'STT service not configured' }, { status: 500 });
 
     let audioBlob: Blob;
     let contentType: string;
 
     if (audio_base64) {
-      // Audio sent directly as base64 — skips UploadFile + download roundtrip
       const binaryString = atob(audio_base64);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -142,4 +142,4 @@ Return JSON: segments [{speaker, text}], feedback (advice to victim if they spok
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
-});
+}

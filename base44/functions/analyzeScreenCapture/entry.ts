@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 
-Deno.serve(async (req) => {
+export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -82,4 +82,4 @@ Respond entirely in ${languageName}.`;
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
-});
+}
