@@ -4,14 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Phone, Mail, Loader2, ShieldCheck, ShieldAlert, AlertTriangle, ListPlus,
-  Download, X, ChevronDown, ChevronUp,
+  Plus, X, ChevronDown, ChevronUp, Download, Trash2,
 } from "lucide-react";
 import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
 import PlanGate from "@/components/PlanGate";
 import { toast } from "@/components/ui/use-toast";
 
-const MAX_CONCURRENCY = 3;
 const MAX_ITEMS = 20;
+const INITIAL_ITEMS = 3;
+const MAX_CONCURRENCY = 3;
 const PHONE_COST = 5;
 const MESSAGE_COST = CREDIT_COSTS.MESSAGE; // 3
 
@@ -31,35 +32,21 @@ const MESSAGE_SCHEMA = {
   },
 };
 
-function parsePhoneNumbers(text) {
-  return text
-    .split(/[\n,;]/)
-    .map((s) => s.trim())
-    .filter((s) => s.replace(/[^\d]/g, "").length >= 7)
-    .slice(0, MAX_ITEMS);
-}
-
-function parseMessages(text) {
-  return text
-    .split(/\n---\n|\n{3,}/)
-    .map((s) => s.trim())
-    .filter((s) => s.length >= 10)
-    .slice(0, MAX_ITEMS);
+function makeBox(id) {
+  return { id, input: "", status: "idle", result: null, error: null };
 }
 
 export default function BulkPhoneScanner({ credits: initialCredits, onCreditsChange }) {
   const [bulkType, setBulkType] = useState("phone");
-  const [input, setInput] = useState("");
+  const [boxes, setBoxes] = useState(() => Array.from({ length: INITIAL_ITEMS }, (_, i) => makeBox(i)));
   const [scanning, setScanning] = useState(false);
-  const [items, setItems] = useState([]);
   const [completedCount, setCompletedCount] = useState(0);
-  const [expandedIndex, setExpandedIndex] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
   const [credits, setCredits] = useState(initialCredits);
   const cancelRef = useRef(false);
+  const nextId = useRef(INITIAL_ITEMS);
 
-  useEffect(() => {
-    setCredits(initialCredits);
-  }, [initialCredits]);
+  useEffect(() => { setCredits(initialCredits); }, [initialCredits]);
 
   const updateCredits = async () => {
     const updated = await getCreditStatus();
@@ -67,34 +54,54 @@ export default function BulkPhoneScanner({ credits: initialCredits, onCreditsCha
     if (onCreditsChange) onCreditsChange(updated);
   };
 
-  const detected = bulkType === "phone" ? parsePhoneNumbers(input) : parseMessages(input);
-  const costPerItem = bulkType === "phone" ? PHONE_COST : MESSAGE_COST;
-  const totalCost = detected.length * costPerItem;
+  const handleTypeChange = (type) => {
+    if (scanning) return;
+    setBulkType(type);
+    setBoxes(Array.from({ length: INITIAL_ITEMS }, () => makeBox(nextId.current++)));
+    setCompletedCount(0);
+    setExpandedId(null);
+  };
 
-  const handleScan = async () => {
-    const entries = bulkType === "phone" ? parsePhoneNumbers(input) : parseMessages(input);
-    if (entries.length === 0) return;
+  const addBox = () => {
+    if (boxes.length >= MAX_ITEMS || scanning) return;
+    setBoxes(prev => [...prev, makeBox(nextId.current++)]);
+  };
+
+  const removeBox = (id) => {
+    if (scanning || boxes.length <= 1) return;
+    setBoxes(prev => prev.filter(b => b.id !== id));
+  };
+
+  const updateInput = (id, value) => {
+    setBoxes(prev => prev.map(b => b.id === id ? { ...b, input: value } : b));
+  };
+
+  const filledBoxes = boxes.filter(b => b.input.trim().length > 0);
+  const costPerItem = bulkType === "phone" ? PHONE_COST : MESSAGE_COST;
+  const totalCost = filledBoxes.length * costPerItem;
+
+  const handleScanAll = async () => {
+    const toScan = boxes.filter(b => b.input.trim().length > 0);
+    if (toScan.length === 0) return;
 
     if (credits && credits.remaining < totalCost) {
       toast({
         title: "Not enough credits",
-        description: `You need ${totalCost} credits (${entries.length} × ${costPerItem}) but have ${credits.remaining}.`,
+        description: `You need ${totalCost} credits (${toScan.length} × ${costPerItem}) but have ${credits.remaining}.`,
         variant: "destructive",
       });
       return;
     }
 
-    // Deduct credits upfront
     await incrementCreditUsage(totalCost);
     await updateCredits();
 
     setScanning(true);
     cancelRef.current = false;
-
-    const initialItems = entries.map((e) => ({ input: e, status: "pending", result: null, error: null }));
-    setItems(initialItems);
     setCompletedCount(0);
-    setExpandedIndex(null);
+    setExpandedId(null);
+
+    setBoxes(prev => prev.map(b => b.input.trim().length > 0 ? { ...b, status: "scanning", result: null, error: null } : b));
 
     const lang = localStorage.getItem("vardin_language") || "en";
     let doneCount = 0;
@@ -107,31 +114,29 @@ export default function BulkPhoneScanner({ credits: initialCredits, onCreditsCha
     };
 
     const scanMessage = async (text) => {
-      const result = await base44.integrations.Core.InvokeLLM({
+      return await base44.integrations.Core.InvokeLLM({
         prompt: `Scam detection expert: analyze this message for scam risk.\nMessage: "${text}"\nRules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics and concrete next steps.\nRISK SCORE: 0-100 whole number. Low 0-35, Medium 36-70, High 71-100. Must match risk_level.`,
         response_json_schema: MESSAGE_SCHEMA,
       });
-      return result;
     };
 
     const runWorker = async () => {
-      while (idx < entries.length) {
+      while (idx < toScan.length) {
         if (cancelRef.current) return;
         const myIdx = idx++;
-        setItems((prev) => prev.map((it, i) => (i === myIdx ? { ...it, status: "scanning" } : it)));
-
+        const box = toScan[myIdx];
         try {
-          const result = bulkType === "phone" ? await scanPhone(entries[myIdx]) : await scanMessage(entries[myIdx]);
-          setItems((prev) => prev.map((it, i) => (i === myIdx ? { ...it, status: "done", result } : it)));
+          const result = bulkType === "phone" ? await scanPhone(box.input.trim()) : await scanMessage(box.input.trim());
+          setBoxes(prev => prev.map(b => b.id === box.id ? { ...b, status: "done", result } : b));
         } catch (e) {
-          setItems((prev) => prev.map((it, i) => (i === myIdx ? { ...it, status: "error", error: e.message } : it)));
+          setBoxes(prev => prev.map(b => b.id === box.id ? { ...b, status: "error", error: e.message } : b));
         }
         doneCount++;
         setCompletedCount(doneCount);
       }
     };
 
-    const workers = Array.from({ length: Math.min(MAX_CONCURRENCY, entries.length) }, () => runWorker());
+    const workers = Array.from({ length: Math.min(MAX_CONCURRENCY, toScan.length) }, () => runWorker());
     await Promise.all(workers);
     setScanning(false);
   };
@@ -139,33 +144,32 @@ export default function BulkPhoneScanner({ credits: initialCredits, onCreditsCha
   const handleCancel = () => {
     cancelRef.current = true;
     setScanning(false);
-    setItems((prev) => prev.map((it) => (it.status === "pending" || it.status === "scanning" ? { ...it, status: "cancelled" } : it)));
+    setBoxes(prev => prev.map(b => b.status === "scanning" ? { ...b, status: "idle" } : b));
   };
 
-  const handleClear = () => {
-    setInput("");
-    setItems([]);
+  const handleClearAll = () => {
+    setBoxes(Array.from({ length: INITIAL_ITEMS }, () => makeBox(nextId.current++)));
     setCompletedCount(0);
-    setExpandedIndex(null);
+    setExpandedId(null);
   };
 
   const handleExport = () => {
-    const done = items.filter((it) => it.status === "done" && it.result);
+    const done = boxes.filter(b => b.status === "done" && b.result);
     if (done.length === 0) return;
     const headers = bulkType === "phone"
-      ? "Phone Number,Risk Score,Risk Level,Country,Carrier,Scam Reports,Summary"
-      : "Message,Risk Score,Risk Level,Explanation,Tactics";
-    const csv = [headers];
-    done.forEach((it) => {
-      const r = it.result;
+      ? "Item,Risk Score,Risk Level,Country,Carrier,Scam Reports,Summary"
+      : "Item,Risk Score,Risk Level,Explanation,Tactics";
+    const rows = [headers];
+    done.forEach((b) => {
+      const r = b.result;
       const esc = (s) => `"${String(s || "").replace(/"/g, '""').replace(/\n/g, " ")}"`;
       if (bulkType === "phone") {
-        csv.push([esc(it.input), r.reputation_score, r.risk_level, esc(r.country), esc(r.carrier), r.scam_report_count || 0, esc(r.summary)].join(","));
+        rows.push([esc(b.input), r.reputation_score, r.risk_level, esc(r.country), esc(r.carrier), r.scam_report_count || 0, esc(r.summary)].join(","));
       } else {
-        csv.push([esc(it.input.slice(0, 200)), r.risk_score, r.risk_level, esc(r.explanation), esc((r.tactics_detected || []).join("; "))].join(","));
+        rows.push([esc(b.input.slice(0, 200)), r.risk_score, r.risk_level, esc(r.explanation), esc((r.tactics_detected || []).join("; "))].join(","));
       }
     });
-    const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+    const blob = new Blob([rows.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -187,247 +191,232 @@ export default function BulkPhoneScanner({ credits: initialCredits, onCreditsCha
       <PlanGate
         icon={ListPlus}
         title="Bulk Scanner"
-        description="Check multiple phone numbers or messages at once. Each item is scanned for scam risk with live results streaming in. Available on Plus and Premium plans."
+        description="Check multiple phone numbers or messages at once. Add boxes, type or paste your items, and scan them all in one go. Available on Plus and Premium plans."
         plan="Plus"
       />
     );
   }
 
-  const total = items.length;
-  const done = completedCount;
-  const progress = total > 0 ? (done / total) * 100 : 0;
-
-  const order = { done: 0, scanning: 1, pending: 2, error: 3, cancelled: 4 };
-  const sortedItems = [...items].sort((a, b) => {
-    if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
-    if (a.status === "done" && b.status === "done") {
-      const aScore = bulkType === "phone" ? a.result?.reputation_score : a.result?.risk_score;
-      const bScore = bulkType === "phone" ? b.result?.reputation_score : b.result?.risk_score;
-      return (bScore || 0) - (aScore || 0);
-    }
-    return 0;
-  });
+  const doneCount = boxes.filter(b => b.status === "done").length;
+  const hasResults = doneCount > 0;
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-3xl mx-auto space-y-5">
+      {/* Header */}
       <div className="text-center space-y-2 animate-slide-up">
         <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
           <ListPlus className="w-6 h-6 sm:w-8 sm:h-8 text-primary-foreground" />
         </div>
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Bulk Scanner</h2>
-        <p className="text-muted-foreground text-base sm:text-lg max-w-md mx-auto hidden sm:block">
-          Check multiple phone numbers or messages at once. Results stream in as each item is scanned.
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Bulk Scanner</h1>
+        <p className="text-muted-foreground text-sm sm:text-base max-w-md mx-auto">
+          Add items to boxes below, then scan them all at once. Results appear in each box.
         </p>
       </div>
 
-      <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-7 space-y-4 animate-slide-up anim-delay-2">
-        {/* Type toggle */}
-        <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl">
-          <button
-            onClick={() => !scanning && setBulkType("phone")}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${bulkType === "phone" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
-          >
-            <Phone className="w-4 h-4" />
-            Phone Numbers
-          </button>
-          <button
-            onClick={() => !scanning && setBulkType("message")}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${bulkType === "message" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
-          >
-            <Mail className="w-4 h-4" />
-            Messages / Emails
-          </button>
-        </div>
+      {/* Type toggle */}
+      <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl animate-slide-up anim-delay-1">
+        <button
+          onClick={() => handleTypeChange("phone")}
+          disabled={scanning}
+          className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${bulkType === "phone" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
+        >
+          <Phone className="w-4 h-4" />
+          Phone Numbers
+        </button>
+        <button
+          onClick={() => handleTypeChange("message")}
+          disabled={scanning}
+          className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${bulkType === "message" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
+        >
+          <Mail className="w-4 h-4" />
+          Messages / Emails
+        </button>
+      </div>
 
-        {/* Input */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">
-              {bulkType === "phone" ? "Paste phone numbers" : "Paste messages or emails"}
-            </label>
-            <span className="text-xs text-muted-foreground">
-              {detected.length}/{MAX_ITEMS} detected
-            </span>
+      {/* Boxes */}
+      <div className="space-y-3 animate-slide-up anim-delay-2">
+        {boxes.map((box, i) => {
+          const risk = box.result ? (RISK_META[box.result.risk_level] || RISK_META.low) : null;
+          const RiskIcon = risk?.icon;
+          const score = box.result ? (bulkType === "phone" ? box.result.reputation_score : box.result.risk_score) : 0;
+          const isExpanded = expandedId === box.id;
+
+          return (
+            <div key={box.id} className={`rounded-2xl border ${risk ? risk.border : "border-border/50"} ${risk ? risk.bg : "bg-card"} overflow-hidden transition-all`}>
+              {/* Box header */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border/30">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                  {bulkType === "phone" ? <Phone className="w-3.5 h-3.5 text-muted-foreground" /> : <Mail className="w-3.5 h-3.5 text-muted-foreground" />}
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {bulkType === "phone" ? "Phone number" : "Message / email"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {box.status === "scanning" && <Loader2 className="w-4 h-4 text-primary animate-spin" />}
+                  {box.status === "done" && RiskIcon && <RiskIcon className={`w-4 h-4 ${risk.color}`} />}
+                  {box.status === "error" && <AlertTriangle className="w-4 h-4 text-destructive" />}
+                  {boxes.length > 1 && !scanning && (
+                    <button onClick={() => removeBox(box.id)} className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Input */}
+              <div className="p-3">
+                <Textarea
+                  value={box.input}
+                  onChange={(e) => updateInput(box.id, e.target.value)}
+                  disabled={scanning}
+                  placeholder={bulkType === "phone"
+                    ? "Enter a phone number..."
+                    : "Paste a message or email to scan..."}
+                  className={`min-h-[56px] ${bulkType === "message" ? "sm:min-h-[80px]" : ""} text-sm resize-none rounded-xl border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 p-0`}
+                />
+
+                {/* Result */}
+                {box.status === "scanning" && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Scanning...
+                  </div>
+                )}
+
+                {box.status === "error" && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-destructive">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                    {box.error}
+                  </div>
+                )}
+
+                {box.status === "done" && box.result && risk && (
+                  <div className="mt-2 space-y-2">
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : box.id)}
+                      className="w-full flex items-center justify-between gap-2 text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-semibold ${risk.color}`}>{risk.label}</span>
+                        <span className="text-xs text-muted-foreground">Score: {score}/100</span>
+                      </div>
+                      {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                    </button>
+                    {isExpanded && (
+                      <div className="space-y-2 pt-2 border-t border-border/30">
+                        {bulkType === "phone" ? (
+                          <>
+                            {box.result.summary && <p className="text-sm text-muted-foreground leading-relaxed">{box.result.summary}</p>}
+                            {box.result.scam_categories?.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {box.result.scam_categories.map((cat, ci) => (
+                                  <span key={ci} className="text-xs font-medium px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">{cat}</span>
+                                ))}
+                              </div>
+                            )}
+                            {box.result.sources?.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {box.result.sources.slice(0, 4).map((source, si) => (
+                                  <a key={si} href={source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-[200px]">{source}</a>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {box.result.explanation && <p className="text-sm text-muted-foreground leading-relaxed">{box.result.explanation}</p>}
+                            {box.result.tactics_detected?.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {box.result.tactics_detected.map((tactic, ti) => (
+                                  <span key={ti} className="text-xs font-medium px-2 py-0.5 rounded-full bg-warning/10 text-warning">{tactic}</span>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Add more button */}
+      {boxes.length < MAX_ITEMS && !scanning && (
+        <button
+          onClick={addBox}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-all text-sm font-medium text-muted-foreground hover:text-primary"
+        >
+          <Plus className="w-4 h-4" />
+          Add Another Box
+          <span className="text-xs text-muted-foreground/60">({boxes.length}/{MAX_ITEMS})</span>
+        </button>
+      )}
+
+      {/* Bottom action bar */}
+      <div className="sticky bottom-4 bg-card/95 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg p-4 space-y-3 animate-slide-up anim-delay-3">
+        {/* Progress */}
+        {scanning && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Scanning {completedCount} of {filledBoxes.length}...</span>
+              <span>{Math.round((completedCount / filledBoxes.length) * 100)}%</span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-500"
+                style={{ width: `${(completedCount / filledBoxes.length) * 100}%` }} />
+            </div>
           </div>
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={bulkType === "phone"
-              ? "Paste numbers (one per line or comma-separated):\n+1-555-123-4567\n+44 20 7946 0958\n(555) 987-6543"
-              : "Paste messages separated by --- or blank lines:\n\nDear customer, your package is held at customs. Pay $2 fee...\n\n---\n\nHi! I'm a crypto investor offering guaranteed returns...\n\n---\n\nYour bank account is suspended. Click here to verify..."}
-            className="min-h-[120px] sm:min-h-[160px] text-base resize-none rounded-xl"
-            disabled={scanning}
-          />
-          <p className="text-xs text-muted-foreground">
-            {bulkType === "phone"
-              ? `Up to ${MAX_ITEMS} numbers · ${PHONE_COST} credits each · ${MAX_CONCURRENCY} scanned at a time`
-              : `Up to ${MAX_ITEMS} messages · ${MESSAGE_COST} credits each · separate with --- or blank lines`}
-          </p>
-        </div>
+        )}
 
         {/* Cost summary */}
-        {detected.length > 0 && (
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50 text-sm">
-            <span className="text-muted-foreground">Total cost</span>
+        {filledBoxes.length > 0 && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">
+              {filledBoxes.length} {filledBoxes.length === 1 ? "item" : "items"} × {costPerItem} credits
+            </span>
             <span className={`font-semibold ${credits.remaining < totalCost ? "text-destructive" : "text-foreground"}`}>
               {totalCost} credits ({credits.remaining} available)
             </span>
           </div>
         )}
 
-        {/* Action buttons */}
+        {/* Buttons */}
         <div className="flex gap-2">
           {!scanning ? (
             <>
               <Button
-                onClick={handleScan}
-                disabled={detected.length === 0 || (credits.remaining < totalCost)}
-                className="flex-1 h-11 sm:h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
+                onClick={handleScanAll}
+                disabled={filledBoxes.length === 0 || credits.remaining < totalCost}
+                className="flex-1 h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
                 size="lg"
               >
-                {bulkType === "phone" ? <Phone className="w-5 h-5 mr-2" /> : <Mail className="w-5 h-5 mr-2" />}
-                Scan {detected.length} {bulkType === "phone" ? "Number" : "Message"}{detected.length !== 1 ? "s" : ""}
+                <ListPlus className="w-5 h-5 mr-2" />
+                Scan All {filledBoxes.length > 0 ? `(${filledBoxes.length})` : ""}
               </Button>
-              {items.length > 0 && (
-                <Button onClick={handleClear} variant="outline" className="h-11 sm:h-12 px-4">
-                  Clear
+              {hasResults && (
+                <Button onClick={handleExport} variant="outline" size="lg" className="h-12 px-4 rounded-xl">
+                  <Download className="w-4 h-4" />
+                </Button>
+              )}
+              {boxes.some(b => b.input.trim() || b.status !== "idle") && (
+                <Button onClick={handleClearAll} variant="ghost" size="lg" className="h-12 px-4 rounded-xl text-muted-foreground">
+                  <Trash2 className="w-4 h-4" />
                 </Button>
               )}
             </>
           ) : (
-            <Button onClick={handleCancel} variant="destructive" className="flex-1 h-11 sm:h-12 text-base font-semibold rounded-xl" size="lg">
+            <Button onClick={handleCancel} variant="destructive" className="flex-1 h-12 text-base font-semibold rounded-xl" size="lg">
               <X className="w-5 h-5 mr-2" />
               Stop Scanning
             </Button>
           )}
         </div>
       </div>
-
-      {items.length > 0 && (
-        <div className="bg-card rounded-2xl border border-border/50 p-4 sm:p-5 space-y-4 animate-slide-up">
-          {/* Progress */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">{scanning ? "Scanning in background..." : "Scan complete"}</span>
-              <span className="text-muted-foreground">{done}/{total} done</span>
-            </div>
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-500"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-
-          {done > 0 && !scanning && (
-            <Button onClick={handleExport} variant="outline" size="sm" className="gap-2">
-              <Download className="w-4 h-4" />
-              Export CSV
-            </Button>
-          )}
-
-          {/* Results */}
-          <div className="space-y-2">
-            {sortedItems.map((it) => {
-              const originalIndex = items.indexOf(it);
-              const isExpanded = expandedIndex === originalIndex;
-
-              if (it.status === "pending" || it.status === "scanning" || it.status === "cancelled") {
-                return (
-                  <div key={originalIndex} className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-muted/30">
-                    {it.status === "scanning" ? (
-                      <Loader2 className="w-5 h-5 text-primary animate-spin flex-shrink-0" />
-                    ) : it.status === "cancelled" ? (
-                      <X className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
-                    )}
-                    <span className="text-sm truncate flex-1">{bulkType === "phone" ? it.input : it.input.slice(0, 80) + (it.input.length > 80 ? "…" : "")}</span>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                      {it.status === "scanning" ? "Scanning..." : it.status === "cancelled" ? "Cancelled" : "Waiting..."}
-                    </span>
-                  </div>
-                );
-              }
-
-              if (it.status === "error") {
-                return (
-                  <div key={originalIndex} className="flex items-center gap-3 p-3 rounded-xl border border-destructive/30 bg-destructive/5">
-                    <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
-                    <span className="text-sm truncate flex-1">{bulkType === "phone" ? it.input : it.input.slice(0, 80) + (it.input.length > 80 ? "…" : "")}</span>
-                    <span className="text-xs text-destructive truncate max-w-[180px]">{it.error}</span>
-                  </div>
-                );
-              }
-
-              // Done
-              const r = it.result;
-              const risk = RISK_META[r.risk_level] || RISK_META.low;
-              const RiskIcon = risk.icon;
-              const score = bulkType === "phone" ? (r.reputation_score || 0) : (r.risk_score || 0);
-              const displayInput = bulkType === "phone" ? it.input : (it.input.slice(0, 80) + (it.input.length > 80 ? "…" : ""));
-
-              return (
-                <div key={originalIndex} className={`rounded-xl border ${risk.border} ${risk.bg} overflow-hidden`}>
-                  <button
-                    onClick={() => setExpandedIndex(isExpanded ? null : originalIndex)}
-                    className="w-full flex items-center gap-3 p-3 text-left"
-                  >
-                    <RiskIcon className={`w-5 h-5 ${risk.color} flex-shrink-0`} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{displayInput}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {bulkType === "phone"
-                          ? `${r.carrier || "Unknown carrier"}${r.country ? ` · ${r.country}` : ""}${r.scam_report_count > 0 ? ` · ${r.scam_report_count} scam reports` : ""}`
-                          : (r.explanation || "").slice(0, 100) + (r.explanation?.length > 100 ? "…" : "")}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-sm font-bold ${risk.color}`}>{score}</span>
-                      <span className="text-xs text-muted-foreground">/100</span>
-                      {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                    </div>
-                  </button>
-                  {isExpanded && (
-                    <div className="px-3 pb-3 space-y-2 border-t border-border/30 pt-2">
-                      {bulkType === "phone" ? (
-                        <>
-                          {r.summary && <p className="text-sm text-muted-foreground leading-relaxed">{r.summary}</p>}
-                          {r.scam_categories?.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {r.scam_categories.map((cat, i) => (
-                                <span key={i} className="text-xs font-medium px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">{cat}</span>
-                              ))}
-                            </div>
-                          )}
-                          {r.sources?.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {r.sources.slice(0, 4).map((source, i) => (
-                                <a key={i} href={source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-[200px]">{source}</a>
-                              ))}
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {r.explanation && <p className="text-sm text-muted-foreground leading-relaxed">{r.explanation}</p>}
-                          {r.tactics_detected?.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {r.tactics_detected.map((tactic, i) => (
-                                <span key={i} className="text-xs font-medium px-2 py-0.5 rounded-full bg-warning/10 text-warning">{tactic}</span>
-                              ))}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
