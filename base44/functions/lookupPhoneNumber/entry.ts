@@ -96,6 +96,8 @@ If no reports found: reputation_score 5-15, risk_level "low", summary "No scam r
 If reports found: set risk_level and reputation_score consistently using the ranges above, plus user_reports (max 3), scam_categories, summary, sources, report counts (scam/spam/suspicious/safe).
 If verified business: verified_business=true, business_name.
 
+IMPORTANT: The summary must ONLY state findings about this number. Never mention background checks, ongoing processes, deeper analysis, or future updates — the result returned IS the complete result.
+
 Respond in ${languageName}.`;
 
     const result = await base44.integrations.Core.InvokeLLM({
