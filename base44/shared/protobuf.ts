@@ -57,6 +57,22 @@ export function encodeInt64Field(fieldNumber: number, value: number | bigint): U
   return encodeVarintField(fieldNumber, value);
 }
 
+// Encode a packed repeated int32 field (proto3 default for repeated scalars)
+export function encodePackedInt32Field(fieldNumber: number, values: number[]): Uint8Array {
+  if (values.length === 0) return new Uint8Array(0);
+  const varints = values.map((v) => encodeVarint(v));
+  const data = concat(...varints);
+  return encodeLengthDelimited(fieldNumber, data);
+}
+
+// Encode a packed repeated int64/uint64 field
+export function encodePackedInt64Field(fieldNumber: number, values: number[]): Uint8Array {
+  if (values.length === 0) return new Uint8Array(0);
+  const varints = values.map((v) => encodeVarint(v));
+  const data = concat(...varints);
+  return encodeLengthDelimited(fieldNumber, data);
+}
+
 // Encode a map<string, Message> field (protobuf maps are repeated entry messages)
 export function encodeStringMapField(
   fieldNumber: number,
