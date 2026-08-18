@@ -93,7 +93,7 @@ function AnimatedNumber({ value }) {
   return <span>{display}</span>;
 }
 
-export default function AnalysisResult({ analysis, showEducation = true, messageType }) {
+export default function AnalysisResult({ analysis, showEducation = true, messageType, originalMessage }) {
   const { kidMode } = useKidMode();
   const [speaking, setSpeaking] = useState(false);
   const [eduOpen, setEduOpen] = useState(false);
@@ -180,7 +180,7 @@ export default function AnalysisResult({ analysis, showEducation = true, message
       )}
 
       {/* Ask Family + Report Scam actions (medium/high risk) */}
-      <ResultActions analysis={analysis} analysisType="scam_analysis" messageType={messageType} />
+      <ResultActions analysis={analysis} analysisType="scam_analysis" messageType={messageType} originalMessage={originalMessage} />
 
       {/* Education section */}
       {showEducation && !kidMode && analysis.why_scammers_do_this && (

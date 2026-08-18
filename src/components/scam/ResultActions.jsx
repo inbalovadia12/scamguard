@@ -25,14 +25,14 @@ const MESSAGE_TYPE_TO_SCAM = {
 const RISK_TO_REPORT_RISK = { low: "low", medium: "medium", high: "high" };
 
 // analysisType: "scam_analysis" | "conversation" | "image" | "live_guard"
-export default function ResultActions({ analysis, analysisType = "scam_analysis", messageType }) {
+export default function ResultActions({ analysis, analysisType = "scam_analysis", messageType, originalMessage }) {
   const { kidMode } = useKidMode();
   const [reportOpen, setReportOpen] = useState(false);
   const level = analysis.risk_level || "low";
   if (level !== "medium" && level !== "high") return null;
 
   const scamType = MESSAGE_TYPE_TO_SCAM[messageType] || analysis.message_type || "other";
-  const userMessage = (analysis.message_text || analysis.transcript || "").slice(0, 1000);
+  const userMessage = (originalMessage || analysis.message_text || analysis.transcript || "").slice(0, 1000);
   const aiAnalysis = (analysis.explanation || "").slice(0, 2000);
 
   const prefill = {

@@ -468,7 +468,7 @@ export default function Home() {
           </div>
 
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6">
-            <AnalysisResult analysis={result} messageType={mode === "url" ? "url" : messageType} />
+            <AnalysisResult analysis={result} messageType={mode === "url" ? "url" : messageType} originalMessage={mode === "url" ? urlText : messageText} />
           </div>
         </div>
       )}
