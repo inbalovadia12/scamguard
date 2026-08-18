@@ -2,8 +2,41 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 import { waitUntil } from 'base44:runtime';
 import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
+// Strip hallucinated "deeper check" / "background process" text from LLM summaries.
+function sanitizeSummary(raw: string): string {
+  if (!raw) return 'No scam reports found for this number.';
+  const cleaned = raw.replace(
+    /[^.!?]*\b(?:deeper\s+check|running\s+in\s+the\s+background|background\s+check|ongoing\s+process|further\s+analysis|still\s+checking|currently\s+(?:checking|analyzing)|will\s+(?:be\s+)?(?:check|analyz|updat)\w*)\b[^.!?]*[.!?]*/gi,
+    ''
+  ).trim();
+  return cleaned || 'No scam reports found for this number.';
+}
+
+// Force score and risk_level to be consistent with each other.
+function enforceConsistency(score: number, risk: string): { score: number; risk: 'low' | 'medium' | 'high' } {
+  let s = score || 0;
+  let r = (risk || 'low') as 'low' | 'medium' | 'high';
+  if (r === 'high' && s < 71) s = 75;
+  if (r === 'medium' && (s < 36 || s > 70)) s = 50;
+  if (r === 'low' && s > 35) s = 15;
+  return { score: s, risk: r };
+}
+
+// Parse JSON from a free-text LLM response (no response_json_schema → forces web search).
+function parseJsonFromText(text: string): any {
+  if (!text) return null;
+  // Try direct parse first
+  try { return JSON.parse(text); } catch {}
+  // Extract the outermost JSON object
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1) return null;
+  try { return JSON.parse(text.slice(start, end + 1)); } catch {}
+  return null;
+}
+
 // Single web-search phone-number reputation lookup. Returns the full, verified
-// result in one pass (target <20s). Caches to the canonical PhoneReputation index
+// result in one pass (~25s). Caches to the canonical PhoneReputation index
 // so repeat lookups on the same number are instant.
 Deno.serve(async (req) => {
   try {
@@ -33,14 +66,15 @@ Deno.serve(async (req) => {
       const STALE_MS = 1000 * 60 * 60 * 24 * 30;
       const r = cached[0];
       if (r && r.last_external_check_at && (Date.now() - new Date(r.last_external_check_at).getTime() < STALE_MS)) {
+        const { score, risk } = enforceConsistency(r.reputation_score || 0, r.risk_level || 'low');
         const result = {
           country: r.country || '',
           carrier: r.carrier || '',
-          reputation_score: r.reputation_score || 0,
-          risk_level: r.risk_level || 'low',
+          reputation_score: score,
+          risk_level: risk,
           user_reports: [],
           scam_categories: r.scam_categories || [],
-          summary: r.summary || '',
+          summary: sanitizeSummary(r.summary || ''),
           sources: r.sources || [],
           report_count: r.report_count || 0,
           scam_report_count: r.scam_report_count || 0,
@@ -62,7 +96,7 @@ Deno.serve(async (req) => {
       }
     } catch {}
 
-    // ---- Single web-search lookup ----
+    // ---- Single web-search lookup (no response_json_schema → forces actual web search) ----
     const cleaned = phone_number.trim().replace(/[^\d]/g, '');
 
     let tenDigit: string;
@@ -85,72 +119,63 @@ Deno.serve(async (req) => {
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
-    const prompt = `Research phone number ${displayFormat} (${intlFormat}) for scam/spam reports. Check 800notes.com, nomorobo.com, truecaller.com, Reddit r/scams for this exact number.
+    const prompt = `Search the web for phone number ${displayFormat} (${intlFormat}) scam and spam reports. You MUST actually search the internet — check 800notes.com, nomorobo.com, truecaller.com, Reddit r/scams, and any other sources that mention this exact number.
 
-Score and risk_level MUST be consistent:
-- low risk = reputation_score 0-35
-- medium risk = reputation_score 36-70
-- high risk = reputation_score 71-100
+After completing your web research, respond with ONLY a JSON object (no markdown, no backticks, no text before or after) with these fields:
 
-If no reports found: reputation_score 5-15, risk_level "low", summary "No scam reports found for this number."
-If reports found: set risk_level and reputation_score consistently using the ranges above, plus user_reports (max 3), scam_categories, summary, sources, report counts (scam/spam/suspicious/safe).
-If verified business: verified_business=true, business_name.
+{
+  "country": "country name",
+  "carrier": "telecom carrier name",
+  "reputation_score": <number 0-100>,
+  "risk_level": "low" | "medium" | "high",
+  "user_reports": ["short quote of each report found, max 3"],
+  "scam_categories": ["scam types"],
+  "summary": "what you found about this number from your web search",
+  "sources": ["urls you actually checked"],
+  "scam_report_count": <number>,
+  "spam_report_count": <number>,
+  "suspicious_report_count": <number>,
+  "safe_report_count": <number>,
+  "verified_business": true/false,
+  "business_name": "business name if verified, empty string if not"
+}
 
-IMPORTANT: The summary must ONLY state findings about this number. Never mention background checks, ongoing processes, deeper analysis, or future updates — the result returned IS the complete result.
+SCORING RULES (score and risk_level MUST be consistent):
+- If scam reports found: risk_level "high", reputation_score 71-100
+- If spam/telemarketing reports found: risk_level "medium", reputation_score 36-70
+- If suspicious but unconfirmed: risk_level "medium", reputation_score 36-60
+- If no reports found anywhere: risk_level "low", reputation_score 5-15, summary "No scam reports found for this number."
+
+CRITICAL RULES:
+- The summary must ONLY state what you found from your web search. 
+- NEVER mention "deeper check", "background check", "ongoing process", "further analysis", or any suggestion that more checking is happening. The result you return IS the complete result.
+- You MUST include the actual source URLs you checked in the sources array.
+- If you did not find any reports, set all report counts to 0 and sources to an empty array.
 
 Respond in ${languageName}.`;
 
-    const result = await base44.integrations.Core.InvokeLLM({
+    const llmResponse = await base44.integrations.Core.InvokeLLM({
       prompt,
       add_context_from_internet: true,
       model: 'gemini_3_flash',
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          country: { type: 'string' },
-          carrier: { type: 'string' },
-          reputation_score: { type: 'number' },
-          risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
-          user_reports: { type: 'array', items: { type: 'string' } },
-          scam_categories: { type: 'array', items: { type: 'string' } },
-          summary: { type: 'string' },
-          sources: { type: 'array', items: { type: 'string' } },
-          scam_report_count: { type: 'number' },
-          spam_report_count: { type: 'number' },
-          suspicious_report_count: { type: 'number' },
-          safe_report_count: { type: 'number' },
-          verified_business: { type: 'boolean' },
-          business_name: { type: 'string' },
-        },
-        required: ['reputation_score', 'risk_level', 'summary'],
-      },
     });
 
+    // Parse JSON from the free-text response (no response_json_schema was used)
+    const result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
+
     // ---- Code-level safety nets: enforce score/risk consistency + strip hallucinated text ----
-    let rawScore = result.reputation_score ?? 0;
-    let rawRisk = (result.risk_level || 'low') as 'low' | 'medium' | 'high';
-
-    // Force score and risk_level to be consistent
-    if (rawRisk === 'high' && rawScore < 71) rawScore = 75;
-    if (rawRisk === 'medium' && (rawScore < 36 || rawScore > 70)) rawScore = 50;
-    if (rawRisk === 'low' && rawScore > 35) rawScore = 15;
-
-    // Strip any hallucinated "deeper check" / "background" text from the summary
-    let cleanSummary = (result.summary || '').replace(
-      /[^.!?]*\b(?:deeper\s+check|running\s+in\s+the\s+background|background\s+check|ongoing\s+process|further\s+analysis)\b[^.!?]*[.!?]*/gi,
-      ''
-    ).trim();
-    if (!cleanSummary) cleanSummary = 'No scam reports found for this number.';
+    const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
+    const cleanSummary = sanitizeSummary(result.summary || '');
 
     const fullResult = {
       country: result.country || '',
       carrier: result.carrier || '',
-      reputation_score: rawScore,
-      risk_level: rawRisk,
-      user_reports: result.user_reports || [],
-      scam_categories: result.scam_categories || [],
+      reputation_score: consistentScore,
+      risk_level: consistentRisk,
+      user_reports: Array.isArray(result.user_reports) ? result.user_reports : [],
+      scam_categories: Array.isArray(result.scam_categories) ? result.scam_categories : [],
       summary: cleanSummary,
-      sources: result.sources || [],
+      sources: Array.isArray(result.sources) ? result.sources : [],
       report_count: (result.scam_report_count || 0) + (result.spam_report_count || 0) + (result.suspicious_report_count || 0) + (result.safe_report_count || 0),
       scam_report_count: result.scam_report_count || 0,
       spam_report_count: result.spam_report_count || 0,
@@ -164,27 +189,28 @@ Respond in ${languageName}.`;
       last_checked_at: new Date().toISOString(),
     };
 
-    // Persist to cache index + history in the background so the response returns immediately
+    // Persist to cache index + history in the background so the response returns immediately.
+    // Store SANITIZED values so the cache never contains "deeper check" text or bad scores.
     waitUntil((async () => {
       try {
         const rep = await upsertPhoneReputation(base44, {
           normalized_number: cacheKey,
           phone_number: displayFormat,
-          country: result.country || '',
-          carrier: result.carrier || '',
-          reputation_score: result.reputation_score || 0,
-          risk_level: result.risk_level || 'low',
-          scam_categories: result.scam_categories || [],
-          summary: result.summary || '',
-          sources: result.sources || [],
+          country: fullResult.country,
+          carrier: fullResult.carrier,
+          reputation_score: fullResult.reputation_score,
+          risk_level: fullResult.risk_level,
+          scam_categories: fullResult.scam_categories,
+          summary: fullResult.summary,
+          sources: fullResult.sources,
           last_external_check_at: new Date().toISOString(),
-          verified_business: result.verified_business || false,
-          business_name: result.business_name || '',
+          verified_business: fullResult.verified_business,
+          business_name: fullResult.business_name,
           report_counts: {
-            scam: result.scam_report_count || 0,
-            spam: result.spam_report_count || 0,
-            suspicious: result.suspicious_report_count || 0,
-            safe: result.safe_report_count || 0,
+            scam: fullResult.scam_report_count,
+            spam: fullResult.spam_report_count,
+            suspicious: fullResult.suspicious_report_count,
+            safe: fullResult.safe_report_count,
           },
         });
 
