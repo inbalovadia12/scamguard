@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export default function ConversationSidebar({ conversations, activeId, onSelect, onNew, onDelete, loading }) {
   return (
-    <div className="w-64 flex-shrink-0 border-r border-border/50 bg-card/50 flex flex-col h-full">
+    <div className="w-64 flex-shrink-0 border-r border-border/50 bg-card flex flex-col h-full">
       <div className="p-3">
         <Button onClick={onNew} className="w-full gap-2 bg-gradient-to-r from-primary to-primary/80" size="sm">
           <Plus className="w-4 h-4" />

@@ -204,7 +204,7 @@ export default function AgentChat() {
       {sidebarOpen && (
         <>
           <div className="md:hidden fixed inset-0 z-40 bg-black/40" onClick={() => setSidebarOpen(false)} />
-          <div className="md:hidden fixed left-0 top-0 bottom-0 z-50 animate-slide-in-right">
+          <div className="md:hidden fixed left-0 top-0 bottom-0 z-50 animate-slide-in-left shadow-xl">
             <ConversationSidebar
               conversations={conversations}
               activeId={conversation?.id}
