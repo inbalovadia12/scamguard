@@ -48,7 +48,7 @@ export default function AdvancedScanner() {
   };
 
   const resetInputs = () => {
-    setText(""); setUrl(""); setFileData(null); setFileName(""); setCustomFocus(""); setDecodedQR("");
+    setText("");setUrl("");setFileData(null);setFileName("");setCustomFocus("");setDecodedQR("");
   };
 
   const handleFileSelect = async (data, name) => {
@@ -82,8 +82,8 @@ export default function AdvancedScanner() {
           scan_mode: scanType === "page" ? "text" : scanType,
           answer_type: answerType,
           custom_focus: customFocus.trim(),
-          language: lang || "en",
-        },
+          language: lang || "en"
+        }
       };
       if (selectedType.inputType === "textarea") payload.page_text = text.trim();
       if (selectedType.inputType === "both") {
@@ -92,8 +92,8 @@ export default function AdvancedScanner() {
       }
       if (selectedType.inputType === "url") payload.page_url = url.trim();
       if (selectedType.inputType === "image") payload.screenshot_data_url = fileData;
-      if (selectedType.inputType === "file") { payload.file_data = fileData; payload.file_name = fileName; }
-      if (scanType === "qr" && decodedQR) { payload.options.decoded_content = decodedQR; }
+      if (selectedType.inputType === "file") {payload.file_data = fileData;payload.file_name = fileName;}
+      if (scanType === "qr" && decodedQR) {payload.options.decoded_content = decodedQR;}
 
       const response = await base44.functions.invoke("scanWebpage", payload);
       const data = response.data;
@@ -151,8 +151,8 @@ export default function AdvancedScanner() {
             </Button>
           </Link>
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   return (
@@ -162,16 +162,16 @@ export default function AdvancedScanner() {
         <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
           <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-primary-foreground" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Advanced Scanner</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Universal </h1>
         <p className="text-muted-foreground text-sm sm:text-base max-w-md mx-auto hidden sm:block">
           All extension scan types in one place — pages, URLs, screenshots, QR codes, emails, chats, marketplace listings, and files.
         </p>
       </div>
 
-      {scanning ? (
-        <LongLoadingScreen type={scanType === "url" || scanType === "qr" ? "url" : "scanner"} />
-      ) : result ? (
-        <div className="space-y-6 animate-scale-in">
+      {scanning ?
+      <LongLoadingScreen type={scanType === "url" || scanType === "qr" ? "url" : "scanner"} /> :
+      result ?
+      <div className="space-y-6 animate-scale-in">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold font-heading">Scan Result</h2>
             <Button variant="outline" onClick={handleRescan}>New Scan</Button>
@@ -179,134 +179,134 @@ export default function AdvancedScanner() {
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6">
             <AdvancedScanResults data={result} onRescan={handleRescan} />
           </div>
-        </div>
-      ) : (
-        <div className="space-y-5 animate-slide-up anim-delay-1">
+        </div> :
+
+      <div className="space-y-5 animate-slide-up anim-delay-1">
           <AIDisclaimer />
 
           {/* Credits bar */}
-          {credits && (
-            <div className="flex items-center justify-between px-4 py-2.5 bg-muted rounded-xl">
+          {credits &&
+        <div className="flex items-center justify-between px-4 py-2.5 bg-muted rounded-xl">
               <span className="text-sm text-muted-foreground">
                 ✦ {credits.plan === "premium" ? "Premium" : "Plus"} plan
               </span>
               <span className="text-sm font-medium">{credits.remaining} / {credits.limit} credits left</span>
             </div>
-          )}
+        }
 
-          {error && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-xl">
+          {error &&
+        <div className="flex items-center gap-3 px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-xl">
               <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
               <p className="text-sm text-destructive">{error}</p>
-              {error.includes("credit") && (
-                <Link to="/pricing" className="ml-auto flex-shrink-0">
+              {error.includes("credit") &&
+          <Link to="/pricing" className="ml-auto flex-shrink-0">
                   <Button size="sm" variant="outline" className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10">
                     <Crown className="w-3.5 h-3.5" />Upgrade
                   </Button>
                 </Link>
-              )}
+          }
             </div>
-          )}
+        }
 
           {/* Scan Type Grid */}
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6 space-y-5">
             <div>
               <label className="text-sm font-medium mb-2 block">Scan Type</label>
               <ScanTypeGrid
-                value={scanType}
-                onChange={(v) => { setScanType(v); resetInputs(); setError(null); }}
-              />
+              value={scanType}
+              onChange={(v) => {setScanType(v);resetInputs();setError(null);}} />
+            
             </div>
 
             {/* Input area */}
             <div className="space-y-2">
-              {selectedType?.inputType === "textarea" && (
-                <>
+              {selectedType?.inputType === "textarea" &&
+            <>
                   <label className="text-sm font-medium">Content</label>
                   <Textarea
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    placeholder={
-                      scanType === "email" ? "Paste the email content here..." :
-                      scanType === "chat" ? "Paste the chat or SMS messages here..." :
-                      "Paste the webpage content here..."
-                    }
-                    className="min-h-[120px] text-base resize-none rounded-xl"
-                  />
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder={
+                scanType === "email" ? "Paste the email content here..." :
+                scanType === "chat" ? "Paste the chat or SMS messages here..." :
+                "Paste the webpage content here..."
+                }
+                className="min-h-[120px] text-base resize-none rounded-xl" />
+              
                 </>
-              )}
-              {selectedType?.inputType === "both" && (
-                <>
+            }
+              {selectedType?.inputType === "both" &&
+            <>
                   <label className="text-sm font-medium">Listing text <span className="text-muted-foreground text-xs">(optional)</span></label>
                   <Textarea
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    placeholder="Paste the marketplace listing text here (optional)..."
-                    className="min-h-[100px] text-base resize-none rounded-xl"
-                  />
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Paste the marketplace listing text here (optional)..."
+                className="min-h-[100px] text-base resize-none rounded-xl" />
+              
                   <label className="text-sm font-medium">Listing screenshot <span className="text-muted-foreground text-xs">(optional)</span></label>
                   <FileDropzone
-                    onFileSelect={handleFileSelect}
-                    accept="image/*"
-                    label="Upload listing screenshot"
-                    sublabel="PNG, JPG, WebP — max 10MB"
-                  />
+                onFileSelect={handleFileSelect}
+                accept="image/*"
+                label="Upload listing screenshot"
+                sublabel="PNG, JPG, WebP — max 10MB" />
+              
                 </>
-              )}
-              {selectedType?.inputType === "url" && (
-                <>
+            }
+              {selectedType?.inputType === "url" &&
+            <>
                   <label className="text-sm font-medium">URL</label>
                   <Input
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://suspicious-link.com"
-                    className="h-11 text-base rounded-xl"
-                  />
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://suspicious-link.com"
+                className="h-11 text-base rounded-xl" />
+              
                   <p className="text-xs text-muted-foreground">Includes VirusTotal reputation check across 70+ security engines.</p>
                 </>
-              )}
-              {selectedType?.inputType === "image" && (
-                <>
+            }
+              {selectedType?.inputType === "image" &&
+            <>
                   <FileDropzone
-                    onFileSelect={handleFileSelect}
-                    accept="image/*"
-                    label={scanType === "qr" ? "Upload QR code image" : "Upload screenshot image"}
-                    sublabel="PNG, JPG, WebP — max 10MB"
-                  />
-                  {scanType === "qr" && decodedQR && (
-                    <div className="flex items-start gap-2 px-4 py-3 bg-primary/10 border border-primary/20 rounded-xl animate-scale-in">
+                onFileSelect={handleFileSelect}
+                accept="image/*"
+                label={scanType === "qr" ? "Upload QR code image" : "Upload screenshot image"}
+                sublabel="PNG, JPG, WebP — max 10MB" />
+              
+                  {scanType === "qr" && decodedQR &&
+              <div className="flex items-start gap-2 px-4 py-3 bg-primary/10 border border-primary/20 rounded-xl animate-scale-in">
                       <QrCode className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-primary mb-0.5">Decoded QR Content</p>
                         <p className="text-sm font-mono break-all">{decodedQR}</p>
                       </div>
                     </div>
-                  )}
+              }
                 </>
-              )}
-              {selectedType?.inputType === "file" && (
-                <FileDropzone
-                  onFileSelect={(data, name) => { setFileData(data); setFileName(name); }}
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.jpg,.jpeg,.png,.webp"
-                  label="Upload file to analyze"
-                  sublabel="PDF, DOC, XLS, ZIP, images — max 10MB"
-                />
-              )}
+            }
+              {selectedType?.inputType === "file" &&
+            <FileDropzone
+              onFileSelect={(data, name) => {setFileData(data);setFileName(name);}}
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.jpg,.jpeg,.png,.webp"
+              label="Upload file to analyze"
+              sublabel="PDF, DOC, XLS, ZIP, images — max 10MB" />
+
+            }
             </div>
 
             {/* Result Type */}
             <div>
               <label className="text-sm font-medium mb-2 block">Result Type</label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {ANSWER_TYPES.map((at) => (
-                  <button
-                    key={at.value}
-                    onClick={() => setAnswerType(at.value)}
-                    className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all ${answerType === at.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/50"}`}
-                  >
+                {ANSWER_TYPES.map((at) =>
+              <button
+                key={at.value}
+                onClick={() => setAnswerType(at.value)}
+                className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all ${answerType === at.value ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/50"}`}>
+                
                     {at.label}
                   </button>
-                ))}
+              )}
               </div>
             </div>
 
@@ -316,30 +316,30 @@ export default function AdvancedScanner() {
                 Custom Focus <span className="text-muted-foreground text-xs">(optional)</span>
               </label>
               <Input
-                value={customFocus}
-                onChange={(e) => setCustomFocus(e.target.value)}
-                placeholder='e.g., "Is this a phishing site?"'
-                maxLength={500}
-                className="rounded-xl"
-              />
+              value={customFocus}
+              onChange={(e) => setCustomFocus(e.target.value)}
+              placeholder='e.g., "Is this a phishing site?"'
+              maxLength={500}
+              className="rounded-xl" />
+            
             </div>
 
             {/* Scan button */}
             <Button
-              onClick={handleScan}
-              disabled={!canScan() || scanning || outOfCredits || insufficientCredits}
-              className="w-full h-11 sm:h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
-              size="lg"
-            >
-              {scanning ? (
-                <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Analyzing...</>
-              ) : (
-                <>Scan · {cost} credits <ArrowRight className="w-5 h-5 ml-2" /></>
-              )}
+            onClick={handleScan}
+            disabled={!canScan() || scanning || outOfCredits || insufficientCredits}
+            className="w-full h-11 sm:h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
+            size="lg">
+            
+              {scanning ?
+            <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Analyzing...</> :
+
+            <>Scan · {cost} credits <ArrowRight className="w-5 h-5 ml-2" /></>
+            }
             </Button>
           </div>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
