@@ -119,38 +119,50 @@ Deno.serve(async (req) => {
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
-    const prompt = `Search the web for phone number ${displayFormat} (${intlFormat}) scam and spam reports. You MUST actually search the internet — check 800notes.com, nomorobo.com, truecaller.com, Reddit r/scams, and any other sources that mention this exact number.
+    const prompt = `Search the web for scam and spam reports about the phone number ${displayFormat} (${intlFormat}).
 
-After completing your web research, respond with ONLY a JSON object (no markdown, no backticks, no text before or after) with these fields:
+Search the exact number in multiple common formats. Prioritize high-signal, relevant results — do not exhaustively investigate many websites or search unrelated pages. Only research the area code/prefix if it provides useful carrier or geographic info.
+
+RULES:
+- Only count reports that clearly refer to this exact number. Do not count similar numbers, same area code, or same prefix.
+- Do not invent carrier, reports, businesses, sources, or statistics.
+- Caller-ID spoofing is possible; carrier alone does not prove legitimacy.
+- Give greater weight to multiple independent reports than a single unverified one.
+- Distinguish scam, spam/telemarketing, suspicious, and legitimate reports.
+
+SCORING (0 = confirmed scam, 100 = verified legitimate):
+- 0-25: confirmed/repeated scam evidence
+- 26-40: strong scam indicators
+- 41-60: suspicious or significant spam
+- 61-75: limited/unverified negative evidence
+- 76-89: no credible negative evidence, not verified legitimate
+- 90-100: strongly verified legitimate
+
+risk_level must match: "high" (strong/repeated scam evidence), "medium" (suspicious/spam/limited negative), "low" (no credible negative reports or strong legitimacy evidence). "No reports found" does NOT mean confirmed safe.
+
+Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON):
 
 {
-  "country": "country name",
-  "carrier": "telecom carrier name",
-  "reputation_score": <number 0-100>,
-  "risk_level": "low" | "medium" | "high",
-  "user_reports": ["short quote of each report found, max 3"],
-  "scam_categories": ["scam types"],
-  "summary": "what you found about this number from your web search",
-  "sources": ["urls you actually checked"],
-  "scam_report_count": <number>,
-  "spam_report_count": <number>,
-  "suspicious_report_count": <number>,
-  "safe_report_count": <number>,
-  "verified_business": true/false,
-  "business_name": "business name if verified, empty string if not"
+  "country": "",
+  "carrier": "",
+  "reputation_score": 0,
+  "risk_level": "low",
+  "user_reports": [],
+  "scam_categories": [],
+  "summary": "",
+  "sources": [],
+  "scam_report_count": 0,
+  "spam_report_count": 0,
+  "suspicious_report_count": 0,
+  "safe_report_count": 0,
+  "verified_business": false,
+  "business_name": ""
 }
 
-SCORING RULES (score and risk_level MUST be consistent):
-- If scam reports found: risk_level "high", reputation_score 71-100
-- If spam/telemarketing reports found: risk_level "medium", reputation_score 36-70
-- If suspicious but unconfirmed: risk_level "medium", reputation_score 36-60
-- If no reports found anywhere: risk_level "low", reputation_score 5-15, summary "No scam reports found for this number."
-
-CRITICAL RULES:
-- The summary must ONLY state what you found from your web search. 
-- NEVER mention "deeper check", "background check", "ongoing process", "further analysis", or any suggestion that more checking is happening. The result you return IS the complete result.
-- You MUST include the actual source URLs you checked in the sources array.
-- If you did not find any reports, set all report counts to 0 and sources to an empty array.
+- user_reports: up to 3 paraphrased summaries of the most relevant reports (do not directly quote users).
+- sources: up to 6 URLs that contained relevant info about this exact number. No search-engine URLs. Empty array if none.
+- summary: max 300 chars, what you actually found. Never mention internal processes, background checks, further analysis, or future checking.
+- If no reports found, set all counts to 0, sources to empty array, summary to "No scam reports found for this number."
 
 Respond in ${languageName}.`;
 
