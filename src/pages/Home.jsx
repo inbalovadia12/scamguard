@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ShieldCheck, Loader2, ArrowRight, MessageSquare, MessagesSquare, Mail, Briefcase, ShoppingCart,
   Heart, Landmark, HelpCircle, Lock, Link2, TrendingUp, Package, Gift, HeartHandshake, Globe,
-  AlertTriangle, Crown, X, EyeOff,
+  AlertTriangle, Crown, X, EyeOff, ListPlus,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import TruncatedText from "@/components/TruncatedText";
@@ -21,6 +21,7 @@ import LongLoadingScreen from "@/components/LongLoadingScreen";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import ImageUpload from "@/components/scam/ImageUpload";
 import ConversationPanel from "@/components/scam/ConversationPanel";
+import BulkPhoneScanner from "@/components/scam/BulkPhoneScanner";
 import PostScamResponsePanel from "@/components/scam/PostScamResponsePanel";
 import { Switch } from "@/components/ui/switch";
 import { useKidMode } from "@/lib/KidModeContext";
@@ -176,7 +177,7 @@ export default function Home() {
         </div>
       )}
 
-      {credits?.lowCredit && !outOfCredits && !result && (
+      {credits?.lowCredit && !outOfCredits && !result && mode !== "bulk" && (
         <div className="mb-4 sm:mb-6 flex items-center gap-3 px-4 py-3 bg-warning/10 border border-warning/20 rounded-xl animate-fade-in">
           <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0" />
           <div className="flex-1 min-w-0">
@@ -192,7 +193,7 @@ export default function Home() {
         </div>
       )}
 
-      {insufficientCredits && !result && !outOfCredits && (
+      {insufficientCredits && !result && !outOfCredits && mode !== "bulk" && (
         <div className="mb-4 sm:mb-6 flex items-center gap-3 px-4 py-3 bg-warning/10 border border-warning/20 rounded-xl animate-fade-in">
           <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0" />
           <div className="flex-1 min-w-0">
@@ -210,7 +211,7 @@ export default function Home() {
         </div>
       )}
 
-      {outOfCredits && !result && mode !== "conversation" && (
+      {outOfCredits && !result && mode !== "conversation" && mode !== "bulk" && (
         <div className="mb-6 p-6 rounded-2xl bg-warning/10 border border-warning/20 text-center space-y-5 animate-scale-in">
           <div className="space-y-3">
             <Lock className="w-8 h-8 text-warning mx-auto" />
@@ -228,7 +229,7 @@ export default function Home() {
         </div>
       )}
 
-      {credits && !result && !kidMode && mode !== "conversation" && (
+      {credits && !result && !kidMode && mode !== "conversation" && mode !== "bulk" && (
         <div className={`flex items-center justify-between mb-4 sm:mb-6 px-4 py-3 rounded-xl border animate-fade-in ${incognito ? "bg-primary/5 border-primary/30" : "bg-card border-border/50"}`}>
           <div className="flex items-center gap-2.5 min-w-0">
             <EyeOff className={`w-4 h-4 flex-shrink-0 ${incognito ? "text-primary" : "text-muted-foreground"}`} />
@@ -266,7 +267,7 @@ export default function Home() {
           </div>
 
           {/* Mode toggle */}
-          <div className="grid grid-cols-3 gap-2 p-1 bg-muted rounded-xl animate-slide-up anim-delay-1">
+          <div className="grid grid-cols-4 gap-2 p-1 bg-muted rounded-xl animate-slide-up anim-delay-1">
             <button
               onClick={() => setMode("message")}
               className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
@@ -295,10 +296,21 @@ export default function Home() {
               <MessagesSquare className="w-4 h-4" />
               <span className="hidden sm:inline">Chat</span>
             </button>
+            <button
+              onClick={() => setMode("bulk")}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                mode === "bulk" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              <ListPlus className="w-4 h-4" />
+              <span className="hidden sm:inline">Bulk</span>
+            </button>
           </div>
 
           {mode === "conversation" ? (
             <ConversationPanel />
+          ) : mode === "bulk" ? (
+            <BulkPhoneScanner credits={credits} />
           ) : (
           <>
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-7 space-y-4 sm:space-y-6 animate-slide-up anim-delay-2">
