@@ -53,7 +53,18 @@ export default function ScamReportCard({ report, onVerify, verifying }) {
         </span>
       </div>
       <h3 className="font-semibold text-sm">{report.title}</h3>
-      <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">{report.summary}</p>
+      <div className="space-y-2">
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">What happened</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{report.summary}</p>
+        </div>
+        {report.ai_analysis && (
+          <div className="rounded-lg bg-primary/5 border border-primary/15 p-3">
+            <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-0.5">AI Analysis</p>
+            <p className="text-sm text-foreground/80 leading-relaxed">{report.ai_analysis}</p>
+          </div>
+        )}
+      </div>
       <div className="flex items-center justify-between pt-2 border-t border-border/30">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           {report.channel && (

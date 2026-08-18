@@ -26,7 +26,11 @@
     },
     "summary": {
       "type": "string",
-      "description": "Redacted summary of the scam (no personal information)"
+      "description": "The user's original message or description of what happened (redacted, no personal information)"
+    },
+    "ai_analysis": {
+      "type": "string",
+      "description": "AI-generated scam analysis/explanation associated with this report (optional, set when report is created from a scan result)"
     },
     "risk_level": {
       "type": "string",

@@ -32,12 +32,14 @@ export default function ResultActions({ analysis, analysisType = "scam_analysis"
   if (level !== "medium" && level !== "high") return null;
 
   const scamType = MESSAGE_TYPE_TO_SCAM[messageType] || analysis.message_type || "other";
-  const excerpt = (analysis.message_text || analysis.transcript || analysis.explanation || "").slice(0, 300);
+  const userMessage = (analysis.message_text || analysis.transcript || "").slice(0, 1000);
+  const aiAnalysis = (analysis.explanation || "").slice(0, 2000);
 
   const prefill = {
     scam_type: scamType,
     title: (analysis.message_text || analysis.transcript || "").slice(0, 120) || "Flagged scan",
-    summary: excerpt,
+    summary: userMessage,
+    ai_analysis: aiAnalysis,
     risk_level: RISK_TO_REPORT_RISK[level] || "high",
   };
 
@@ -46,7 +48,7 @@ export default function ResultActions({ analysis, analysisType = "scam_analysis"
       <AskFamilyButton
         analysisId={analysis.id}
         analysisType={analysisType}
-        threatExcerpt={excerpt}
+        threatExcerpt={userMessage}
         riskLevel={level}
         scamType={scamType}
       />

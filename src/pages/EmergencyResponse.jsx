@@ -267,6 +267,71 @@ Respond with:
         </div>
       </div>
 
+      {/* Static Steps — shown immediately below the selected scenario */}
+      {selected && !aiSteps && !aiLoading && (() => {
+        const scenario = SCENARIOS.find((s) => s.id === selected);
+        const cfg = COLOR_MAP[scenario.color];
+        return (
+          <div className="space-y-4 animate-slide-up">
+            {/* Do Now */}
+            <div className="bg-card rounded-2xl border border-border/50 p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <div className={`w-8 h-8 rounded-lg ${cfg.bg} flex items-center justify-center flex-shrink-0`}>
+                  <AlertTriangle className={`w-4 h-4 ${cfg.text}`} />
+                </div>
+                <h3 className="font-semibold">Do This Now</h3>
+                <span className="text-xs text-muted-foreground">— Time is critical</span>
+              </div>
+              <div className="space-y-3">
+                {scenario.doNow.map((step, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className={`w-6 h-6 rounded-lg ${cfg.bg} ${cfg.text} flex items-center justify-center text-xs font-bold flex-shrink-0`}>
+                      {i + 1}
+                    </div>
+                    <p className="text-sm text-foreground/90 pt-0.5 leading-relaxed">{step}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Follow Up */}
+            <div className="bg-card rounded-2xl border border-border/50 p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold">Follow Up</h3>
+                <span className="text-xs text-muted-foreground">— Within the next few days</span>
+              </div>
+              <div className="space-y-3">
+                {scenario.followUp.map((step, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {i + 1}
+                    </div>
+                    <p className="text-sm text-foreground/90 pt-0.5 leading-relaxed">{step}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Links */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Link to="/universal-scan" className="flex-1">
+                <Button variant="outline" size="sm" className="w-full gap-2">
+                  <ShieldAlert className="w-3.5 h-3.5" /> Scan the suspicious content
+                </Button>
+              </Link>
+              <Link to="/scam-feed" className="flex-1">
+                <Button variant="outline" size="sm" className="w-full gap-2">
+                  <ExternalLink className="w-3.5 h-3.5" /> Report this scam
+                </Button>
+              </Link>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Elaborate with AI */}
       <div className="bg-card rounded-2xl border border-primary/20 p-4 sm:p-5 space-y-3 animate-slide-up" style={{ animationDelay: "70ms" }}>
         <div className="flex items-center gap-2 flex-wrap">
@@ -466,71 +531,6 @@ Respond with:
           </div>
         </div>
       )}
-
-      {/* Static Steps */}
-      {selected && !aiSteps && !aiLoading && (() => {
-        const scenario = SCENARIOS.find((s) => s.id === selected);
-        const cfg = COLOR_MAP[scenario.color];
-        return (
-          <div className="space-y-4 animate-slide-up">
-            {/* Do Now */}
-            <div className="bg-card rounded-2xl border border-border/50 p-4 sm:p-5">
-              <div className="flex items-center gap-2 mb-4 flex-wrap">
-                <div className={`w-8 h-8 rounded-lg ${cfg.bg} flex items-center justify-center flex-shrink-0`}>
-                  <AlertTriangle className={`w-4 h-4 ${cfg.text}`} />
-                </div>
-                <h3 className="font-semibold">Do This Now</h3>
-                <span className="text-xs text-muted-foreground">— Time is critical</span>
-              </div>
-              <div className="space-y-3">
-                {scenario.doNow.map((step, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className={`w-6 h-6 rounded-lg ${cfg.bg} ${cfg.text} flex items-center justify-center text-xs font-bold flex-shrink-0`}>
-                      {i + 1}
-                    </div>
-                    <p className="text-sm text-foreground/90 pt-0.5 leading-relaxed">{step}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Follow Up */}
-            <div className="bg-card rounded-2xl border border-border/50 p-4 sm:p-5">
-              <div className="flex items-center gap-2 mb-4 flex-wrap">
-                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
-                </div>
-                <h3 className="font-semibold">Follow Up</h3>
-                <span className="text-xs text-muted-foreground">— Within the next few days</span>
-              </div>
-              <div className="space-y-3">
-                {scenario.followUp.map((step, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-lg bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">
-                      {i + 1}
-                    </div>
-                    <p className="text-sm text-foreground/90 pt-0.5 leading-relaxed">{step}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Links */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Link to="/universal-scan" className="flex-1">
-                <Button variant="outline" size="sm" className="w-full gap-2">
-                  <ShieldAlert className="w-3.5 h-3.5" /> Scan the suspicious content
-                </Button>
-              </Link>
-              <Link to="/scam-feed" className="flex-1">
-                <Button variant="outline" size="sm" className="w-full gap-2">
-                  <ExternalLink className="w-3.5 h-3.5" /> Report this scam
-                </Button>
-              </Link>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* General reminder */}
       <div className="flex items-start gap-3 p-3 sm:p-4 rounded-2xl bg-muted/30 border border-border/30 text-xs sm:text-sm text-muted-foreground">

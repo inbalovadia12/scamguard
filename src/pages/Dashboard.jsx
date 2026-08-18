@@ -179,12 +179,12 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-transparent p-5">
+        <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-transparent p-5 min-w-0 overflow-hidden">
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-4 h-4 text-primary" />
+            <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
             <h2 className="font-semibold text-sm font-heading text-primary">{t("dash.trend_title")}</h2>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+          <p className="text-xs text-muted-foreground leading-relaxed mb-4 break-words">
             {t("dash.trend_desc")}
           </p>
           <Link to="/check">

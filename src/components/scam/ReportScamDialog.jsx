@@ -12,6 +12,7 @@ export default function ReportScamDialog({ open, onOpenChange, onSubmitted, pref
     scam_type: prefill?.scam_type || "phishing_email",
     title: prefill?.title || "",
     summary: prefill?.summary || "",
+    ai_analysis: prefill?.ai_analysis || "",
     risk_level: prefill?.risk_level || "high",
     channel: prefill?.channel || "email",
     country: "",
@@ -35,6 +36,9 @@ export default function ReportScamDialog({ open, onOpenChange, onSubmitted, pref
   }, [open]);
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+  // ai_analysis is passed through from prefill (set when reporting from a scan result);
+  // the user doesn't edit it — it's included silently on submit.
+  const aiAnalysisPrefill = prefill?.ai_analysis || "";
 
   const handleSubmit = async () => {
     if (!form.title.trim() || !form.summary.trim()) {
@@ -47,11 +51,12 @@ export default function ReportScamDialog({ open, onOpenChange, onSubmitted, pref
       const { base44 } = await import("@/api/base44Client");
       await base44.entities.ScamReport.create({
         ...form,
+        ai_analysis: aiAnalysisPrefill || undefined,
         title: form.title.trim().slice(0, 200),
         summary: form.summary.trim().slice(0, 1000),
         country: form.country.trim().slice(0, 60) || undefined,
       });
-      setForm({ scam_type: "phishing_email", title: "", summary: "", risk_level: "high", channel: "email", country: "" });
+      setForm({ scam_type: "phishing_email", title: "", summary: "", ai_analysis: "", risk_level: "high", channel: "email", country: "" });
       onOpenChange(false);
       onSubmitted?.();
     } catch (e) {
