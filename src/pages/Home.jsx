@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ShieldCheck, Loader2, ArrowRight, MessageSquare, MessagesSquare, Mail, Briefcase, ShoppingCart,
   Heart, Landmark, HelpCircle, Lock, Link2, TrendingUp, Package, Gift, HeartHandshake, Globe,
-  AlertTriangle, Crown, X, EyeOff, ListPlus,
+  AlertTriangle, Crown, X, EyeOff,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import TruncatedText from "@/components/TruncatedText";
@@ -21,7 +21,6 @@ import LongLoadingScreen from "@/components/LongLoadingScreen";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import ImageUpload from "@/components/scam/ImageUpload";
 import ConversationPanel from "@/components/scam/ConversationPanel";
-import BulkPhoneScanner from "@/components/scam/BulkPhoneScanner";
 import PostScamResponsePanel from "@/components/scam/PostScamResponsePanel";
 import { Switch } from "@/components/ui/switch";
 import { useKidMode } from "@/lib/KidModeContext";
@@ -267,7 +266,7 @@ export default function Home() {
           </div>
 
           {/* Mode toggle */}
-          <div className="grid grid-cols-4 gap-2 p-1 bg-muted rounded-xl animate-slide-up anim-delay-1">
+          <div className="grid grid-cols-3 gap-2 p-1 bg-muted rounded-xl animate-slide-up anim-delay-1">
             <button
               onClick={() => setMode("message")}
               className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
@@ -296,21 +295,10 @@ export default function Home() {
               <MessagesSquare className="w-4 h-4" />
               <span className="hidden sm:inline">Chat</span>
             </button>
-            <button
-              onClick={() => setMode("bulk")}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                mode === "bulk" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
-              }`}
-            >
-              <ListPlus className="w-4 h-4" />
-              <span className="hidden sm:inline">Bulk</span>
-            </button>
           </div>
 
           {mode === "conversation" ? (
             <ConversationPanel />
-          ) : mode === "bulk" ? (
-            <BulkPhoneScanner credits={credits} onCreditsChange={setCredits} />
           ) : (
           <>
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-7 space-y-4 sm:space-y-6 animate-slide-up anim-delay-2">

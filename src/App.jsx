@@ -57,6 +57,7 @@ import Community from '@/pages/Community';
 import CallSimulator from '@/pages/CallSimulator';
 import CryptoScanner from '@/pages/CryptoScanner';
 import MobileApp from '@/pages/MobileApp';
+import BulkScanner from '@/pages/BulkScanner';
 
 
 // Layout
@@ -113,6 +114,7 @@ const AuthenticatedApp = () => {
           <Route path="/live-guard" element={<Navigate to="/phone-lookup?tab=live" replace />} />
           <Route path="/call-simulator" element={<CallSimulator />} />
           <Route path="/crypto-scanner" element={<CryptoScanner />} />
+          <Route path="/bulk-scanner" element={<BulkScanner />} />
           <Route path="/mobile-app" element={<MobileApp />} />
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/ai-negotiator" element={<AINegotiator />} />
