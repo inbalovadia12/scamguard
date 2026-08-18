@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Megaphone, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+
+const STORAGE_KEY = "seen_broadcasts";
 
 const TYPE_STYLES = {
   update: { icon: "text-primary", label: "Update" },
@@ -11,11 +13,13 @@ const TYPE_STYLES = {
   warning: { icon: "text-warning", label: "Warning" },
 };
 
+function readSeen() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
+}
+
 export default function BroadcastBanner() {
   const [broadcasts, setBroadcasts] = useState([]);
-  const [seen, setSeen] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("seen_broadcasts") || "[]"); } catch { return []; }
-  });
+  const [seen, setSeen] = useState(readSeen);
 
   useEffect(() => {
     base44.entities.AdminBroadcast.filter({ active: true }, "-created_date", 10)
@@ -23,19 +27,21 @@ export default function BroadcastBanner() {
       .catch(() => {});
   }, []);
 
+  // Persist seen IDs to localStorage whenever they change (kept outside the
+  // state updater so React strict-mode double-invocation can't skip the write).
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(seen)); } catch {}
+  }, [seen]);
+
   const unseen = broadcasts.filter((b) => !seen.includes(b.id));
   const current = unseen[0];
 
-  const dismiss = () => {
-    // Mark ALL currently active broadcasts as seen — prevents the same alert
-    // or queued alerts from reappearing after "Got it" is clicked.
+  const dismiss = useCallback(() => {
     setSeen((prev) => {
       const allIds = broadcasts.map((b) => b.id);
-      const next = [...new Set([...prev, ...allIds])];
-      localStorage.setItem("seen_broadcasts", JSON.stringify(next));
-      return next;
+      return [...new Set([...prev, ...allIds])];
     });
-  };
+  }, [broadcasts]);
 
   return (
     <Dialog open={!!current} onOpenChange={(open) => { if (!open) dismiss(); }}>
