@@ -1,56 +1,48 @@
 // Apple Live Caller ID Lookup — /key endpoint
-// POST serviceURL/key
+// POST /functions/key
 //
 // Accepts an EvaluationKeys protobuf message and stores each evaluation key
-// indexed by (User-Identifier, config-hash). The key is later retrieved during
-// /queries to evaluate PIR requests.
+// indexed by (User-Identifier, config-hash).
 //
 // Headers:
 //   User-Identifier: <pseudorandom per-user ID>
-//   Authorization:  Bearer <Vardin access token (userTierToken)>
+//   Authorization: PrivateToken token=<base64-encoded Privacy Pass token>
 
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
+import { secrets } from "base44:runtime";
 import {
-  getConfig,
-  isCallerIdEntitled,
-} from '../../shared/phoneReputation.ts';
-import {
+  authenticatePrivacyPass,
   getUserIdentifier,
-  getBearerToken,
   parseEvaluationKeys,
   storeEvaluationKey,
-} from '../../shared/liveCallerId.ts';
-import { toBase64 } from '../../shared/protobuf.ts';
+} from "../../shared/liveCallerId.ts";
+import { toBase64 } from "../../shared/protobuf.ts";
 
-export default async function(req: Request): Promise<Response> {
+export default async function (req: Request): Promise<Response> {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
+    const secretValue = secrets.get("LIVE_CALLER_ID_TOKEN_ISSUER_KEY");
+    if (!secretValue) {
+      return Response.json({ error: "Token issuer not configured" }, { status: 500 });
+    }
 
-    const config = await getConfig(base44);
-    if (!isCallerIdEntitled(user, config) && user.role !== 'admin') {
-      return Response.json({
-        error: 'Caller identification requires a Vardin Plus or Premium plan',
-      }, { status: 403 });
+    const keyMaterial = await authenticatePrivacyPass(req, secretValue);
+    if (!keyMaterial) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const userIdentifier = getUserIdentifier(req);
     if (!userIdentifier) {
-      return Response.json({ error: 'User-Identifier header required' }, { status: 400 });
+      return Response.json({ error: "User-Identifier header required" }, { status: 400 });
     }
 
-    // Read the raw protobuf body
-    const body = await req.arrayBuffer();
-    const bodyBytes = new Uint8Array(body);
+    const base44 = createClientFromRequest(req);
 
-    // Parse EvaluationKeys { repeated EvaluationKey keys = 1; }
-    const keys = parseEvaluationKeys(bodyBytes);
+    const body = new Uint8Array(await req.arrayBuffer());
+    const keys = parseEvaluationKeys(body);
     if (keys.length === 0) {
-      return Response.json({ error: 'No evaluation keys in request' }, { status: 400 });
+      return Response.json({ error: "No evaluation keys in request" }, { status: 400 });
     }
 
-    // Store each evaluation key
     for (const key of keys) {
       const configHashB64 = toBase64(key.identifier);
       const evaluationKeyB64 = toBase64(key.evaluationKey);

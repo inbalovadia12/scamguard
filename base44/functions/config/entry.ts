@@ -1,78 +1,69 @@
 // Apple Live Caller ID Lookup — /config endpoint
-// POST serviceURL/config
+// POST /functions/config
 //
 // Returns a ConfigResponse protobuf with the PIR use-case configuration
-// (bucket count, keyword count, evaluation key config) and the status of
-// evaluation keys previously uploaded by this device.
+// and the status of evaluation keys previously uploaded by this device.
 //
 // Headers:
 //   User-Identifier: <pseudorandom per-user ID>
-//   Authorization:  Bearer <Vardin access token (userTierToken)>
+//   Authorization: PrivateToken token=<base64-encoded Privacy Pass token>
 
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
+import { secrets } from "base44:runtime";
 import {
-  getConfig,
-  isCallerIdEntitled,
-} from '../../shared/phoneReputation.ts';
-import {
-  USE_CASE_NAME,
-  computeBucketCount,
-  encodeKeyConfig,
-  encodePirConfig,
-  encodeConfig,
-  encodeConfigResponse,
-  encodeKeyStatus,
-  getKeyTimestamp,
+  authenticatePrivacyPass,
   getUserIdentifier,
+  getKeyTimestamp,
   getLatestDataset,
-} from '../../shared/liveCallerId.ts';
-import { sha256, toBase64 } from '../../shared/protobuf.ts';
+  buildPirConfigAndHash,
+  encodeConfig,
+  encodeKeyStatus,
+  encodeConfigResponse,
+  encodeEvaluationKeyConfigFromConfig,
+} from "../../shared/liveCallerId.ts";
+import { toBase64 } from "../../shared/protobuf.ts";
 
-export default async function(req: Request): Promise<Response> {
+export default async function (req: Request): Promise<Response> {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
-
-    const config = await getConfig(base44);
-    if (!isCallerIdEntitled(user, config) && user.role !== 'admin') {
-      return Response.json({
-        error: 'Caller identification requires a Vardin Plus or Premium plan',
-        upgrade_url: 'https://vardin.base44.app/pricing',
-      }, { status: 403 });
+    const secretValue = secrets.get("LIVE_CALLER_ID_TOKEN_ISSUER_KEY");
+    if (!secretValue) {
+      return Response.json({ error: "Token issuer not configured" }, { status: 500 });
     }
 
-    // Dataset version determines keyword count + bucket count
+    const keyMaterial = await authenticatePrivacyPass(req, secretValue);
+    if (!keyMaterial) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const base44 = createClientFromRequest(req);
+
     const dataset = await getLatestDataset(base44);
     const keywordCount = dataset?.entry_count || 0;
-    const bucketCount = computeBucketCount(keywordCount);
 
-    // Build the PIR config + config hash
-    const keyConfigBytes = encodeKeyConfig(1);
-    const pirConfigBytes = encodePirConfig(bucketCount, keywordCount, keyConfigBytes);
-    const configHash = await sha256(pirConfigBytes);
-    const configHashB64 = toBase64(configHash);
-    const configBytes = encodeConfig(pirConfigBytes, configHash);
+    const { pirConfigBytes, configId } = await buildPirConfigAndHash(keywordCount);
+    const configIdB64 = toBase64(configId);
 
-    // Check if the device has uploaded an evaluation key for this config
+    const configBytes = encodeConfig(pirConfigBytes, configId);
+
     const userIdentifier = getUserIdentifier(req);
     const keyTimestamp = userIdentifier
-      ? await getKeyTimestamp(base44, userIdentifier, configHashB64)
+      ? await getKeyTimestamp(base44, userIdentifier, configIdB64)
       : 0;
-    const keyStatusBytes = encodeKeyStatus(keyConfigBytes, keyTimestamp);
 
-    // ConfigResponse { map<string, Config> configs = 1; repeated KeyStatus key_info = 2; }
+    const evalKeyConfigBytes = encodeEvaluationKeyConfigFromConfig(pirConfigBytes);
+    const keyStatusBytes = encodeKeyStatus(keyTimestamp, evalKeyConfigBytes);
+
     const configResponseBytes = encodeConfigResponse(
-      [[USE_CASE_NAME, configBytes]],
+      [["vardin-caller-id", configBytes]],
       [keyStatusBytes],
     );
 
     return new Response(configResponseBytes, {
       status: 200,
       headers: {
-        'Content-Type': 'application/x-protobuf',
-        'X-Vardin-Dataset-Version': String(dataset?.version || 0),
-        'X-Vardin-Entry-Count': String(keywordCount),
+        "Content-Type": "application/x-protobuf",
+        "X-Vardin-Dataset-Version": String(dataset?.version || 0),
+        "X-Vardin-Entry-Count": String(keywordCount),
       },
     });
   } catch (error) {

@@ -132,8 +132,22 @@ function encodePirConfig(
   );
 }
 
+// Build an EvaluationKeyConfig from the PIR config's encryption parameters.
+// Exported so /config can include it in KeyStatus without re-deriving the enc params.
+export function encodeEvaluationKeyConfigFromConfig(pirConfigBytes: Uint8Array): Uint8Array {
+  // PIRConfig field 1 is EncryptionParameters. Extract it.
+  const fields = pb.parseFields(pirConfigBytes);
+  const encParams = (fields.get(1)?.[0]?.data as Uint8Array) || new Uint8Array();
+  const galoisElements = [1, 3, 5, 7, 9, 11, 13, 15];
+  return pb.concat(
+    pb.encodeMessageField(1, encParams),
+    pb.encodePackedInt32Field(2, galoisElements),
+    pb.encodeBoolField(3, true),
+  );
+}
+
 // Config (api.proto)
-function encodeConfig(pirConfigBytes: Uint8Array, configId: Uint8Array): Uint8Array {
+export function encodeConfig(pirConfigBytes: Uint8Array, configId: Uint8Array): Uint8Array {
   return pb.concat(
     pb.encodeMessageField(1, pirConfigBytes),
     pb.encodeBytesField(3, configId),
@@ -141,7 +155,7 @@ function encodeConfig(pirConfigBytes: Uint8Array, configId: Uint8Array): Uint8Ar
 }
 
 // KeyStatus (api_shared.proto) — field 1: timestamp, field 2: EvaluationKeyConfig
-function encodeKeyStatus(timestamp: number, evalKeyConfigBytes: Uint8Array): Uint8Array {
+export function encodeKeyStatus(timestamp: number, evalKeyConfigBytes: Uint8Array): Uint8Array {
   return pb.concat(
     pb.encodeInt64Field(1, timestamp),
     pb.encodeMessageField(2, evalKeyConfigBytes),

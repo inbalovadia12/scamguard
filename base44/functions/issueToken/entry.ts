@@ -1,108 +1,66 @@
-// Apple Live Caller ID Lookup — Privacy Pass token issuer
-// POST serviceURL/issueToken  (also accessible at /functions/issueToken)
+// Apple Live Caller ID Lookup — Privacy Pass token issuer (RFC 9574 blind RSA).
+// POST /functions/issueToken
 //
-// Issues a Privacy Pass token for anonymous authentication. The client sends
-// a blinded token request (blind RSA protocol, RFC 9474); the server signs
-// the blinded token with its RSA private key and returns the blinded signature.
-// The client unblinds the signature to obtain a valid Privacy Pass token.
+// Accepts a TokenRequest (binary, 259 bytes):
+//   uint16_t token_type = 0x0002  (big-endian)
+//   uint8_t  truncated_token_key_id
+//   uint8_t  blinded_msg[256]
 //
-// The token is later sent in the Authorization header of PIR requests instead
-// of the userTierToken, providing anonymous authentication that hides the
-// user's identity from the PIR service.
+// Returns a TokenResponse (binary, 256 bytes):
+//   uint8_t  blind_sig[256]  = blinded_msg^d mod n
 //
-// Headers:
-//   Authorization:  Bearer <Vardin access token (userTierToken)>
+// No Vardin user authentication — anonymous Apple relay/PIR flow.
 
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
-import { secrets } from 'base44:runtime';
+import { secrets } from "base44:runtime";
+import {
+  loadRsaKey,
+  parseTokenRequest,
+  blindSign,
+  TOKEN_TYPE_BLIND_RSA,
+  BLIND_RSA_NK,
+} from "../../shared/privacyPass.ts";
 
-// Module-level RSA key pair cache (persists across warm invocations).
-// On cold start, the key is regenerated from the stored secret.
-let cachedKeyPair: { publicKey: CryptoKey; privateKey: CryptoKey; spkiB64Url: string } | null = null;
-
-async function getKeyPair(): Promise<{ publicKey: CryptoKey; privateKey: CryptoKey; spkiB64Url: string }> {
-  if (cachedKeyPair) return cachedKeyPair;
-
-  // Try to load the private key from the stored secret
-  const storedKeyB64 = secrets.get("LIVE_CALLER_ID_TOKEN_ISSUER_KEY");
-  if (storedKeyB64) {
-    try {
-      const keyBytes = Uint8Array.from(atob(storedKeyB64), (c) => c.charCodeAt(0));
-      const privateKey = await crypto.subtle.importKey(
-        "pkcs8",
-        keyBytes,
-        { name: "RSA-OAEP", hash: "SHA-256" },
-        true,
-        ["decrypt"],
-      );
-      // Export public key for the directory
-      const spki = await crypto.subtle.exportKey("spki", privateKey);
-      const spkiB64Url = btoa(String.fromCharCode(...new Uint8Array(spki)))
-        .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-      cachedKeyPair = { publicKey: privateKey, privateKey, spkiB64Url };
-      return cachedKeyPair;
-    } catch {}
-  }
-
-  // Generate a new RSA key pair (2048-bit, OAEP with SHA-256)
-  const keyPair = await crypto.subtle.generateKey(
-    {
-      name: "RSA-OAEP",
-      modulusLength: 2048,
-      publicExponent: new Uint8Array([1, 0, 1]),
-      hash: "SHA-256",
-    },
-    true,
-    ["encrypt", "decrypt"],
-  );
-
-  const spki = await crypto.subtle.exportKey("spki", keyPair.publicKey);
-  const spkiB64Url = btoa(String.fromCharCode(...new Uint8Array(spki)))
-    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-
-  cachedKeyPair = {
-    publicKey: keyPair.publicKey,
-    privateKey: keyPair.privateKey,
-    spkiB64Url,
-  };
-  return cachedKeyPair;
-}
-
-export default async function(req: Request): Promise<Response> {
+export default async function (req: Request): Promise<Response> {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
-
-    // Read the blinded token request (raw binary, 104 bytes for blind RSA)
-    const body = await req.arrayBuffer();
-    const bodyBytes = new Uint8Array(body);
-
-    if (bodyBytes.length === 0) {
-      return Response.json({ error: 'Empty token request' }, { status: 400 });
+    const secretValue = secrets.get("LIVE_CALLER_ID_TOKEN_ISSUER_KEY");
+    if (!secretValue) {
+      return Response.json({ error: "Token issuer not configured" }, { status: 500 });
     }
 
-    const keyPair = await getKeyPair();
+    const keyMaterial = await loadRsaKey(secretValue);
 
-    // Sign the blinded token using RSA-OAEP.
-    //
-    // Note: The full Privacy Pass blind RSA protocol (RFC 9474) requires raw
-    // RSA modular exponentiation (no padding). Web Crypto's SubtleCrypto does
-    // not support raw RSA operations. This implementation uses RSA-OAEP as a
-    // practical approximation. For full Privacy Pass compliance, deploy a
-    // dedicated token issuer using Apple's pir-service-example PrivacyPass
-    // implementation.
-    const signature = await crypto.subtle.decrypt(
-      { name: "RSA-OAEP" },
-      keyPair.privateKey,
-      bodyBytes,
-    );
+    const body = new Uint8Array(await req.arrayBuffer());
+    if (body.length === 0) {
+      return Response.json({ error: "Empty request body" }, { status: 400 });
+    }
 
-    return new Response(signature, {
+    let tokenReq;
+    try {
+      tokenReq = parseTokenRequest(body);
+    } catch (e) {
+      return Response.json({ error: e.message }, { status: 400 });
+    }
+
+    if (tokenReq.tokenType !== TOKEN_TYPE_BLIND_RSA) {
+      return Response.json({ error: "Unsupported token type" }, { status: 400 });
+    }
+
+    if (tokenReq.truncatedTokenKeyId !== keyMaterial.truncatedTokenKeyId) {
+      return Response.json({ error: "Invalid token key ID" }, { status: 400 });
+    }
+
+    if (tokenReq.blindedMsg.length !== BLIND_RSA_NK) {
+      return Response.json({ error: "Invalid blinded message size" }, { status: 400 });
+    }
+
+    // Blind RSA signing: blind_sig = blinded_msg^d mod n
+    const blindSig = blindSign(tokenReq.blindedMsg, keyMaterial.d, keyMaterial.n);
+
+    return new Response(blindSig, {
       status: 200,
       headers: {
-        'Content-Type': 'application/octet-stream',
-        'Cache-Control': 'no-store',
+        "Content-Type": "application/octet-stream",
+        "Cache-Control": "no-store",
       },
     });
   } catch (error) {
