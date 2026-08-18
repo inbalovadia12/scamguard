@@ -8,10 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Lock, Loader2, MessageSquare, Users, ShieldCheck, BarChart3, Star, Trash2,
   Mail, AlertTriangle, CheckCircle2, Crown, TrendingUp, Activity, Megaphone,
-  PhoneCall,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import CallDirectoryTab from "@/components/admin/CallDirectoryTab";
 
 const ADMIN_ROLE = "admin";
 
@@ -493,7 +491,6 @@ export default function Admin() {
           <TabsTrigger value="analyses" className="gap-1.5"><ShieldCheck className="w-4 h-4" />Analyses</TabsTrigger>
           <TabsTrigger value="seniors" className="gap-1.5"><Crown className="w-4 h-4" />Seniors</TabsTrigger>
           <TabsTrigger value="broadcasts" className="gap-1.5"><Megaphone className="w-4 h-4" />Broadcasts</TabsTrigger>
-          <TabsTrigger value="call-directory" className="gap-1.5"><PhoneCall className="w-4 h-4" />Call Directory</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4"><OverviewTab /></TabsContent>
@@ -502,7 +499,6 @@ export default function Admin() {
         <TabsContent value="analyses" className="mt-4"><AnalysesTab /></TabsContent>
         <TabsContent value="seniors" className="mt-4"><SeniorsTab /></TabsContent>
         <TabsContent value="broadcasts" className="mt-4"><BroadcastsTab /></TabsContent>
-        <TabsContent value="call-directory" className="mt-4"><CallDirectoryTab /></TabsContent>
       </Tabs>
     </div>
   );

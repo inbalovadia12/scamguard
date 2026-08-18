@@ -1,0 +1,45 @@
+{
+  "description": "Synchronizes PhoneReputation records into the Live Caller ID PIR dataset every 6 hours, keeping caller-ID labels fresh for Apple's Live Caller ID Lookup extension",
+  "name": "Live Caller ID Dataset Sync",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 */6 * * *",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "live_caller_id_dataset_sync",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "sync_dataset": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "syncLiveCallerIdDataset",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Sync Live Caller ID dataset",
+            "description": "Build PIR dataset from PhoneReputation"
+          }
+        }
+      }
+    ]
+  }
+}

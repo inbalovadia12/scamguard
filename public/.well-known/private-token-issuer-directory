@@ -1,0 +1,10 @@
+{
+  "issuer_request_uri": "/functions/issueToken",
+  "token_keys": [
+    {
+      "token_type": 80,
+      "token_key_base64url": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp_Z7fbhKVvQ1fOppOkAgvmBkOGoH8Zs_mBxug5Zrl4AGRoyGtDFi3Jc5Ds0iKAqVJURPyajvXEIKziBxffWLkVpmkie57xhIAFWSDseW2QbXZrFP6UZUvAlLYdx7LKIILpnJC5UuDNpY-qZrWbptkBqRnkzl7GK0IBx9uj-E14cgH1pVxFuxfp4GR-xvqAqgOYFvTF5vZ9hvC3ljuJrn4thblH8B_I0hb4BcqPhYyoyewhfKBHEk31bR05jnnVmlFx2kebsFN7I5Dums1UPpFUIeHfdeZw9p7SccpQFRRRYbK46SfomG9PE0xGjfOaIfXsG2SZCkrXZ0rn5P-ruMCwIDAQAB",
+      "not_before": null
+    }
+  ]
+}

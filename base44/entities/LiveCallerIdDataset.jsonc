@@ -1,0 +1,75 @@
+{
+  "name": "LiveCallerIdDataset",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "description": "Monotonically increasing dataset version"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "entry_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of phone-number entries published in this dataset version"
+    },
+    "bucket_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of PIR hash buckets for this dataset version"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "generated",
+        "error"
+      ],
+      "default": "generated"
+    },
+    "error_message": {
+      "type": "string"
+    },
+    "triggered_by": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "auto"
+      ],
+      "default": "manual"
+    },
+    "config_hash_b64": {
+      "type": "string",
+      "description": "Base64-encoded SHA-256 hash of the PIR Config message for this dataset version"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "version"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -57,8 +57,7 @@ import Community from '@/pages/Community';
 import CallSimulator from '@/pages/CallSimulator';
 import CryptoScanner from '@/pages/CryptoScanner';
 import MobileApp from '@/pages/MobileApp';
-import MobileCallerId from '@/pages/MobileCallerId';
-import CallDirectoryDocs from '@/pages/CallDirectoryDocs';
+
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -115,7 +114,6 @@ const AuthenticatedApp = () => {
           <Route path="/call-simulator" element={<CallSimulator />} />
           <Route path="/crypto-scanner" element={<CryptoScanner />} />
           <Route path="/mobile-app" element={<MobileApp />} />
-          <Route path="/mobile-app/caller-id" element={<MobileCallerId />} />
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/ai-negotiator" element={<AINegotiator />} />
           <Route path="/advanced-scanner" element={<Navigate to="/universal-scan" replace />} />
@@ -138,7 +136,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin" element={<Admin />} />
           <Route path="/wrapped" element={<Wrapped />} />
           <Route path="/community" element={<Community />} />
-          <Route path="/call-directory-docs" element={<CallDirectoryDocs />} />
+
         </Route>
         <Route path="/onboarding" element={<Onboarding />} />
       </Route>

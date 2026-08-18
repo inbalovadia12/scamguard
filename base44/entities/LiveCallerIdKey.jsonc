@@ -1,0 +1,55 @@
+{
+  "name": "LiveCallerIdKey",
+  "type": "object",
+  "properties": {
+    "user_identifier": {
+      "type": "string",
+      "description": "Pseudorandom per-user identifier from the User-Identifier HTTP header"
+    },
+    "key_config_hash": {
+      "type": "string",
+      "description": "Base64-encoded SHA-256 hash of the KeyConfig that this evaluation key corresponds to"
+    },
+    "evaluation_key_b64": {
+      "type": "string",
+      "description": "Base64-encoded EvaluationKey protobuf message uploaded by the device"
+    },
+    "key_timestamp": {
+      "type": "number",
+      "default": 0,
+      "description": "Timestamp from the evaluation key metadata (epoch seconds)"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this evaluation key expires and should be re-uploaded"
+    }
+  },
+  "required": [
+    "user_identifier",
+    "key_config_hash",
+    "evaluation_key_b64"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

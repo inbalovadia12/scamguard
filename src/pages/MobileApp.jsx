@@ -3,7 +3,6 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Smartphone, Bell, ShieldCheck, PhoneCall, RefreshCw, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { Link } from "react-router-dom";
 
 const FEATURES = [
   { icon: PhoneCall, title: "Live Call Guard", desc: "Real-time scam coaching during phone calls, on-device." },
@@ -81,11 +80,6 @@ export default function MobileApp() {
         </Button>
       </div>
 
-      <div className="text-center pt-1">
-        <Link to="/mobile-app/caller-id" className="text-xs text-muted-foreground/70 hover:text-primary inline-flex items-center gap-1">
-          <PhoneCall className="w-3 h-3" /> Developer · iOS Caller-ID integration
-        </Link>
-      </div>
     </div>
   );
 }
