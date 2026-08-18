@@ -45,6 +45,17 @@ Deno.serve(async (req) => {
           scam_categories: r.scam_categories || [],
           summary: r.summary || '',
           sources: r.sources || [],
+          report_count: r.report_count || 0,
+          scam_report_count: r.scam_report_count || 0,
+          spam_report_count: r.spam_report_count || 0,
+          suspicious_report_count: r.suspicious_report_count || 0,
+          safe_report_count: r.safe_report_count || 0,
+          caller_id_status: r.caller_id_status || 'UNKNOWN',
+          confidence_score: r.confidence_score || 0,
+          verified_business: r.verified_business || false,
+          business_name: r.business_name || '',
+          caller_id_label: r.caller_id_label || '',
+          last_checked_at: r.last_checked_at || r.last_updated_at || '',
         };
         return Response.json({
           result,
@@ -83,15 +94,34 @@ Deno.serve(async (req) => {
     // carrier is "Unknown" until the background deep lookup fills in the real one.
     // Accuracy is preserved: the deep lookup (below) still runs, and the NEXT lookup on
     // this number returns the full, verified result from the canonical index.
+    // If a STALE PhoneReputation record exists, merge its community report counts and
+    // caller-id status so the user still sees known scam reports while the refresh runs.
+    let stale: any = null;
+    try {
+      const staleRecs = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
+      stale = staleRecs[0];
+    } catch {}
+
     const provisionalResult = {
-      country: countryFromNumber(intlFormat),
-      carrier: 'Unknown',
-      reputation_score: 5,
-      risk_level: 'low' as const,
+      country: stale?.country || countryFromNumber(intlFormat),
+      carrier: stale?.carrier || 'Unknown',
+      reputation_score: stale?.reputation_score || 5,
+      risk_level: (stale?.risk_level || 'low') as 'low' | 'medium' | 'high',
       user_reports: [] as string[],
-      scam_categories: [] as string[],
-      summary: 'No scam reports in our index yet for this number. A deeper check is running in the background.',
-      sources: [] as string[],
+      scam_categories: stale?.scam_categories || [],
+      summary: stale?.summary || 'No scam reports in our index yet for this number. A deeper check is running in the background.',
+      sources: stale?.sources || [],
+      report_count: stale?.report_count || 0,
+      scam_report_count: stale?.scam_report_count || 0,
+      spam_report_count: stale?.spam_report_count || 0,
+      suspicious_report_count: stale?.suspicious_report_count || 0,
+      safe_report_count: stale?.safe_report_count || 0,
+      caller_id_status: stale?.caller_id_status || 'UNKNOWN',
+      confidence_score: stale?.confidence_score || 0,
+      verified_business: stale?.verified_business || false,
+      business_name: stale?.business_name || '',
+      caller_id_label: stale?.caller_id_label || '',
+      last_checked_at: stale?.last_checked_at || stale?.last_updated_at || '',
     };
 
     const saved = await base44.entities.PhoneLookup.create({
@@ -104,6 +134,16 @@ Deno.serve(async (req) => {
       scam_categories: provisionalResult.scam_categories,
       summary: provisionalResult.summary,
       sources: provisionalResult.sources,
+      report_count: provisionalResult.report_count,
+      scam_report_count: provisionalResult.scam_report_count,
+      spam_report_count: provisionalResult.spam_report_count,
+      suspicious_report_count: provisionalResult.suspicious_report_count,
+      safe_report_count: provisionalResult.safe_report_count,
+      caller_id_status: provisionalResult.caller_id_status,
+      confidence_score: provisionalResult.confidence_score,
+      verified_business: provisionalResult.verified_business,
+      business_name: provisionalResult.business_name,
+      caller_id_label: provisionalResult.caller_id_label,
     });
 
     // Deep web research runs in the background; upserts the canonical index so the
@@ -128,7 +168,10 @@ CRITICAL RULES — VIOLATING THESE INVALIDATES YOUR RESPONSE:
 
 Check: 800notes.com, whocallsme.com, nomorobo.com, truecaller.com, reportfraud.ftc.gov, Reddit r/scams and r/phonescams (only posts whose title or body mention this exact number).
 
-Return: country, carrier, reputation_score (0-100), risk_level (low/medium/high), user_reports[], scam_categories[], summary, sources[].
+Return: country, carrier, reputation_score (0-100), risk_level (low/medium/high), user_reports[] (concise excerpts of real complaints found, max 5), scam_categories[], summary, sources[].
+Also estimate report counts from what you found: scam_report_count (people reporting it as a scam), spam_report_count (telemarketing/robocalls), suspicious_report_count (unwanted but unclear), safe_report_count (confirmed legitimate).
+If the number belongs to a known verified business, set verified_business=true and business_name accordingly.
+
 Respond entirely in ${languageName}.`;
 
     const result = await base44.integrations.Core.InvokeLLM({
@@ -146,6 +189,12 @@ Respond entirely in ${languageName}.`;
           scam_categories: { type: 'array', items: { type: 'string' } },
           summary: { type: 'string' },
           sources: { type: 'array', items: { type: 'string' } },
+          scam_report_count: { type: 'number' },
+          spam_report_count: { type: 'number' },
+          suspicious_report_count: { type: 'number' },
+          safe_report_count: { type: 'number' },
+          verified_business: { type: 'boolean' },
+          business_name: { type: 'string' },
         },
         required: ['reputation_score', 'risk_level', 'summary'],
       },
@@ -162,6 +211,14 @@ Respond entirely in ${languageName}.`;
       summary: result.summary || '',
       sources: result.sources || [],
       last_external_check_at: new Date().toISOString(),
+      verified_business: result.verified_business || false,
+      business_name: result.business_name || '',
+      report_counts: {
+        scam: result.scam_report_count || 0,
+        spam: result.spam_report_count || 0,
+        suspicious: result.suspicious_report_count || 0,
+        safe: result.safe_report_count || 0,
+      },
     });
   } catch {
     // background enrichment is best-effort; never throw after the response is sent

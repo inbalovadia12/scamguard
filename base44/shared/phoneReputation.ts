@@ -156,6 +156,18 @@ export async function upsertPhoneReputation(base44: any, data: any): Promise<any
       else if (data.report.type === "safe") patch.safe_report_count = (rep.safe_report_count || 0) + inc;
     }
 
+    // Web-research counts from the deep lookup: SET (replace) the estimated totals,
+    // since the research re-scans all public sources from scratch. User-submitted
+    // reports that were already counted are included in the web findings.
+    if (data.report_counts) {
+      const rc = data.report_counts;
+      patch.scam_report_count = rc.scam || 0;
+      patch.spam_report_count = rc.spam || 0;
+      patch.suspicious_report_count = rc.suspicious || 0;
+      patch.safe_report_count = rc.safe || 0;
+      patch.report_count = (rc.scam || 0) + (rc.spam || 0) + (rc.suspicious || 0) + (rc.safe || 0);
+    }
+
     const next: any = {
       reputation_score: patch.reputation_score ?? rep.reputation_score,
       risk_level: patch.risk_level ?? rep.risk_level,
@@ -174,10 +186,11 @@ export async function upsertPhoneReputation(base44: any, data: any): Promise<any
   }
 
   // create new canonical record
-  const scam = data.report?.type === "scam" ? (data.report.count ?? 1) : 0;
-  const spam = data.report?.type === "spam" ? (data.report.count ?? 1) : 0;
-  const susp = data.report?.type === "suspicious" ? (data.report.count ?? 1) : 0;
-  const safe = data.report?.type === "safe" ? (data.report.count ?? 1) : 0;
+  const rc = data.report_counts;
+  const scam = rc ? (rc.scam || 0) : (data.report?.type === "scam" ? (data.report.count ?? 1) : 0);
+  const spam = rc ? (rc.spam || 0) : (data.report?.type === "spam" ? (data.report.count ?? 1) : 0);
+  const susp = rc ? (rc.suspicious || 0) : (data.report?.type === "suspicious" ? (data.report.count ?? 1) : 0);
+  const safe = rc ? (rc.safe || 0) : (data.report?.type === "safe" ? (data.report.count ?? 1) : 0);
   const status = statusFromReputation({
     reputation_score: data.reputation_score,
     risk_level: data.risk_level,

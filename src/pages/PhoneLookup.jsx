@@ -74,6 +74,16 @@ export default function PhoneLookup() {
         scam_categories: result.scam_categories || [],
         summary: result.summary || "",
         sources: result.sources || [],
+        report_count: result.report_count || 0,
+        scam_report_count: result.scam_report_count || 0,
+        spam_report_count: result.spam_report_count || 0,
+        suspicious_report_count: result.suspicious_report_count || 0,
+        safe_report_count: result.safe_report_count || 0,
+        caller_id_status: result.caller_id_status || "UNKNOWN",
+        confidence_score: result.confidence_score || 0,
+        verified_business: result.verified_business || false,
+        business_name: result.business_name || "",
+        caller_id_label: result.caller_id_label || "",
         created_date: saved?.created_date || new Date().toISOString(),
       });
       loadHistory();
@@ -96,6 +106,16 @@ export default function PhoneLookup() {
       scam_categories: lookup.scam_categories || [],
       summary: lookup.summary || "",
       sources: lookup.sources || [],
+      report_count: lookup.report_count || 0,
+      scam_report_count: lookup.scam_report_count || 0,
+      spam_report_count: lookup.spam_report_count || 0,
+      suspicious_report_count: lookup.suspicious_report_count || 0,
+      safe_report_count: lookup.safe_report_count || 0,
+      caller_id_status: lookup.caller_id_status || "UNKNOWN",
+      confidence_score: lookup.confidence_score || 0,
+      verified_business: lookup.verified_business || false,
+      business_name: lookup.business_name || "",
+      caller_id_label: lookup.caller_id_label || "",
       created_date: lookup.created_date,
     });
   };

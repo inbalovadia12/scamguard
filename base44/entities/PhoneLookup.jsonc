@@ -51,6 +51,61 @@
         "type": "string"
       },
       "description": "URLs where information was found"
+    },
+    "report_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Total community + web reports"
+    },
+    "scam_report_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Reports classifying this number as a scam"
+    },
+    "spam_report_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Reports classifying this number as spam/telemarketing"
+    },
+    "suspicious_report_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Reports flagging this number as suspicious"
+    },
+    "safe_report_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Reports confirming this number is safe"
+    },
+    "caller_id_status": {
+      "type": "string",
+      "enum": [
+        "SCAM",
+        "SPAM",
+        "SUSPICIOUS",
+        "SAFE",
+        "UNKNOWN"
+      ],
+      "default": "UNKNOWN",
+      "description": "Vardin's caller-ID classification for this number"
+    },
+    "confidence_score": {
+      "type": "number",
+      "default": 0,
+      "description": "0-100 confidence in the classification"
+    },
+    "verified_business": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is a known verified business number"
+    },
+    "business_name": {
+      "type": "string",
+      "description": "Verified business name if applicable"
+    },
+    "caller_id_label": {
+      "type": "string",
+      "description": "Published caller-ID label (e.g. 'Vardin: Scam Likely')"
     }
   },
   "required": [

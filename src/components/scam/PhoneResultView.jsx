@@ -1,24 +1,42 @@
 import React from "react";
-import { MapPin, Signal, Users, Tag, ExternalLink } from "lucide-react";
+import { MapPin, Signal, Users, Tag, ExternalLink, ShieldCheck, ShieldAlert, BadgeCheck, Activity } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { RISK_META } from "@/components/scam/ScamReportCard";
 import CommunityIntel, { matchCategoriesToEnum } from "@/components/community/CommunityIntel";
+
+const STATUS_META = {
+  SCAM: { label: "Scam Likely", color: "bg-destructive/10 text-destructive border-destructive/30" },
+  SPAM: { label: "Spam", color: "bg-warning/10 text-warning border-warning/30" },
+  SUSPICIOUS: { label: "Suspicious", color: "bg-warning/10 text-warning border-warning/30" },
+  SAFE: { label: "Safe", color: "bg-success/10 text-success border-success/30" },
+  UNKNOWN: { label: "Unknown", color: "bg-muted text-muted-foreground border-border/50" },
+};
 
 export default function PhoneResultView({ data }) {
   const risk = RISK_META[data.risk_level] || RISK_META.medium;
   const score = data.reputation_score || 0;
   const scoreColor = score >= 71 ? "text-destructive" : score >= 31 ? "text-warning" : "text-success";
   const barColor = score >= 71 ? "bg-destructive" : score >= 31 ? "bg-warning" : "bg-success";
+  const status = STATUS_META[data.caller_id_status] || STATUS_META.UNKNOWN;
+  const totalReports = data.report_count || (data.user_reports?.length || 0);
+  const hasReportCounts = (data.scam_report_count || 0) + (data.spam_report_count || 0) + (data.suspicious_report_count || 0) + (data.safe_report_count || 0) > 0;
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <span className="font-semibold text-sm font-mono">{data.phone_number}</span>
-        {data.created_date && (
-          <span className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(data.created_date), { addSuffix: true })}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {data.caller_id_status && data.caller_id_status !== "UNKNOWN" && (
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${status.color}`}>
+              {status.label}
+            </span>
+          )}
+          {data.created_date && (
+            <span className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(data.created_date), { addSuffix: true })}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Reputation score */}
@@ -33,10 +51,31 @@ export default function PhoneResultView({ data }) {
         <div className="h-2.5 bg-muted rounded-full overflow-hidden">
           <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${score}%` }} />
         </div>
-        <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${risk.color}`}>
-          {risk.label} Risk
-        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${risk.color}`}>
+            {risk.label} Risk
+          </span>
+          {data.confidence_score > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+              <Activity className="w-3 h-3" />
+              {data.confidence_score}% confidence
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* Verified business badge */}
+      {data.verified_business && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30">
+          <BadgeCheck className="w-4 h-4 text-success flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-success">
+              Verified Business{data.business_name ? `: ${data.business_name}` : ""}
+            </p>
+            <p className="text-xs text-muted-foreground">This number belongs to a known legitimate business.</p>
+          </div>
+        </div>
+      )}
 
       {/* Country & Carrier */}
       <div className="grid grid-cols-2 gap-3">
@@ -57,6 +96,41 @@ export default function PhoneResultView({ data }) {
           </div>
         )}
       </div>
+
+      {/* Report counts breakdown */}
+      {hasReportCounts && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <Users className="w-3.5 h-3.5" /> Community Reports ({totalReports} total)
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {data.scam_report_count > 0 && (
+              <div className="bg-destructive/10 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-destructive">{data.scam_report_count}</p>
+                <p className="text-xs text-muted-foreground">Scam</p>
+              </div>
+            )}
+            {data.spam_report_count > 0 && (
+              <div className="bg-warning/10 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-warning">{data.spam_report_count}</p>
+                <p className="text-xs text-muted-foreground">Spam</p>
+              </div>
+            )}
+            {data.suspicious_report_count > 0 && (
+              <div className="bg-warning/10 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-warning">{data.suspicious_report_count}</p>
+                <p className="text-xs text-muted-foreground">Suspicious</p>
+              </div>
+            )}
+            {data.safe_report_count > 0 && (
+              <div className="bg-success/10 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-success">{data.safe_report_count}</p>
+                <p className="text-xs text-muted-foreground">Safe</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Scam categories */}
       {data.scam_categories?.length > 0 && (
