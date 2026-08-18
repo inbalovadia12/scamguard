@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Lock, Loader2, MessageSquare, Users, ShieldCheck, BarChart3, Star, Trash2,
   Mail, AlertTriangle, CheckCircle2, Crown, TrendingUp, Activity, Megaphone,
+  Download, PhoneCall,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -425,6 +426,69 @@ function OverviewTab() {
   );
 }
 
+function CallerIdTab() {
+  const [exporting, setExporting] = useState(false);
+  const [lastExport, setLastExport] = useState(null);
+
+  const handleDownload = async () => {
+    setExporting(true);
+    try {
+      const response = await base44.functions.invoke("exportCallerIdDataset", {});
+      const data = response.data || response;
+      if (data.error) throw new Error(data.error);
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `vardin-live-caller-id-dataset-${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setLastExport({
+        entries: data.entry_count ?? (data.entries || []).length,
+        generated_at: data.generated_at,
+      });
+      toast({ title: "Dataset exported", description: `${data.entry_count ?? (data.entries || []).length} eligible records downloaded.` });
+    } catch (e) {
+      toast({ title: "Export failed", description: e.message, variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-card rounded-2xl border border-border/50 p-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <PhoneCall className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold font-heading">Live Caller ID Dataset</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Export eligible phone reputation records as JSON for Apple's Live Caller ID PIR database generation.
+              Includes only published numbers (valid E.164, in Call Directory, non-UNKNOWN status, meeting confidence threshold).
+            </p>
+          </div>
+        </div>
+        <Button onClick={handleDownload} disabled={exporting} className="gap-2">
+          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {exporting ? "Exporting..." : "Download JSON Dataset"}
+        </Button>
+        {lastExport && (
+          <div className="flex items-center gap-2 text-sm text-success">
+            <CheckCircle2 className="w-4 h-4" />
+            Last export: {lastExport.entries} records · {new Date(lastExport.generated_at).toLocaleString()}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Admin() {
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState(false);
@@ -491,6 +555,7 @@ export default function Admin() {
           <TabsTrigger value="analyses" className="gap-1.5"><ShieldCheck className="w-4 h-4" />Analyses</TabsTrigger>
           <TabsTrigger value="seniors" className="gap-1.5"><Crown className="w-4 h-4" />Seniors</TabsTrigger>
           <TabsTrigger value="broadcasts" className="gap-1.5"><Megaphone className="w-4 h-4" />Broadcasts</TabsTrigger>
+          <TabsTrigger value="caller-id" className="gap-1.5"><PhoneCall className="w-4 h-4" />Caller ID</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4"><OverviewTab /></TabsContent>
@@ -499,6 +564,7 @@ export default function Admin() {
         <TabsContent value="analyses" className="mt-4"><AnalysesTab /></TabsContent>
         <TabsContent value="seniors" className="mt-4"><SeniorsTab /></TabsContent>
         <TabsContent value="broadcasts" className="mt-4"><BroadcastsTab /></TabsContent>
+        <TabsContent value="caller-id" className="mt-4"><CallerIdTab /></TabsContent>
       </Tabs>
     </div>
   );
