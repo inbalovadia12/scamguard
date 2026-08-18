@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { getUrlhausReport } from '../../shared/urlhaus.ts';
 
 const PLAN_LIMITS = { starter: 15, plus: 150, premium: 400 };
 const ANSWER_TYPE_COSTS: Record<string, number> = {
@@ -167,10 +168,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No file provided for analysis.' }, { status: 400 });
     }
 
-    // === VirusTotal URL reputation (for URL-based scans) ===
+    // === VirusTotal + URLhaus URL reputation (for URL-based scans) — run in parallel ===
     let vtReport = null;
-    if (scanType === 'url' || (scanType === 'page' && scanMode === 'url') || (page_url && scanType !== 'file')) {
-      vtReport = await getVirusTotalReport(page_url);
+    let urlhausReport = null;
+    const isUrlScan = scanType === 'url' || (scanType === 'page' && scanMode === 'url') || (page_url && scanType !== 'file');
+    if (isUrlScan && page_url) {
+      const [vt, uh] = await Promise.all([
+        getVirusTotalReport(page_url),
+        getUrlhausReport(page_url),
+      ]);
+      vtReport = vt;
+      urlhausReport = uh;
     }
 
     // === QR: decode via client (BarcodeDetector) or server-side API (never LLM) ===
@@ -226,6 +234,18 @@ Deno.serve(async (req) => {
         prompt += '- Categories: ' + Object.values(vtReport.categories).join(', ') + '\n';
       }
       prompt += '\n';
+    }
+
+    if (urlhausReport?.listed) {
+      prompt += 'URLHAUS ALERT: This URL is LISTED in the URLhaus malware database as a confirmed malware distribution site.\n';
+      prompt += '- Threat type: ' + (urlhausReport.threat || 'malware') + '\n';
+      prompt += '- URL status: ' + (urlhausReport.url_status || 'unknown') + '\n';
+      prompt += '- Date added: ' + (urlhausReport.date_added || 'unknown') + '\n';
+      prompt += '- Tags: ' + ((urlhausReport.tags || []).join(', ') || 'none') + '\n';
+      prompt += '- Malware payloads found: ' + (urlhausReport.payload_count || 0) + '\n';
+      prompt += 'CRITICAL: A URL listed in URLhaus is actively distributing malware. Risk score MUST be high (71-100).\n\n';
+    } else if (urlhausReport && !urlhausReport.listed) {
+      prompt += 'URLHAUS: URL is NOT listed in the URLhaus malware database (no malware distribution history found).\n\n';
     }
 
     prompt += 'Page URL: ' + (page_url || 'unknown') + '\n\n';
@@ -423,6 +443,7 @@ Deno.serve(async (req) => {
       scan_mode: scanMode,
       answer_type: answerType,
       virustotal: vtReport,
+      urlhaus: urlhausReport,
       decoded_content: qrDecodedContent,
       final_destination_url: qrFinalUrl,
       destination_title: qrPageTitle,

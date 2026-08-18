@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Copy, Share2, Download, RotateCcw, CheckCircle2, ShieldAlert, QrCode, ExternalLink, FileText } from "lucide-react";
+import { Copy, Share2, Download, RotateCcw, CheckCircle2, ShieldAlert, ShieldCheck, QrCode, ExternalLink, FileText, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import RiskBadge, { getRiskLevelFromScore, getRiskBarColor } from "@/components/scam/RiskBadge";
 
@@ -60,6 +60,28 @@ function VirusTotalBadge({ vt }) {
       <span className="font-semibold">VirusTotal:</span>
       <span>{vt.malicious}/{vt.total_engines} malicious detections</span>
       <span className="opacity-70">· Reputation: {vt.reputation}</span>
+    </div>
+  );
+}
+
+function UrlhausBadge({ uh }) {
+  if (!uh) return null;
+  if (uh.listed) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 rounded-xl text-sm border bg-destructive/10 text-destructive border-destructive/20">
+        <Bug className="w-4 h-4" />
+        <span className="font-semibold">URLhaus:</span>
+        <span>Listed as malware site</span>
+        {uh.threat && <span className="opacity-80">· {uh.threat.replace(/_/g, " ")}</span>}
+        {uh.payload_count > 0 && <span className="opacity-70">· {uh.payload_count} payload{uh.payload_count !== 1 ? "s" : ""}</span>}
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 rounded-xl text-sm border bg-success/10 text-success border-success/20">
+      <ShieldCheck className="w-4 h-4" />
+      <span className="font-semibold">URLhaus:</span>
+      <span>Not in malware database</span>
     </div>
   );
 }
@@ -229,7 +251,10 @@ export default function AdvancedScanResults({ data, onRescan }) {
   return (
     <div className="space-y-4">
       <QRDestinationCard data={data} />
-      <VirusTotalBadge vt={data.virustotal} />
+      <div className="flex flex-wrap gap-2">
+        <VirusTotalBadge vt={data.virustotal} />
+        <UrlhausBadge uh={data.urlhaus} />
+      </div>
       {mode === "quick" && <QuickResult a={a} />}
       {mode === "risk_score" && <RiskScoreResult a={a} />}
       {mode === "red_flags" && <RedFlagsResult a={a} />}

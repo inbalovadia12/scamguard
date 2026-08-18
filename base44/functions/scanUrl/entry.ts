@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { getUrlhausReport } from '../../shared/urlhaus.ts';
 
 // === SSRF protection: block private/internal IP ranges ===
 function isPrivateIp(ip: string): boolean {
@@ -116,6 +117,7 @@ Deno.serve(async (req) => {
     let redirectCount = 0;
 
     const vtPromise = getVirusTotalReport(targetUrl);
+    const urlhausPromise = getUrlhausReport(targetUrl);
 
     try {
       let currentUrl = targetUrl;
@@ -177,6 +179,7 @@ Deno.serve(async (req) => {
 
     // Await the parallel VT lookup (already started above); non-blocking if fetch was slower.
     vtReport = await vtPromise;
+    const urlhausReport = await urlhausPromise;
 
     const marketplaceContext = marketplace
       ? `\n\nMARKETPLACE DETECTED: ${marketplace}\nThis is a listing from ${marketplace}. Provide marketplace-specific analysis:\n- Seller reputation indicators (ratings, reviews, account age if visible)\n- Pricing anomalies (price significantly below market value = red flag)\n- Listing description quality and consistency\n- Common ${marketplace} scam patterns\n- Payment method red flags (gift cards, wire transfers, crypto)\n- Stock photos vs real photos\n- Return policy and buyer protection availability`
@@ -190,6 +193,12 @@ Deno.serve(async (req) => {
       ? `\n\nVIRUSTOTAL REPORT:\n- Malicious detections: ${vtReport.malicious}/${vtReport.total_engines} security engines\n- Suspicious detections: ${vtReport.suspicious}\n- Harmless: ${vtReport.harmless}\n- Community reputation: ${vtReport.reputation}\n${Object.keys(vtReport.categories).length > 0 ? '- Categories: ' + Object.values(vtReport.categories).join(', ') + '\n' : ''}`
       : '\n\n(VirusTotal report unavailable — analyze based on URL and content only)';
 
+    const urlhausInfo = urlhausReport?.listed
+      ? `\n\nURLHAUS ALERT: This URL is LISTED in the URLhaus malware database as a confirmed malware distribution site.\n- Threat type: ${urlhausReport.threat || 'malware'}\n- URL status: ${urlhausReport.url_status || 'unknown'}\n- Date added to URLhaus: ${urlhausReport.date_added || 'unknown'}\n- Tags: ${(urlhausReport.tags || []).join(', ') || 'none'}\n- Malware payloads found: ${urlhausReport.payload_count || 0}\nCRITICAL: A URL listed in URLhaus is actively distributing malware. Risk score MUST be high (71-100).`
+      : (urlhausReport && !urlhausReport.listed)
+        ? '\n\nURLHAUS: URL is NOT listed in the URLhaus malware database (no malware distribution history found).'
+        : '\n\n(URLhaus report unavailable)';
+
     const prompt = `Analyze this URL and website content for scam/phishing risk.
 
 URL: ${targetUrl}
@@ -198,7 +207,7 @@ ${fetchError ? `Fetch error: ${fetchError}` : ''}
 
 Website content:
 ${websiteContent || '(Could not fetch — analyze URL structure and domain only)'}
-${marketplaceContext}${redirectInfo}${vtInfo}
+${marketplaceContext}${redirectInfo}${vtInfo}${urlhausInfo}
 
 Check: typosquatting, suspicious TLDs, URL shorteners, phishing forms (login/credential harvesting), brand impersonation, pricing anomalies, risky payment methods (gift cards/crypto/wire), urgency tactics, missing legal pages, redirect chain cloaking. For marketplace listings, compare price vs market value and check seller reputation.
 
@@ -228,6 +237,11 @@ Rules: never say "definitely a scam" — use "likely". Be educational, plain-Eng
 
     if (marketplace && !result.marketplace_platform) {
       result.marketplace_platform = marketplace;
+    }
+
+    // Attach threat intel metadata for the frontend / agent
+    if (urlhausReport) {
+      (result as any).urlhaus = urlhausReport;
     }
 
     return Response.json(result);
