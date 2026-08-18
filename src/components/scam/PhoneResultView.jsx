@@ -53,7 +53,7 @@ export default function PhoneResultView({ data }) {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${risk.color}`}>
-            {risk.label} Risk
+            {risk.label}
           </span>
           {data.confidence_score > 0 && (
             <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">

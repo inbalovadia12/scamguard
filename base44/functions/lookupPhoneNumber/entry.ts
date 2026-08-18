@@ -126,14 +126,30 @@ Respond in ${languageName}.`;
       },
     });
 
+    // ---- Code-level safety nets: enforce score/risk consistency + strip hallucinated text ----
+    let rawScore = result.reputation_score ?? 0;
+    let rawRisk = (result.risk_level || 'low') as 'low' | 'medium' | 'high';
+
+    // Force score and risk_level to be consistent
+    if (rawRisk === 'high' && rawScore < 71) rawScore = 75;
+    if (rawRisk === 'medium' && (rawScore < 36 || rawScore > 70)) rawScore = 50;
+    if (rawRisk === 'low' && rawScore > 35) rawScore = 15;
+
+    // Strip any hallucinated "deeper check" / "background" text from the summary
+    let cleanSummary = (result.summary || '').replace(
+      /[^.!?]*\b(?:deeper\s+check|running\s+in\s+the\s+background|background\s+check|ongoing\s+process|further\s+analysis)\b[^.!?]*[.!?]*/gi,
+      ''
+    ).trim();
+    if (!cleanSummary) cleanSummary = 'No scam reports found for this number.';
+
     const fullResult = {
       country: result.country || '',
       carrier: result.carrier || '',
-      reputation_score: result.reputation_score || 0,
-      risk_level: (result.risk_level || 'low') as 'low' | 'medium' | 'high',
+      reputation_score: rawScore,
+      risk_level: rawRisk,
       user_reports: result.user_reports || [],
       scam_categories: result.scam_categories || [],
-      summary: result.summary || '',
+      summary: cleanSummary,
       sources: result.sources || [],
       report_count: (result.scam_report_count || 0) + (result.spam_report_count || 0) + (result.suspicious_report_count || 0) + (result.safe_report_count || 0),
       scam_report_count: result.scam_report_count || 0,
