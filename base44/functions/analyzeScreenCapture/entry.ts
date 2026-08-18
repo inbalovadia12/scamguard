@@ -1,6 +1,9 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
-export default async function (req: Request): Promise<Response> {
+// Analyzes a screenshot of the user's screen for scam patterns in real time.
+//   Uses the platform InvokeLLM integration with vision to detect phishing,
+//   romance scams, investment fraud, tech support scams, etc. in visible content.
+Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -82,4 +85,4 @@ Respond entirely in ${languageName}.`;
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
-}
+});

@@ -1,7 +1,10 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
-import { secrets } from 'base44:runtime';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
-export default async function (req: Request): Promise<Response> {
+// Analyzes a chunk of audio from a live call/screen session for scam tactics.
+//   1. Whisper STT (Groq) transcribes the audio chunk
+//   2. Llama-3.3-70b (Groq) analyzes the transcript for scam patterns
+//   3. Returns structured analysis: segments, risk level, warnings, coaching
+Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -17,7 +20,7 @@ export default async function (req: Request): Promise<Response> {
     const body = await req.json();
     const { audio_url, audio_base64, audio_mime, language, session_context, speaker_history } = body;
 
-    const groqApiKey = secrets.get('GROQ_API_KEY');
+    const groqApiKey = Deno.env.get('GROQ_API_KEY');
     if (!groqApiKey) return Response.json({ error: 'STT service not configured' }, { status: 500 });
 
     let audioBlob: Blob;
@@ -40,7 +43,11 @@ export default async function (req: Request): Promise<Response> {
       contentType = audioBlob.type || 'audio/webm';
     }
 
-    const ext = contentType.includes('mp4') ? 'mp4' : contentType.includes('ogg') ? 'ogg' : 'webm';
+    const ext = contentType.includes('mp4') ? 'mp4'
+      : contentType.includes('ogg') ? 'ogg'
+      : contentType.includes('wav') ? 'wav'
+      : contentType.includes('mpeg') || contentType.includes('mp3') ? 'mp3'
+      : 'webm';
 
     const formData = new FormData();
     formData.append('file', audioBlob, `audio.${ext}`);
@@ -107,7 +114,7 @@ Return JSON: segments [{speaker, text}], feedback (advice to victim if they spok
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         messages: [{ role: 'user', content: prompt }],
         response_format: { type: 'json_object' },
         temperature: 0,
@@ -142,4 +149,4 @@ Return JSON: segments [{speaker, text}], feedback (advice to victim if they spok
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
-}
+});
