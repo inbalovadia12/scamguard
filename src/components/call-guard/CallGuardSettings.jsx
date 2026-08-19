@@ -13,12 +13,29 @@ import {
 
 export default function CallGuardSettings({ user, onUpdate }) {
   const [toggling, setToggling] = useState(false);
+  const [guardEnabled, setGuardEnabled] = useState(true);
   const [notifSaving, setNotifSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState(null);
 
   const notificationsEnabled = user?.call_guard_notifications !== false;
+
+  const handleToggleGuard = async (checked) => {
+    if (!checked) {
+      setGuardEnabled(false);
+      setToggling(true);
+      setError(null);
+      try {
+        await base44.functions.invoke("toggleCallGuard", { action: "disable" });
+        if (onUpdate) await onUpdate();
+      } catch (e) {
+        setGuardEnabled(true);
+        setError(e.message || "Failed to disable Call Guard.");
+      }
+      setToggling(false);
+    }
+  };
 
   const handleToggleNotifications = async (checked) => {
     setNotifSaving(true);
@@ -30,19 +47,6 @@ export default function CallGuardSettings({ user, onUpdate }) {
       setError("Failed to update notification setting.");
     }
     setNotifSaving(false);
-  };
-
-  const handleDisable = async () => {
-    setToggling(true);
-    setError(null);
-    try {
-      const res = await base44.functions.invoke("toggleCallGuard", { action: "disable" });
-      if (res.data?.error) throw new Error(res.data.error);
-      if (onUpdate) await onUpdate();
-    } catch (e) {
-      setError(e.message || "Failed to disable Call Guard.");
-    }
-    setToggling(false);
   };
 
   const handleDeleteHistory = async () => {
@@ -124,27 +128,22 @@ export default function CallGuardSettings({ user, onUpdate }) {
         </div>
       </div>
 
-      {/* Disable Call Guard */}
+      {/* Enable / Disable toggle */}
       <div className="flex items-center justify-between gap-4 py-3">
         <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center flex-shrink-0">
-            <Power className="w-4 h-4 text-warning" />
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Power className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <p className="text-sm font-medium">Disable Call Guard</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Cancel your $3/month subscription and stop call screening.</p>
+            <p className="text-sm font-medium">Call Guard active</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Toggle off to cancel your $3/month subscription and stop screening.</p>
           </div>
         </div>
-        <Button
-          onClick={handleDisable}
+        <Switch
+          checked={guardEnabled}
+          onCheckedChange={handleToggleGuard}
           disabled={toggling}
-          variant="outline"
-          size="sm"
-          className="text-warning border-warning/30 hover:bg-warning/5"
-        >
-          {toggling ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Power className="w-3.5 h-3.5 mr-1.5" />}
-          Disable
-        </Button>
+        />
       </div>
 
       {/* Delete confirmation dialog */}

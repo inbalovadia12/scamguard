@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Phone, Clock, ChevronRight, Inbox } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 const VERDICT_CONFIG = {
   SAFE: { color: "bg-success/10 text-success border-success/20", label: "SAFE" },
