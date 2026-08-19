@@ -58,6 +58,7 @@ import CallSimulator from '@/pages/CallSimulator';
 import CryptoScanner from '@/pages/CryptoScanner';
 import MobileApp from '@/pages/MobileApp';
 import BulkScanner from '@/pages/BulkScanner';
+import CallGuard from '@/pages/CallGuard';
 
 
 // Layout
@@ -115,6 +116,7 @@ const AuthenticatedApp = () => {
           <Route path="/call-simulator" element={<CallSimulator />} />
           <Route path="/crypto-scanner" element={<CryptoScanner />} />
           <Route path="/bulk-scanner" element={<BulkScanner />} />
+          <Route path="/call-guard" element={<CallGuard />} />
           <Route path="/mobile-app" element={<MobileApp />} />
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/ai-negotiator" element={<AINegotiator />} />

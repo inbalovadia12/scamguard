@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon,   MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard, Scan, Siren, History, MessagesSquare, EyeOff,
+  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon,   MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard, Scan, Siren, History, MessagesSquare, EyeOff, PhoneCall,
   Gamepad2, BookOpen, Bitcoin, Smartphone, ListPlus,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -25,6 +25,7 @@ const NAV_SECTIONS = [
       { path: "/ai-negotiator", labelKey: "nav.ai_negotiator", icon: MessageCircle },
       { path: "/extension", labelKey: "nav.extension", icon: Puzzle, kidLabel: "Vardin Kid Guard" },
       { path: "/phone-lookup", labelKey: "nav.phone_guard", icon: Phone },
+      { path: "/call-guard", label: "Call Guard", icon: PhoneCall },
       { path: "/emergency-response", labelKey: "nav.emergency_response", icon: Siren, kidLabel: "Get Help" },
     ],
   },
@@ -96,7 +97,7 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [alertBadge, setAlertBadge] = useState(0);
 
-  const KID_HIDDEN_PATHS = ["/ai-negotiator", "/phone-lookup", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/feedback", "/projects", "/pricing"];
+  const KID_HIDDEN_PATHS = ["/ai-negotiator", "/phone-lookup", "/call-guard", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/feedback", "/projects", "/pricing"];
   const visibleSections = kidMode
     ? NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !KID_HIDDEN_PATHS.includes(i.path)) })).filter(s => s.items.length > 0)
     : NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !i.kidOnly) })).filter(s => s.items.length > 0);
@@ -275,7 +276,7 @@ export default function AppLayout() {
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-30 glass border-b border-border/50" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      <div className="md:hidden fixed top-0 inset-x-0 z-30 bg-card border-b border-border/50" style={{ paddingTop: "env(safe-area-inset-top)", transform: "translateZ(0)" }}>
         <div className="px-4 h-16 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg luxury-gradient-btn flex items-center justify-center">
@@ -296,7 +297,7 @@ export default function AppLayout() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 top-16 z-20 bg-background animate-fade-in overflow-y-auto" style={{ paddingBottom: "env(safe-area-inset-bottom)" }} onClick={() => setMobileOpen(false)}>
+        <div className="md:hidden fixed inset-0 z-20 bg-background animate-fade-in overflow-y-auto" style={{ top: "calc(4rem + env(safe-area-inset-top))", paddingBottom: "env(safe-area-inset-bottom)" }} onClick={() => setMobileOpen(false)}>
           <div className="px-5 py-5 space-y-6" onClick={(e) => e.stopPropagation()}>
             <div className="space-y-5">
               {visibleSections.map((section) => (
