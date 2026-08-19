@@ -1,6 +1,45 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { secrets } from 'base44:runtime';
 
+// ---- Retell webhook signature verification (official method) ----
+// X-Retell-Signature format: "v={unix_ms_timestamp},d={hex_digest}"
+// The digest is HMAC-SHA256 of (rawBody + timestamp), keyed with the Retell API key.
+async function verifyRetellSignature(rawBody: string, apiKey: string, signature: string): Promise<boolean> {
+  const match = signature.match(/v=(\d+),d=(.*)/);
+  if (!match) return false;
+
+  const timestamp = match[1];
+  const digest = match[2];
+
+  // Reject replays older than 5 minutes
+  const now = Date.now();
+  const ts = parseInt(timestamp, 10);
+  if (isNaN(ts) || Math.abs(now - ts) > 5 * 60 * 1000) return false;
+
+  // Compute HMAC-SHA256(rawBody + timestamp, apiKey)
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(apiKey),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const data = encoder.encode(rawBody + timestamp);
+  const sigBuffer = await crypto.subtle.sign('HMAC', key, data);
+  const expectedDigest = Array.from(new Uint8Array(sigBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  // Constant-time comparison
+  if (expectedDigest.length !== digest.length) return false;
+  let result = 0;
+  for (let i = 0; i < expectedDigest.length; i++) {
+    result |= expectedDigest.charCodeAt(i) ^ digest.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 // Parse JSON from a free-text LLM response as a fallback.
 function parseJsonFromText(text: string): any {
   if (!text) return null;
@@ -12,35 +51,81 @@ function parseJsonFromText(text: string): any {
   return null;
 }
 
-// Webhook endpoint: receives completed call-screening data from the Retell
-// voice agent, runs it through Vardin's scam-detection AI, and saves the
-// combined record + final assessment.
-//
-// The Retell agent provides extracted call facts; Vardin's AI makes the
-// final SAFE / SUSPICIOUS / SCAM determination.
+// Webhook endpoint: receives Retell's call_analyzed webhook, verifies the
+// X-Retell-Signature, extracts call data, runs it through Vardin's
+// scam-detection AI, and saves the combined record + final assessment.
 export default async function(req: Request): Promise<Response> {
   try {
-    // ---- 1. Authenticate the webhook request ----
-    const webhookSecret = secrets.get("CALLGUARD_WEBHOOK_SECRET");
-    if (!webhookSecret) {
-      return Response.json({ error: 'Webhook secret not configured' }, { status: 500 });
+    // ---- 1. Get the Retell API key (used as the HMAC signing secret) ----
+    const retellApiKey = secrets.get('RETELL_API_KEY');
+    if (!retellApiKey) {
+      return Response.json({ error: 'Retell API key not configured' }, { status: 500 });
     }
 
-    const authHeader = req.headers.get('authorization') || '';
-    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
-    const headerSecret = bearerMatch
-      ? bearerMatch[1]
-      : (req.headers.get('x-webhook-secret') || '');
-    const url = new URL(req.url);
-    const querySecret = url.searchParams.get('secret') || '';
+    // ---- 2. Read the raw body (required for signature verification) ----
+    const rawBody = await req.text();
 
-    if (headerSecret !== webhookSecret && querySecret !== webhookSecret) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    // ---- 3. Verify the X-Retell-Signature header ----
+    const signature = req.headers.get('x-retell-signature') || '';
+    if (!signature) {
+      return Response.json({ error: 'Missing X-Retell-Signature header' }, { status: 401 });
+    }
+    const isValid = await verifyRetellSignature(rawBody, retellApiKey, signature);
+    if (!isValid) {
+      return Response.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    // ---- 2. Parse and validate the request body ----
-    const body = await req.json();
-    const {
+    // ---- 4. Parse the Retell payload ----
+    const payload = JSON.parse(rawBody);
+    const { event, call } = payload;
+
+    if (!call || !call.call_id) {
+      return Response.json({ error: 'Invalid payload: missing call object or call_id' }, { status: 400 });
+    }
+
+    // Only process call_analyzed events (where the call_analysis data is available)
+    if (event !== 'call_analyzed') {
+      return new Response(null, { status: 204 });
+    }
+
+    const base44 = createClientFromRequest(req);
+
+    // ---- 5. Idempotency check — skip duplicates on Retell retries ----
+    const existing = await base44.asServiceRole.entities.CallGuardReport.filter({ call_id: call.call_id });
+    if (existing.length > 0) {
+      return Response.json({
+        call_id: call.call_id,
+        report_id: existing[0].id,
+        vardin_verdict: existing[0].vardin_verdict,
+        duplicate: true,
+      });
+    }
+
+    // ---- 6. Extract data from the Retell call object ----
+    const callAnalysis = call.call_analysis || {};
+    const dynamicVars = call.retell_llm_dynamic_variables || {};
+
+    const call_id = call.call_id;
+    const transcript = call.transcript || '';
+    const summary = callAnalysis.call_summary || 'Call analysis not available.';
+
+    // Custom post-call analysis fields (configured in the Retell agent)
+    const caller_name = callAnalysis.caller_name || dynamicVars.caller_name || '';
+    const claimed_organization = callAnalysis.claimed_organization || dynamicVars.claimed_organization || '';
+    const reason_for_call = callAnalysis.reason_for_call || dynamicVars.reason_for_call || '';
+    const requested_action = callAnalysis.requested_action || dynamicVars.requested_action || '';
+    const sensitive_information_requested = callAnalysis.sensitive_information_requested || '';
+    const payment_requested = callAnalysis.payment_requested || '';
+    const urgency_or_threats = callAnalysis.urgency_or_threats || '';
+    const remote_access_requested = callAnalysis.remote_access_requested || '';
+
+    // Additional call context
+    const from_number = call.from_number || '';
+    const to_number = call.to_number || '';
+    const direction = call.direction || '';
+
+    // ---- 7. Save the raw call information ----
+    const callRecord = await base44.asServiceRole.entities.CallGuardReport.create({
       call_id,
       caller_name,
       claimed_organization,
@@ -52,38 +137,17 @@ export default async function(req: Request): Promise<Response> {
       remote_access_requested,
       summary,
       transcript,
-    } = body;
-
-    if (!call_id || !String(call_id).trim()) {
-      return Response.json({ error: 'call_id is required' }, { status: 400 });
-    }
-    if (!summary || !String(summary).trim()) {
-      return Response.json({ error: 'summary is required' }, { status: 400 });
-    }
-
-    const base44 = createClientFromRequest(req);
-
-    // ---- 3. Save the raw call information ----
-    const callRecord = await base44.asServiceRole.entities.CallGuardReport.create({
-      call_id: String(call_id).trim(),
-      caller_name: caller_name || '',
-      claimed_organization: claimed_organization || '',
-      reason_for_call: reason_for_call || '',
-      requested_action: requested_action || '',
-      sensitive_information_requested: sensitive_information_requested || '',
-      payment_requested: payment_requested || '',
-      urgency_or_threats: urgency_or_threats || '',
-      remote_access_requested: remote_access_requested || '',
-      summary: String(summary).trim(),
-      transcript: transcript || '',
       vardin_verdict: 'SUSPICIOUS',
       confidence_score: 0,
       vardin_explanation: '',
       scam_signals: [],
     });
 
-    // ---- 4. Build the Vardin AI assessment prompt ----
+    // ---- 8. Build the Vardin AI assessment prompt ----
     const callFacts = [
+      `Caller phone number: ${from_number || 'not provided'}`,
+      `Called number: ${to_number || 'not provided'}`,
+      `Call direction: ${direction || 'unknown'}`,
       `Caller name: ${caller_name || 'not provided'}`,
       `Claimed organization: ${claimed_organization || 'not provided'}`,
       `Stated reason for call: ${reason_for_call || 'not provided'}`,
@@ -92,13 +156,14 @@ export default async function(req: Request): Promise<Response> {
       `Payment requested: ${payment_requested || 'none'}`,
       `Urgency or threats used: ${urgency_or_threats || 'none'}`,
       `Remote access requested: ${remote_access_requested || 'none'}`,
+      `Retell call summary: ${summary}`,
     ].join('\n');
 
-    const prompt = `You are Vardin, an AI-powered scam detection system. A voice-agent just screened an incoming phone call and extracted structured information about the caller. Your job is to analyze this information and determine whether the call is SAFE, SUSPICIOUS, or a SCAM.
+    const prompt = `You are Vardin, an AI-powered scam detection system. A voice-agent (Retell AI) just screened an incoming phone call and extracted structured information about the caller. Your job is to analyze this information and determine whether the call is SAFE, SUSPICIOUS, or a SCAM.
 
-IMPORTANT: The voice agent's summary is provided for context, but the agent does NOT make the final scam determination. YOU (Vardin) are solely responsible for the final verdict.
+IMPORTANT: The Retell agent's summary is provided for context, but the agent does NOT make the final scam determination. YOU (Vardin) are solely responsible for the final verdict.
 
-=== CALL SUMMARY (from voice agent) ===
+=== RETELL CALL SUMMARY ===
 ${summary}
 
 === EXTRACTED CALL FACTS ===
@@ -125,7 +190,6 @@ VERDICT GUIDELINES:
 - SCAM: Clear scam indicators — requests for money/sensitive info, threats, impersonation, urgency tactics, or remote access demands.
 
 CONFIDENCE SCORE (0-100):
-- How confident Vardin is in the verdict based on the available evidence.
 - 90-100: overwhelming evidence for the verdict
 - 70-89: strong evidence
 - 40-69: moderate evidence, some ambiguity
@@ -139,7 +203,7 @@ Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON
   "scam_signals": ["short label for each key indicator detected"]
 }`;
 
-    // ---- 5. Run Vardin's scam-detection AI ----
+    // ---- 9. Run Vardin's scam-detection AI ----
     let verdict = 'SUSPICIOUS';
     let confidenceScore = 0;
     let explanation = '';
@@ -177,7 +241,7 @@ Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON
       }
     } catch {}
 
-    // ---- 6. Save the final Vardin assessment to the call record ----
+    // ---- 10. Save the final Vardin assessment to the call record ----
     await base44.asServiceRole.entities.CallGuardReport.update(callRecord.id, {
       vardin_verdict: verdict,
       confidence_score: confidenceScore,
@@ -186,7 +250,7 @@ Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON
       assessed_at: new Date().toISOString(),
     });
 
-    // ---- 7. Return the result ----
+    // ---- 11. Return the result ----
     return Response.json({
       call_id: callRecord.call_id,
       report_id: callRecord.id,
