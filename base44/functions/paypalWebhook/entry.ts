@@ -67,57 +67,13 @@ async function verifyWebhookSignature(headers, body) {
 function parseCustomId(event) {
   const resource = event.resource || {};
   const raw = resource.custom_id || resource.subscriber?.custom_id || "";
-  if (!raw) return { userId: null, members: null, isCallGuard: false, phoneNumber: null };
-  // Call Guard subscriptions use custom_id format: cg::{userId}::{phoneNumber}
-  if (raw.startsWith("cg::")) {
-    const parts = raw.split("::");
-    return { userId: parts[1] || null, members: null, isCallGuard: true, phoneNumber: parts[2] || null };
-  }
+  if (!raw) return { userId: null, members: null };
   if (raw.includes("::")) {
     const [uid, m] = raw.split("::");
     const members = parseInt(m, 10);
-    return { userId: uid, members: Number.isNaN(members) ? null : members, isCallGuard: false, phoneNumber: null };
+    return { userId: uid, members: Number.isNaN(members) ? null : members };
   }
-  return { userId: raw, members: null, isCallGuard: false, phoneNumber: null };
-}
-
-async function processCallGuardEvent(base44, userId, phoneNumber, eventType) {
-  switch (eventType) {
-    case "BILLING.SUBSCRIPTION.ACTIVATED":
-    case "BILLING.SUBSCRIPTION.UPDATED":
-    case "PAYMENT.SALE.COMPLETED":
-      await base44.asServiceRole.entities.User.update(userId, {
-        call_guard_enabled: true,
-        call_guard_status: "active",
-        call_guard_expires_at: null,
-        ...(phoneNumber ? { call_guard_phone_number: phoneNumber } : {}),
-      });
-      console.log(`Call Guard activated for user ${userId}`);
-      break;
-
-    case "BILLING.SUBSCRIPTION.CANCELLED":
-      await base44.asServiceRole.entities.User.update(userId, {
-        call_guard_enabled: false,
-        call_guard_status: "cancelled",
-        call_guard_expires_at: new Date().toISOString(),
-      });
-      console.log(`Call Guard cancelled for user ${userId}`);
-      break;
-
-    case "BILLING.SUBSCRIPTION.EXPIRED":
-    case "BILLING.SUBSCRIPTION.SUSPENDED":
-    case "PAYMENT.SALE.DENIED":
-      await base44.asServiceRole.entities.User.update(userId, {
-        call_guard_enabled: false,
-        call_guard_status: "expired",
-        call_guard_expires_at: new Date().toISOString(),
-      });
-      console.log(`Call Guard expired for user ${userId} (event: ${eventType})`);
-      break;
-
-    default:
-      console.log(`Unhandled Call Guard event type: ${eventType}`);
-  }
+  return { userId: raw, members: null };
 }
 
 async function determinePlanKey(accessToken, event) {
@@ -152,19 +108,14 @@ async function determinePlanKey(accessToken, event) {
 }
 
 async function processEvent(base44, event) {
-  const parsed = parseCustomId(event);
-  const { userId, members, isCallGuard, phoneNumber } = parsed;
+  const { userId, members } = parseCustomId(event);
   if (!userId) {
     console.log(`No user ID found in event ${event.id}`);
     return;
   }
 
   const eventType = event.event_type;
-  console.log(`Processing event: ${eventType} for user: ${userId}${isCallGuard ? " (Call Guard)" : ""}`);
-
-  if (isCallGuard) {
-    return processCallGuardEvent(base44, userId, phoneNumber, eventType);
-  }
+  console.log(`Processing event: ${eventType} for user: ${userId}`);
 
   const accessToken = await getPayPalAccessToken();
 
@@ -252,9 +203,6 @@ async function processEvent(base44, event) {
         subscription_plan: "starter",
         subscription_status: "inactive",
         family_members_paid: 1,
-        call_guard_enabled: false,
-        call_guard_status: "expired",
-        call_guard_expires_at: new Date().toISOString(),
       });
       // Revoke inherited perks from family members who were on the guardian's plan
       try {

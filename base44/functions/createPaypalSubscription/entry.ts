@@ -1,6 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { computeFamilyTotal, FAMILY_PRICING } from "../../shared/familyPricing.ts";
-import { getAccessToken, findApprovalLink, PAYPAL_API_BASE } from "../../shared/paypal.ts";
+
+const PAYPAL_API_BASE = "https://api-m.paypal.com";
+
+const PAYPAL_CLIENT_ID = Deno.env.get("PAYPAL_CLIENT_ID");
+const PAYPAL_CLIENT_SECRET = Deno.env.get("PAYPAL_CLIENT_SECRET");
 
 const PRODUCT_NAME = "Vardin Subscription";
 const PRODUCT_DESC = "AI-powered scam detection and family protection";
@@ -9,6 +13,24 @@ const PLAN_CONFIGS = {
   plus: { name: "Vardin Plus", credits: "150 credits/month" },
   premium: { name: "Vardin Premium", credits: "400 credits/month + all features" },
 };
+
+async function getAccessToken() {
+  const auth = btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`);
+  const res = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`PayPal token error: ${res.status} ${txt}`);
+  }
+  const data = await res.json();
+  return data.access_token;
+}
 
 async function getOrCreateProduct(accessToken) {
   const listRes = await fetch(`${PAYPAL_API_BASE}/v1/catalogs/products?page_size=20`, {
@@ -160,13 +182,16 @@ Deno.serve(async (req) => {
 
     const subscription = await subRes.json();
 
-    const approvalUrl = findApprovalLink(subscription);
-    if (!approvalUrl) {
+    const approvalLink = (subscription.links || []).find(
+      (l) => l.rel === "approve" || l.rel === "payer-action"
+    );
+
+    if (!approvalLink) {
       throw new Error("No approval link in PayPal response");
     }
 
     return Response.json({
-      approval_url: approvalUrl,
+      approval_url: approvalLink.href,
       subscription_id: subscription.id,
     });
   } catch (error) {

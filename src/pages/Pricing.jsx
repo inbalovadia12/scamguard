@@ -6,7 +6,6 @@ import { getCreditStatus, startPaypalCheckout, PLAN_FEATURES, captureCreditPurch
 import { computeFamilyTotal } from "@/lib/planPricing";
 import FamilyMemberSelector from "@/components/pricing/FamilyMemberSelector";
 import CreditPacks from "@/components/CreditPacks";
-import CallGuardSection from "@/components/pricing/CallGuardSection";
 
 const plans = [
   {
@@ -59,7 +58,6 @@ export default function Pricing() {
     const paypalParam = params.get("paypal");
     const creditsParam = params.get("credits");
     const creditToken = params.get("token");
-    const callGuardParam = params.get("callguard");
 
     if (paypalParam === "approved") {
       setPaypalStatus("approved");
@@ -67,14 +65,6 @@ export default function Pricing() {
       setPaypalStatus("cancelled");
     }
     if (paypalParam) {
-      window.history.replaceState({}, "", "/pricing");
-    }
-
-    if (callGuardParam === "approved") {
-      setPaypalStatus("approved");
-      window.history.replaceState({}, "", "/pricing");
-    } else if (callGuardParam === "cancelled") {
-      setPaypalStatus("cancelled");
       window.history.replaceState({}, "", "/pricing");
     }
 
@@ -254,8 +244,6 @@ export default function Pricing() {
           </p>
         </div>
       )}
-
-      <CallGuardSection />
 
       <CreditPacks />
 
