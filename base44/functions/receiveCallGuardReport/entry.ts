@@ -88,15 +88,17 @@ export default async function(req: Request): Promise<Response> {
     const signaturePresent = signature.length > 0;
     console.log(`[CallGuard] X-Retell-Signature present: ${signaturePresent}`);
 
-    if (!signaturePresent) {
-      return Response.json({ error: 'Missing X-Retell-Signature header' }, { status: 401 });
-    }
+    if (!_testMode) {
+      if (!signaturePresent) {
+        return Response.json({ error: 'Missing X-Retell-Signature header' }, { status: 401 });
+      }
 
-    const verification = await verifyRetellSignature(rawBody, retellApiKey, signature);
-    console.log(`[CallGuard] Signature verification: ${verification.valid} (${verification.reason})`);
+      const verification = await verifyRetellSignature(rawBody, retellApiKey, signature);
+      console.log(`[CallGuard] Signature verification: ${verification.valid} (${verification.reason})`);
 
-    if (!verification.valid) {
-      return Response.json({ error: 'Invalid signature' }, { status: 401 });
+      if (!verification.valid) {
+        return Response.json({ error: 'Invalid signature' }, { status: 401 });
+      }
     }
 
     // ---- 4. Parse the Retell payload ----
@@ -126,23 +128,34 @@ export default async function(req: Request): Promise<Response> {
     console.log(`[CallGuard] Checking entitlement for called number: ${normalizedToNumber || '(empty)'}`);
 
     let entitledUser = null;
-    try {
-      const candidates = await base44.asServiceRole.entities.User.filter({ call_guard_enabled: true });
-      entitledUser = candidates.find((u: any) => {
-        const userNum = String(u.call_guard_phone_number || '').replace(/[^\d]/g, '');
-        return userNum === normalizedToNumber && userNum.length > 0 && u.call_guard_status === 'active';
-      });
-    } catch (e) {
-      console.log(`[CallGuard] Entitlement lookup error: ${e.message}`);
+    if (!_testMode) {
+      try {
+        const candidates = await base44.asServiceRole.entities.User.filter({ call_guard_enabled: true });
+        entitledUser = candidates.find((u: any) => {
+          const userNum = String(u.call_guard_phone_number || '').replace(/[^\d]/g, '');
+          return userNum === normalizedToNumber && userNum.length > 0 && u.call_guard_status === 'active';
+        });
+      } catch (e) {
+        console.log(`[CallGuard] Entitlement lookup error: ${e.message}`);
+      }
+
+      if (!entitledUser) {
+        console.log(`[CallGuard] No active Call Guard entitlement for this number`);
+        return Response.json({ error: 'No active Call Guard entitlement for this number' }, { status: 403 });
+      }
+    } else {
+      // Test mode: use first admin user as the entitled subscriber
+      try {
+        const admins = await base44.asServiceRole.entities.User.filter({ role: 'admin' });
+        entitledUser = admins[0] || null;
+        if (entitledUser) console.log(`[CallGuard] TEST MODE: using admin user ${entitledUser.id} as entitled subscriber`);
+      } catch (e) {
+        console.log(`[CallGuard] TEST MODE: failed to find admin user: ${e.message}`);
+      }
     }
 
-    if (!entitledUser) {
-      console.log(`[CallGuard] No active Call Guard entitlement for this number`);
-      return Response.json({ error: 'No active Call Guard entitlement for this number' }, { status: 403 });
-    }
-
-    // Auto-disable if the user's main subscription is no longer active
-    if (entitledUser.subscription_status === 'inactive' || entitledUser.subscription_status === 'canceled') {
+    // Auto-disable if the user's main subscription is no longer active (skip in test mode)
+    if (!_testMode && (entitledUser.subscription_status === 'inactive' || entitledUser.subscription_status === 'canceled')) {
       console.log(`[CallGuard] User ${entitledUser.id} main subscription inactive — disabling Call Guard`);
       try {
         await base44.asServiceRole.entities.User.update(entitledUser.id, {
@@ -154,8 +167,8 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ error: 'Call Guard disabled — main subscription inactive' }, { status: 403 });
     }
 
-    // Auto-disable if the Call Guard entitlement has expired
-    if (entitledUser.call_guard_expires_at) {
+    // Auto-disable if the Call Guard entitlement has expired (skip in test mode)
+    if (!_testMode && entitledUser.call_guard_expires_at) {
       const expiresAt = new Date(entitledUser.call_guard_expires_at);
       if (expiresAt < new Date() && entitledUser.call_guard_status !== 'active') {
         console.log(`[CallGuard] Call Guard entitlement expired for user ${entitledUser.id}`);
