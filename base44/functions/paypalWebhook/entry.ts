@@ -90,6 +90,7 @@ async function processCallGuardEvent(base44, userId, phoneNumber, eventType) {
         call_guard_enabled: true,
         call_guard_status: "active",
         call_guard_expires_at: null,
+        ...(phoneNumber ? { call_guard_phone_number: phoneNumber } : {}),
       });
       console.log(`Call Guard activated for user ${userId}`);
       break;

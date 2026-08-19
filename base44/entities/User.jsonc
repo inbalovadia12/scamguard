@@ -106,11 +106,6 @@
       "type": "string",
       "format": "date-time",
       "description": "When the Call Guard entitlement expires or was disabled"
-    },
-    "call_guard_notifications": {
-      "type": "boolean",
-      "default": true,
-      "description": "Whether the user receives notifications for Call Guard verdicts"
     }
   },
   "required": [

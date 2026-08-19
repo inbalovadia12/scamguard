@@ -6,27 +6,26 @@ import { secrets } from 'base44:runtime';
 // The digest is HMAC-SHA256 of (rawBody + timestamp), keyed with the Retell API key.
 // Returns { valid, reason } so the caller can log the failure cause without
 // exposing the signature, timestamp, or digest values.
-async function verifyRetellSignature(rawBody: string, apiKey: string, signature: string): Promise<{ valid: boolean; reason: string; parsedTimestamp: number | null; timestampAgeMs: number | null }> {
-  // Regex aligned with Retell's official SDK (src/lib/webhook_auth.ts): /^v=(\d+),d=([0-9a-f]+)$/i
-  const match = signature.match(/^v=(\d+),d=([0-9a-f]+)$/i);
+async function verifyRetellSignature(rawBody: string, apiKey: string, signature: string): Promise<{ valid: boolean; reason: string }> {
+  const match = signature.match(/v=(\d+),d=(.*)/);
   if (!match) {
-    return { valid: false, reason: 'signature_format_mismatch', parsedTimestamp: null, timestampAgeMs: null };
+    return { valid: false, reason: 'signature_format_mismatch' };
   }
 
   const timestamp = match[1];
-  const digest = match[2].toLowerCase();
+  const digest = match[2].trim();
 
+  // Reject replays older than 5 minutes
   const now = Date.now();
   const ts = parseInt(timestamp, 10);
-  const age = Math.abs(now - ts);
   if (isNaN(ts)) {
-    return { valid: false, reason: 'timestamp_not_numeric', parsedTimestamp: ts, timestampAgeMs: age };
+    return { valid: false, reason: 'timestamp_not_numeric' };
   }
-  if (age > 5 * 60 * 1000) {
-    return { valid: false, reason: 'timestamp_out_of_range', parsedTimestamp: ts, timestampAgeMs: age };
+  if (Math.abs(now - ts) > 5 * 60 * 1000) {
+    return { valid: false, reason: 'timestamp_out_of_range' };
   }
 
-  // HMAC-SHA256(rawBody + timestamp, apiKey) — matches official SDK: input + poststamp
+  // Compute HMAC-SHA256(rawBody + timestamp, apiKey)
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw',
@@ -43,16 +42,16 @@ async function verifyRetellSignature(rawBody: string, apiKey: string, signature:
 
   // Constant-time comparison
   if (expectedDigest.length !== digest.length) {
-    return { valid: false, reason: 'digest_length_mismatch', parsedTimestamp: ts, timestampAgeMs: age };
+    return { valid: false, reason: 'digest_length_mismatch' };
   }
   let result = 0;
   for (let i = 0; i < expectedDigest.length; i++) {
     result |= expectedDigest.charCodeAt(i) ^ digest.charCodeAt(i);
   }
   if (result !== 0) {
-    return { valid: false, reason: 'hmac_mismatch', parsedTimestamp: ts, timestampAgeMs: age };
+    return { valid: false, reason: 'hmac_mismatch' };
   }
-  return { valid: true, reason: 'verified', parsedTimestamp: ts, timestampAgeMs: age };
+  return { valid: true, reason: 'verified' };
 }
 
 // Parse JSON from a free-text LLM response as a fallback.
@@ -94,10 +93,10 @@ export default async function(req: Request): Promise<Response> {
     }
 
     const verification = await verifyRetellSignature(rawBody, retellApiKey, signature);
-    console.log(`[CallGuard] Verify: reason=${verification.reason} | parsed_ts=${verification.parsedTimestamp} | age_ms=${verification.timestampAgeMs} | body_len=${rawBody.length}`);
+    console.log(`[CallGuard] Signature verification: ${verification.valid} (${verification.reason})`);
 
     if (!verification.valid) {
-      return Response.json({ error: 'Invalid signature', reason: verification.reason }, { status: 401 });
+      return Response.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     // ---- 4. Parse the Retell payload ----
@@ -206,9 +205,6 @@ export default async function(req: Request): Promise<Response> {
     try {
       callRecord = await base44.asServiceRole.entities.CallGuardReport.create({
         call_id,
-        user_id: entitledUser.id,
-        screened_phone_number: normalizedToNumber,
-        caller_phone_number: from_number,
         caller_name,
         claimed_organization,
         reason_for_call,
