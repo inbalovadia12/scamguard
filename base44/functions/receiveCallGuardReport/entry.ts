@@ -120,6 +120,51 @@ export default async function(req: Request): Promise<Response> {
 
     const base44 = createClientFromRequest(req);
 
+    // ---- 4b. Entitlement check — verify the called number has an active Call Guard subscription ----
+    const calledNumber = call.to_number || '';
+    const normalizedToNumber = calledNumber.replace(/[^\d]/g, '');
+    console.log(`[CallGuard] Checking entitlement for called number: ${normalizedToNumber || '(empty)'}`);
+
+    let entitledUser = null;
+    try {
+      const candidates = await base44.asServiceRole.entities.User.filter({ call_guard_enabled: true });
+      entitledUser = candidates.find((u: any) => {
+        const userNum = String(u.call_guard_phone_number || '').replace(/[^\d]/g, '');
+        return userNum === normalizedToNumber && userNum.length > 0 && u.call_guard_status === 'active';
+      });
+    } catch (e) {
+      console.log(`[CallGuard] Entitlement lookup error: ${e.message}`);
+    }
+
+    if (!entitledUser) {
+      console.log(`[CallGuard] No active Call Guard entitlement for this number`);
+      return Response.json({ error: 'No active Call Guard entitlement for this number' }, { status: 403 });
+    }
+
+    // Auto-disable if the user's main subscription is no longer active
+    if (entitledUser.subscription_status === 'inactive' || entitledUser.subscription_status === 'canceled') {
+      console.log(`[CallGuard] User ${entitledUser.id} main subscription inactive — disabling Call Guard`);
+      try {
+        await base44.asServiceRole.entities.User.update(entitledUser.id, {
+          call_guard_enabled: false,
+          call_guard_status: 'expired',
+          call_guard_expires_at: new Date().toISOString(),
+        });
+      } catch {}
+      return Response.json({ error: 'Call Guard disabled — main subscription inactive' }, { status: 403 });
+    }
+
+    // Auto-disable if the Call Guard entitlement has expired
+    if (entitledUser.call_guard_expires_at) {
+      const expiresAt = new Date(entitledUser.call_guard_expires_at);
+      if (expiresAt < new Date() && entitledUser.call_guard_status !== 'active') {
+        console.log(`[CallGuard] Call Guard entitlement expired for user ${entitledUser.id}`);
+        return Response.json({ error: 'Call Guard entitlement expired' }, { status: 403 });
+      }
+    }
+
+    console.log(`[CallGuard] Entitlement verified for user ${entitledUser.id}`);
+
     // ---- 5. Idempotency check — skip duplicates on Retell retries ----
     const existing = await base44.asServiceRole.entities.CallGuardReport.filter({ call_id: call.call_id });
     if (existing.length > 0) {
