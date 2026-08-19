@@ -6,6 +6,18 @@
       "type": "string",
       "description": "Unique call identifier from the Retell voice agent"
     },
+    "user_id": {
+      "type": "string",
+      "description": "User ID of the Call Guard subscriber whose call was screened"
+    },
+    "screened_phone_number": {
+      "type": "string",
+      "description": "Normalized phone number (digits only) that was screened (the subscriber's number)"
+    },
+    "caller_phone_number": {
+      "type": "string",
+      "description": "Phone number of the incoming caller"
+    },
     "caller_name": {
       "type": "string",
       "description": "Name the caller provided during screening"
@@ -89,9 +101,16 @@
       }
     },
     "read": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     },
     "update": {
       "user_condition": {
@@ -99,9 +118,16 @@
       }
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     }
   }
 }
