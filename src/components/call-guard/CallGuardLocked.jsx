@@ -1,5 +1,5 @@
 import React from "react";
-import { Lock, PhoneCall, ShieldCheck, Bell, Sparkles, Loader2 } from "lucide-react";
+import { Lock, PhoneCall, ShieldCheck, Bell, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
@@ -82,3 +82,5 @@ export default function CallGuardLocked({ user }) {
     </div>
   );
 }
+
+import { Loader2 } from "lucide-react";
