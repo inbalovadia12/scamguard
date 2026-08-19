@@ -205,6 +205,9 @@ export default async function(req: Request): Promise<Response> {
     try {
       callRecord = await base44.asServiceRole.entities.CallGuardReport.create({
         call_id,
+        user_id: entitledUser.id,
+        screened_phone_number: normalizedToNumber,
+        caller_phone_number: from_number,
         caller_name,
         claimed_organization,
         reason_for_call,
