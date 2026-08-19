@@ -170,7 +170,7 @@ export default async function(req: Request): Promise<Response> {
         remote_access_requested,
         summary,
         transcript,
-        vardin_verdict: 'SUSPICIOUS',
+        vardin_verdict: 'SAFE',
         confidence_score: 0,
         vardin_explanation: '',
         scam_signals: [],
@@ -210,39 +210,55 @@ ${callFacts}
 === FULL TRANSCRIPT ===
 ${transcript || '(no transcript provided)'}
 
-=== ASSESSMENT INSTRUCTIONS ===
-Analyze the call for well-known scam patterns including but not limited to:
-- Impersonation of government agencies (IRS, SSA, police, immigration)
-- Impersonation of banks, tech support, or well-known companies
-- Requests for gift cards, wire transfers, crypto, or unusual payment methods
-- Requests for sensitive information (SSN, passwords, OTPs, banking details)
-- Urgency tactics or threats (arrest, account closure, legal action)
-- Remote access requests (installation of software, screen sharing)
-- Romance or investment scams
-- Prize/lottery scams requiring upfront payment
-- Caller-ID spoofing or inconsistent claims
+=== BEHAVIOR THAT IS NOT A SCAM SIGNAL ===
+The following behaviors are normal and must NEVER by themselves cause a caller to be classified as suspicious or a scam:
+- The caller refused to provide their name or personal details.
+- The caller was frustrated, annoyed, hostile, impatient, or rude toward the AI agent.
+- The caller hung up, ended the call abruptly, or was short in duration.
+- The caller refused to talk to an automated assistant or expressed dislike of voice agents.
+- The caller was anonymous (did not state a name or organization).
+- The caller was confused, skeptical, or uncooperative with screening questions.
+- The caller spoke in a foreign language or had an accent.
 
-VERDICT GUIDELINES:
-- SAFE: The call appears legitimate — verified business, no sensitive requests, no threats, consistent claims.
-- SUSPICIOUS: Some red flags present but not enough for a definitive scam determination — proceed with caution.
-- SCAM: Clear scam indicators — requests for money/sensitive info, threats, impersonation, urgency tactics, or remote access demands.
+These are common reactions to an automated screening call and do NOT indicate fraud. Do not penalize callers for any of the above.
 
-CONFIDENCE SCORE (0-100):
-- 90-100: overwhelming evidence for the verdict
+=== ACTUAL SCAM INDICATORS (prioritize these) ===
+Classify as suspicious or scam ONLY when you find concrete evidence of fraud such as:
+- Requests for passwords, verification codes, OTPs, or authentication codes.
+- Requests for banking details, credit/debit card numbers, or payment information.
+- Requests for money, gift cards, wire transfers, cryptocurrency, or unusual payment methods.
+- Suspicious payment links or instructions to visit unusual URLs to pay.
+- Requests to install software, download apps, or provide remote device/computer access (screen sharing).
+- Impersonation of a bank, government agency (IRS, SSA, police, immigration), tech support, or well-known company — COMBINED with a suspicious demand (money, info, access, or urgency).
+- Urgency, threats, or pressure to act immediately (arrest, account closure, legal action, fines).
+- Attempts to move the conversation to an unusual communication or payment channel (e.g., wire transfer, gift cards, crypto wallet, a specific messaging app).
+- Attempts to obtain sensitive personal information (SSN, date of birth, account credentials, security question answers).
+- Romance or investment scams with promises of returns, prizes, or lottery winnings requiring upfront payment.
+- Caller-ID spoofing or claims that are verifiably inconsistent with the caller's behavior.
+
+=== VERDICT GUIDELINES ===
+- SAFE: No meaningful evidence of fraud. This is the DEFAULT when there are no concrete scam indicators — even if the caller was anonymous, impatient, rude, uncooperative, or hung up. Most legitimate callers will be SAFE.
+- SUSPICIOUS: Some concrete but incomplete evidence of potential fraud (e.g., vague requests for personal info without clear malicious intent, or a suspicious claim that is not corroborated). Use this sparingly — only when you have a real reason to be cautious.
+- SCAM: Strong, clear evidence of fraudulent or malicious intent (e.g., explicit requests for money, passwords, or remote access combined with urgency, threats, or impersonation).
+
+=== CONFIDENCE SCORE (0-100) ===
+Assign confidence based on the STRENGTH of the evidence, not the severity of the verdict:
+- 90-100: overwhelming, unambiguous evidence for the verdict
 - 70-89: strong evidence
 - 40-69: moderate evidence, some ambiguity
-- 0-39: limited evidence, low confidence
+- 0-39: limited or weak evidence — low confidence
+A SAFE verdict with no evidence of fraud should have LOW confidence (10-30) if the call was too short or incomplete to assess, and MODERATE confidence (40-60) if the call was clearly normal and unremarkable. Do NOT artificially inflate confidence. If there is little to analyze, confidence should be low regardless of verdict.
 
 Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON):
 {
   "verdict": "SAFE" | "SUSPICIOUS" | "SCAM",
   "confidence_score": 0,
   "explanation": "concise plain-English explanation of the verdict (max 300 chars)",
-  "scam_signals": ["short label for each key indicator detected"]
+  "scam_signals": ["short label for each concrete scam indicator detected, or empty array if none"]
 }`;
 
     // ---- 9. Run Vardin's scam-detection AI ----
-    let verdict = 'SUSPICIOUS';
+    let verdict = 'SAFE';
     let confidenceScore = 0;
     let explanation = '';
     let scamSignals: string[] = [];
