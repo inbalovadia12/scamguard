@@ -3,6 +3,8 @@
 // Auth-Key stays on the backend, never exposed to the client.
 // Docs: https://urlhaus.abuse.ch/api/
 
+import { secrets } from "base44:runtime";
+
 export interface UrlhausReport {
   listed: boolean;              // true = URL is in URLhaus malware database
   url_status?: string;          // "online" | "offline" | ...
@@ -14,7 +16,7 @@ export interface UrlhausReport {
 }
 
 export async function getUrlhausReport(url: string): Promise<UrlhausReport | null> {
-  const apiKey = Deno.env.get("URLHAUS_AUTH_KEY");
+  const apiKey = secrets.get("URLHAUS_AUTH_KEY");
   if (!apiKey) return null;
 
   try {

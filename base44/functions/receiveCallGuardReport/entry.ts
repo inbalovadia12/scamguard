@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { secrets } from "base44:runtime";
 
 /**
  * Verify Retell's X-Retell-Signature header using the official method.
@@ -107,7 +108,7 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ error: 'Missing X-Retell-Signature header' }, { status: 401 });
     }
 
-    const apiKey = Deno.env.get('RETELL_API_KEY');
+    const apiKey = secrets.get("RETELL_API_KEY");
     if (!apiKey) {
       return Response.json({ error: 'Server misconfigured' }, { status: 500 });
     }
