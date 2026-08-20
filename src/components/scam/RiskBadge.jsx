@@ -24,7 +24,7 @@ const riskConfig = {
     barColor: "bg-destructive",
   },
   critical: {
-    label: "Critical Risk",
+    label: "High Risk",
     color: "bg-destructive/15 text-destructive border-destructive/30",
     icon: ShieldCritical,
     dot: "bg-destructive",
@@ -33,9 +33,8 @@ const riskConfig = {
 };
 
 export function getRiskLevelFromScore(score) {
-  if (score >= 85) return "critical";
-  if (score >= 70) return "high";
-  if (score >= 40) return "medium";
+  if (score >= 71) return "high";
+  if (score >= 36) return "medium";
   return "low";
 }
 
