@@ -185,7 +185,7 @@ export default function PhoneLookup() {
               <RiskIcon className={`w-8 h-8 ${cfg.color}`} />
             </div>
             <h2 className={`text-2xl font-bold font-heading ${cfg.color}`}>{cfg.label}</h2>
-            <p className="text-sm text-muted-foreground mt-1">Risk Score: {currentResult.reputation_score}/100</p>
+            <p className="text-sm text-muted-foreground mt-1">Reputation Score: {currentResult.reputation_score}/100 · Higher is generally better</p>
           </div>
 
           <div className="bg-card rounded-2xl border border-border/50 p-5">
@@ -213,9 +213,9 @@ export default function PhoneLookup() {
               const isSelected = lookup.id === selectedId;
               const score = lookup.reputation_score || 0;
               const scoreColor =
-                score >= 71
+                score <= 35
                   ? "text-destructive bg-destructive/10"
-                  : score >= 31
+                  : score <= 70
                   ? "text-warning bg-warning/10"
                   : "text-success bg-success/10";
               return (
