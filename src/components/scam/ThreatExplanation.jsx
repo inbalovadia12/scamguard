@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, Target, ShieldX, Sparkles } from "lucide-react";
+import { AlertTriangle, Target, ShieldX, Sparkles, ShieldCheck } from "lucide-react";
 import { useKidMode } from "@/lib/KidModeContext";
 
 // Structured, labeled threat breakdown shown on scan results.
