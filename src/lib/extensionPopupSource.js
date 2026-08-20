@@ -693,7 +693,7 @@ function displayResults(data, answerType) {
   } else if (mode === 'risk_score') {
     var score = a.risk_score || 0;
     var level = a.risk_level || 'low';
-    var cls2 = score >= 70 ? 'danger' : score >= 40 ? 'warning' : 'safe';
+    var cls2 = score >= 71 ? 'danger' : score >= 36 ? 'warning' : 'safe';
     html += '<div class="result-card ' + cls2 + '"><div class="score-display"><span class="score-number">' + escapeHtml(score) + '</span><span class="score-max">/100</span></div><div class="risk-bar"><div class="risk-fill ' + cls2 + '" style="width:' + score + '%"></div></div><p class="risk-level ' + cls2 + '">' + escapeHtml(level.toUpperCase()) + ' ' + t('risk_level') + '</p>' + (a.summary ? '<p class="summary">' + escapeHtml(a.summary) + '</p>' : '') + '</div>';
   } else if (mode === 'red_flags') {
     var flags = a.red_flags || [];
