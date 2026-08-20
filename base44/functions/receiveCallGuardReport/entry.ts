@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { secrets } from "base44:runtime";
 
 /**
@@ -100,7 +100,7 @@ Return your verdict as JSON with these fields:
   });
 }
 
-export default async function (req: Request): Promise<Response> {
+Deno.serve(async (req) => {
   try {
     // --- Signature verification (Retell's official X-Retell-Signature) ---
     const signature = req.headers.get('x-retell-signature');
@@ -171,4 +171,4 @@ export default async function (req: Request): Promise<Response> {
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
-}
+});
