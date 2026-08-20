@@ -156,10 +156,10 @@ async function autoScanUrl(tabId, url, token, appId) {
     var level = analysis.risk_level || 'low';
 
     // Set badge
-    if (score >= 70) {
+    if (score >= 71) {
       chrome.action.setBadgeText({ text: '!', tabId: tabId });
       chrome.action.setBadgeBackgroundColor({ color: '#ef4444', tabId: tabId });
-    } else if (score >= 40) {
+    } else if (score >= 36) {
       chrome.action.setBadgeText({ text: '?', tabId: tabId });
       chrome.action.setBadgeBackgroundColor({ color: '#f59e0b', tabId: tabId });
     } else {
