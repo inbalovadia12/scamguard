@@ -141,25 +141,6 @@ export default function AnalysisResult({ analysis, showEducation = true, message
       {/* Structured threat breakdown */}
       <ThreatExplanation analysis={analysis} />
 
-      {/* URLhaus diagnostic — temporary verification of the live threat-intelligence integration */}
-      {analysis.urlhaus && (
-        <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">URLhaus diagnostic</span>
-            <span className={`text-xs font-semibold ${analysis.urlhaus.listed ? "text-destructive" : "text-emerald-600"}`}>
-              {analysis.urlhaus.listed ? "LISTED" : "NOT LISTED"}
-            </span>
-          </div>
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div>Integration response received: <span className="font-medium text-foreground">Yes</span></div>
-            {analysis.urlhaus.threat && <div>Threat: <span className="font-medium text-foreground">{analysis.urlhaus.threat}</span></div>}
-            {analysis.urlhaus.url_status && <div>URL status: <span className="font-medium text-foreground">{analysis.urlhaus.url_status}</span></div>}
-            {analysis.urlhaus.date_added && <div>Date added: <span className="font-medium text-foreground">{analysis.urlhaus.date_added}</span></div>}
-            {Array.isArray(analysis.urlhaus.tags) && analysis.urlhaus.tags.length > 0 && <div>Tags: <span className="font-medium text-foreground">{analysis.urlhaus.tags.join(", ")}</span></div>}
-          </div>
-        </div>
-      )}
-
       {/* Marketplace info */}
       {analysis.marketplace_platform && (
         <div className="flex items-center gap-2 text-sm bg-primary/5 rounded-xl px-4 py-3 border border-primary/10">
