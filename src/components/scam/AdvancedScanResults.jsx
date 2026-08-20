@@ -151,9 +151,10 @@ function Section({ label, children }) {
   );
 }
 
-function DetailedResult({ a }) {
+function DetailedResult({ a, scanType }) {
   const score = a.risk_score ?? 0;
   const level = a.risk_level || getRiskLevelFromScore(score);
+  const isQr = scanType === "qr";
   return (
     <div className="rounded-2xl border border-border/50 p-6 space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -173,17 +174,17 @@ function DetailedResult({ a }) {
       </div>
       {a.confidence != null && <p className="text-sm text-muted-foreground">Confidence: {a.confidence}%</p>}
       {a.scam_category && <Section label="Scam Category"><p className="text-sm">{a.scam_category}</p></Section>}
-      {a.decoded_content && (
+      {isQr && a.decoded_content && (
         <Section label="Decoded QR Content">
           <p className="text-sm font-mono break-all bg-muted/50 rounded-lg px-3 py-2">{a.decoded_content}</p>
         </Section>
       )}
-      {a.final_destination_url && a.final_destination_url !== a.decoded_content && (
+      {isQr && a.final_destination_url && a.final_destination_url !== a.decoded_content && (
         <Section label="Final Destination URL (After Redirects)">
           <p className="text-sm font-mono break-all bg-muted/50 rounded-lg px-3 py-2">{a.final_destination_url}</p>
         </Section>
       )}
-      {a.destination_description && (
+      {isQr && a.destination_description && (
         <Section label="What's On The Destination Webpage">
           <p className="text-sm leading-relaxed">{a.destination_description}</p>
         </Section>
@@ -258,7 +259,7 @@ export default function AdvancedScanResults({ data, onRescan }) {
       {mode === "quick" && <QuickResult a={a} />}
       {mode === "risk_score" && <RiskScoreResult a={a} />}
       {mode === "red_flags" && <RedFlagsResult a={a} />}
-      {mode === "detailed" && <DetailedResult a={a} />}
+      {mode === "detailed" && <DetailedResult a={a} scanType={data.scan_type} />}
 
       {data.timestamp && (
         <p className="text-xs text-muted-foreground">Scanned on {new Date(data.timestamp).toLocaleString()}</p>
