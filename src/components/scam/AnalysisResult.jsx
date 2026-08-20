@@ -100,6 +100,8 @@ export default function AnalysisResult({ analysis, showEducation = true, message
 
   const riskScore = analysis.risk_score ?? 0;
   const derivedLevel = getRiskLevelFromScore(riskScore);
+  const isLowRisk = derivedLevel === "low";
+  const isHighRisk = derivedLevel === "high";
 
   const handleSpeak = () => {
     if (speaking) {
@@ -202,7 +204,7 @@ export default function AnalysisResult({ analysis, showEducation = true, message
       <ResultActions analysis={analysis} analysisType="scam_analysis" messageType={messageType} originalMessage={originalMessage} />
 
       {/* Education section */}
-      {showEducation && !kidMode && analysis.why_scammers_do_this && (
+      {showEducation && !kidMode && (analysis.why_scammers_do_this || analysis.what_they_want || analysis.what_to_say) && (
         <div className="border border-border rounded-2xl overflow-hidden">
           <button
             onClick={() => setEduOpen(!eduOpen)}
@@ -210,19 +212,25 @@ export default function AnalysisResult({ analysis, showEducation = true, message
           >
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-primary" />
-              <span className="font-semibold text-sm">Learn more about this scam</span>
+              <span className="font-semibold text-sm">{isLowRisk ? "Learn more about this result" : "Learn more about this analysis"}</span>
             </div>
             {eduOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
           {eduOpen && (
             <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
-              <div>
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">Why scammers use this tactic</h4>
-                <p className="text-sm leading-relaxed">{analysis.why_scammers_do_this}</p>
-              </div>
+              {analysis.why_scammers_do_this && (
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                    {isLowRisk ? "Why this looks safe" : isHighRisk ? "Why scammers may use this tactic" : "Why we're cautious"}
+                  </h4>
+                  <p className="text-sm leading-relaxed">{analysis.why_scammers_do_this}</p>
+                </div>
+              )}
               {analysis.what_they_want && (
                 <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">What they want from you</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">
+                    {isLowRisk ? "What we found" : isHighRisk ? "What they may want from you" : "What this may be about"}
+                  </h4>
                   <p className="text-sm leading-relaxed">{analysis.what_they_want}</p>
                 </div>
               )}
