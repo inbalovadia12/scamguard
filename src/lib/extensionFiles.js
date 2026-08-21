@@ -169,7 +169,7 @@ async function autoScanUrl(tabId, url, token, appId) {
     // Store risk status for content script
     var riskKey = 'risk_' + tabId;
     chrome.storage.local.set({
-      [riskKey]: { score: score, level: level, url: url, risky: score >= 40 }
+      [riskKey]: { score: score, level: level, url: url, risky: score >= 36 }
     });
   } catch (_e) {
     // Silent fail for auto-scan
