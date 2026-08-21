@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut,
-  BarChart3, MessageSquare, User, ChevronRight, ChevronDown, Globe, Globe2, GraduationCap, LayoutGrid, Puzzle, Megaphone, Radar, Phone, Image as ImageIcon,   MessageCircle, Layers, PhoneIncoming, Radio, Sparkles, Trophy, LineChart, LayoutDashboard, Scan, Siren, History, MessagesSquare, EyeOff, PhoneCall,
+  ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut, MessageSquare, ChevronRight, GraduationCap, Puzzle, Radar, Phone, Image as ImageIcon,   MessageCircle, Sparkles, Scan, Siren, History, PhoneCall,
   Gamepad2, BookOpen, Bitcoin, Smartphone, ListPlus,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";

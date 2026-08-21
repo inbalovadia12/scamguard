@@ -1,5 +1,5 @@
 import React from "react";
-import { Award, CheckCircle2, Flame, Star, TrendingUp } from "lucide-react";
+import { CheckCircle2, Flame, Star, TrendingUp } from "lucide-react";
 
 export default function LessonStats({ progress, xp, streak }) {
   const completedCount = progress.filter((p) => p.status === "completed").length;

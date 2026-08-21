@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { MessageSquare, User, AlertTriangle, ThumbsUp, ThumbsDown, Lightbulb, Pencil, Check, X } from "lucide-react";
+import { MessageSquare, User, AlertTriangle, ThumbsUp, Lightbulb, Pencil, Check, X } from "lucide-react";
 import { getFeedbackSentiment } from "./feedbackUtils";
 
 const RISK_COLORS = {

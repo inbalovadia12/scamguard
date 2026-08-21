@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X, ExternalLink, TrendingDown } from "lucide-react";
+import { X, ExternalLink } from "lucide-react";
 
 const STORAGE_KEY = "vardin_nudigo_popup";
 const DISMISS_KEY = "vardin_nudigo_dismissed";

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Check, Shield, Loader2, Zap, Sparkles, ShieldCheck } from "lucide-react";
 import { getCreditStatus, startPaypalCheckout, PLAN_FEATURES, captureCreditPurchase } from "@/lib/credits";

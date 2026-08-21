@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  ShieldCheck, ArrowRight, ArrowLeft, Check, Users, Bell, Bot, Zap, Heart,
+  ShieldCheck, ArrowRight, ArrowLeft, Check, Users, Bell, Bot, Zap,
   Target, ShoppingBag, MessageSquare, Briefcase, Mail, Lock, Sparkles, PartyPopper,
   UserPlus, Loader2,
 } from "lucide-react";

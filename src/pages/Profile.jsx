@@ -11,7 +11,7 @@ import {
   CalendarClock, RotateCcw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getCreditStatus, PLAN_NAMES, PLAN_LIMITS } from "@/lib/credits";
+import { getCreditStatus, PLAN_NAMES } from "@/lib/credits";
 import { useAuth } from "@/lib/AuthContext";
 import { useKidMode } from "@/lib/KidModeContext";
 import { toast } from "@/components/ui/use-toast";

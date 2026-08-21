@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  Loader2, ShieldCheck, ShieldAlert, AlertTriangle, Bell,
+  Loader2, ShieldCheck, AlertTriangle, Bell,
   Clock, ChevronRight, Users, Activity,
 } from "lucide-react";
 

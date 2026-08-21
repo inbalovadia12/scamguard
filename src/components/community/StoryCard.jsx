@@ -1,5 +1,5 @@
 import React from "react";
-import { Heart, MessageCircle, MapPin, Clock, ShieldCheck } from "lucide-react";
+import { Heart, MapPin, Clock, ShieldCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 

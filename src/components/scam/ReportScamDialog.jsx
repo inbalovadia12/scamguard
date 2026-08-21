@@ -32,7 +32,7 @@ export default function ReportScamDialog({ open, onOpenChange, onSubmitted, pref
         channel: prefill.channel || f.channel,
       }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [open]);
 
   const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));

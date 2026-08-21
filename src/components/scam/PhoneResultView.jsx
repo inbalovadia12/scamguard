@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Signal, Users, Tag, ExternalLink, ShieldCheck, ShieldAlert, BadgeCheck, Activity } from "lucide-react";
+import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { RISK_META } from "@/components/scam/ScamReportCard";
 import CommunityIntel, { matchCategoriesToEnum } from "@/components/community/CommunityIntel";

@@ -1,5 +1,5 @@
 import React from "react";
-import { ShieldCheck, Eye, Users, Mail, Globe, Lock, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Eye, Users, Globe, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 export default function About() {

@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { Gamepad2, Trophy, CheckCircle2, XCircle, RotateCcw, ChevronRight, Star, Heart } from "lucide-react";
+import React, { useState } from "react";
+import { Gamepad2, Trophy, CheckCircle2, XCircle, RotateCcw, ChevronRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const SCENARIOS = [

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Lock, Loader2, MessageSquare, Users, ShieldCheck, BarChart3, Star, Trash2,
+  Lock, Loader2, MessageSquare, Users, ShieldCheck, Star, Trash2,
   Mail, AlertTriangle, CheckCircle2, Crown, TrendingUp, Activity, Megaphone,
   Download, PhoneCall,
 } from "lucide-react";

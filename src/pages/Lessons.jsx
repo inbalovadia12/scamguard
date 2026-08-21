@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Button } from "@/components/ui/button";
 import { GraduationCap, Loader2, Crown, Sparkles, Trophy, Phone, ChevronRight, Scan } from "lucide-react";
 import { Link } from "react-router-dom";
 import LockedFeature from "@/components/LockedFeature";
 import LessonCard from "@/components/lessons/LessonCard";
 import LessonView from "@/components/lessons/LessonView";
 import LessonStats from "@/components/lessons/LessonStats";
-import { LESSON_CATEGORIES, getIcon } from "@/lib/lessons";
+import { LESSON_CATEGORIES } from "@/lib/lessons";
 import { getCreditStatus } from "@/lib/credits";
 import { toast } from "@/components/ui/use-toast";
 
