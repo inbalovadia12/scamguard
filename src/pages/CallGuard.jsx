@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 const VERDICT_META = {
   safe: { label: "Safe", icon: ShieldCheck, className: "text-success" },
   suspicious: { label: "Suspicious", icon: AlertTriangle, className: "text-warning" },
-  scam: { label: "Scam", icon: ShieldAlert, className: "text-destructive" },
+  scam: { label: "Scam", icon: ShieldAlert, className: "text-destructive" }
 };
 
 export default function CallGuard() {
@@ -18,7 +18,7 @@ export default function CallGuard() {
   const [copied, setCopied] = useState(false);
 
   const loadStatus = async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
+    if (isRefresh) setRefreshing(true);else setLoading(true);
     try {
       const response = await base44.functions.invoke("getCallGuardDashboard", {});
       setStatus(response.data || null);
@@ -30,7 +30,7 @@ export default function CallGuard() {
     }
   };
 
-  useEffect(() => { loadStatus(); }, []);
+  useEffect(() => {loadStatus();}, []);
 
   const appBaseUrl = "https://vardin.base44.app";
   const webhookUrl = `${appBaseUrl}${status?.webhook_endpoint || "/api/functions/receiveCallGuardReport"}`;
@@ -65,12 +65,12 @@ export default function CallGuard() {
           </div>
           <div className="space-y-2">
             <h2 className="text-xl font-semibold font-heading">Call Guard isn't available yet</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">We're still finishing this feature. When it launches, Vardin will help identify suspicious calls before you answer them.</p>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">We're still finishing this feature. When it launches, Vardin will help identify suspicious calls before you answer them w</p>
           </div>
           <p className="text-xs text-muted-foreground">No call data or setup information is shown on this page.</p>
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   const total = status?.total_reports || 0;
@@ -101,22 +101,22 @@ export default function CallGuard() {
         </Button>
       </div>
 
-      {typeof status?.total_reports === "number" ? (
-        <div className="grid sm:grid-cols-4 gap-3">
+      {typeof status?.total_reports === "number" ?
+      <div className="grid sm:grid-cols-4 gap-3">
           <StatCard label="Calls received" value={total} icon={PhoneCall} />
           <StatCard label="Processed" value={processed} icon={CheckCircle2} tone="success" />
           <StatCard label="Pending" value={pending} icon={Clock3} tone={pending ? "warning" : "success"} />
           <StatCard label="Scam verdicts" value={counts.scam || 0} icon={ShieldAlert} tone="danger" />
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-success/20 bg-success/5 p-4 flex items-start gap-3">
+        </div> :
+
+      <div className="rounded-2xl border border-success/20 bg-success/5 p-4 flex items-start gap-3">
           <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold">Call Guard backend is connected</p>
             <p className="text-xs text-muted-foreground mt-1">Call activity totals are restricted to administrators. Your call protection setup is still active.</p>
           </div>
         </div>
-      )}
+      }
 
       <div className="rounded-2xl border border-border/50 bg-card p-5 sm:p-6 space-y-5">
         <div>
@@ -170,9 +170,9 @@ export default function CallGuard() {
           <p className="text-xs text-muted-foreground mt-1">Internal admin view with summaries, transcripts, Vardin analysis, tactics, and recommended actions.</p>
         </div>
         <div className="space-y-3">
-          {reports.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No Call Guard reports yet.</div>
-          ) : reports.map((report) => {
+          {reports.length === 0 ?
+          <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No Call Guard reports yet.</div> :
+          reports.map((report) => {
             const meta = VERDICT_META[report.vardin_verdict] || { label: report.processed ? "Pending" : "Processing", icon: Clock3, className: "text-muted-foreground" };
             const Icon = meta.icon;
             return (
@@ -192,8 +192,8 @@ export default function CallGuard() {
                   <AdminReportSection title="Transcript"><pre className="max-h-80 overflow-auto rounded-xl border border-border bg-background p-3 text-xs leading-relaxed whitespace-pre-wrap font-mono">{report.transcript || "No transcript available."}</pre></AdminReportSection>
                   <AdminReportSection title="Retell analysis data"><pre className="max-h-64 overflow-auto rounded-xl border border-border bg-background p-3 text-xs leading-relaxed whitespace-pre-wrap font-mono">{report.call_analysis_data || "No analysis data available."}</pre></AdminReportSection>
                 </div>
-              </details>
-            );
+              </details>);
+
           })}
         </div>
       </div>
@@ -204,8 +204,8 @@ export default function CallGuard() {
       </div>
 
       {status?.error && <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">{status.error}</div>}
-    </div>
-  );
+    </div>);
+
 }
 
 function StatCard({ label, value, icon: Icon, tone = "default" }) {
@@ -218,8 +218,8 @@ function AdminReportSection({ title, children }) {
     <section className="space-y-1.5">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
       {children}
-    </section>
-  );
+    </section>);
+
 }
 
 function Step({ number, title, text }) {
