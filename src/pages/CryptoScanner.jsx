@@ -113,7 +113,7 @@ export default function CryptoScanner() {
         <div className="space-y-5 animate-scale-in">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold font-heading">Crypto Scan Result</h2>
-            <Button variant="outline" onClick={handleReset}>New scan</Button>
+            <Button variant="outline" onClick={handleReset}>New Scan</Button>
           </div>
           <div className="bg-card rounded-2xl border border-border/50 p-3">
             <p className="text-xs text-muted-foreground mb-1">
