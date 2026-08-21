@@ -46,10 +46,38 @@ export default function CallGuard() {
     }
   };
 
+  if (!loading && status?.under_construction) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6 animate-slide-up">
+        <div>
+          <div className="flex items-center gap-2.5 mb-2 flex-wrap">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
+              <PhoneCall className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight font-heading">Call Guard</h1>
+            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/20 tracking-wider uppercase">Under Construction</span>
+          </div>
+          <p className="text-sm text-muted-foreground max-w-md">AI-powered call protection is currently in development.</p>
+        </div>
+        <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-8 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Lock className="w-7 h-7 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold font-heading">Call Guard isn't available yet</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">We're still finishing this feature. When it launches, Vardin will help identify suspicious calls before you answer them.</p>
+          </div>
+          <p className="text-xs text-muted-foreground">No call data or setup information is shown on this page.</p>
+        </div>
+      </div>
+    );
+  }
+
   const total = status?.total_reports || 0;
   const processed = status?.processed_reports || 0;
   const pending = status?.pending_reports || 0;
   const counts = status?.verdict_counts || { safe: 0, suspicious: 0, scam: 0 };
+  const reports = status?.reports || [];
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-slide-up">
@@ -124,7 +152,7 @@ export default function CallGuard() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h2 className="font-semibold">Verdict breakdown</h2>
-            <p className="text-xs text-muted-foreground mt-1">Aggregate results from the Call Guard backend.</p>
+            <p className="text-xs text-muted-foreground mt-1">Aggregate results from all processed Call Guard calls.</p>
           </div>
           {status?.last_activity_at && <span className="text-xs text-muted-foreground">Last activity {new Date(status.last_activity_at).toLocaleString()}</span>}
         </div>
@@ -132,6 +160,40 @@ export default function CallGuard() {
           {Object.entries(VERDICT_META).map(([key, meta]) => {
             const Icon = meta.icon;
             return <div key={key} className="rounded-xl border border-border/50 bg-muted/20 p-4 flex items-center gap-3"><Icon className={`w-5 h-5 ${meta.className}`} /><div><p className="text-sm font-medium">{meta.label}</p><p className="text-2xl font-bold">{counts[key] || 0}</p></div></div>;
+          })}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border/50 bg-card p-5 sm:p-6 space-y-4">
+        <div>
+          <h2 className="font-semibold">Call reports</h2>
+          <p className="text-xs text-muted-foreground mt-1">Internal admin view with summaries, transcripts, Vardin analysis, tactics, and recommended actions.</p>
+        </div>
+        <div className="space-y-3">
+          {reports.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No Call Guard reports yet.</div>
+          ) : reports.map((report) => {
+            const meta = VERDICT_META[report.vardin_verdict] || { label: report.processed ? "Pending" : "Processing", icon: Clock3, className: "text-muted-foreground" };
+            const Icon = meta.icon;
+            return (
+              <details key={report.id} className="rounded-xl border border-border/50 bg-muted/10 overflow-hidden">
+                <summary className="cursor-pointer list-none px-4 py-3 flex items-center gap-3">
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${meta.className}`} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{meta.label}{report.vardin_confidence_score != null ? ` · ${report.vardin_confidence_score}/100` : ""}</p>
+                    <p className="text-xs text-muted-foreground">{report.created_date ? new Date(report.created_date).toLocaleString() : "Unknown time"} · {report.call_id}</p>
+                  </div>
+                </summary>
+                <div className="border-t border-border/50 p-4 space-y-4">
+                  <AdminReportSection title="Call summary"><p className="text-sm text-muted-foreground whitespace-pre-wrap">{report.call_summary || "No summary provided."}</p></AdminReportSection>
+                  <AdminReportSection title="Vardin analysis"><p className="text-sm text-muted-foreground whitespace-pre-wrap">{report.vardin_explanation || "No Vardin explanation yet."}</p></AdminReportSection>
+                  {report.vardin_tactics_detected?.length > 0 && <AdminReportSection title="Tactics detected"><div className="flex flex-wrap gap-2">{report.vardin_tactics_detected.map((tactic, i) => <span key={`${tactic}-${i}`} className="text-xs px-2 py-1 rounded-full bg-destructive/10 text-destructive font-medium">{tactic}</span>)}</div></AdminReportSection>}
+                  {report.vardin_recommended_actions?.length > 0 && <AdminReportSection title="Recommended actions"><ul className="space-y-1">{report.vardin_recommended_actions.map((action, i) => <li key={i} className="text-sm text-muted-foreground">• {action}</li>)}</ul></AdminReportSection>}
+                  <AdminReportSection title="Transcript"><pre className="max-h-80 overflow-auto rounded-xl border border-border bg-background p-3 text-xs leading-relaxed whitespace-pre-wrap font-mono">{report.transcript || "No transcript available."}</pre></AdminReportSection>
+                  <AdminReportSection title="Retell analysis data"><pre className="max-h-64 overflow-auto rounded-xl border border-border bg-background p-3 text-xs leading-relaxed whitespace-pre-wrap font-mono">{report.call_analysis_data || "No analysis data available."}</pre></AdminReportSection>
+                </div>
+              </details>
+            );
           })}
         </div>
       </div>
