@@ -32,9 +32,8 @@ export default function CallGuard() {
 
   useEffect(() => { loadStatus(); }, []);
 
-  const webhookUrl = status?.webhook_endpoint
-    ? `${window.location.origin}${status.webhook_endpoint}`
-    : "https://vardin.base44.app/api/functions/receiveCallGuardReport";
+  const appBaseUrl = import.meta.env.VITE_BASE44_APP_BASE_URL || "https://vardin.base44.app";
+  const webhookUrl = `${appBaseUrl}${status?.webhook_endpoint || "/api/functions/receiveCallGuardReport"}`;
 
   const copyWebhook = async () => {
     try {
@@ -74,12 +73,22 @@ export default function CallGuard() {
         </Button>
       </div>
 
-      <div className="grid sm:grid-cols-4 gap-3">
-        <StatCard label="Calls received" value={total} icon={PhoneCall} />
-        <StatCard label="Processed" value={processed} icon={CheckCircle2} tone="success" />
-        <StatCard label="Pending" value={pending} icon={Clock3} tone={pending ? "warning" : "success"} />
-        <StatCard label="Scam verdicts" value={counts.scam || 0} icon={ShieldAlert} tone="danger" />
-      </div>
+      {typeof status?.total_reports === "number" ? (
+        <div className="grid sm:grid-cols-4 gap-3">
+          <StatCard label="Calls received" value={total} icon={PhoneCall} />
+          <StatCard label="Processed" value={processed} icon={CheckCircle2} tone="success" />
+          <StatCard label="Pending" value={pending} icon={Clock3} tone={pending ? "warning" : "success"} />
+          <StatCard label="Scam verdicts" value={counts.scam || 0} icon={ShieldAlert} tone="danger" />
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-success/20 bg-success/5 p-4 flex items-start gap-3">
+          <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold">Call Guard backend is connected</p>
+            <p className="text-xs text-muted-foreground mt-1">Call activity totals are restricted to administrators. Your call protection setup is still active.</p>
+          </div>
+        </div>
+      )
 
       <div className="rounded-2xl border border-border/50 bg-card p-5 sm:p-6 space-y-5">
         <div>
