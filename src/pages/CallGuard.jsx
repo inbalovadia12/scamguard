@@ -88,7 +88,7 @@ export default function CallGuard() {
             <p className="text-xs text-muted-foreground mt-1">Call activity totals are restricted to administrators. Your call protection setup is still active.</p>
           </div>
         </div>
-      )
+      )}
 
       <div className="rounded-2xl border border-border/50 bg-card p-5 sm:p-6 space-y-5">
         <div>
