@@ -29,7 +29,7 @@ function getSupportedAudioMime() {
 }
 
 const RISK_CONFIG = {
-  low: { color: "text-success", bg: "bg-success/10", border: "border-success/30", icon: ShieldCheck, label: "Low Risk — No Scam Detected" }
+  low: { color: "text-success", bg: "bg-success/10", border: "border-success/30", icon: ShieldCheck, label: "Low Risk — No Scam Detected" },
   medium: { color: "text-warning", bg: "bg-warning/10", border: "border-warning/30", icon: AlertTriangle, label: "Caution — Suspicious Activity" },
   high: { color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30", icon: ShieldAlert, label: "High Risk — Likely Scam" },
 };
