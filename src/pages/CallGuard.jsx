@@ -213,6 +213,15 @@ function StatCard({ label, value, icon: Icon, tone = "default" }) {
   return <div className="rounded-2xl border border-border/50 bg-card p-4"><div className="flex items-center justify-between gap-2"><span className="text-xs text-muted-foreground">{label}</span><Icon className={`w-4 h-4 ${toneClass}`} /></div><p className="text-2xl font-bold mt-2">{value}</p></div>;
 }
 
+function AdminReportSection({ title, children }) {
+  return (
+    <section className="space-y-1.5">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
 function Step({ number, title, text }) {
   return <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-2"><div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{number}</div><p className="text-sm font-semibold">{title}</p><p className="text-xs text-muted-foreground leading-relaxed">{text}</p></div>;
 }
