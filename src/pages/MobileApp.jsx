@@ -37,10 +37,10 @@ export default function MobileApp() {
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Vardin Mobile</h1>
         <p className="text-muted-foreground max-w-md mx-auto">
-          Native iOS and Android apps are on the way — bringing real-time protection to your pocket.
+          The Vardin iPhone app is in active development. This page will become the launch hub for the iOS release, installation, and updates.
         </p>
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-warning/10 text-warning text-xs font-semibold">
-          Coming Soon
+          iOS in Development
         </span>
       </div>
 
@@ -60,9 +60,8 @@ export default function MobileApp() {
         ))}
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-1 gap-4">
         <PlatformCard name="iOS" badge="iPhone · iPad" />
-        <PlatformCard name="Android" badge="Phone · Tablet" />
       </div>
 
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-center space-y-3">
@@ -88,7 +87,7 @@ function PlatformCard({ name, badge }) {
   return (
     <div className="relative rounded-2xl border border-border/50 bg-card p-5 overflow-hidden">
       <div className="absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-        UNDER CONSTRUCTION
+        IN DEVELOPMENT
       </div>
       <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mb-3">
         <Smartphone className="w-5 h-5 text-muted-foreground" />
