@@ -65,7 +65,7 @@ export default function CallGuard() {
           </div>
           <div className="space-y-2">
             <h2 className="text-xl font-semibold font-heading">Call Guard isn't available yet</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">We're still finishing this feature. When it launches, Vardin will help identify suspicious calls before you answer them by deploying </p>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">We're still finishing this feature. When it launches, Vardin will help identify suspicious calls before you answer them by deploying an ai voice agent that will find out why the caller is calling</p>
           </div>
           <p className="text-xs text-muted-foreground">No call data or setup information is shown on this page.</p>
         </div>
