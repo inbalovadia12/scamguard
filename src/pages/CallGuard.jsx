@@ -32,7 +32,7 @@ export default function CallGuard() {
 
   useEffect(() => { loadStatus(); }, []);
 
-  const appBaseUrl = import.meta.env.VITE_BASE44_APP_BASE_URL || "https://vardin.base44.app";
+  const appBaseUrl = "https://vardin.base44.app";
   const webhookUrl = `${appBaseUrl}${status?.webhook_endpoint || "/api/functions/receiveCallGuardReport"}`;
 
   const copyWebhook = async () => {
