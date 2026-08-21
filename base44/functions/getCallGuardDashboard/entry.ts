@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 import { secrets } from 'base44:runtime';
 
-const CALL_GUARD_ADMIN_EMAIL = 'balto.ovadia@gmail.com';
+const CALL_GUARD_ADMIN_EMAIL = 'inbalto.ovadia@gmail.com';
 
 Deno.serve(async (req) => {
   try {
