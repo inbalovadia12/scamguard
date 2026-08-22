@@ -5,7 +5,7 @@ import { Smartphone, Bell, ShieldCheck, PhoneCall, RefreshCw, Loader2 } from "lu
 import { useToast } from "@/components/ui/use-toast";
 
 const FEATURES = [
-  { icon: PhoneCall, title: "Live Call Guard", desc: "Real-time scam coaching during phone calls, on-device." },
+  { icon: PhoneCall, title: "Live Call Shield", desc: "Real-time scam coaching during phone calls, on-device." },
   { icon: Bell, title: "Push Alerts", desc: "Family threat alerts delivered straight to your phone." },
   { icon: ShieldCheck, title: "Anywhere Scanning", desc: "Scan links, QR codes, and messages from any app via share sheet." },
   { icon: RefreshCw, title: "Family Sync", desc: "Two-way protection network synced across all your devices." },
