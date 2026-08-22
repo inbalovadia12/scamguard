@@ -33,59 +33,28 @@ Deno.serve(async (req) => {
     const languageName = LANGUAGE_NAMES[String(body?.language || 'en')] || 'English';
     const displayNumber = phoneInput;
 
-    let provisional: any;
-
-    try {
-      provisional = await base44.integrations.Core.InvokeLLM({
-        prompt: `Give a fast provisional scam-risk assessment of the phone number ${normalized}. Do not claim that you verified facts you did not verify. Return a useful assessment based on known patterns. Respond in ${languageName}.`,
-        add_context_from_internet: false,
-        model: 'gemini_3_flash',
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            country: { type: 'string' },
-            carrier: { type: 'string' },
-            reputation_score: { type: 'number' },
-            risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
-            summary: { type: 'string' },
-            scam_categories: { type: 'array', items: { type: 'string' } },
-            sources: { type: 'array', items: { type: 'string' } },
-            report_count: { type: 'number' },
-            scam_report_count: { type: 'number' },
-            spam_report_count: { type: 'number' },
-            suspicious_report_count: { type: 'number' },
-            safe_report_count: { type: 'number' },
-            caller_id_status: { type: 'string', enum: ['SCAM', 'SPAM', 'SUSPICIOUS', 'SAFE', 'UNKNOWN'] },
-            confidence_score: { type: 'number' },
-            verified_business: { type: 'boolean' },
-            business_name: { type: 'string' },
-            caller_id_label: { type: 'string' },
-          },
-          required: ['risk_level', 'summary', 'reputation_score', 'confidence_score'],
-        },
-      });
-    } catch (llmError) {
-      console.error('Phone provisional lookup failed', llmError);
-      provisional = {
-        country: '',
-        carrier: '',
-        reputation_score: 50,
-        risk_level: 'medium',
-        summary: 'Vardin could not complete the automated phone reputation lookup. Treat this number cautiously and verify the caller independently.',
-        scam_categories: [],
-        sources: [],
-        report_count: 0,
-        scam_report_count: 0,
-        spam_report_count: 0,
-        suspicious_report_count: 0,
-        safe_report_count: 0,
-        caller_id_status: 'UNKNOWN',
-        confidence_score: 0,
-        verified_business: false,
-        business_name: '',
-        caller_id_label: '',
-      };
-    }
+    // Return immediately without a synchronous LLM dependency. This keeps the
+    // phone-lookup endpoint fast and avoids proxy/function timeouts. The existing
+    // Vardin analysis stack can enrich this record asynchronously later.
+    const provisional = {
+      country: '',
+      carrier: '',
+      reputation_score: 50,
+      risk_level: 'medium',
+      summary: `Phone number ${displayNumber} was received. Vardin has not independently verified this number yet; treat unexpected callers cautiously.`,
+      scam_categories: [],
+      sources: [],
+      report_count: 0,
+      scam_report_count: 0,
+      spam_report_count: 0,
+      suspicious_report_count: 0,
+      safe_report_count: 0,
+      caller_id_status: 'UNKNOWN',
+      confidence_score: 0,
+      verified_business: false,
+      business_name: '',
+      caller_id_label: '',
+    };
 
     const result = {
       phone_number: displayNumber,
