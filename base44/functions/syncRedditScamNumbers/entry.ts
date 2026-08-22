@@ -1,125 +1,93 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
-const SUBREDDIT_URL = 'https://www.reddit.com/r/ScamNumbers/new.rss';
-const USER_AGENT = 'VardinScamGuard/1.0';
+const LANGUAGE = 'English';
 
 function normalizePhone(raw: string): string | null {
-  const value = String(raw || '').trim();
-  const digits = value.replace(/\D/g, '');
+  const digits = String(raw || '').replace(/\D/g, '');
   if (digits.length === 10) return `+1${digits}`;
   if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
   if (digits.length >= 7 && digits.length <= 15) return `+${digits}`;
   return null;
 }
 
-function extractPhones(text: string): string[] {
-  const matches = String(text || '').match(/(?:\+?\d[\d\s().-]{6,}\d)/g) || [];
-  const normalized = new Set<string>();
-  for (const match of matches) {
-    const phone = normalizePhone(match);
-    if (phone) normalized.add(phone);
-  }
-  return [...normalized];
-}
-
-function classify(title: string, text: string): string {
-  const haystack = `${title}\n${text}`.toLowerCase();
-  if (/crypto|bitcoin|usdt|investment|wallet/.test(haystack)) return 'crypto_investment';
-  if (/paypal|bank|account|refund|payment|invoice/.test(haystack)) return 'financial_impersonation';
-  if (/delivery|package|fedex|ups|usps/.test(haystack)) return 'delivery';
-  if (/government|irs|police|tax|social security/.test(haystack)) return 'government_impersonation';
-  if (/job|recruit|employment|hiring/.test(haystack)) return 'job_scam';
-  if (/romance|dating|girlfriend|boyfriend/.test(haystack)) return 'romance';
-  if (/tech support|microsoft|apple|computer/.test(haystack)) return 'tech_support';
+function classify(title: string, summary: string): string {
+  const text = `${title}\n${summary}`.toLowerCase();
+  if (/crypto|bitcoin|usdt|investment|wallet/.test(text)) return 'crypto_investment';
+  if (/paypal|bank|account|refund|payment|invoice/.test(text)) return 'financial_impersonation';
+  if (/delivery|package|fedex|ups|usps/.test(text)) return 'delivery';
+  if (/government|irs|police|tax|social security/.test(text)) return 'government_impersonation';
+  if (/job|recruit|employment|hiring/.test(text)) return 'job_scam';
+  if (/romance|dating|girlfriend|boyfriend/.test(text)) return 'romance';
+  if (/tech support|microsoft|apple|computer/.test(text)) return 'tech_support';
   return 'other';
-}
-
-function decodeXml(text: string): string {
-  return text
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function parseRss(xml: string) {
-  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map((m) => m[1]);
-  return items.map((item, index) => {
-    const get = (tag: string) => {
-      const match = item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'));
-      return match ? decodeXml(match[1]) : '';
-    };
-    const link = get('link');
-    const guid = get('guid');
-    const id = (guid.match(/comments\/([a-z0-9]+)/i) || [])[1] || guid || link || `rss-${index}`;
-    const pubDate = get('pubDate');
-    const description = get('description');
-    const title = get('title');
-    return { id, title, description, link, pubDate };
-  });
 }
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    const response = await fetch(SUBREDDIT_URL, {
-      headers: {
-        accept: 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
-        'user-agent': USER_AGENT,
+    const research = await base44.integrations.Core.InvokeLLM({
+      prompt: `Research the public Reddit subreddit r/ScamNumbers. Find recent posts from the subreddit that contain phone numbers associated with scams or spam. Return ONLY real, verifiable matches where the phone number is explicitly present in the post and the Reddit post URL is provided. Do not invent phone numbers, reports, post URLs, authors, or dates. Prefer the newest 50 relevant posts. Extract every distinct phone number found in each relevant post. Respond in ${LANGUAGE}.`,
+      add_context_from_internet: true,
+      model: 'gemini_3_flash',
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          posts: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                post_url: { type: 'string' },
+                post_id: { type: 'string' },
+                title: { type: 'string' },
+                summary: { type: 'string' },
+                posted_at: { type: 'string' },
+                phones: { type: 'array', items: { type: 'string' } },
+              },
+              required: ['post_url', 'title', 'phones'],
+            },
+          },
+        },
+        required: ['posts'],
       },
-      signal: AbortSignal.timeout(15000),
     });
 
-    const raw = await response.text();
-    if (!response.ok) {
-      return Response.json({ error: `Reddit returned HTTP ${response.status}` }, { status: 502 });
-    }
-
-    const posts = parseRss(raw).slice(0, 50);
-    let scannedPosts = 0;
     let createdRecords = 0;
     let phoneMatches = 0;
+    const posts = Array.isArray(research?.posts) ? research.posts.slice(0, 50) : [];
 
-    for (const child of posts) {
-      const post = child;
-      if (!post?.id) continue;
-      scannedPosts += 1;
+    for (const post of posts) {
+      const postUrl = String(post?.post_url || '').trim();
+      if (!/^https?:\/\/(www\.)?reddit\.com\/r\/ScamNumbers\//i.test(postUrl)) continue;
 
-      const body = [post.title, post.description].filter(Boolean).join('\n');
-      const phones = extractPhones(body);
-      if (!phones.length) continue;
-
-      for (const normalized of phones) {
+      const phones = Array.isArray(post?.phones) ? post.phones : [];
+      for (const rawPhone of phones) {
+        const normalized = normalizePhone(rawPhone);
+        if (!normalized) continue;
         phoneMatches += 1;
 
+        const postId = String(post?.post_id || postUrl);
         const existing = await base44.asServiceRole.entities.RedditScamNumber.filter({
-          post_id: post.id,
+          post_id: postId,
           normalized_number: normalized,
         });
-
         if (existing.length > 0) continue;
 
         await base44.asServiceRole.entities.RedditScamNumber.create({
           normalized_number: normalized,
           phone_number: normalized,
-          title: post.title || '',
-          summary: String(post.description || '').slice(0, 4000),
-          scam_category: classify(post.title || '', post.description || ''),
+          title: String(post?.title || '').slice(0, 500),
+          summary: String(post?.summary || '').slice(0, 4000),
+          scam_category: classify(String(post?.title || ''), String(post?.summary || '')),
           subreddit: 'ScamNumbers',
-          post_url: post.link || '',
-          post_id: post.id,
-          author: '[rss]',
-          posted_at: post.pubDate ? new Date(post.pubDate).toISOString() : new Date().toISOString(),
+          post_url: postUrl,
+          post_id: postId,
+          author: '',
+          posted_at: post?.posted_at ? new Date(post.posted_at).toISOString() : new Date().toISOString(),
           synced_at: new Date().toISOString(),
-          source_confidence: 90,
+          source_confidence: 85,
         });
-
         createdRecords += 1;
       }
     }
@@ -127,7 +95,7 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       subreddit: 'r/ScamNumbers',
-      scanned_posts: scannedPosts,
+      scanned_posts: posts.length,
       phone_matches: phoneMatches,
       created_records: createdRecords,
       synced_at: new Date().toISOString(),
