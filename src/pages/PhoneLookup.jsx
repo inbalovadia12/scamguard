@@ -70,6 +70,8 @@ export default function PhoneLookup() {
     business_name: result.business_name || "",
     caller_id_label: result.caller_id_label || "",
     created_date: result.created_date || new Date().toISOString(),
+    community: result.community || { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0 },
+    reddit: result.reddit || { matched: false, report_count: 0, sources: [] },
   });
 
   const handleLookup = async () => {
