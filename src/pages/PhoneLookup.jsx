@@ -49,47 +49,84 @@ export default function PhoneLookup() {
     }
   };
 
+  const applyLookupToResult = (phone, result) => ({
+    phone_number: phone,
+    country: result.country,
+    carrier: result.carrier,
+    reputation_score: result.reputation_score,
+    risk_level: result.risk_level,
+    user_reports: result.user_reports || [],
+    scam_categories: result.scam_categories || [],
+    summary: result.summary || "",
+    sources: result.sources || [],
+    report_count: result.report_count || 0,
+    scam_report_count: result.scam_report_count || 0,
+    spam_report_count: result.spam_report_count || 0,
+    suspicious_report_count: result.suspicious_report_count || 0,
+    safe_report_count: result.safe_report_count || 0,
+    caller_id_status: result.caller_id_status || "UNKNOWN",
+    confidence_score: result.confidence_score || 0,
+    verified_business: result.verified_business || false,
+    business_name: result.business_name || "",
+    caller_id_label: result.caller_id_label || "",
+    created_date: result.created_date || new Date().toISOString(),
+  });
+
+  const pollLookup = async (id, phone) => {
+    const POLL_MS = 2000;
+    const MAX_ATTEMPTS = 20; // ~40s ceiling
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      await new Promise((r) => setTimeout(r, POLL_MS));
+      try {
+        const record = await base44.entities.PhoneLookup.get(id);
+        if (record.status === "complete") {
+          setCurrentResult(applyLookupToResult(phone, record));
+          setLooking(false);
+          loadHistory();
+          return;
+        }
+        if (record.status === "error") {
+          setError(record.summary || "Lookup failed. Please try again.");
+          setLooking(false);
+          return;
+        }
+      } catch (e) {
+        // transient fetch error while polling — keep trying until MAX_ATTEMPTS
+      }
+    }
+    setError("This is taking longer than expected. Please try again in a moment.");
+    setLooking(false);
+  };
+
   const handleLookup = async () => {
     if (!phoneInput.trim()) return;
     setLooking(true);
     setError(null);
     setCurrentResult(null);
     setSelectedId(null);
+    const phone = phoneInput.trim();
     try {
       const lang = localStorage.getItem("vardin_language") || "en";
       const response = await base44.functions.invoke("lookupPhoneNumber", {
-        phone_number: phoneInput.trim(),
+        phone_number: phone,
         language: lang,
       });
       if (response.data?.error) throw new Error(response.data.error);
       const result = response.data?.result;
       const saved = response.data?.lookup;
-      setCurrentResult({
-        phone_number: phoneInput.trim(),
-        country: result.country,
-        carrier: result.carrier,
-        reputation_score: result.reputation_score,
-        risk_level: result.risk_level,
-        user_reports: result.user_reports || [],
-        scam_categories: result.scam_categories || [],
-        summary: result.summary || "",
-        sources: result.sources || [],
-        report_count: result.report_count || 0,
-        scam_report_count: result.scam_report_count || 0,
-        spam_report_count: result.spam_report_count || 0,
-        suspicious_report_count: result.suspicious_report_count || 0,
-        safe_report_count: result.safe_report_count || 0,
-        caller_id_status: result.caller_id_status || "UNKNOWN",
-        confidence_score: result.confidence_score || 0,
-        verified_business: result.verified_business || false,
-        business_name: result.business_name || "",
-        caller_id_label: result.caller_id_label || "",
-        created_date: saved?.created_date || new Date().toISOString(),
-      });
+
+      if (saved?.status === "pending" && saved?.id) {
+        // Fast placeholder came back; the real result is being fetched in the
+        // background. Keep the loading UI up and poll until it's ready.
+        pollLookup(saved.id, phone);
+        return;
+      }
+
+      setCurrentResult(applyLookupToResult(phone, { ...result, created_date: saved?.created_date }));
       loadHistory();
+      setLooking(false);
     } catch (e) {
       setError(e.message || "Lookup failed. Please try again.");
-    } finally {
       setLooking(false);
     }
   };
