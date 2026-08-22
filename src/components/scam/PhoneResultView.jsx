@@ -17,10 +17,15 @@ const STATUS_META = {
 export default function PhoneResultView({ data }) {
   const [reportOpen, setReportOpen] = useState(false);
   const risk = RISK_META[data.risk_level] || RISK_META.medium;
-  const score = data.reputation_score || 0;
+  const confirmedCommunityScam =
+    (data.community?.scam_reports || 0) > 0 ||
+    (data.reddit?.report_count || 0) > 0 ||
+    (data.scam_report_count || 0) > 0;
+  const score = confirmedCommunityScam ? 100 : (data.reputation_score ?? 0);
   const scoreColor = score >= 71 ? "text-destructive" : score >= 31 ? "text-warning" : "text-success";
   const barColor = score >= 71 ? "bg-destructive" : score >= 31 ? "bg-warning" : "bg-success";
-  const status = STATUS_META[data.caller_id_status] || STATUS_META.UNKNOWN;
+  const effectiveStatus = confirmedCommunityScam ? "SCAM" : (data.caller_id_status || "UNKNOWN");
+  const status = STATUS_META[effectiveStatus] || STATUS_META.UNKNOWN;
   const totalReports = data.report_count || (data.user_reports?.length || 0);
   const hasReportCounts = (data.scam_report_count || 0) + (data.spam_report_count || 0) + (data.suspicious_report_count || 0) + (data.safe_report_count || 0) > 0;
 
@@ -29,7 +34,7 @@ export default function PhoneResultView({ data }) {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <span className="font-semibold text-sm font-mono">{data.phone_number}</span>
         <div className="flex items-center gap-2">
-          {data.caller_id_status && data.caller_id_status !== "UNKNOWN" && (
+          {effectiveStatus !== "UNKNOWN" && (
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${status.color}`}>
               {status.label}
             </span>
