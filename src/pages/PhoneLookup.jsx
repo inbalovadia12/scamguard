@@ -72,32 +72,6 @@ export default function PhoneLookup() {
     created_date: result.created_date || new Date().toISOString(),
   });
 
-  const pollLookup = async (id, phone) => {
-    const POLL_MS = 2000;
-    const MAX_ATTEMPTS = 20; // ~40s ceiling
-    for (let i = 0; i < MAX_ATTEMPTS; i++) {
-      await new Promise((r) => setTimeout(r, POLL_MS));
-      try {
-        const record = await base44.entities.PhoneLookup.get(id);
-        if (record.status === "complete") {
-          setCurrentResult(applyLookupToResult(phone, record));
-          setLooking(false);
-          loadHistory();
-          return;
-        }
-        if (record.status === "error") {
-          setError(record.summary || "Lookup failed. Please try again.");
-          setLooking(false);
-          return;
-        }
-      } catch (e) {
-        // transient fetch error while polling — keep trying until MAX_ATTEMPTS
-      }
-    }
-    setError("This is taking longer than expected. Please try again in a moment.");
-    setLooking(false);
-  };
-
   const handleLookup = async () => {
     if (!phoneInput.trim()) return;
     setLooking(true);
@@ -114,19 +88,11 @@ export default function PhoneLookup() {
       if (response.data?.error) throw new Error(response.data.error);
       const result = response.data?.result;
       const saved = response.data?.lookup;
-
-      if (saved?.status === "pending" && saved?.id) {
-        // Fast placeholder came back; the real result is being fetched in the
-        // background. Keep the loading UI up and poll until it's ready.
-        pollLookup(saved.id, phone);
-        return;
-      }
-
       setCurrentResult(applyLookupToResult(phone, { ...result, created_date: saved?.created_date }));
       loadHistory();
-      setLooking(false);
     } catch (e) {
       setError(e.message || "Lookup failed. Please try again.");
+    } finally {
       setLooking(false);
     }
   };
