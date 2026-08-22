@@ -1,35 +1,26 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
-// Fast phone reputation lookup.
-// Sources: Vardin's canonical PhoneReputation index + locally indexed
-// r/ScamNumbers reports. No paid external phone-validation API is required.
-
-function normalizePhone(raw: string): { key: string; display: string } | null {
-  const input = String(raw || '').trim();
+function normalizePhone(raw: unknown): { key: string; display: string } | null {
+  const input = String(raw ?? '').trim();
   const digits = input.replace(/\D/g, '');
   if (digits.length < 7 || digits.length > 15) return null;
 
-  let key: string;
-  let display = input;
   if (digits.length === 10) {
-    key = `+1${digits}`;
-    display = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
-  } else if (digits.length === 11 && digits.startsWith('1')) {
-    key = `+${digits}`;
-    const ten = digits.slice(1);
-    display = `${ten.slice(0, 3)}-${ten.slice(3, 6)}-${ten.slice(6)}`;
-  } else {
-    key = `+${digits}`;
+    return {
+      key: `+1${digits}`,
+      display: `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`,
+    };
   }
 
-  return { key, display };
-}
+  if (digits.length === 11 && digits.startsWith('1')) {
+    const ten = digits.slice(1);
+    return {
+      key: `+${digits}`,
+      display: `${ten.slice(0, 3)}-${ten.slice(3, 6)}-${ten.slice(6)}`,
+    };
+  }
 
-function riskFromReports(count: number, score = 0): 'low' | 'medium' | 'high' {
-  if (count > 0 || score >= 71) return 'high';
-  if (score >= 41) return 'medium';
-  return 'low';
+  return { key: `+${digits}`, display: input };
 }
 
 Deno.serve(async (req) => {
@@ -38,7 +29,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
-    let plan = user.subscription_plan || 'starter';
+    let plan = String(user.subscription_plan || 'starter').toLowerCase();
     if (plan === 'free') plan = 'starter';
     if (plan === 'elite') plan = 'premium';
     if (plan !== 'premium' && plan !== 'plus') {
@@ -48,189 +39,112 @@ Deno.serve(async (req) => {
       }, { status: 403 });
     }
 
-    const body = await req.json();
-    const normalized = normalizePhone(body?.phone_number);
-    if (!normalized) {
-      return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      return Response.json({ error: 'Invalid request body.' }, { status: 400 });
     }
 
-    const now = new Date().toISOString();
+    const phone = normalizePhone(body?.phone_number);
+    if (!phone) return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
 
-    // 1. Canonical Vardin reputation index.
     let canonical: any = null;
+    let redditMatches: any[] = [];
+    let communityMatches: any[] = [];
+
     try {
       const rows = await base44.asServiceRole.entities.PhoneReputation.filter({
-        normalized_number: normalized.key,
+        normalized_number: phone.key,
       });
       canonical = rows?.[0] || null;
     } catch (error) {
       console.error('PhoneReputation lookup failed', error);
     }
 
-    // 2. Local r/ScamNumbers index. This is local and does not contact Reddit.
-    let redditMatches: any[] = [];
     try {
       redditMatches = await base44.asServiceRole.entities.RedditScamNumber.filter({
-        normalized_number: normalized.key,
+        normalized_number: phone.key,
       });
     } catch (error) {
       console.error('Reddit index lookup failed', error);
     }
 
-    let communityMatches: any[] = [];
     try {
       communityMatches = await base44.asServiceRole.entities.PhoneCommunityReport.filter({
-        normalized_number: normalized.key,
+        normalized_number: phone.key,
         status: 'active',
       });
     } catch (error) {
-      console.error('Vardin community phone-report lookup failed', error);
+      console.error('Vardin Community lookup failed', error);
     }
 
     const redditCategories = [...new Set(
       redditMatches.map((item: any) => String(item?.scam_category || '').trim()).filter(Boolean),
     )];
+    const communityCategories = [...new Set(
+      communityMatches.map((item: any) => String(item?.scam_category || '').trim()).filter(Boolean),
+    )];
+
     const redditSources = [...new Set(
       redditMatches.map((item: any) => String(item?.post_url || '').trim()).filter(Boolean),
     )];
+
     const redditSummaries = redditMatches
       .map((item: any) => String(item?.summary || '').trim())
       .filter(Boolean)
-      .slice(0, 5);
+      .slice(0, 3);
+
     const communitySummaries = communityMatches
       .map((item: any) => String(item?.summary || '').trim())
       .filter(Boolean)
-      .slice(0, 5);
-    const communityScam = communityMatches.filter((item: any) => item.report_type === 'scam').length;
-    const communitySpam = communityMatches.filter((item: any) => item.report_type === 'spam').length;
-    const communitySuspicious = communityMatches.filter((item: any) => item.report_type === 'suspicious').length;
-    const communitySafe = communityMatches.filter((item: any) => item.report_type === 'safe').length;
+      .slice(0, 3);
 
-    const reportCount = redditMatches.length + communityMatches.length + Number(canonical?.report_count || 0);
-    const scamReportCount = redditMatches.length + communityScam + Number(canonical?.scam_report_count || 0);
-    const baseScore = Number(canonical?.reputation_score || 0);
-    const confirmedCommunityScam = redditMatches.length > 0 || communityScam > 0;
-    const score = confirmedCommunityScam
-      ? 100
-      : Math.max(0, Math.min(100, baseScore));
-    const riskLevel = confirmedCommunityScam ? 'high' : riskFromReports(0, score);
+    const communityScam = communityMatches.filter((item: any) => item?.report_type === 'scam').length;
+    const communitySpam = communityMatches.filter((item: any) => item?.report_type === 'spam').length;
+    const communitySuspicious = communityMatches.filter((item: any) => item?.report_type === 'suspicious').length;
+    const communitySafe = communityMatches.filter((item: any) => item?.report_type === 'safe').length;
 
-    const scamCategories = [...new Set([
-      ...(Array.isArray(canonical?.scam_categories) ? canonical.scam_categories : []),
-      ...redditCategories,
-      ...communityMatches.map((item: any) => String(item?.scam_category || '').trim()).filter(Boolean),
-    ])];
+    const confirmedScam = redditMatches.length > 0 || communityScam > 0;
+    const baseScore = Number(canonical?.reputation_score);
+    const score = confirmedScam ? 100 : (Number.isFinite(baseScore) ? Math.max(0, Math.min(100, baseScore)) : 0);
 
-    let summary = String(canonical?.summary || '').trim();
-    if (redditMatches.length > 0) {
-      const redditEvidence = `Reddit evidence: ${redditMatches.length} report${redditMatches.length === 1 ? '' : 's'} from r/ScamNumbers.`;
-      summary = summary ? `${summary} ${redditEvidence}` : redditEvidence;
-      if (redditSummaries.length > 0) summary += ` ${redditSummaries[0]}`;
-    }
-    if (communityMatches.length > 0) {
-      const vardinEvidence = `Vardin Community evidence: ${communityMatches.length} report${communityMatches.length === 1 ? '' : 's'}.`;
-      summary = summary ? `${summary} ${vardinEvidence}` : vardinEvidence;
-      if (communitySummaries.length > 0) summary += ` ${communitySummaries[0]}`;
-    }
-    if (!summary) {
-      if (redditMatches.length > 0 && communityMatches.length > 0) {
-        summary = 'This number has reports in both r/ScamNumbers and the Vardin Community.';
-      } else if (redditMatches.length > 0) {
-        summary = 'This number has scam reports indexed by Vardin from r/ScamNumbers.';
-      } else if (communityMatches.length > 0) {
-        summary = 'This number has scam reports in the Vardin Community.';
-      } else {
-        summary = 'No community scam reports are currently indexed for this number.';
-      }
-    }
-
-    const sources = [...new Set([
-      ...(Array.isArray(canonical?.sources) ? canonical.sources : []),
-      ...redditSources,
-    ])];
+    const summaryParts: string[] = [];
+    if (confirmedScam) summaryParts.push('Likely scam based on community evidence.');
+    if (communityMatches.length > 0) summaryParts.push(`Vardin Community: ${communityMatches.length} report${communityMatches.length === 1 ? '' : 's'}.`);
+    if (redditMatches.length > 0) summaryParts.push(`Reddit r/ScamNumbers: ${redditMatches.length} indexed report${redditMatches.length === 1 ? '' : 's'}.`);
+    if (communitySummaries[0]) summaryParts.push(communitySummaries[0]);
+    if (redditSummaries[0]) summaryParts.push(redditSummaries[0]);
+    if (summaryParts.length === 0) summaryParts.push('No community scam reports are currently indexed for this number.');
 
     const result = {
+      phone_number: phone.display,
       country: canonical?.country || '',
       carrier: canonical?.carrier || '',
       reputation_score: score,
-      risk_level: riskLevel,
-      user_reports: redditSummaries,
-      scam_categories: scamCategories,
-      summary,
-      sources,
-      report_count: reportCount,
-      scam_report_count: scamReportCount,
+      risk_level: confirmedScam ? 'high' : (canonical?.risk_level || 'low'),
+      user_reports: [...communitySummaries, ...redditSummaries],
+      scam_categories: [...new Set([
+        ...(Array.isArray(canonical?.scam_categories) ? canonical.scam_categories : []),
+        ...communityCategories,
+        ...redditCategories,
+      ])],
+      summary: summaryParts.join(' '),
+      sources: [...new Set([
+        ...(Array.isArray(canonical?.sources) ? canonical.sources : []),
+        ...redditSources,
+        'Vardin Community',
+      ])],
+      report_count: Number(canonical?.report_count || 0) + communityMatches.length + redditMatches.length,
+      scam_report_count: Number(canonical?.scam_report_count || 0) + communityScam + redditMatches.length,
       spam_report_count: Number(canonical?.spam_report_count || 0) + communitySpam,
       suspicious_report_count: Number(canonical?.suspicious_report_count || 0) + communitySuspicious,
       safe_report_count: Number(canonical?.safe_report_count || 0) + communitySafe,
-      caller_id_status: confirmedCommunityScam ? 'SCAM' : (canonical?.caller_id_status || 'UNKNOWN'),
-      confidence_score: Math.max(
-        Number(canonical?.confidence_score || 0),
-        confirmedCommunityScam ? 100 : 0,
-      ),
+      caller_id_status: confirmedScam ? 'SCAM' : (canonical?.caller_id_status || 'UNKNOWN'),
+      confidence_score: confirmedScam ? 100 : Number(canonical?.confidence_score || 0),
       verified_business: !!canonical?.verified_business,
       business_name: canonical?.business_name || '',
-      caller_id_label: confirmedCommunityScam ? 'Vardin: Scam Likely' : (canonical?.caller_id_label || ''),
-      last_checked_at: canonical?.last_checked_at || now,
-    };
-
-    // Keep the canonical index aligned with Reddit evidence.
-    try {
-      await upsertPhoneReputation(base44, {
-        normalized_number: normalized.key,
-        phone_number: normalized.display,
-        reputation_score: result.reputation_score,
-        risk_level: result.risk_level,
-        report_count: result.report_count,
-        scam_report_count: result.scam_report_count,
-        scam_categories: result.scam_categories,
-        summary: result.summary,
-        sources: result.sources,
-        caller_id_status: result.caller_id_status,
-        confidence_score: result.confidence_score,
-        caller_id_label: result.caller_id_label,
-        last_checked_at: now,
-        last_external_check_at: now,
-      });
-    } catch (error) {
-      console.error('PhoneReputation upsert failed', error);
-    }
-
-    // Save the user's lookup without making this persistence step fatal.
-    let lookup: any = null;
-    try {
-      lookup = await base44.entities.PhoneLookup.create({
-        phone_number: normalized.display,
-        status: 'complete',
-        country: result.country,
-        carrier: result.carrier,
-        reputation_score: result.reputation_score,
-        risk_level: result.risk_level,
-        user_reports: result.user_reports,
-        scam_categories: result.scam_categories,
-        summary: result.summary,
-        sources: result.sources,
-        report_count: result.report_count,
-        scam_report_count: result.scam_report_count,
-        spam_report_count: result.spam_report_count,
-        suspicious_report_count: result.suspicious_report_count,
-        safe_report_count: result.safe_report_count,
-        caller_id_status: result.caller_id_status,
-        confidence_score: result.confidence_score,
-        verified_business: result.verified_business,
-        business_name: result.business_name,
-        caller_id_label: result.caller_id_label,
-      });
-    } catch (error) {
-      console.error('PhoneLookup save failed', error);
-    }
-
-    return Response.json({
-      result,
-      lookup: lookup
-        ? { id: lookup.id, phone_number: normalized.display, cached: !!canonical, status: 'complete' }
-        : { phone_number: normalized.display, cached: !!canonical, status: 'complete' },
-      cached: !!canonical,
+      caller_id_label: confirmedScam ? 'Vardin: Scam Likely' : (canonical?.caller_id_label || ''),
       community: {
         matched: communityMatches.length > 0,
         report_count: communityMatches.length,
@@ -244,6 +158,12 @@ Deno.serve(async (req) => {
         report_count: redditMatches.length,
         sources: redditSources,
       },
+    };
+
+    return Response.json({
+      result,
+      lookup: { phone_number: phone.display, cached: !!canonical, status: 'complete' },
+      cached: !!canonical,
     });
   } catch (error) {
     console.error('lookupPhoneNumber error', error);
