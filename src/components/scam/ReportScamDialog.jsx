@@ -56,6 +56,22 @@ export default function ReportScamDialog({ open, onOpenChange, onSubmitted, pref
         summary: form.summary.trim().slice(0, 1000),
         country: form.country.trim().slice(0, 60) || undefined,
       });
+
+      if (prefill?.phone_number) {
+        const digits = String(prefill.phone_number).replace(/\D/g, '');
+        const normalized = digits.length === 10 ? `+1${digits}` : (digits.length === 11 && digits.startsWith('1') ? `+${digits}` : `+${digits}`);
+        await base44.entities.PhoneCommunityReport.create({
+          normalized_number: normalized,
+          phone_number: prefill.phone_number,
+          report_type: "scam",
+          scam_category: form.scam_type,
+          summary: form.summary.trim().slice(0, 1000),
+          country: form.country.trim().slice(0, 60) || "",
+          status: "active",
+          created_date_label: new Date().toISOString(),
+          sources: ["Vardin Community"],
+        });
+      }
       setForm({ scam_type: "phishing_email", title: "", summary: "", ai_analysis: "", risk_level: "high", channel: "email", country: "" });
       onOpenChange(false);
       onSubmitted?.();
