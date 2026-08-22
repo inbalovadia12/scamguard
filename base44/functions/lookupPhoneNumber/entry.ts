@@ -1,43 +1,18 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-import { waitUntil } from 'base44:runtime';
 import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
-// Strip hallucinated "deeper check" / "background process" text from LLM summaries.
-function sanitizeSummary(raw: string): string {
-  if (!raw) return 'No scam reports found for this number.';
-  const cleaned = raw.replace(
-    /[^.!?]*\b(?:deeper\s+check|running\s+in\s+the\s+background|background\s+check|ongoing\s+process|further\s+analysis|still\s+checking|currently\s+(?:checking|analyzing)|will\s+(?:be\s+)?(?:check|analyz|updat)\w*)\b[^.!?]*[.!?]*/gi,
-    ''
-  ).trim();
-  return cleaned || 'No scam reports found for this number.';
-}
+// Phone-number reputation lookup backed by IPQualityScore's Phone Number
+// Validation API (https://www.ipqualityscore.com/documentation/phone-number-validation-api/overview).
+// Replaces the previous LLM web-search implementation: IPQS responds in well
+// under a second, which also eliminates the 502s the LLM-based version
+// produced when its ~25s web search exceeded the function/proxy timeout.
+//
+// SCORING CONVENTION: reputation_score is 0-100 where HIGHER = MORE RISKY.
+// This matches statusFromReputation() in shared/phoneReputation.ts (which
+// treats score >= 71 as SCAM) and the PhoneLookup/PhoneReputation entity
+// field descriptions ("100 = definitely a scam"). It intentionally mirrors
+// IPQS's own fraud_score scale 1:1, so no inversion is needed.
 
-// Force score and risk_level to be consistent with each other.
-function enforceConsistency(score: number, risk: string): { score: number; risk: 'low' | 'medium' | 'high' } {
-  let s = score || 0;
-  let r = (risk || 'low') as 'low' | 'medium' | 'high';
-  if (r === 'high' && s < 71) s = 75;
-  if (r === 'medium' && (s < 36 || s > 70)) s = 50;
-  if (r === 'low' && s > 35) s = 15;
-  return { score: s, risk: r };
-}
-
-// Parse JSON from a free-text LLM response (no response_json_schema → forces web search).
-function parseJsonFromText(text: string): any {
-  if (!text) return null;
-  // Try direct parse first
-  try { return JSON.parse(text); } catch {}
-  // Extract the outermost JSON object
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end === -1) return null;
-  try { return JSON.parse(text.slice(start, end + 1)); } catch {}
-  return null;
-}
-
-// Single web-search phone-number reputation lookup. Returns the full, verified
-// result in one pass (~25s). Caches to the canonical PhoneReputation index
-// so repeat lookups on the same number are instant.
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -52,13 +27,23 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { phone_number, language } = body;
+    const phoneInput = String(body?.phone_number || '').trim();
+    if (!phoneInput) return Response.json({ error: 'Phone number is required' }, { status: 400 });
 
-    if (!phone_number || !phone_number.trim()) {
-      return Response.json({ error: 'Phone number is required' }, { status: 400 });
-    }
+    const cleaned = phoneInput.replace(/[^\d]/g, '');
+    if (cleaned.length < 7) return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
 
-    const cacheKey = '+' + phone_number.trim().replace(/[^\d]/g, '');
+    let tenDigit: string;
+    if (cleaned.length === 10) tenDigit = cleaned;
+    else if (cleaned.length === 11 && cleaned.startsWith('1')) tenDigit = cleaned.slice(1);
+    else if (cleaned.length > 10) tenDigit = cleaned.slice(-10);
+    else tenDigit = cleaned;
+
+    const isValidNANP = tenDigit.length === 10 && !tenDigit.startsWith('0') && !tenDigit.startsWith('1');
+    const displayFormat = isValidNANP
+      ? `${tenDigit.slice(0, 3)}-${tenDigit.slice(3, 6)}-${tenDigit.slice(6)}`
+      : phoneInput;
+    const cacheKey = isValidNANP ? `+1${tenDigit}` : `+${cleaned}`;
 
     // ---- Fast path: return the canonical reputation index if this number is already known ----
     try {
@@ -66,15 +51,14 @@ Deno.serve(async (req) => {
       const STALE_MS = 1000 * 60 * 60 * 24 * 30;
       const r = cached[0];
       if (r && r.last_external_check_at && (Date.now() - new Date(r.last_external_check_at).getTime() < STALE_MS)) {
-        const { score, risk } = enforceConsistency(r.reputation_score || 0, r.risk_level || 'low');
         const result = {
           country: r.country || '',
           carrier: r.carrier || '',
-          reputation_score: score,
-          risk_level: risk,
+          reputation_score: r.reputation_score ?? 0,
+          risk_level: r.risk_level || 'low',
           user_reports: [],
           scam_categories: r.scam_categories || [],
-          summary: sanitizeSummary(r.summary || ''),
+          summary: r.summary || '',
           sources: r.sources || [],
           report_count: r.report_count || 0,
           scam_report_count: r.scam_report_count || 0,
@@ -90,196 +74,163 @@ Deno.serve(async (req) => {
         };
         return Response.json({
           result,
-          lookup: { id: r.id, phone_number: r.phone_number, cached: true },
+          lookup: { id: r.id, phone_number: r.phone_number, cached: true, status: 'complete' },
           cached: true,
         });
       }
     } catch {}
 
-    // ---- Single web-search lookup (no response_json_schema → forces actual web search) ----
-    const cleaned = phone_number.trim().replace(/[^\d]/g, '');
-
-    let tenDigit: string;
-    if (cleaned.length === 10) {
-      tenDigit = cleaned;
-    } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
-      tenDigit = cleaned.slice(1);
-    } else if (cleaned.length > 10) {
-      tenDigit = cleaned.slice(-10);
-    } else {
-      tenDigit = cleaned;
+    // ---- Live IPQS lookup (fast, typically <1s) ----
+    const ipqsKey = Deno.env.get('IPQS_API_KEY');
+    if (!ipqsKey) {
+      return Response.json({ error: 'Phone lookup is not configured. Missing IPQS_API_KEY.' }, { status: 500 });
     }
 
-    const isValidNANP = tenDigit.length === 10 && !tenDigit.startsWith('0') && !tenDigit.startsWith('1');
-    const displayFormat = isValidNANP
-      ? `${tenDigit.slice(0, 3)}-${tenDigit.slice(3, 6)}-${tenDigit.slice(6)}`
-      : phone_number.trim();
-    const intlFormat = isValidNANP ? `+1${tenDigit}` : `+${cleaned}`;
+    const ipqsUrl = `https://www.ipqualityscore.com/api/json/phone/${encodeURIComponent(ipqsKey)}/${encodeURIComponent(cleaned)}?country[]=US&country[]=CA&country[]=IL`;
 
-    const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
-    const languageName = LANGUAGE_NAMES[language] || 'English';
+    let ipqs: any = null;
+    try {
+      const resp = await fetch(ipqsUrl, { signal: AbortSignal.timeout(8000) });
+      ipqs = await resp.json();
+    } catch (fetchError) {
+      console.error('IPQS request failed', fetchError);
+      return Response.json({ error: 'The phone lookup service is temporarily unavailable. Please try again.' }, { status: 502 });
+    }
 
-    const prompt = `Search the web for scam and spam reports about the phone number ${displayFormat} (${intlFormat}).
+    if (!ipqs || ipqs.success === false) {
+      // Insufficient credits, malformed key, etc. Surface a clear message rather than a raw failure.
+      const msg = ipqs?.message || 'Phone lookup failed.';
+      return Response.json({ error: msg }, { status: 502 });
+    }
 
-Search the exact number in multiple common formats. Prioritize high-signal, relevant results — do not exhaustively investigate many websites or search unrelated pages. Only research the area code/prefix if it provides useful carrier or geographic info.
+    if (ipqs.valid === false) {
+      const notInService = {
+        country: ipqs.country || '',
+        carrier: '',
+        reputation_score: 0,
+        risk_level: 'low',
+        user_reports: [],
+        scam_categories: [],
+        summary: 'This does not appear to be a valid, in-service phone number.',
+        sources: [],
+        report_count: 0, scam_report_count: 0, spam_report_count: 0, suspicious_report_count: 0, safe_report_count: 0,
+        caller_id_status: 'UNKNOWN',
+        confidence_score: 0,
+        verified_business: false,
+        business_name: '',
+        caller_id_label: '',
+        last_checked_at: new Date().toISOString(),
+      };
+      return Response.json({ result: notInService, lookup: { phone_number: displayFormat, cached: false, status: 'complete' }, cached: false });
+    }
 
-RULES:
-- Only count reports that clearly refer to this exact number. Do not count similar numbers, same area code, or same prefix.
-- Do not invent carrier, reports, businesses, sources, or statistics.
-- Caller-ID spoofing is possible; carrier alone does not prove legitimacy.
-- Give greater weight to multiple independent reports than a single unverified one.
-- Distinguish scam, spam/telemarketing, suspicious, and legitimate reports.
+    const fraudScore = Math.max(0, Math.min(100, Number(ipqs.fraud_score) || 0));
+    const recentAbuse = !!ipqs.recent_abuse;
+    const isSpammer = !!ipqs.spammer;
+    const isDoNotCall = !!ipqs.do_not_call;
+    const isVoip = !!ipqs.VOIP;
+    const isLeaked = !!ipqs.leaked;
 
-SCORING (0 = confirmed scam, 100 = verified legitimate):
-- 0-25: confirmed/repeated scam evidence
-- 26-40: strong scam indicators
-- 41-60: suspicious or significant spam
-- 61-75: limited/unverified negative evidence
-- 76-89: no credible negative evidence, not verified legitimate
-- 90-100: strongly verified legitimate
+    let riskLevel: 'low' | 'medium' | 'high' = 'low';
+    if (fraudScore >= 71 || recentAbuse) riskLevel = 'high';
+    else if (fraudScore >= 41 || isSpammer || isDoNotCall || isLeaked) riskLevel = 'medium';
 
-risk_level must match: "high" (strong/repeated scam evidence), "medium" (suspicious/spam/limited negative), "low" (no credible negative reports or strong legitimacy evidence). "No reports found" does NOT mean confirmed safe.
+    const scamCategories: string[] = [];
+    if (recentAbuse) scamCategories.push('Recent Abuse Reports');
+    if (isSpammer) scamCategories.push('Known Spammer');
+    if (isDoNotCall) scamCategories.push('Do Not Call List');
+    if (isVoip) scamCategories.push('VOIP Number');
+    if (isLeaked) scamCategories.push('Leaked/Breached Number');
 
-Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON):
+    const summaryParts: string[] = [];
+    summaryParts.push(`IPQS fraud score: ${fraudScore}/100.`);
+    if (ipqs.line_type) summaryParts.push(`Line type: ${ipqs.line_type}.`);
+    if (ipqs.active === false) summaryParts.push('This line appears inactive/disconnected.');
+    if (recentAbuse) summaryParts.push('Recent abuse has been reported for this number.');
+    if (isSpammer) summaryParts.push('This number is flagged as a known spammer.');
+    if (isDoNotCall) summaryParts.push('This number is on the Do Not Call list.');
+    if (scamCategories.length === 0 && fraudScore < 41) summaryParts.push('No significant fraud signals found.');
 
-{
-  "country": "",
-  "carrier": "",
-  "reputation_score": 0,
-  "risk_level": "low",
-  "user_reports": [],
-  "scam_categories": [],
-  "summary": "",
-  "sources": [],
-  "scam_report_count": 0,
-  "spam_report_count": 0,
-  "suspicious_report_count": 0,
-  "safe_report_count": 0,
-  "verified_business": false,
-  "business_name": ""
-}
+    const businessName = ipqs.name && ipqs.name !== 'N/A' ? ipqs.name : '';
 
-- user_reports: up to 3 paraphrased summaries of the most relevant reports (do not directly quote users).
-- sources: up to 6 URLs that contained relevant info about this exact number. No search-engine URLs. Empty array if none.
-- summary: max 300 chars, what you actually found. Never mention internal processes, background checks, further analysis, or future checking.
-- If no reports found, set all counts to 0, sources to empty array, summary to "No scam reports found for this number."
-
-Respond in ${languageName}.`;
-
-    // ---- Return immediately with a pending record; do the (slow, ~25s) web search in the
-    // background. The proxy/function timeout is fixed and shorter than typical search time,
-    // so we can no longer await the LLM call in the request path (that was the 502 cause).
-    const pendingLookup = await base44.entities.PhoneLookup.create({
-      phone_number: displayFormat,
-      status: 'pending',
-      reputation_score: 50,
-      risk_level: 'medium',
+    const fullResult = {
+      country: ipqs.country || '',
+      carrier: ipqs.carrier || '',
+      reputation_score: fraudScore,
+      risk_level: riskLevel,
+      user_reports: [] as string[],
+      scam_categories: scamCategories,
+      summary: summaryParts.join(' '),
+      sources: [] as string[],
+      report_count: 0,
+      scam_report_count: 0,
+      spam_report_count: 0,
+      suspicious_report_count: 0,
+      safe_report_count: 0,
       caller_id_status: 'UNKNOWN',
       confidence_score: 0,
-      summary: 'Searching the web for reports about this number…',
+      verified_business: false,
+      business_name: businessName,
+      caller_id_label: '',
+      last_checked_at: new Date().toISOString(),
+    };
+
+    // Persist to the canonical reputation index (does NOT touch community report_counts,
+    // since IPQS is a fraud-score source, not a user-report source).
+    const rep = await upsertPhoneReputation(base44, {
+      normalized_number: cacheKey,
+      phone_number: displayFormat,
+      country: fullResult.country,
+      carrier: fullResult.carrier,
+      reputation_score: fullResult.reputation_score,
+      risk_level: fullResult.risk_level,
+      scam_categories: fullResult.scam_categories,
+      summary: fullResult.summary,
+      sources: fullResult.sources,
+      last_external_check_at: new Date().toISOString(),
+      verified_business: fullResult.verified_business,
+      business_name: fullResult.business_name,
     });
 
-    waitUntil((async () => {
-      try {
-        const llmResponse = await base44.integrations.Core.InvokeLLM({
-          prompt,
-          add_context_from_internet: true,
-          model: 'gemini_3_flash',
-        });
+    fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
+    fullResult.confidence_score = rep?.confidence_score || 0;
+    fullResult.caller_id_label = rep?.caller_id_label || '';
 
-        // Parse JSON from the free-text response (no response_json_schema was used)
-        const result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
-
-        // ---- Code-level safety nets: enforce score/risk consistency + strip hallucinated text ----
-        const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
-        const cleanSummary = sanitizeSummary(result.summary || '');
-
-        const fullResult = {
-          country: result.country || '',
-          carrier: result.carrier || '',
-          reputation_score: consistentScore,
-          risk_level: consistentRisk,
-          user_reports: Array.isArray(result.user_reports) ? result.user_reports : [],
-          scam_categories: Array.isArray(result.scam_categories) ? result.scam_categories : [],
-          summary: cleanSummary,
-          sources: Array.isArray(result.sources) ? result.sources : [],
-          report_count: (result.scam_report_count || 0) + (result.spam_report_count || 0) + (result.suspicious_report_count || 0) + (result.safe_report_count || 0),
-          scam_report_count: result.scam_report_count || 0,
-          spam_report_count: result.spam_report_count || 0,
-          suspicious_report_count: result.suspicious_report_count || 0,
-          safe_report_count: result.safe_report_count || 0,
-          caller_id_status: 'UNKNOWN',
-          confidence_score: 0,
-          verified_business: result.verified_business || false,
-          business_name: result.business_name || '',
-          caller_id_label: '',
-          last_checked_at: new Date().toISOString(),
-        };
-
-        const rep = await upsertPhoneReputation(base44, {
-          normalized_number: cacheKey,
-          phone_number: displayFormat,
-          country: fullResult.country,
-          carrier: fullResult.carrier,
-          reputation_score: fullResult.reputation_score,
-          risk_level: fullResult.risk_level,
-          scam_categories: fullResult.scam_categories,
-          summary: fullResult.summary,
-          sources: fullResult.sources,
-          last_external_check_at: new Date().toISOString(),
-          verified_business: fullResult.verified_business,
-          business_name: fullResult.business_name,
-          report_counts: {
-            scam: fullResult.scam_report_count,
-            spam: fullResult.spam_report_count,
-            suspicious: fullResult.suspicious_report_count,
-            safe: fullResult.safe_report_count,
-          },
-        });
-
-        // Reconcile derived fields from the upserted record so history matches the index
-        fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
-        fullResult.confidence_score = rep?.confidence_score || 0;
-        fullResult.caller_id_label = rep?.caller_id_label || '';
-
-        await base44.asServiceRole.entities.PhoneLookup.update(pendingLookup.id, {
-          status: 'complete',
-          country: fullResult.country,
-          carrier: fullResult.carrier,
-          reputation_score: fullResult.reputation_score,
-          risk_level: fullResult.risk_level,
-          user_reports: fullResult.user_reports,
-          scam_categories: fullResult.scam_categories,
-          summary: fullResult.summary,
-          sources: fullResult.sources,
-          report_count: fullResult.report_count,
-          scam_report_count: fullResult.scam_report_count,
-          spam_report_count: fullResult.spam_report_count,
-          suspicious_report_count: fullResult.suspicious_report_count,
-          safe_report_count: fullResult.safe_report_count,
-          caller_id_status: fullResult.caller_id_status,
-          confidence_score: fullResult.confidence_score,
-          verified_business: fullResult.verified_business,
-          business_name: fullResult.business_name,
-          caller_id_label: fullResult.caller_id_label,
-        });
-      } catch (bgError) {
-        console.error('lookupPhoneNumber background search failed', bgError);
-        try {
-          await base44.asServiceRole.entities.PhoneLookup.update(pendingLookup.id, {
-            status: 'error',
-            summary: 'The web search for this number failed. Please try again.',
-          });
-        } catch {}
-      }
-    })());
+    let lookup: any = null;
+    try {
+      lookup = await base44.entities.PhoneLookup.create({
+        phone_number: displayFormat,
+        status: 'complete',
+        country: fullResult.country,
+        carrier: fullResult.carrier,
+        reputation_score: fullResult.reputation_score,
+        risk_level: fullResult.risk_level,
+        user_reports: fullResult.user_reports,
+        scam_categories: fullResult.scam_categories,
+        summary: fullResult.summary,
+        sources: fullResult.sources,
+        report_count: fullResult.report_count,
+        scam_report_count: fullResult.scam_report_count,
+        spam_report_count: fullResult.spam_report_count,
+        suspicious_report_count: fullResult.suspicious_report_count,
+        safe_report_count: fullResult.safe_report_count,
+        caller_id_status: fullResult.caller_id_status,
+        confidence_score: fullResult.confidence_score,
+        verified_business: fullResult.verified_business,
+        business_name: fullResult.business_name,
+        caller_id_label: fullResult.caller_id_label,
+      });
+    } catch (saveError) {
+      console.error('PhoneLookup save failed', saveError);
+    }
 
     return Response.json({
-      result: { ...pendingLookup, phone_number: displayFormat },
-      lookup: { id: pendingLookup.id, phone_number: displayFormat, cached: false, status: 'pending' },
+      result: fullResult,
+      lookup: lookup ? { id: lookup.id, phone_number: displayFormat, cached: false, status: 'complete' } : { phone_number: displayFormat, cached: false, status: 'complete' },
       cached: false,
     });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('lookupPhoneNumber error', error);
+    return Response.json({ error: error instanceof Error ? error.message : 'Lookup failed' }, { status: 500 });
   }
 });
