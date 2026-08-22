@@ -756,7 +756,7 @@ export default function LiveCallAnalyzer() {
               disabled={uploading || !creditStatus?.canAnalyze || ((mode === "system" || mode === "phone_call") && !supportsDisplayMedia)}
             >
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === "screen" ? <Eye className="w-4 h-4" /> : mode === "upload" ? <Upload className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
-              {uploading ? "Analyzing recording..." : mode === "screen" ? "Start Watching" : mode === "upload" ? "Choose Recording" : mode === "phone_call" ? "Start Call Guard" : "Start Listening"}
+              {uploading ? "Analyzing recording..." : mode === "screen" ? "Start Watching" : mode === "upload" ? "Choose Recording" : mode === "phone_call" ? "Start Call Shield" : "Start Listening"}
             </Button>
             {mode === "screen" && !isMobile && (
               <div className="space-y-2">
