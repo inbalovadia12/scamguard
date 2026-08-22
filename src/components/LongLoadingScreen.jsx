@@ -71,7 +71,7 @@ const THEMES = {
       { label: "Scoring reputation risk...", at: 62 },
       { label: "Preparing your result...", at: 84 },
     ],
-  }
+  },
   local: {
     title: "Scanning Local Scam Activity",
     gradient: "from-primary to-primary/80",
