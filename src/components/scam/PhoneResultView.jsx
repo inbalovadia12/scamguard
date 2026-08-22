@@ -1,8 +1,10 @@
-import React from "react";
-import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity } from "lucide-react";
+import React, { useState } from "react";
+import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity, Flag } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { RISK_META } from "@/components/scam/ScamReportCard";
 import CommunityIntel, { matchCategoriesToEnum } from "@/components/community/CommunityIntel";
+import ReportScamDialog from "@/components/scam/ReportScamDialog";
+import { Button } from "@/components/ui/button";
 
 const STATUS_META = {
   SCAM: { label: "Scam Likely", color: "bg-destructive/10 text-destructive border-destructive/30" },
@@ -13,6 +15,7 @@ const STATUS_META = {
 };
 
 export default function PhoneResultView({ data }) {
+  const [reportOpen, setReportOpen] = useState(false);
   const risk = RISK_META[data.risk_level] || RISK_META.medium;
   const score = data.reputation_score || 0;
   const scoreColor = score >= 71 ? "text-destructive" : score >= 31 ? "text-warning" : "text-success";
@@ -185,6 +188,44 @@ export default function PhoneResultView({ data }) {
           </div>
         </div>
       )}
+
+      {/* Source breakdown */}
+      {(data.community?.matched || data.reddit?.matched) && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <Users className="w-3.5 h-3.5" /> Evidence Sources
+          </div>
+          <div className="grid sm:grid-cols-2 gap-2">
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+              <p className="text-sm font-semibold">Vardin Community</p>
+              <p className="text-xs text-muted-foreground mt-1">{data.community?.report_count || 0} phone report{(data.community?.report_count || 0) === 1 ? "" : "s"}</p>
+            </div>
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+              <p className="text-sm font-semibold">Reddit · r/ScamNumbers</p>
+              <p className="text-xs text-muted-foreground mt-1">{data.reddit?.report_count || 0} indexed report{(data.reddit?.report_count || 0) === 1 ? "" : "s"}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={() => setReportOpen(true)} className="gap-2">
+          <Flag className="w-4 h-4" /> Report this number
+        </Button>
+        <ReportScamDialog
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          prefill={{
+            phone_number: data.phone_number,
+            scam_type: data.scam_categories?.[0] || "other",
+            title: `Report for ${data.phone_number}`,
+            summary: `I received a suspicious or scam call/text from ${data.phone_number}.`,
+            risk_level: data.risk_level || "high",
+            channel: "phone_call",
+          }}
+          onSubmitted={() => {}}
+        />
+      </div>
 
       {/* Community Intel */}
       <div className="border-t border-border/50 pt-4">
