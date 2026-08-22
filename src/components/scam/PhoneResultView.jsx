@@ -217,7 +217,7 @@ export default function PhoneResultView({ data }) {
           onOpenChange={setReportOpen}
           prefill={{
             phone_number: data.phone_number,
-            scam_type: data.scam_categories?.[0] || "other",
+            scam_type: "other",
             title: `Report for ${data.phone_number}`,
             summary: `I received a suspicious or scam call/text from ${data.phone_number}.`,
             risk_level: data.risk_level || "high",
