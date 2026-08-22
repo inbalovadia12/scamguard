@@ -166,45 +166,56 @@ Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON
 
 Respond in ${languageName}.`;
 
-    const llmResponse = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      add_context_from_internet: true,
-      model: 'gemini_3_flash',
-    });
-
-    // Parse JSON from the free-text response (no response_json_schema was used)
-    const result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
-
-    // ---- Code-level safety nets: enforce score/risk consistency + strip hallucinated text ----
-    const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
-    const cleanSummary = sanitizeSummary(result.summary || '');
-
-    const fullResult = {
-      country: result.country || '',
-      carrier: result.carrier || '',
-      reputation_score: consistentScore,
-      risk_level: consistentRisk,
-      user_reports: Array.isArray(result.user_reports) ? result.user_reports : [],
-      scam_categories: Array.isArray(result.scam_categories) ? result.scam_categories : [],
-      summary: cleanSummary,
-      sources: Array.isArray(result.sources) ? result.sources : [],
-      report_count: (result.scam_report_count || 0) + (result.spam_report_count || 0) + (result.suspicious_report_count || 0) + (result.safe_report_count || 0),
-      scam_report_count: result.scam_report_count || 0,
-      spam_report_count: result.spam_report_count || 0,
-      suspicious_report_count: result.suspicious_report_count || 0,
-      safe_report_count: result.safe_report_count || 0,
+    // ---- Return immediately with a pending record; do the (slow, ~25s) web search in the
+    // background. The proxy/function timeout is fixed and shorter than typical search time,
+    // so we can no longer await the LLM call in the request path (that was the 502 cause).
+    const pendingLookup = await base44.entities.PhoneLookup.create({
+      phone_number: displayFormat,
+      status: 'pending',
+      reputation_score: 50,
+      risk_level: 'medium',
       caller_id_status: 'UNKNOWN',
       confidence_score: 0,
-      verified_business: result.verified_business || false,
-      business_name: result.business_name || '',
-      caller_id_label: '',
-      last_checked_at: new Date().toISOString(),
-    };
+      summary: 'Searching the web for reports about this number…',
+    });
 
-    // Persist to cache index + history in the background so the response returns immediately.
-    // Store SANITIZED values so the cache never contains "deeper check" text or bad scores.
     waitUntil((async () => {
       try {
+        const llmResponse = await base44.integrations.Core.InvokeLLM({
+          prompt,
+          add_context_from_internet: true,
+          model: 'gemini_3_flash',
+        });
+
+        // Parse JSON from the free-text response (no response_json_schema was used)
+        const result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
+
+        // ---- Code-level safety nets: enforce score/risk consistency + strip hallucinated text ----
+        const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
+        const cleanSummary = sanitizeSummary(result.summary || '');
+
+        const fullResult = {
+          country: result.country || '',
+          carrier: result.carrier || '',
+          reputation_score: consistentScore,
+          risk_level: consistentRisk,
+          user_reports: Array.isArray(result.user_reports) ? result.user_reports : [],
+          scam_categories: Array.isArray(result.scam_categories) ? result.scam_categories : [],
+          summary: cleanSummary,
+          sources: Array.isArray(result.sources) ? result.sources : [],
+          report_count: (result.scam_report_count || 0) + (result.spam_report_count || 0) + (result.suspicious_report_count || 0) + (result.safe_report_count || 0),
+          scam_report_count: result.scam_report_count || 0,
+          spam_report_count: result.spam_report_count || 0,
+          suspicious_report_count: result.suspicious_report_count || 0,
+          safe_report_count: result.safe_report_count || 0,
+          caller_id_status: 'UNKNOWN',
+          confidence_score: 0,
+          verified_business: result.verified_business || false,
+          business_name: result.business_name || '',
+          caller_id_label: '',
+          last_checked_at: new Date().toISOString(),
+        };
+
         const rep = await upsertPhoneReputation(base44, {
           normalized_number: cacheKey,
           phone_number: displayFormat,
@@ -231,8 +242,8 @@ Respond in ${languageName}.`;
         fullResult.confidence_score = rep?.confidence_score || 0;
         fullResult.caller_id_label = rep?.caller_id_label || '';
 
-        await base44.entities.PhoneLookup.create({
-          phone_number: displayFormat,
+        await base44.asServiceRole.entities.PhoneLookup.update(pendingLookup.id, {
+          status: 'complete',
           country: fullResult.country,
           carrier: fullResult.carrier,
           reputation_score: fullResult.reputation_score,
@@ -252,10 +263,22 @@ Respond in ${languageName}.`;
           business_name: fullResult.business_name,
           caller_id_label: fullResult.caller_id_label,
         });
-      } catch {}
+      } catch (bgError) {
+        console.error('lookupPhoneNumber background search failed', bgError);
+        try {
+          await base44.asServiceRole.entities.PhoneLookup.update(pendingLookup.id, {
+            status: 'error',
+            summary: 'The web search for this number failed. Please try again.',
+          });
+        } catch {}
+      }
     })());
 
-    return Response.json({ result: fullResult, lookup: { phone_number: displayFormat, cached: false }, cached: false });
+    return Response.json({
+      result: { ...pendingLookup, phone_number: displayFormat },
+      lookup: { id: pendingLookup.id, phone_number: displayFormat, cached: false, status: 'pending' },
+      cached: false,
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
