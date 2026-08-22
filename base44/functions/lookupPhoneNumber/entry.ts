@@ -134,15 +134,14 @@ Deno.serve(async (req) => {
     const redditCategories = [...new Set(redditMatches.map((item: any) => item.scam_category).filter(Boolean))];
     const redditSources = redditMatches.map((item: any) => item.post_url).filter(Boolean);
 
-    // Risk level is driven by IPQS fraud_score, but boosted if there are Reddit reports
+    // Risk level and score: community/Reddit evidence takes priority over IPQS
     let riskLevel: 'low' | 'medium' | 'high' = 'low';
-    let adjustedScore = fraudScore;
+    let effectiveScore = fraudScore;
     
-    // If there are Reddit reports, boost the score to reflect the community evidence
-    if (redditReportCount > 0) {
-      adjustedScore = Math.max(fraudScore, 75); // At least "high risk" if community confirms scam
+    if (redditReportCount > 0 || recentAbuse) {
       riskLevel = 'high';
-    } else if (fraudScore >= 71 || recentAbuse) {
+      effectiveScore = Math.max(effectiveScore, 75); // Boost score for confirmed scam reports
+    } else if (fraudScore >= 71) {
       riskLevel = 'high';
     } else if (fraudScore >= 41 || isSpammer || isDoNotCall || isLeaked) {
       riskLevel = 'medium';
@@ -157,7 +156,7 @@ Deno.serve(async (req) => {
     if (isLeaked) scamCategories.push('Leaked/Breached Number');
     scamCategories.push(...redditCategories);
 
-    // Build summary incorporating both IPQS and Reddit data
+    // Build summary incorporating both IPQS and Reddit data (once, not repeated)
     const summaryParts: string[] = [];
     summaryParts.push(`IPQS fraud score: ${fraudScore}/100.`);
     if (redditReportCount > 0) {
@@ -168,7 +167,7 @@ Deno.serve(async (req) => {
     if (recentAbuse) summaryParts.push('Recent abuse has been reported for this number.');
     if (isSpammer) summaryParts.push('This number is flagged as a known spammer.');
     if (isDoNotCall) summaryParts.push('This number is on the Do Not Call list.');
-    if (scamCategories.length === 0 && fraudScore < 41 && redditReportCount === 0) summaryParts.push('No significant fraud signals found.');
+    if (scamCategories.length === 0 && effectiveScore < 41 && redditReportCount === 0) summaryParts.push('No significant fraud signals found.');
 
     const businessName = ipqs.name && ipqs.name !== 'N/A' ? ipqs.name : '';
 
@@ -178,7 +177,7 @@ Deno.serve(async (req) => {
     const fullResult = {
       country: ipqs.country || '',
       carrier: ipqs.carrier || '',
-      reputation_score: adjustedScore,
+      reputation_score: effectiveScore,
       risk_level: riskLevel,
       user_reports: [] as string[],
       scam_categories: scamCategories,
