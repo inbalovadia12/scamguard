@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
     const fullResult = {
       country: ipqs.country || '',
       carrier: ipqs.carrier || '',
-      reputation_score: fraudScore,
+      reputation_score: adjustedScore,
       risk_level: riskLevel,
       user_reports: [] as string[],
       scam_categories: scamCategories,
