@@ -1,0 +1,45 @@
+{
+  "description": "Synchronizes recent r/ScamNumbers posts into Vardin's local phone-number reputation index every 6 hours",
+  "name": "Reddit Scam Numbers Sync",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "15 */6 * * *",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "reddit_scam_numbers_sync",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "sync_reddit": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "syncRedditScamNumbers",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Sync r/ScamNumbers",
+            "description": "Index recent scam-number Reddit posts without slowing Phone Guard lookups"
+          }
+        }
+      }
+    ]
+  }
+}
