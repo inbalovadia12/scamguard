@@ -106,6 +106,16 @@
     "caller_id_label": {
       "type": "string",
       "description": "Published caller-ID label (e.g. 'Vardin: Scam Likely')"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "complete",
+        "error"
+      ],
+      "default": "complete",
+      "description": "Whether the background web-search lookup has finished. 'pending' means the client should keep polling this record."
     }
   },
   "required": [
