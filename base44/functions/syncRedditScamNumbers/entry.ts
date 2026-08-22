@@ -56,7 +56,7 @@ function parseRss(xml: string) {
     };
     const link = get('link');
     const guid = get('guid');
-    const id = (guid.match(/comments\/([a-z0-9]+)/i) || [])[1] || guid || `rss-${index}-${Buffer.from(link || item).toString('base64url').slice(0, 24)}`;
+    const id = (guid.match(/comments\/([a-z0-9]+)/i) || [])[1] || guid || link || `rss-${index}`;
     const pubDate = get('pubDate');
     const description = get('description');
     const title = get('title');
