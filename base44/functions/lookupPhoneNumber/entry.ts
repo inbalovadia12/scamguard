@@ -2,16 +2,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
 // Phone-number reputation lookup backed by IPQualityScore's Phone Number
-// Validation API (https://www.ipqualityscore.com/documentation/phone-number-validation-api/overview).
-// Replaces the previous LLM web-search implementation: IPQS responds in well
-// under a second, which also eliminates the 502s the LLM-based version
-// produced when its ~25s web search exceeded the function/proxy timeout.
-//
-// SCORING CONVENTION: reputation_score is 0-100 where HIGHER = MORE RISKY.
-// This matches statusFromReputation() in shared/phoneReputation.ts (which
-// treats score >= 71 as SCAM) and the PhoneLookup/PhoneReputation entity
-// field descriptions ("100 = definitely a scam"). It intentionally mirrors
-// IPQS's own fraud_score scale 1:1, so no inversion is needed.
+// Validation API + Reddit r/ScamNumbers community reports.
+// Combines IPQS automated fraud scoring with crowdsourced community data.
 
 Deno.serve(async (req) => {
   try {
@@ -80,7 +72,7 @@ Deno.serve(async (req) => {
       }
     } catch {}
 
-    // ---- Live IPQS lookup (fast, typically <1s) ----
+    // ---- Live IPQS lookup ----
     const ipqsKey = Deno.env.get('IPQS_API_KEY');
     if (!ipqsKey) {
       return Response.json({ error: 'Phone lookup is not configured. Missing IPQS_API_KEY.' }, { status: 500 });
@@ -98,7 +90,6 @@ Deno.serve(async (req) => {
     }
 
     if (!ipqs || ipqs.success === false) {
-      // Insufficient credits, malformed key, etc. Surface a clear message rather than a raw failure.
       const msg = ipqs?.message || 'Phone lookup failed.';
       return Response.json({ error: msg }, { status: 502 });
     }
@@ -131,27 +122,49 @@ Deno.serve(async (req) => {
     const isVoip = !!ipqs.VOIP;
     const isLeaked = !!ipqs.leaked;
 
+    // ---- Pull Reddit community reports for this number ----
+    let redditMatches: any[] = [];
+    try {
+      redditMatches = await base44.asServiceRole.entities.RedditScamNumber.filter({ normalized_number: cacheKey });
+    } catch (redditError) {
+      console.error('Reddit index lookup failed', redditError);
+    }
+
+    const redditReportCount = redditMatches.length;
+    const redditCategories = [...new Set(redditMatches.map((item: any) => item.scam_category).filter(Boolean))];
+    const redditSources = redditMatches.map((item: any) => item.post_url).filter(Boolean);
+
+    // Risk level is driven by IPQS fraud_score, but boosted if there are Reddit reports
     let riskLevel: 'low' | 'medium' | 'high' = 'low';
-    if (fraudScore >= 71 || recentAbuse) riskLevel = 'high';
+    if (fraudScore >= 71 || recentAbuse || redditReportCount > 0) riskLevel = 'high';
     else if (fraudScore >= 41 || isSpammer || isDoNotCall || isLeaked) riskLevel = 'medium';
 
+    // Combine categories from both sources
     const scamCategories: string[] = [];
     if (recentAbuse) scamCategories.push('Recent Abuse Reports');
     if (isSpammer) scamCategories.push('Known Spammer');
     if (isDoNotCall) scamCategories.push('Do Not Call List');
     if (isVoip) scamCategories.push('VOIP Number');
     if (isLeaked) scamCategories.push('Leaked/Breached Number');
+    scamCategories.push(...redditCategories);
 
+    // Build summary incorporating both IPQS and Reddit data
     const summaryParts: string[] = [];
     summaryParts.push(`IPQS fraud score: ${fraudScore}/100.`);
+    if (redditReportCount > 0) {
+      summaryParts.push(`Community evidence: ${redditReportCount} report${redditReportCount === 1 ? '' : 's'} from r/ScamNumbers.`);
+    }
     if (ipqs.line_type) summaryParts.push(`Line type: ${ipqs.line_type}.`);
     if (ipqs.active === false) summaryParts.push('This line appears inactive/disconnected.');
     if (recentAbuse) summaryParts.push('Recent abuse has been reported for this number.');
     if (isSpammer) summaryParts.push('This number is flagged as a known spammer.');
     if (isDoNotCall) summaryParts.push('This number is on the Do Not Call list.');
-    if (scamCategories.length === 0 && fraudScore < 41) summaryParts.push('No significant fraud signals found.');
+    if (scamCategories.length === 0 && fraudScore < 41 && redditReportCount === 0) summaryParts.push('No significant fraud signals found.');
 
     const businessName = ipqs.name && ipqs.name !== 'N/A' ? ipqs.name : '';
+
+    // Combine sources from IPQS and Reddit
+    const allSources = [...redditSources];
 
     const fullResult = {
       country: ipqs.country || '',
@@ -161,9 +174,9 @@ Deno.serve(async (req) => {
       user_reports: [] as string[],
       scam_categories: scamCategories,
       summary: summaryParts.join(' '),
-      sources: [] as string[],
-      report_count: 0,
-      scam_report_count: 0,
+      sources: allSources,
+      report_count: redditReportCount,
+      scam_report_count: redditReportCount,
       spam_report_count: 0,
       suspicious_report_count: 0,
       safe_report_count: 0,
@@ -175,8 +188,7 @@ Deno.serve(async (req) => {
       last_checked_at: new Date().toISOString(),
     };
 
-    // Persist to the canonical reputation index (does NOT touch community report_counts,
-    // since IPQS is a fraud-score source, not a user-report source).
+    // Persist to the canonical reputation index
     const rep = await upsertPhoneReputation(base44, {
       normalized_number: cacheKey,
       phone_number: displayFormat,
