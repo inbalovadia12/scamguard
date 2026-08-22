@@ -216,9 +216,9 @@ export default function PhoneLookup() {
               const isSelected = lookup.id === selectedId;
               const score = lookup.reputation_score || 0;
               const scoreColor =
-                score <= 35
+                score >= 71
                   ? "text-destructive bg-destructive/10"
-                  : score <= 70
+                  : score >= 41
                   ? "text-warning bg-warning/10"
                   : "text-success bg-success/10";
               return (
