@@ -1,9 +1,36 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
-// Phone-number reputation lookup backed by IPQualityScore's Phone Number
-// Validation API + Reddit r/ScamNumbers community reports.
-// Combines IPQS automated fraud scoring with crowdsourced community data.
+// Fast phone reputation lookup.
+// Sources: Vardin's canonical PhoneReputation index + locally indexed
+// r/ScamNumbers reports. No paid external phone-validation API is required.
+
+function normalizePhone(raw: string): { key: string; display: string } | null {
+  const input = String(raw || '').trim();
+  const digits = input.replace(/\D/g, '');
+  if (digits.length < 7 || digits.length > 15) return null;
+
+  let key: string;
+  let display = input;
+  if (digits.length === 10) {
+    key = `+1${digits}`;
+    display = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  } else if (digits.length === 11 && digits.startsWith('1')) {
+    key = `+${digits}`;
+    const ten = digits.slice(1);
+    display = `${ten.slice(0, 3)}-${ten.slice(3, 6)}-${ten.slice(6)}`;
+  } else {
+    key = `+${digits}`;
+  }
+
+  return { key, display };
+}
+
+function riskFromReports(count: number, score = 0): 'low' | 'medium' | 'high' {
+  if (count > 0 || score >= 71) return 'high';
+  if (score >= 41) return 'medium';
+  return 'low';
+}
 
 Deno.serve(async (req) => {
   try {
@@ -15,234 +42,174 @@ Deno.serve(async (req) => {
     if (plan === 'free') plan = 'starter';
     if (plan === 'elite') plan = 'premium';
     if (plan !== 'premium' && plan !== 'plus') {
-      return Response.json({ error: 'Premium subscription required', upgrade_url: 'https://vardin.base44.app/pricing' }, { status: 403 });
+      return Response.json({
+        error: 'Premium subscription required',
+        upgrade_url: 'https://vardin.base44.app/pricing',
+      }, { status: 403 });
     }
 
     const body = await req.json();
-    const phoneInput = String(body?.phone_number || '').trim();
-    if (!phoneInput) return Response.json({ error: 'Phone number is required' }, { status: 400 });
+    const normalized = normalizePhone(body?.phone_number);
+    if (!normalized) {
+      return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
+    }
 
-    const cleaned = phoneInput.replace(/[^\d]/g, '');
-    if (cleaned.length < 7) return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
+    const now = new Date().toISOString();
 
-    let tenDigit: string;
-    if (cleaned.length === 10) tenDigit = cleaned;
-    else if (cleaned.length === 11 && cleaned.startsWith('1')) tenDigit = cleaned.slice(1);
-    else if (cleaned.length > 10) tenDigit = cleaned.slice(-10);
-    else tenDigit = cleaned;
-
-    const isValidNANP = tenDigit.length === 10 && !tenDigit.startsWith('0') && !tenDigit.startsWith('1');
-    const displayFormat = isValidNANP
-      ? `${tenDigit.slice(0, 3)}-${tenDigit.slice(3, 6)}-${tenDigit.slice(6)}`
-      : phoneInput;
-    const cacheKey = isValidNANP ? `+1${tenDigit}` : `+${cleaned}`;
-
-    // ---- Fast path: return the canonical reputation index if this number is already known ----
+    // 1. Canonical Vardin reputation index.
+    let canonical: any = null;
     try {
-      const cached = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
-      const STALE_MS = 1000 * 60 * 60 * 24 * 30;
-      const r = cached[0];
-      if (r && r.last_external_check_at && (Date.now() - new Date(r.last_external_check_at).getTime() < STALE_MS)) {
-        const result = {
-          country: r.country || '',
-          carrier: r.carrier || '',
-          reputation_score: r.reputation_score ?? 0,
-          risk_level: r.risk_level || 'low',
-          user_reports: [],
-          scam_categories: r.scam_categories || [],
-          summary: r.summary || '',
-          sources: r.sources || [],
-          report_count: r.report_count || 0,
-          scam_report_count: r.scam_report_count || 0,
-          spam_report_count: r.spam_report_count || 0,
-          suspicious_report_count: r.suspicious_report_count || 0,
-          safe_report_count: r.safe_report_count || 0,
-          caller_id_status: r.caller_id_status || 'UNKNOWN',
-          confidence_score: r.confidence_score || 0,
-          verified_business: r.verified_business || false,
-          business_name: r.business_name || '',
-          caller_id_label: r.caller_id_label || '',
-          last_checked_at: r.last_checked_at || r.last_updated_at || '',
-        };
-        return Response.json({
-          result,
-          lookup: { id: r.id, phone_number: r.phone_number, cached: true, status: 'complete' },
-          cached: true,
-        });
-      }
-    } catch {}
-
-    // ---- Live IPQS lookup ----
-    const ipqsKey = Deno.env.get('IPQS_API_KEY');
-    if (!ipqsKey) {
-      return Response.json({ error: 'Phone lookup is not configured. Missing IPQS_API_KEY.' }, { status: 500 });
+      const rows = await base44.asServiceRole.entities.PhoneReputation.filter({
+        normalized_number: normalized.key,
+      });
+      canonical = rows?.[0] || null;
+    } catch (error) {
+      console.error('PhoneReputation lookup failed', error);
     }
 
-    const ipqsUrl = `https://www.ipqualityscore.com/api/json/phone/${encodeURIComponent(ipqsKey)}/${encodeURIComponent(cleaned)}?country[]=US&country[]=CA&country[]=IL`;
-
-    let ipqs: any = null;
-    try {
-      const resp = await fetch(ipqsUrl, { signal: AbortSignal.timeout(8000) });
-      ipqs = await resp.json();
-    } catch (fetchError) {
-      console.error('IPQS request failed', fetchError);
-      return Response.json({ error: 'The phone lookup service is temporarily unavailable. Please try again.' }, { status: 502 });
-    }
-
-    if (!ipqs || ipqs.success === false) {
-      const msg = ipqs?.message || 'Phone lookup failed.';
-      return Response.json({ error: msg }, { status: 502 });
-    }
-
-    if (ipqs.valid === false) {
-      const notInService = {
-        country: ipqs.country || '',
-        carrier: '',
-        reputation_score: 0,
-        risk_level: 'low',
-        user_reports: [],
-        scam_categories: [],
-        summary: 'This does not appear to be a valid, in-service phone number.',
-        sources: [],
-        report_count: 0, scam_report_count: 0, spam_report_count: 0, suspicious_report_count: 0, safe_report_count: 0,
-        caller_id_status: 'UNKNOWN',
-        confidence_score: 0,
-        verified_business: false,
-        business_name: '',
-        caller_id_label: '',
-        last_checked_at: new Date().toISOString(),
-      };
-      return Response.json({ result: notInService, lookup: { phone_number: displayFormat, cached: false, status: 'complete' }, cached: false });
-    }
-
-    const fraudScore = Math.max(0, Math.min(100, Number(ipqs.fraud_score) || 0));
-    const recentAbuse = !!ipqs.recent_abuse;
-    const isSpammer = !!ipqs.spammer;
-    const isDoNotCall = !!ipqs.do_not_call;
-    const isVoip = !!ipqs.VOIP;
-    const isLeaked = !!ipqs.leaked;
-
-    // ---- Pull Reddit community reports for this number ----
+    // 2. Local r/ScamNumbers index. This is local and does not contact Reddit.
     let redditMatches: any[] = [];
     try {
-      redditMatches = await base44.asServiceRole.entities.RedditScamNumber.filter({ normalized_number: cacheKey });
-    } catch (redditError) {
-      console.error('Reddit index lookup failed', redditError);
+      redditMatches = await base44.asServiceRole.entities.RedditScamNumber.filter({
+        normalized_number: normalized.key,
+      });
+    } catch (error) {
+      console.error('Reddit index lookup failed', error);
     }
 
-    const redditReportCount = redditMatches.length;
-    const redditCategories = [...new Set(redditMatches.map((item: any) => item.scam_category).filter(Boolean))];
-    const redditSources = redditMatches.map((item: any) => item.post_url).filter(Boolean);
+    const redditCategories = [...new Set(
+      redditMatches.map((item: any) => String(item?.scam_category || '').trim()).filter(Boolean),
+    )];
+    const redditSources = [...new Set(
+      redditMatches.map((item: any) => String(item?.post_url || '').trim()).filter(Boolean),
+    )];
+    const redditSummaries = redditMatches
+      .map((item: any) => String(item?.summary || '').trim())
+      .filter(Boolean)
+      .slice(0, 5);
 
-    // Risk level is driven by IPQS fraud_score, but boosted if there are Reddit reports
-    let riskLevel: 'low' | 'medium' | 'high' = 'low';
-    if (fraudScore >= 71 || recentAbuse || redditReportCount > 0) riskLevel = 'high';
-    else if (fraudScore >= 41 || isSpammer || isDoNotCall || isLeaked) riskLevel = 'medium';
+    const reportCount = redditMatches.length + Number(canonical?.report_count || 0);
+    const scamReportCount = redditMatches.length + Number(canonical?.scam_report_count || 0);
+    const baseScore = Number(canonical?.reputation_score || 0);
+    const score = Math.max(0, Math.min(100, redditMatches.length > 0 ? Math.max(baseScore, 85) : baseScore));
+    const riskLevel = riskFromReports(redditMatches.length, score);
 
-    // Combine categories from both sources
-    const scamCategories: string[] = [];
-    if (recentAbuse) scamCategories.push('Recent Abuse Reports');
-    if (isSpammer) scamCategories.push('Known Spammer');
-    if (isDoNotCall) scamCategories.push('Do Not Call List');
-    if (isVoip) scamCategories.push('VOIP Number');
-    if (isLeaked) scamCategories.push('Leaked/Breached Number');
-    scamCategories.push(...redditCategories);
+    const scamCategories = [...new Set([
+      ...(Array.isArray(canonical?.scam_categories) ? canonical.scam_categories : []),
+      ...redditCategories,
+    ])];
 
-    // Build summary incorporating both IPQS and Reddit data
-    const summaryParts: string[] = [];
-    summaryParts.push(`IPQS fraud score: ${fraudScore}/100.`);
-    if (redditReportCount > 0) {
-      summaryParts.push(`Community evidence: ${redditReportCount} report${redditReportCount === 1 ? '' : 's'} from r/ScamNumbers.`);
+    let summary = String(canonical?.summary || '').trim();
+    if (redditMatches.length > 0) {
+      const community = `Community evidence: ${redditMatches.length} report${redditMatches.length === 1 ? '' : 's'} from r/ScamNumbers.`;
+      summary = summary ? `${summary} ${community}` : community;
+      if (redditSummaries.length > 0) {
+        summary += ` ${redditSummaries[0]}`;
+      }
     }
-    if (ipqs.line_type) summaryParts.push(`Line type: ${ipqs.line_type}.`);
-    if (ipqs.active === false) summaryParts.push('This line appears inactive/disconnected.');
-    if (recentAbuse) summaryParts.push('Recent abuse has been reported for this number.');
-    if (isSpammer) summaryParts.push('This number is flagged as a known spammer.');
-    if (isDoNotCall) summaryParts.push('This number is on the Do Not Call list.');
-    if (scamCategories.length === 0 && fraudScore < 41 && redditReportCount === 0) summaryParts.push('No significant fraud signals found.');
+    if (!summary) {
+      summary = redditMatches.length > 0
+        ? 'This number has community scam reports indexed by Vardin from r/ScamNumbers.'
+        : 'No Vardin community scam reports are currently indexed for this number.';
+    }
 
-    const businessName = ipqs.name && ipqs.name !== 'N/A' ? ipqs.name : '';
+    const sources = [...new Set([
+      ...(Array.isArray(canonical?.sources) ? canonical.sources : []),
+      ...redditSources,
+    ])];
 
-    // Combine sources from IPQS and Reddit
-    const allSources = [...redditSources];
-
-    const fullResult = {
-      country: ipqs.country || '',
-      carrier: ipqs.carrier || '',
-      reputation_score: fraudScore,
+    const result = {
+      country: canonical?.country || '',
+      carrier: canonical?.carrier || '',
+      reputation_score: score,
       risk_level: riskLevel,
-      user_reports: [] as string[],
+      user_reports: redditSummaries,
       scam_categories: scamCategories,
-      summary: summaryParts.join(' '),
-      sources: allSources,
-      report_count: redditReportCount,
-      scam_report_count: redditReportCount,
-      spam_report_count: 0,
-      suspicious_report_count: 0,
-      safe_report_count: 0,
-      caller_id_status: 'UNKNOWN',
-      confidence_score: 0,
-      verified_business: false,
-      business_name: businessName,
-      caller_id_label: '',
-      last_checked_at: new Date().toISOString(),
+      summary,
+      sources,
+      report_count: reportCount,
+      scam_report_count: scamReportCount,
+      spam_report_count: Number(canonical?.spam_report_count || 0),
+      suspicious_report_count: Number(canonical?.suspicious_report_count || 0),
+      safe_report_count: Number(canonical?.safe_report_count || 0),
+      caller_id_status: canonical?.caller_id_status || (redditMatches.length > 0 ? 'SCAM' : 'UNKNOWN'),
+      confidence_score: Math.max(
+        Number(canonical?.confidence_score || 0),
+        redditMatches.length > 0 ? Math.min(95, 60 + redditMatches.length * 10) : 0,
+      ),
+      verified_business: !!canonical?.verified_business,
+      business_name: canonical?.business_name || '',
+      caller_id_label: canonical?.caller_id_label || (redditMatches.length > 0 ? 'Vardin: Scam Likely' : ''),
+      last_checked_at: canonical?.last_checked_at || now,
     };
 
-    // Persist to the canonical reputation index
-    const rep = await upsertPhoneReputation(base44, {
-      normalized_number: cacheKey,
-      phone_number: displayFormat,
-      country: fullResult.country,
-      carrier: fullResult.carrier,
-      reputation_score: fullResult.reputation_score,
-      risk_level: fullResult.risk_level,
-      scam_categories: fullResult.scam_categories,
-      summary: fullResult.summary,
-      sources: fullResult.sources,
-      last_external_check_at: new Date().toISOString(),
-      verified_business: fullResult.verified_business,
-      business_name: fullResult.business_name,
-    });
+    // Keep the canonical index aligned with Reddit evidence.
+    try {
+      await upsertPhoneReputation(base44, {
+        normalized_number: normalized.key,
+        phone_number: normalized.display,
+        reputation_score: result.reputation_score,
+        risk_level: result.risk_level,
+        report_count: result.report_count,
+        scam_report_count: result.scam_report_count,
+        scam_categories: result.scam_categories,
+        summary: result.summary,
+        sources: result.sources,
+        caller_id_status: result.caller_id_status,
+        confidence_score: result.confidence_score,
+        caller_id_label: result.caller_id_label,
+        last_checked_at: now,
+        last_external_check_at: now,
+      });
+    } catch (error) {
+      console.error('PhoneReputation upsert failed', error);
+    }
 
-    fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
-    fullResult.confidence_score = rep?.confidence_score || 0;
-    fullResult.caller_id_label = rep?.caller_id_label || '';
-
+    // Save the user's lookup without making this persistence step fatal.
     let lookup: any = null;
     try {
       lookup = await base44.entities.PhoneLookup.create({
-        phone_number: displayFormat,
+        phone_number: normalized.display,
         status: 'complete',
-        country: fullResult.country,
-        carrier: fullResult.carrier,
-        reputation_score: fullResult.reputation_score,
-        risk_level: fullResult.risk_level,
-        user_reports: fullResult.user_reports,
-        scam_categories: fullResult.scam_categories,
-        summary: fullResult.summary,
-        sources: fullResult.sources,
-        report_count: fullResult.report_count,
-        scam_report_count: fullResult.scam_report_count,
-        spam_report_count: fullResult.spam_report_count,
-        suspicious_report_count: fullResult.suspicious_report_count,
-        safe_report_count: fullResult.safe_report_count,
-        caller_id_status: fullResult.caller_id_status,
-        confidence_score: fullResult.confidence_score,
-        verified_business: fullResult.verified_business,
-        business_name: fullResult.business_name,
-        caller_id_label: fullResult.caller_id_label,
+        country: result.country,
+        carrier: result.carrier,
+        reputation_score: result.reputation_score,
+        risk_level: result.risk_level,
+        user_reports: result.user_reports,
+        scam_categories: result.scam_categories,
+        summary: result.summary,
+        sources: result.sources,
+        report_count: result.report_count,
+        scam_report_count: result.scam_report_count,
+        spam_report_count: result.spam_report_count,
+        suspicious_report_count: result.suspicious_report_count,
+        safe_report_count: result.safe_report_count,
+        caller_id_status: result.caller_id_status,
+        confidence_score: result.confidence_score,
+        verified_business: result.verified_business,
+        business_name: result.business_name,
+        caller_id_label: result.caller_id_label,
       });
-    } catch (saveError) {
-      console.error('PhoneLookup save failed', saveError);
+    } catch (error) {
+      console.error('PhoneLookup save failed', error);
     }
 
     return Response.json({
-      result: fullResult,
-      lookup: lookup ? { id: lookup.id, phone_number: displayFormat, cached: false, status: 'complete' } : { phone_number: displayFormat, cached: false, status: 'complete' },
-      cached: false,
+      result,
+      lookup: lookup
+        ? { id: lookup.id, phone_number: normalized.display, cached: !!canonical, status: 'complete' }
+        : { phone_number: normalized.display, cached: !!canonical, status: 'complete' },
+      cached: !!canonical,
+      reddit: {
+        matched: redditMatches.length > 0,
+        report_count: redditMatches.length,
+        sources: redditSources,
+      },
     });
   } catch (error) {
     console.error('lookupPhoneNumber error', error);
-    return Response.json({ error: error instanceof Error ? error.message : 'Lookup failed' }, { status: 500 });
+    return Response.json({
+      error: error instanceof Error ? error.message : 'Lookup failed',
+    }, { status: 500 });
   }
 });
