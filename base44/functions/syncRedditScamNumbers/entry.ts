@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
-const SUBREDDIT_URL = 'https://www.reddit.com/r/ScamNumbers/new.json?limit=100';
+const SUBREDDIT_URL = 'https://www.reddit.com/r/ScamNumbers/new.rss';
 const USER_AGENT = 'VardinScamGuard/1.0';
 
 function normalizePhone(raw: string): string | null {
@@ -34,34 +34,64 @@ function classify(title: string, text: string): string {
   return 'other';
 }
 
+function decodeXml(text: string): string {
+  return text
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseRss(xml: string) {
+  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].map((m) => m[1]);
+  return items.map((item, index) => {
+    const get = (tag: string) => {
+      const match = item.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'));
+      return match ? decodeXml(match[1]) : '';
+    };
+    const link = get('link');
+    const guid = get('guid');
+    const id = (guid.match(/comments\/([a-z0-9]+)/i) || [])[1] || guid || `rss-${index}-${Buffer.from(link || item).toString('base64url').slice(0, 24)}`;
+    const pubDate = get('pubDate');
+    const description = get('description');
+    const title = get('title');
+    return { id, title, description, link, pubDate };
+  });
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
     const response = await fetch(SUBREDDIT_URL, {
       headers: {
-        accept: 'application/json',
+        accept: 'application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8',
         'user-agent': USER_AGENT,
       },
       signal: AbortSignal.timeout(15000),
     });
 
+    const raw = await response.text();
     if (!response.ok) {
       return Response.json({ error: `Reddit returned HTTP ${response.status}` }, { status: 502 });
     }
 
-    const payload = await response.json();
-    const posts = (payload?.data?.children || []).slice(0, 50);
+    const posts = parseRss(raw).slice(0, 50);
     let scannedPosts = 0;
     let createdRecords = 0;
     let phoneMatches = 0;
 
     for (const child of posts) {
-      const post = child?.data;
+      const post = child;
       if (!post?.id) continue;
       scannedPosts += 1;
 
-      const body = [post.title, post.selftext].filter(Boolean).join('\n');
+      const body = [post.title, post.description].filter(Boolean).join('\n');
       const phones = extractPhones(body);
       if (!phones.length) continue;
 
@@ -79,13 +109,13 @@ Deno.serve(async (req) => {
           normalized_number: normalized,
           phone_number: normalized,
           title: post.title || '',
-          summary: String(post.selftext || '').slice(0, 4000),
-          scam_category: classify(post.title || '', post.selftext || ''),
+          summary: String(post.description || '').slice(0, 4000),
+          scam_category: classify(post.title || '', post.description || ''),
           subreddit: 'ScamNumbers',
-          post_url: `https://www.reddit.com${post.permalink || ''}`,
+          post_url: post.link || '',
           post_id: post.id,
-          author: post.author || '[deleted]',
-          posted_at: post.created_utc ? new Date(post.created_utc * 1000).toISOString() : new Date().toISOString(),
+          author: '[rss]',
+          posted_at: post.pubDate ? new Date(post.pubDate).toISOString() : new Date().toISOString(),
           synced_at: new Date().toISOString(),
           source_confidence: 90,
         });
