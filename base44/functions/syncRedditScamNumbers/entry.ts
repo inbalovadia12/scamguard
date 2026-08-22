@@ -37,10 +37,6 @@ function classify(title: string, text: string): string {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Admin access required' }, { status: 403 });
-    }
 
     const response = await fetch(SUBREDDIT_URL, {
       headers: {
@@ -55,7 +51,7 @@ Deno.serve(async (req) => {
     }
 
     const payload = await response.json();
-    const posts = payload?.data?.children || [];
+    const posts = (payload?.data?.children || []).slice(0, 50);
     let scannedPosts = 0;
     let createdRecords = 0;
     let phoneMatches = 0;
