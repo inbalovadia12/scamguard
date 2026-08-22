@@ -1,5 +1,5 @@
 {
-  "description": "Synchronizes recent r/ScamNumbers posts into Vardin's local phone-number reputation index every 6 hours",
+  "description": "Synchronizes recent r/ScamNumbers posts into Vardin's local phone-number reputation index weekly",
   "name": "Reddit Scam Numbers Sync",
   "trigger": {
     "condition": null,
@@ -7,7 +7,7 @@
       "trigger_type": "scheduled",
       "events": [],
       "schedule_mode": "recurring",
-      "cron_expression": "15 */6 * * *",
+      "cron_expression": "15 3 * * 0",
       "one_time_date": null,
       "timezone": "UTC",
       "interval_value": null,
