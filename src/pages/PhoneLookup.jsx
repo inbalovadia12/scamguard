@@ -49,11 +49,13 @@ export default function PhoneLookup() {
     }
   };
 
-  const applyLookupToResult = (phone, result) => ({
+  const applyLookupToResult = (phone, result) => {
+    const confirmedCommunityScam = (result.community?.scam_reports || 0) > 0 || (result.reddit?.report_count || 0) > 0 || (result.scam_report_count || 0) > 0;
+    return {
     phone_number: phone,
     country: result.country,
     carrier: result.carrier,
-    reputation_score: result.reputation_score,
+    reputation_score: confirmedCommunityScam ? 100 : (result.reputation_score ?? 0),
     risk_level: result.risk_level,
     user_reports: result.user_reports || [],
     scam_categories: result.scam_categories || [],
@@ -72,7 +74,8 @@ export default function PhoneLookup() {
     created_date: result.created_date || new Date().toISOString(),
     community: result.community || { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0 },
     reddit: result.reddit || { matched: false, report_count: 0, sources: [] },
-  });
+    };
+  };
 
   const handleLookup = async () => {
     if (!phoneInput.trim()) return;
