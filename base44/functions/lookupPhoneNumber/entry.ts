@@ -109,8 +109,11 @@ Deno.serve(async (req) => {
     const reportCount = redditMatches.length + communityMatches.length + Number(canonical?.report_count || 0);
     const scamReportCount = redditMatches.length + communityScam + Number(canonical?.scam_report_count || 0);
     const baseScore = Number(canonical?.reputation_score || 0);
-    const score = Math.max(0, Math.min(100, redditMatches.length > 0 ? Math.max(baseScore, 85) : baseScore));
-    const riskLevel = riskFromReports(redditMatches.length + communityScam, score);
+    const confirmedCommunityScam = redditMatches.length > 0 || communityScam > 0;
+    const score = confirmedCommunityScam
+      ? 100
+      : Math.max(0, Math.min(100, baseScore));
+    const riskLevel = confirmedCommunityScam ? 'high' : riskFromReports(0, score);
 
     const scamCategories = [...new Set([
       ...(Array.isArray(canonical?.scam_categories) ? canonical.scam_categories : []),
@@ -130,9 +133,15 @@ Deno.serve(async (req) => {
       if (communitySummaries.length > 0) summary += ` ${communitySummaries[0]}`;
     }
     if (!summary) {
-      summary = redditMatches.length > 0
-        ? 'This number has community scam reports indexed by Vardin from r/ScamNumbers.'
-        : 'No Vardin community scam reports are currently indexed for this number.';
+      if (redditMatches.length > 0 && communityMatches.length > 0) {
+        summary = 'This number has reports in both r/ScamNumbers and the Vardin Community.';
+      } else if (redditMatches.length > 0) {
+        summary = 'This number has scam reports indexed by Vardin from r/ScamNumbers.';
+      } else if (communityMatches.length > 0) {
+        summary = 'This number has scam reports in the Vardin Community.';
+      } else {
+        summary = 'No community scam reports are currently indexed for this number.';
+      }
     }
 
     const sources = [...new Set([
@@ -154,14 +163,14 @@ Deno.serve(async (req) => {
       spam_report_count: Number(canonical?.spam_report_count || 0) + communitySpam,
       suspicious_report_count: Number(canonical?.suspicious_report_count || 0) + communitySuspicious,
       safe_report_count: Number(canonical?.safe_report_count || 0) + communitySafe,
-      caller_id_status: canonical?.caller_id_status || (redditMatches.length > 0 ? 'SCAM' : 'UNKNOWN'),
+      caller_id_status: confirmedCommunityScam ? 'SCAM' : (canonical?.caller_id_status || 'UNKNOWN'),
       confidence_score: Math.max(
         Number(canonical?.confidence_score || 0),
-        redditMatches.length > 0 ? Math.min(95, 60 + redditMatches.length * 10) : 0,
+        confirmedCommunityScam ? 100 : 0,
       ),
       verified_business: !!canonical?.verified_business,
       business_name: canonical?.business_name || '',
-      caller_id_label: canonical?.caller_id_label || (redditMatches.length > 0 ? 'Vardin: Scam Likely' : ''),
+      caller_id_label: confirmedCommunityScam ? 'Vardin: Scam Likely' : (canonical?.caller_id_label || ''),
       last_checked_at: canonical?.last_checked_at || now,
     };
 
