@@ -61,19 +61,17 @@ const THEMES = {
     ],
   },
   phone: {
-    title: "Looking Up Phone Number",
+    title: "Checking This Phone Number",
     gradient: "from-primary to-primary/80",
-    estimatedDuration: 25000,
+    estimatedDuration: 5000,
     steps: [
-      { label: "Identifying carrier and country...", at: 0 },
-      { label: "Searching scam report databases...", at: 12 },
-      { label: "Checking user-reported numbers...", at: 28 },
-      { label: "Cross-referencing known scam lists...", at: 45 },
-      { label: "Analyzing call patterns...", at: 62 },
-      { label: "Checking reputation services...", at: 78 },
-      { label: "Compiling number reputation...", at: 92 },
+      { label: "Checking number format...", at: 0 },
+      { label: "Checking carrier and country...", at: 18 },
+      { label: "Checking scam and spam signals...", at: 38 },
+      { label: "Scoring reputation risk...", at: 62 },
+      { label: "Preparing your result...", at: 84 },
     ],
-  },
+  }
   local: {
     title: "Scanning Local Scam Activity",
     gradient: "from-primary to-primary/80",
