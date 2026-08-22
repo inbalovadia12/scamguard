@@ -136,8 +136,17 @@ Deno.serve(async (req) => {
 
     // Risk level is driven by IPQS fraud_score, but boosted if there are Reddit reports
     let riskLevel: 'low' | 'medium' | 'high' = 'low';
-    if (fraudScore >= 71 || recentAbuse || redditReportCount > 0) riskLevel = 'high';
-    else if (fraudScore >= 41 || isSpammer || isDoNotCall || isLeaked) riskLevel = 'medium';
+    let adjustedScore = fraudScore;
+    
+    // If there are Reddit reports, boost the score to reflect the community evidence
+    if (redditReportCount > 0) {
+      adjustedScore = Math.max(fraudScore, 75); // At least "high risk" if community confirms scam
+      riskLevel = 'high';
+    } else if (fraudScore >= 71 || recentAbuse) {
+      riskLevel = 'high';
+    } else if (fraudScore >= 41 || isSpammer || isDoNotCall || isLeaked) {
+      riskLevel = 'medium';
+    }
 
     // Combine categories from both sources
     const scamCategories: string[] = [];
