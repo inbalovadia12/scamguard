@@ -1,0 +1,4 @@
+{
+  "name": "syncRedditScamNumbers",
+  "entry": "entry.ts"
+}
