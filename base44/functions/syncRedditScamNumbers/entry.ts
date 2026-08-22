@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
 
     const research = await base44.integrations.Core.InvokeLLM({
-      prompt: `Research the public Reddit subreddit r/ScamNumbers. Find recent posts from the subreddit that contain phone numbers associated with scams or spam. Return ONLY real, verifiable matches where the phone number is explicitly present in the post and the Reddit post URL is provided. Do not invent phone numbers, reports, post URLs, authors, or dates. Prefer the newest 50 relevant posts. Extract every distinct phone number found in each relevant post. Respond in ${LANGUAGE}.`,
+      prompt: `Use web search to find publicly indexed pages from the Reddit subreddit r/ScamNumbers. Do NOT directly open, fetch, or call Reddit URLs or Reddit's API, because direct Reddit access may be denied. Use search-result snippets and other publicly indexed search information only. Find recent posts that contain phone numbers associated with scams or spam. Return ONLY real, verifiable matches where the phone number is explicitly present in the indexed search result and the Reddit post URL is provided by the search result. Do not invent phone numbers, reports, post URLs, authors, or dates. Prefer the newest 50 relevant posts. Extract every distinct phone number found in each relevant post. Respond in ${LANGUAGE}.`,
       add_context_from_internet: true,
       model: 'gemini_3_flash',
       response_json_schema: {
