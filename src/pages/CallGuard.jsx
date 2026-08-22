@@ -23,7 +23,7 @@ export default function CallGuard() {
       const response = await base44.functions.invoke("getCallGuardDashboard", {});
       setStatus(response.data || null);
     } catch (error) {
-      setStatus({ connected: false, error: error.message || "Unable to load Call Guard status." });
+      setStatus({ connected: false, error: error.message || "Unable to load Call Shield status." });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -54,7 +54,7 @@ export default function CallGuard() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
               <PhoneCall className="w-5 h-5 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight font-heading">Call Guard</h1>
+            <h1 className="text-2xl font-bold tracking-tight font-heading">Call Shield</h1>
             <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/15 text-amber-600 border border-amber-500/20 tracking-wider uppercase">Under Construction</span>
           </div>
           <p className="text-sm text-muted-foreground max-w-md">AI-powered call protection is currently in development.</p>
@@ -64,7 +64,7 @@ export default function CallGuard() {
             <Lock className="w-7 h-7 text-primary" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-semibold font-heading">Call Guard isn't available yet</h2>
+            <h2 className="text-xl font-semibold font-heading">Call Shield isn't available yet</h2>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">We're still finishing this feature. When it launches, Vardin will help identify suspicious calls before you answer them by deploying an ai voice agent that will find out why the caller is calling</p>
           </div>
           <p className="text-xs text-muted-foreground">No call data or setup information is shown on this page.</p>
@@ -87,7 +87,7 @@ export default function CallGuard() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
               <PhoneCall className="w-5 h-5 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight font-heading">Call Guard</h1>
+            <h1 className="text-2xl font-bold tracking-tight font-heading">Call Shield</h1>
             <span className={`text-[10px] font-bold px-2 py-1 rounded-full border tracking-wider uppercase ${status?.connected ? "bg-success/10 text-success border-success/20" : "bg-destructive/10 text-destructive border-destructive/20"}`}>
               {loading ? "Checking" : status?.connected ? "Connected" : "Needs attention"}
             </span>
@@ -112,7 +112,7 @@ export default function CallGuard() {
       <div className="rounded-2xl border border-success/20 bg-success/5 p-4 flex items-start gap-3">
           <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold">Call Guard backend is connected</p>
+            <p className="text-sm font-semibold">Call Shield backend is connected</p>
             <p className="text-xs text-muted-foreground mt-1">Call activity totals are restricted to administrators. Your call protection setup is still active.</p>
           </div>
         </div>
@@ -120,7 +120,7 @@ export default function CallGuard() {
 
       <div className="rounded-2xl border border-border/50 bg-card p-5 sm:p-6 space-y-5">
         <div>
-          <h2 className="text-lg font-semibold font-heading">How Call Guard works</h2>
+          <h2 className="text-lg font-semibold font-heading">How Call Shield works</h2>
           <p className="text-sm text-muted-foreground mt-1">The live phone agent and the Vardin analysis backend are separate steps.</p>
         </div>
         <div className="grid sm:grid-cols-3 gap-3">
@@ -152,7 +152,7 @@ export default function CallGuard() {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h2 className="font-semibold">Verdict breakdown</h2>
-            <p className="text-xs text-muted-foreground mt-1">Aggregate results from all processed Call Guard calls.</p>
+            <p className="text-xs text-muted-foreground mt-1">Aggregate results from all processed Call Shield calls.</p>
           </div>
           {status?.last_activity_at && <span className="text-xs text-muted-foreground">Last activity {new Date(status.last_activity_at).toLocaleString()}</span>}
         </div>
@@ -171,7 +171,7 @@ export default function CallGuard() {
         </div>
         <div className="space-y-3">
           {reports.length === 0 ?
-          <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No Call Guard reports yet.</div> :
+          <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No Call Shield reports yet.</div> :
           reports.map((report) => {
             const meta = VERDICT_META[report.vardin_verdict] || { label: report.processed ? "Pending" : "Processing", icon: Clock3, className: "text-muted-foreground" };
             const Icon = meta.icon;
@@ -200,7 +200,7 @@ export default function CallGuard() {
 
       <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-primary/5 border border-primary/10">
         <ShieldCheck className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-muted-foreground leading-relaxed">Call Guard is intentionally separate from Phone Lookup and Live Guard. Call Guard handles the completed Retell conversation and makes the final Vardin verdict after the call.</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">Call Shield is intentionally separate from Phone Lookup and Live Guard. Call Shield handles the completed Retell conversation and makes the final Vardin verdict after the call.</p>
       </div>
 
       {status?.error && <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">{status.error}</div>}
