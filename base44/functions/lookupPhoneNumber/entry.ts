@@ -77,6 +77,16 @@ Deno.serve(async (req) => {
       console.error('Reddit index lookup failed', error);
     }
 
+    let communityMatches: any[] = [];
+    try {
+      communityMatches = await base44.asServiceRole.entities.PhoneCommunityReport.filter({
+        normalized_number: normalized.key,
+        status: 'active',
+      });
+    } catch (error) {
+      console.error('Vardin community phone-report lookup failed', error);
+    }
+
     const redditCategories = [...new Set(
       redditMatches.map((item: any) => String(item?.scam_category || '').trim()).filter(Boolean),
     )];
@@ -87,25 +97,37 @@ Deno.serve(async (req) => {
       .map((item: any) => String(item?.summary || '').trim())
       .filter(Boolean)
       .slice(0, 5);
+    const communitySummaries = communityMatches
+      .map((item: any) => String(item?.summary || '').trim())
+      .filter(Boolean)
+      .slice(0, 5);
+    const communityScam = communityMatches.filter((item: any) => item.report_type === 'scam').length;
+    const communitySpam = communityMatches.filter((item: any) => item.report_type === 'spam').length;
+    const communitySuspicious = communityMatches.filter((item: any) => item.report_type === 'suspicious').length;
+    const communitySafe = communityMatches.filter((item: any) => item.report_type === 'safe').length;
 
-    const reportCount = redditMatches.length + Number(canonical?.report_count || 0);
-    const scamReportCount = redditMatches.length + Number(canonical?.scam_report_count || 0);
+    const reportCount = redditMatches.length + communityMatches.length + Number(canonical?.report_count || 0);
+    const scamReportCount = redditMatches.length + communityScam + Number(canonical?.scam_report_count || 0);
     const baseScore = Number(canonical?.reputation_score || 0);
     const score = Math.max(0, Math.min(100, redditMatches.length > 0 ? Math.max(baseScore, 85) : baseScore));
-    const riskLevel = riskFromReports(redditMatches.length, score);
+    const riskLevel = riskFromReports(redditMatches.length + communityScam, score);
 
     const scamCategories = [...new Set([
       ...(Array.isArray(canonical?.scam_categories) ? canonical.scam_categories : []),
       ...redditCategories,
+      ...communityMatches.map((item: any) => String(item?.scam_category || '').trim()).filter(Boolean),
     ])];
 
     let summary = String(canonical?.summary || '').trim();
     if (redditMatches.length > 0) {
-      const community = `Community evidence: ${redditMatches.length} report${redditMatches.length === 1 ? '' : 's'} from r/ScamNumbers.`;
-      summary = summary ? `${summary} ${community}` : community;
-      if (redditSummaries.length > 0) {
-        summary += ` ${redditSummaries[0]}`;
-      }
+      const redditEvidence = `Reddit evidence: ${redditMatches.length} report${redditMatches.length === 1 ? '' : 's'} from r/ScamNumbers.`;
+      summary = summary ? `${summary} ${redditEvidence}` : redditEvidence;
+      if (redditSummaries.length > 0) summary += ` ${redditSummaries[0]}`;
+    }
+    if (communityMatches.length > 0) {
+      const vardinEvidence = `Vardin Community evidence: ${communityMatches.length} report${communityMatches.length === 1 ? '' : 's'}.`;
+      summary = summary ? `${summary} ${vardinEvidence}` : vardinEvidence;
+      if (communitySummaries.length > 0) summary += ` ${communitySummaries[0]}`;
     }
     if (!summary) {
       summary = redditMatches.length > 0
@@ -129,9 +151,9 @@ Deno.serve(async (req) => {
       sources,
       report_count: reportCount,
       scam_report_count: scamReportCount,
-      spam_report_count: Number(canonical?.spam_report_count || 0),
-      suspicious_report_count: Number(canonical?.suspicious_report_count || 0),
-      safe_report_count: Number(canonical?.safe_report_count || 0),
+      spam_report_count: Number(canonical?.spam_report_count || 0) + communitySpam,
+      suspicious_report_count: Number(canonical?.suspicious_report_count || 0) + communitySuspicious,
+      safe_report_count: Number(canonical?.safe_report_count || 0) + communitySafe,
       caller_id_status: canonical?.caller_id_status || (redditMatches.length > 0 ? 'SCAM' : 'UNKNOWN'),
       confidence_score: Math.max(
         Number(canonical?.confidence_score || 0),
@@ -200,6 +222,14 @@ Deno.serve(async (req) => {
         ? { id: lookup.id, phone_number: normalized.display, cached: !!canonical, status: 'complete' }
         : { phone_number: normalized.display, cached: !!canonical, status: 'complete' },
       cached: !!canonical,
+      community: {
+        matched: communityMatches.length > 0,
+        report_count: communityMatches.length,
+        scam_reports: communityScam,
+        spam_reports: communitySpam,
+        suspicious_reports: communitySuspicious,
+        safe_reports: communitySafe,
+      },
       reddit: {
         matched: redditMatches.length > 0,
         report_count: redditMatches.length,
