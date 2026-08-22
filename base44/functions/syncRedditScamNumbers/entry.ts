@@ -84,11 +84,7 @@ Deno.serve(async (req) => {
           post_url: postUrl,
           post_id: postId,
           author: '',
-          posted_at: (() => {
-            const value = String(post?.posted_at || '').trim();
-            const parsed = value ? new Date(value) : null;
-            return parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString() : new Date().toISOString();
-          })(),
+          posted_at: new Date().toISOString(),
           synced_at: new Date().toISOString(),
           source_confidence: 85,
         });
