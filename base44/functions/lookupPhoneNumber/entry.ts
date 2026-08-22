@@ -80,26 +80,39 @@ Deno.serve(async (req) => {
     }
 
     const fraudScore = Math.max(0, Math.min(100, Number(data.fraud_score) || 0));
+    let redditMatches: any[] = [];
+    try {
+      redditMatches = await base44.asServiceRole.entities.RedditScamNumber.filter({ normalized_number: normalized });
+    } catch (redditError) {
+      console.error('Reddit index lookup failed', redditError);
+    }
+
+    const redditReportCount = redditMatches.length;
+    const redditSources = redditMatches.map((item: any) => item.post_url).filter(Boolean);
+    const redditCategories = [...new Set(redditMatches.map((item: any) => item.scam_category).filter(Boolean))];
+    const redditSummary = redditMatches.length
+      ? `Community evidence found: ${redditReportCount} Reddit ScamNumbers report${redditReportCount === 1 ? '' : 's'} match this phone number.`
+      : '';
     const result = {
       phone_number: data.formatted || normalized,
       country: data.country || '',
       carrier: data.carrier || '',
       reputation_score: Math.max(0, 100 - fraudScore),
-      risk_level: deriveRisk(fraudScore, data.risky ?? null, data.recent_abuse ?? null, data.spammer ?? null),
-      user_reports: [],
-      scam_categories: [],
-      summary: buildSummary(data),
-      sources: [],
-      report_count: 0,
-      scam_report_count: 0,
+      risk_level: redditReportCount > 0 ? 'high' : deriveRisk(fraudScore, data.risky ?? null, data.recent_abuse ?? null, data.spammer ?? null),
+      user_reports: redditMatches.map((item: any) => item.summary || item.title).filter(Boolean),
+      scam_categories: redditCategories,
+      summary: [buildSummary(data), redditSummary].filter(Boolean).join(' '),
+      sources: [...new Set(redditSources)],
+      report_count: redditReportCount,
+      scam_report_count: redditReportCount,
       spam_report_count: data.spammer === true ? 1 : 0,
       suspicious_report_count: data.risky === true ? 1 : 0,
-      safe_report_count: data.valid === true && data.risky !== true && data.spammer !== true ? 1 : 0,
-      caller_id_status: data.spammer === true ? 'SPAM' : (fraudScore >= 71 ? 'SCAM' : (fraudScore >= 36 || data.risky === true ? 'SUSPICIOUS' : 'SAFE')),
-      confidence_score: 85,
+      safe_report_count: redditReportCount === 0 && data.valid === true && data.risky !== true && data.spammer !== true ? 1 : 0,
+      caller_id_status: redditReportCount > 0 ? 'SCAM' : (data.spammer === true ? 'SPAM' : (fraudScore >= 71 ? 'SCAM' : (fraudScore >= 36 || data.risky === true ? 'SUSPICIOUS' : 'SAFE'))),
+      confidence_score: redditReportCount > 0 ? Math.min(100, 90 + Math.min(10, redditReportCount)) : 85,
       verified_business: Boolean(data.name && data.name !== 'N/A' && data.name !== 'IPQualityScore'),
       business_name: data.name && data.name !== 'N/A' && data.name !== 'IPQualityScore' ? data.name : '',
-      caller_id_label: '',
+      caller_id_label: redditReportCount > 0 ? 'Vardin: Scam Likely' : '',
       created_date: new Date().toISOString(),
     };
 
