@@ -1,5 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-import { waitUntil } from 'base44:runtime';
 import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
 // Strip hallucinated "deeper check" / "background process" text from LLM summaries.
@@ -103,19 +102,7 @@ Deno.serve(async (req) => {
       }
     } catch {}
 
-    // ---- Return immediately with a pending record; do the (slow, ~25s) web search in the
-    // background. The proxy/function timeout is fixed and shorter than typical search time,
-    // so we can no longer await the LLM call in the request path (that was the 502 cause).
-    const pendingLookup = await base44.entities.PhoneLookup.create({
-      phone_number: displayFormat,
-      status: 'pending',
-      reputation_score: 50,
-      risk_level: 'medium',
-      caller_id_status: 'UNKNOWN',
-      confidence_score: 0,
-      summary: 'Searching the web for reports about this number…',
-    });
-
+    // ---- Single synchronous web-search lookup (waits ~25s) ----
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
@@ -166,97 +153,95 @@ Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON
 
 Respond in ${languageName}.`;
 
-    // Run the LLM web-search lookup in the background so response returns immediately
-    waitUntil((async () => {
-      try {
-        const llmResponse = await base44.integrations.Core.InvokeLLM({
-          prompt,
-          add_context_from_internet: true,
-          model: 'gemini_3_flash',
-        });
+    let llmResponse: any = null;
+    try {
+      llmResponse = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        add_context_from_internet: true,
+        model: 'gemini_3_flash',
+      });
+    } catch (llmError) {
+      console.error('LLM web search failed', llmError);
+      return Response.json({ error: 'Phone lookup service temporarily unavailable. Please try again.' }, { status: 502 });
+    }
 
-        const result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
-        const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
-        const cleanSummary = sanitizeSummary(result.summary || '');
+    const result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
+    const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
+    const cleanSummary = sanitizeSummary(result.summary || '');
 
-        const fullResult = {
-          country: result.country || '',
-          carrier: result.carrier || '',
-          reputation_score: consistentScore,
-          risk_level: consistentRisk,
-          user_reports: Array.isArray(result.user_reports) ? result.user_reports : [],
-          scam_categories: Array.isArray(result.scam_categories) ? result.scam_categories : [],
-          summary: cleanSummary,
-          sources: Array.isArray(result.sources) ? result.sources : [],
-          report_count: (result.scam_report_count || 0) + (result.spam_report_count || 0) + (result.suspicious_report_count || 0) + (result.safe_report_count || 0),
-          scam_report_count: result.scam_report_count || 0,
-          spam_report_count: result.spam_report_count || 0,
-          suspicious_report_count: result.suspicious_report_count || 0,
-          safe_report_count: result.safe_report_count || 0,
-          caller_id_status: 'UNKNOWN',
-          confidence_score: 0,
-          verified_business: result.verified_business || false,
-          business_name: result.business_name || '',
-          caller_id_label: '',
-          last_checked_at: new Date().toISOString(),
-        };
+    const fullResult = {
+      country: result.country || '',
+      carrier: result.carrier || '',
+      reputation_score: consistentScore,
+      risk_level: consistentRisk,
+      user_reports: Array.isArray(result.user_reports) ? result.user_reports : [],
+      scam_categories: Array.isArray(result.scam_categories) ? result.scam_categories : [],
+      summary: cleanSummary,
+      sources: Array.isArray(result.sources) ? result.sources : [],
+      report_count: (result.scam_report_count || 0) + (result.spam_report_count || 0) + (result.suspicious_report_count || 0) + (result.safe_report_count || 0),
+      scam_report_count: result.scam_report_count || 0,
+      spam_report_count: result.spam_report_count || 0,
+      suspicious_report_count: result.suspicious_report_count || 0,
+      safe_report_count: result.safe_report_count || 0,
+      caller_id_status: 'UNKNOWN',
+      confidence_score: 0,
+      verified_business: result.verified_business || false,
+      business_name: result.business_name || '',
+      caller_id_label: '',
+      last_checked_at: new Date().toISOString(),
+    };
 
-        // Persist to cache index
-        const rep = await upsertPhoneReputation(base44, {
-          normalized_number: cacheKey,
-          phone_number: displayFormat,
-          country: fullResult.country,
-          carrier: fullResult.carrier,
-          reputation_score: fullResult.reputation_score,
-          risk_level: fullResult.risk_level,
-          scam_categories: fullResult.scam_categories,
-          summary: fullResult.summary,
-          sources: fullResult.sources,
-          last_external_check_at: new Date().toISOString(),
-          verified_business: fullResult.verified_business,
-          business_name: fullResult.business_name,
-        });
+    // Persist to cache index
+    const rep = await upsertPhoneReputation(base44, {
+      normalized_number: cacheKey,
+      phone_number: displayFormat,
+      country: fullResult.country,
+      carrier: fullResult.carrier,
+      reputation_score: fullResult.reputation_score,
+      risk_level: fullResult.risk_level,
+      scam_categories: fullResult.scam_categories,
+      summary: fullResult.summary,
+      sources: fullResult.sources,
+      last_external_check_at: new Date().toISOString(),
+      verified_business: fullResult.verified_business,
+      business_name: fullResult.business_name,
+    });
 
-        fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
-        fullResult.confidence_score = rep?.confidence_score || 0;
-        fullResult.caller_id_label = rep?.caller_id_label || '';
+    fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
+    fullResult.confidence_score = rep?.confidence_score || 0;
+    fullResult.caller_id_label = rep?.caller_id_label || '';
 
-        // Update the pending lookup with the completed data
-        await base44.asServiceRole.entities.PhoneLookup.update(pendingLookup.id, {
-          status: 'complete',
-          country: fullResult.country,
-          carrier: fullResult.carrier,
-          reputation_score: fullResult.reputation_score,
-          risk_level: fullResult.risk_level,
-          user_reports: fullResult.user_reports,
-          scam_categories: fullResult.scam_categories,
-          summary: fullResult.summary,
-          sources: fullResult.sources,
-          report_count: fullResult.report_count,
-          scam_report_count: fullResult.scam_report_count,
-          spam_report_count: fullResult.spam_report_count,
-          suspicious_report_count: fullResult.suspicious_report_count,
-          safe_report_count: fullResult.safe_report_count,
-          caller_id_status: fullResult.caller_id_status,
-          confidence_score: fullResult.confidence_score,
-          verified_business: fullResult.verified_business,
-          business_name: fullResult.business_name,
-          caller_id_label: fullResult.caller_id_label,
-        });
-      } catch (bgError) {
-        console.error('lookupPhoneNumber background search failed', bgError);
-        try {
-          await base44.asServiceRole.entities.PhoneLookup.update(pendingLookup.id, {
-            status: 'error',
-            summary: 'The web search for this number failed. Please try again.',
-          });
-        } catch {}
-      }
-    })());
+    let lookup: any = null;
+    try {
+      lookup = await base44.entities.PhoneLookup.create({
+        phone_number: displayFormat,
+        status: 'complete',
+        country: fullResult.country,
+        carrier: fullResult.carrier,
+        reputation_score: fullResult.reputation_score,
+        risk_level: fullResult.risk_level,
+        user_reports: fullResult.user_reports,
+        scam_categories: fullResult.scam_categories,
+        summary: fullResult.summary,
+        sources: fullResult.sources,
+        report_count: fullResult.report_count,
+        scam_report_count: fullResult.scam_report_count,
+        spam_report_count: fullResult.spam_report_count,
+        suspicious_report_count: fullResult.suspicious_report_count,
+        safe_report_count: fullResult.safe_report_count,
+        caller_id_status: fullResult.caller_id_status,
+        confidence_score: fullResult.confidence_score,
+        verified_business: fullResult.verified_business,
+        business_name: fullResult.business_name,
+        caller_id_label: fullResult.caller_id_label,
+      });
+    } catch (saveError) {
+      console.error('PhoneLookup save failed', saveError);
+    }
 
     return Response.json({
-      result: { ...pendingLookup, phone_number: displayFormat },
-      lookup: { id: pendingLookup.id, phone_number: displayFormat, cached: false, status: 'pending' },
+      result: fullResult,
+      lookup: lookup ? { id: lookup.id, phone_number: displayFormat, cached: false } : { phone_number: displayFormat, cached: false },
       cached: false,
     });
   } catch (error) {
