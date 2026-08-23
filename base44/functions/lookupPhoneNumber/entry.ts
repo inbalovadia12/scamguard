@@ -31,7 +31,7 @@ function parseJsonFromText(text: string): any {
 
 // Quick check for known fictional/reserved number ranges
 function checkKnownFictional(cleaned: string): any {
-  // 555-0100 to 555-0199 are reserved (as seen in your test)
+  // 555-0100 to 555-0199 are reserved
   if (cleaned.length >= 10) {
     const last4 = cleaned.slice(-4);
     const exchanges = cleaned.slice(-7, -4);
@@ -52,6 +52,8 @@ function checkKnownFictional(cleaned: string): any {
         safe_report_count: 0,
         verified_business: false,
         business_name: '',
+        community: { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0, reports: [] },
+        reddit: { matched: false, report_count: 0, sources: [] },
       };
     }
   }
@@ -93,12 +95,75 @@ Deno.serve(async (req) => {
       : phone_number.trim();
     const cacheKey = isValidNANP ? `+1${tenDigit}` : `+${cleaned}`;
 
-    // ---- Cache hit ----
+    // ---- Helper: fetch community evidence ----
+    const fetchCommunityEvidence = async (): Promise<any> => {
+      try {
+        const communityReports = await base44.entities.PhoneCommunityReport.filter({ normalized_number: cacheKey });
+        if (!communityReports || communityReports.length === 0) {
+          return { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0, reports: [] };
+        }
+
+        const reports = communityReports.filter((r: any) => r.status === 'active');
+        const scamCount = reports.filter((r: any) => r.report_type === 'scam').length;
+        const spamCount = reports.filter((r: any) => r.report_type === 'spam').length;
+        const suspiciousCount = reports.filter((r: any) => r.report_type === 'suspicious').length;
+        const safeCount = reports.filter((r: any) => r.report_type === 'safe').length;
+
+        return {
+          matched: reports.length > 0,
+          report_count: reports.length,
+          scam_reports: scamCount,
+          spam_reports: spamCount,
+          suspicious_reports: suspiciousCount,
+          safe_reports: safeCount,
+          reports: reports.map((r: any) => ({
+            type: r.report_type,
+            summary: r.summary,
+            category: r.scam_category,
+            created: r.created_date_label,
+          })),
+        };
+      } catch (e) {
+        console.error('Community evidence fetch failed:', e);
+        return { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0, reports: [] };
+      }
+    };
+
+    // ---- Helper: fetch Reddit evidence ----
+    const fetchRedditEvidence = async (): Promise<any> => {
+      try {
+        const redditReports = await base44.asServiceRole.entities.RedditScamNumber.filter({ normalized_number: cacheKey });
+        if (!redditReports || redditReports.length === 0) {
+          return { matched: false, report_count: 0, sources: [] };
+        }
+
+        return {
+          matched: redditReports.length > 0,
+          report_count: redditReports.length,
+          sources: redditReports.map((r: any) => r.post_url).filter(Boolean),
+          reports: redditReports.map((r: any) => ({
+            title: r.title,
+            summary: r.summary,
+            category: r.scam_category,
+            url: r.post_url,
+            posted_at: r.posted_at,
+          })),
+        };
+      } catch (e) {
+        console.error('Reddit evidence fetch failed:', e);
+        return { matched: false, report_count: 0, sources: [] };
+      }
+    };
+
+    // ---- Cache hit (check fresh PhoneReputation + fetch community/reddit evidence) ----
     try {
       const cached = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
       const STALE_MS = 1000 * 60 * 60 * 24 * 30;
       const r = cached[0];
       if (r && r.last_external_check_at && (Date.now() - new Date(r.last_external_check_at).getTime() < STALE_MS)) {
+        const communityEvidence = await fetchCommunityEvidence();
+        const redditEvidence = await fetchRedditEvidence();
+        
         const result = {
           country: r.country || '',
           carrier: r.carrier || '',
@@ -119,6 +184,8 @@ Deno.serve(async (req) => {
           business_name: r.business_name || '',
           caller_id_label: r.caller_id_label || '',
           last_checked_at: r.last_checked_at || r.last_updated_at || '',
+          community: communityEvidence,
+          reddit: redditEvidence,
         };
         return Response.json({
           result,
@@ -128,7 +195,7 @@ Deno.serve(async (req) => {
       }
     } catch {}
 
-    // ---- Quick check for known fictional numbers (instant, no LLM call) ----
+    // ---- Quick check for known fictional numbers (instant) ----
     const knownFictional = checkKnownFictional(cleaned);
     if (knownFictional) {
       const fullResult = {
@@ -183,7 +250,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ---- LLM web search (only for unknown numbers) ----
+    // ---- LLM web search for new numbers ----
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
@@ -239,6 +306,10 @@ Respond in ${languageName}.`;
     const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
     const cleanSummary = sanitizeSummary(result.summary || '');
 
+    // ---- Fetch community and Reddit evidence for this new lookup ----
+    const communityEvidence = await fetchCommunityEvidence();
+    const redditEvidence = await fetchRedditEvidence();
+
     const fullResult = {
       country: result.country || '',
       carrier: result.carrier || '',
@@ -259,6 +330,8 @@ Respond in ${languageName}.`;
       business_name: result.business_name || '',
       caller_id_label: '',
       last_checked_at: new Date().toISOString(),
+      community: communityEvidence,
+      reddit: redditEvidence,
     };
 
     const rep = await upsertPhoneReputation(base44, {
