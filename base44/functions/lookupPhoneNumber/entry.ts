@@ -125,6 +125,12 @@ SCORING (0 = confirmed scam, 100 = verified legitimate):
 - 76-89: no credible negative evidence, not verified legitimate
 - 90-100: strongly verified legitimate
 
+CONFIDENCE (0 = uncertain, 100 = absolutely certain):
+- 0-30: very limited or contradictory evidence
+- 31-60: some evidence but not comprehensive
+- 61-80: solid evidence from multiple sources
+- 81-100: definitive evidence (e.g., known fictional number, confirmed scam pattern, official listing)
+
 risk_level must match: "high" (strong/repeated scam evidence), "medium" (suspicious/spam/limited negative), "low" (no credible negative reports or strong legitimacy evidence). "No reports found" does NOT mean confirmed safe.
 
 Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON):
@@ -134,6 +140,7 @@ Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON
   "carrier": "",
   "reputation_score": 0,
   "risk_level": "low",
+  "confidence_score": 0,
   "user_reports": [],
   "scam_categories": [],
   "summary": "",
@@ -148,6 +155,7 @@ Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON
 
 - user_reports: up to 3 paraphrased summaries of the most relevant reports (do not directly quote users).
 - sources: up to 6 URLs that contained relevant info about this exact number. No search-engine URLs. Empty array if none.
+- confidence_score: 0-100. High confidence (80+) for definitive cases like known fictional numbers, confirmed scam networks, or official listings. Lower confidence (30-60) for anecdotal or conflicting reports.
 - summary: max 300 chars, what you actually found. Never mention internal processes, background checks, further analysis, or future checking.
 - If no reports found, set all counts to 0, sources to empty array, summary to "No scam reports found for this number."
 
@@ -184,7 +192,7 @@ Respond in ${languageName}.`;
       suspicious_report_count: result.suspicious_report_count || 0,
       safe_report_count: result.safe_report_count || 0,
       caller_id_status: 'UNKNOWN',
-      confidence_score: 0,
+      confidence_score: Math.max(0, Math.min(100, Number(result.confidence_score) || 0)),
       verified_business: result.verified_business || false,
       business_name: result.business_name || '',
       caller_id_label: '',
@@ -208,7 +216,7 @@ Respond in ${languageName}.`;
     });
 
     fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
-    fullResult.confidence_score = rep?.confidence_score || 0;
+    fullResult.confidence_score = Math.max(fullResult.confidence_score, rep?.confidence_score || 0);
     fullResult.caller_id_label = rep?.caller_id_label || '';
 
     let lookup: any = null;
