@@ -1,7 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
-// Strip hallucinated "deeper check" / "background process" text from LLM summaries.
 function sanitizeSummary(raw: string): string {
   if (!raw) return 'No scam reports found for this number.';
   const cleaned = raw.replace(
@@ -11,7 +10,6 @@ function sanitizeSummary(raw: string): string {
   return cleaned || 'No scam reports found for this number.';
 }
 
-// Force score and risk_level to be consistent with each other.
 function enforceConsistency(score: number, risk: string): { score: number; risk: 'low' | 'medium' | 'high' } {
   let s = score || 0;
   let r = (risk || 'low') as 'low' | 'medium' | 'high';
@@ -21,7 +19,6 @@ function enforceConsistency(score: number, risk: string): { score: number; risk:
   return { score: s, risk: r };
 }
 
-// Parse JSON from a free-text LLM response.
 function parseJsonFromText(text: string): any {
   if (!text) return null;
   try { return JSON.parse(text); } catch {}
@@ -29,6 +26,35 @@ function parseJsonFromText(text: string): any {
   const end = text.lastIndexOf('}');
   if (start === -1 || end === -1) return null;
   try { return JSON.parse(text.slice(start, end + 1)); } catch {}
+  return null;
+}
+
+// Quick check for known fictional/reserved number ranges
+function checkKnownFictional(cleaned: string): any {
+  // 555-0100 to 555-0199 are reserved (as seen in your test)
+  if (cleaned.length >= 10) {
+    const last4 = cleaned.slice(-4);
+    const exchanges = cleaned.slice(-7, -4);
+    if (exchanges === '555' && last4.startsWith('01')) {
+      return {
+        country: 'USA',
+        carrier: 'None (Fictional Number)',
+        reputation_score: 15,
+        risk_level: 'low',
+        confidence_score: 100,
+        user_reports: ['Reserved for fictional use in media and documentation.'],
+        scam_categories: ['Fictional Number'],
+        summary: 'This number is officially reserved for fictional use. It is not assigned to a real subscriber.',
+        sources: [],
+        scam_report_count: 0,
+        spam_report_count: 0,
+        suspicious_report_count: 0,
+        safe_report_count: 0,
+        verified_business: false,
+        business_name: '',
+      };
+    }
+  }
   return null;
 }
 
@@ -67,7 +93,7 @@ Deno.serve(async (req) => {
       : phone_number.trim();
     const cacheKey = isValidNANP ? `+1${tenDigit}` : `+${cleaned}`;
 
-    // ---- Fast path: return the canonical reputation index if this number is already known and fresh ----
+    // ---- Cache hit ----
     try {
       const cached = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
       const STALE_MS = 1000 * 60 * 60 * 24 * 30;
@@ -102,39 +128,78 @@ Deno.serve(async (req) => {
       }
     } catch {}
 
-    // ---- Single synchronous web-search lookup (waits ~25s) ----
+    // ---- Quick check for known fictional numbers (instant, no LLM call) ----
+    const knownFictional = checkKnownFictional(cleaned);
+    if (knownFictional) {
+      const fullResult = {
+        ...knownFictional,
+        caller_id_status: 'UNKNOWN',
+        caller_id_label: '',
+        last_checked_at: new Date().toISOString(),
+      };
+
+      await upsertPhoneReputation(base44, {
+        normalized_number: cacheKey,
+        phone_number: displayFormat,
+        country: fullResult.country,
+        carrier: fullResult.carrier,
+        reputation_score: fullResult.reputation_score,
+        risk_level: fullResult.risk_level,
+        scam_categories: fullResult.scam_categories,
+        summary: fullResult.summary,
+        sources: fullResult.sources,
+        last_external_check_at: new Date().toISOString(),
+        verified_business: fullResult.verified_business,
+        business_name: fullResult.business_name,
+      });
+
+      let lookup: any = null;
+      try {
+        lookup = await base44.entities.PhoneLookup.create({
+          phone_number: displayFormat,
+          status: 'complete',
+          country: fullResult.country,
+          carrier: fullResult.carrier,
+          reputation_score: fullResult.reputation_score,
+          risk_level: fullResult.risk_level,
+          user_reports: fullResult.user_reports,
+          scam_categories: fullResult.scam_categories,
+          summary: fullResult.summary,
+          sources: fullResult.sources,
+          caller_id_status: fullResult.caller_id_status,
+          confidence_score: fullResult.confidence_score,
+          verified_business: fullResult.verified_business,
+          business_name: fullResult.business_name,
+          caller_id_label: fullResult.caller_id_label,
+        });
+      } catch (saveError) {
+        console.error('PhoneLookup save failed', saveError);
+      }
+
+      return Response.json({
+        result: fullResult,
+        lookup: lookup ? { id: lookup.id, phone_number: displayFormat, cached: false } : { phone_number: displayFormat, cached: false },
+        cached: false,
+      });
+    }
+
+    // ---- LLM web search (only for unknown numbers) ----
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
-    const prompt = `Search the web for scam and spam reports about the phone number ${displayFormat} (${isValidNANP ? `+1${tenDigit}` : `+${cleaned}`}).
+    const prompt = `Search the web for scam/spam reports on ${displayFormat}.
 
-Search the exact number in multiple common formats. Prioritize high-signal, relevant results — do not exhaustively investigate many websites or search unrelated pages. Only research the area code/prefix if it provides useful carrier or geographic info.
+Rules:
+- Count only reports about THIS EXACT number, not similar numbers or area codes.
+- Do not invent data.
+- Distinguish scam, spam, suspicious, and legitimate reports.
+- High confidence (80+) for definitive cases (fictional numbers, confirmed scams, official listings).
+- Lower confidence (30-60) for anecdotal reports.
 
-RULES:
-- Only count reports that clearly refer to this exact number. Do not count similar numbers, same area code, or same prefix.
-- Do not invent carrier, reports, businesses, sources, or statistics.
-- Caller-ID spoofing is possible; carrier alone does not prove legitimacy.
-- Give greater weight to multiple independent reports than a single unverified one.
-- Distinguish scam, spam/telemarketing, suspicious, and legitimate reports.
+Score 0-100: 0-25=confirmed scam, 26-40=strong indicators, 41-60=suspicious/spam, 61-75=limited negative, 76-100=no negatives/legitimate.
+Risk level: "high" (strong scam evidence), "medium" (suspicious/spam), "low" (no negatives).
 
-SCORING (0 = confirmed scam, 100 = verified legitimate):
-- 0-25: confirmed/repeated scam evidence
-- 26-40: strong scam indicators
-- 41-60: suspicious or significant spam
-- 61-75: limited/unverified negative evidence
-- 76-89: no credible negative evidence, not verified legitimate
-- 90-100: strongly verified legitimate
-
-CONFIDENCE (0 = uncertain, 100 = absolutely certain):
-- 0-30: very limited or contradictory evidence
-- 31-60: some evidence but not comprehensive
-- 61-80: solid evidence from multiple sources
-- 81-100: definitive evidence (e.g., known fictional number, confirmed scam pattern, official listing)
-
-risk_level must match: "high" (strong/repeated scam evidence), "medium" (suspicious/spam/limited negative), "low" (no credible negative reports or strong legitimacy evidence). "No reports found" does NOT mean confirmed safe.
-
-Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON):
-
+Return ONLY valid JSON:
 {
   "country": "",
   "carrier": "",
@@ -153,11 +218,8 @@ Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON
   "business_name": ""
 }
 
-- user_reports: up to 3 paraphrased summaries of the most relevant reports (do not directly quote users).
-- sources: up to 6 URLs that contained relevant info about this exact number. No search-engine URLs. Empty array if none.
-- confidence_score: 0-100. High confidence (80+) for definitive cases like known fictional numbers, confirmed scam networks, or official listings. Lower confidence (30-60) for anecdotal or conflicting reports.
-- summary: max 300 chars, what you actually found. Never mention internal processes, background checks, further analysis, or future checking.
-- If no reports found, set all counts to 0, sources to empty array, summary to "No scam reports found for this number."
+- summary: max 300 chars, what you found. No mention of future checking or background processes.
+- If nothing found: all counts=0, sources=[], summary="No scam reports found for this number."
 
 Respond in ${languageName}.`;
 
@@ -199,7 +261,6 @@ Respond in ${languageName}.`;
       last_checked_at: new Date().toISOString(),
     };
 
-    // Persist to cache index
     const rep = await upsertPhoneReputation(base44, {
       normalized_number: cacheKey,
       phone_number: displayFormat,
