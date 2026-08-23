@@ -1,9 +1,37 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { waitUntil } from 'base44:runtime';
 import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
-// Phone-number reputation lookup backed by IPQualityScore's Phone Number
-// Validation API + Reddit r/ScamNumbers community reports.
-// Combines IPQS automated fraud scoring with crowdsourced community data.
+// Strip hallucinated "deeper check" / "background process" text from LLM summaries.
+function sanitizeSummary(raw: string): string {
+  if (!raw) return 'No scam reports found for this number.';
+  const cleaned = raw.replace(
+    /[^.!?]*\b(?:deeper\s+check|running\s+in\s+the\s+background|background\s+check|ongoing\s+process|further\s+analysis|still\s+checking|currently\s+(?:checking|analyzing)|will\s+(?:be\s+)?(?:check|analyz|updat)\w*)\b[^.!?]*[.!?]*/gi,
+    ''
+  ).trim();
+  return cleaned || 'No scam reports found for this number.';
+}
+
+// Force score and risk_level to be consistent with each other.
+function enforceConsistency(score: number, risk: string): { score: number; risk: 'low' | 'medium' | 'high' } {
+  let s = score || 0;
+  let r = (risk || 'low') as 'low' | 'medium' | 'high';
+  if (r === 'high' && s < 71) s = 75;
+  if (r === 'medium' && (s < 36 || s > 70)) s = 50;
+  if (r === 'low' && s > 35) s = 15;
+  return { score: s, risk: r };
+}
+
+// Parse JSON from a free-text LLM response.
+function parseJsonFromText(text: string): any {
+  if (!text) return null;
+  try { return JSON.parse(text); } catch {}
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1) return null;
+  try { return JSON.parse(text.slice(start, end + 1)); } catch {}
+  return null;
+}
 
 Deno.serve(async (req) => {
   try {
@@ -19,10 +47,13 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const phoneInput = String(body?.phone_number || '').trim();
-    if (!phoneInput) return Response.json({ error: 'Phone number is required' }, { status: 400 });
+    const { phone_number, language } = body;
 
-    const cleaned = phoneInput.replace(/[^\d]/g, '');
+    if (!phone_number || !phone_number.trim()) {
+      return Response.json({ error: 'Phone number is required' }, { status: 400 });
+    }
+
+    const cleaned = phone_number.trim().replace(/[^\d]/g, '');
     if (cleaned.length < 7) return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
 
     let tenDigit: string;
@@ -34,7 +65,7 @@ Deno.serve(async (req) => {
     const isValidNANP = tenDigit.length === 10 && !tenDigit.startsWith('0') && !tenDigit.startsWith('1');
     const displayFormat = isValidNANP
       ? `${tenDigit.slice(0, 3)}-${tenDigit.slice(3, 6)}-${tenDigit.slice(6)}`
-      : phoneInput;
+      : phone_number.trim();
     const cacheKey = isValidNANP ? `+1${tenDigit}` : `+${cleaned}`;
 
     // ---- Fast path: return the canonical reputation index if this number is already known and fresh ----
@@ -66,187 +97,166 @@ Deno.serve(async (req) => {
         };
         return Response.json({
           result,
-          lookup: { id: r.id, phone_number: r.phone_number, cached: true, status: 'complete' },
+          lookup: { id: r.id, phone_number: r.phone_number, cached: true },
           cached: true,
         });
       }
     } catch {}
 
-    // ---- Live IPQS lookup ----
-    const ipqsKey = Deno.env.get('IPQS_API_KEY');
-    if (!ipqsKey) {
-      return Response.json({ error: 'Phone lookup is not configured. Missing IPQS_API_KEY.' }, { status: 500 });
-    }
-
-    const ipqsUrl = `https://www.ipqualityscore.com/api/json/phone/${encodeURIComponent(ipqsKey)}/${encodeURIComponent(cleaned)}?country[]=US&country[]=CA&country[]=IL`;
-
-    let ipqs: any = null;
-    try {
-      const resp = await fetch(ipqsUrl, { signal: AbortSignal.timeout(8000) });
-      ipqs = await resp.json();
-    } catch (fetchError) {
-      console.error('IPQS request failed', fetchError);
-      return Response.json({ error: 'The phone lookup service is temporarily unavailable. Please try again.' }, { status: 502 });
-    }
-
-    if (!ipqs || ipqs.success === false) {
-      const msg = ipqs?.message || 'Phone lookup failed.';
-      return Response.json({ error: msg }, { status: 502 });
-    }
-
-    if (ipqs.valid === false) {
-      const notInService = {
-        country: ipqs.country || '',
-        carrier: '',
-        reputation_score: 0,
-        risk_level: 'low',
-        user_reports: [],
-        scam_categories: [],
-        summary: 'This does not appear to be a valid, in-service phone number.',
-        sources: [],
-        report_count: 0, scam_report_count: 0, spam_report_count: 0, suspicious_report_count: 0, safe_report_count: 0,
-        caller_id_status: 'UNKNOWN',
-        confidence_score: 0,
-        verified_business: false,
-        business_name: '',
-        caller_id_label: '',
-        last_checked_at: new Date().toISOString(),
-      };
-      return Response.json({ result: notInService, lookup: { phone_number: displayFormat, cached: false, status: 'complete' }, cached: false });
-    }
-
-    const fraudScore = Math.max(0, Math.min(100, Number(ipqs.fraud_score) || 0));
-    const recentAbuse = !!ipqs.recent_abuse;
-    const isSpammer = !!ipqs.spammer;
-    const isDoNotCall = !!ipqs.do_not_call;
-    const isVoip = !!ipqs.VOIP;
-    const isLeaked = !!ipqs.leaked;
-
-    // ---- Pull Reddit community reports for this number ----
-    let redditMatches: any[] = [];
-    try {
-      redditMatches = await base44.asServiceRole.entities.RedditScamNumber.filter({ normalized_number: cacheKey });
-    } catch (redditError) {
-      console.error('Reddit index lookup failed', redditError);
-    }
-
-    const redditReportCount = redditMatches.length;
-    const redditCategories = [...new Set(redditMatches.map((item: any) => item.scam_category).filter(Boolean))];
-    const redditSources = redditMatches.map((item: any) => item.post_url).filter(Boolean);
-
-    // Risk level and score: community/Reddit evidence takes priority over IPQS
-    let riskLevel: 'low' | 'medium' | 'high' = 'low';
-    let effectiveScore = fraudScore;
-    
-    if (redditReportCount > 0 || recentAbuse) {
-      riskLevel = 'high';
-      effectiveScore = Math.max(effectiveScore, 75); // Boost score for confirmed scam reports
-    } else if (fraudScore >= 71) {
-      riskLevel = 'high';
-    } else if (fraudScore >= 41 || isSpammer || isDoNotCall || isLeaked) {
-      riskLevel = 'medium';
-    }
-
-    // Combine categories from both sources
-    const scamCategories: string[] = [];
-    if (recentAbuse) scamCategories.push('Recent Abuse Reports');
-    if (isSpammer) scamCategories.push('Known Spammer');
-    if (isDoNotCall) scamCategories.push('Do Not Call List');
-    if (isVoip) scamCategories.push('VOIP Number');
-    if (isLeaked) scamCategories.push('Leaked/Breached Number');
-    scamCategories.push(...redditCategories);
-
-    // Build summary incorporating both IPQS and Reddit data (once, not repeated)
-    const summaryParts: string[] = [];
-    summaryParts.push(`IPQS fraud score: ${fraudScore}/100.`);
-    if (redditReportCount > 0) {
-      summaryParts.push(`Community evidence: ${redditReportCount} report${redditReportCount === 1 ? '' : 's'} from r/ScamNumbers.`);
-    }
-    if (ipqs.line_type) summaryParts.push(`Line type: ${ipqs.line_type}.`);
-    if (ipqs.active === false) summaryParts.push('This line appears inactive/disconnected.');
-    if (recentAbuse) summaryParts.push('Recent abuse has been reported for this number.');
-    if (isSpammer) summaryParts.push('This number is flagged as a known spammer.');
-    if (isDoNotCall) summaryParts.push('This number is on the Do Not Call list.');
-    if (scamCategories.length === 0 && effectiveScore < 41 && redditReportCount === 0) summaryParts.push('No significant fraud signals found.');
-
-    const businessName = ipqs.name && ipqs.name !== 'N/A' ? ipqs.name : '';
-
-    // Combine sources from IPQS and Reddit
-    const allSources = [...redditSources];
-
-    const fullResult = {
-      country: ipqs.country || '',
-      carrier: ipqs.carrier || '',
-      reputation_score: effectiveScore,
-      risk_level: riskLevel,
-      user_reports: [] as string[],
-      scam_categories: scamCategories,
-      summary: summaryParts.join(' '),
-      sources: allSources,
-      report_count: redditReportCount,
-      scam_report_count: redditReportCount,
-      spam_report_count: 0,
-      suspicious_report_count: 0,
-      safe_report_count: 0,
+    // ---- Return immediately with a pending record; do the (slow, ~25s) web search in the
+    // background. The proxy/function timeout is fixed and shorter than typical search time,
+    // so we can no longer await the LLM call in the request path (that was the 502 cause).
+    const pendingLookup = await base44.entities.PhoneLookup.create({
+      phone_number: displayFormat,
+      status: 'pending',
+      reputation_score: 50,
+      risk_level: 'medium',
       caller_id_status: 'UNKNOWN',
       confidence_score: 0,
-      verified_business: false,
-      business_name: businessName,
-      caller_id_label: '',
-      last_checked_at: new Date().toISOString(),
-    };
-
-    // Persist to the canonical reputation index
-    const rep = await upsertPhoneReputation(base44, {
-      normalized_number: cacheKey,
-      phone_number: displayFormat,
-      country: fullResult.country,
-      carrier: fullResult.carrier,
-      reputation_score: fullResult.reputation_score,
-      risk_level: fullResult.risk_level,
-      scam_categories: fullResult.scam_categories,
-      summary: fullResult.summary,
-      sources: fullResult.sources,
-      last_external_check_at: new Date().toISOString(),
-      verified_business: fullResult.verified_business,
-      business_name: fullResult.business_name,
+      summary: 'Searching the web for reports about this number…',
     });
 
-    fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
-    fullResult.confidence_score = rep?.confidence_score || 0;
-    fullResult.caller_id_label = rep?.caller_id_label || '';
+    const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
+    const languageName = LANGUAGE_NAMES[language] || 'English';
 
-    let lookup: any = null;
-    try {
-      lookup = await base44.entities.PhoneLookup.create({
-        phone_number: displayFormat,
-        status: 'complete',
-        country: fullResult.country,
-        carrier: fullResult.carrier,
-        reputation_score: fullResult.reputation_score,
-        risk_level: fullResult.risk_level,
-        user_reports: fullResult.user_reports,
-        scam_categories: fullResult.scam_categories,
-        summary: fullResult.summary,
-        sources: fullResult.sources,
-        report_count: fullResult.report_count,
-        scam_report_count: fullResult.scam_report_count,
-        spam_report_count: fullResult.spam_report_count,
-        suspicious_report_count: fullResult.suspicious_report_count,
-        safe_report_count: fullResult.safe_report_count,
-        caller_id_status: fullResult.caller_id_status,
-        confidence_score: fullResult.confidence_score,
-        verified_business: fullResult.verified_business,
-        business_name: fullResult.business_name,
-        caller_id_label: fullResult.caller_id_label,
-      });
-    } catch (saveError) {
-      console.error('PhoneLookup save failed', saveError);
-    }
+    const prompt = `Search the web for scam and spam reports about the phone number ${displayFormat} (${isValidNANP ? `+1${tenDigit}` : `+${cleaned}`}).
+
+Search the exact number in multiple common formats. Prioritize high-signal, relevant results — do not exhaustively investigate many websites or search unrelated pages. Only research the area code/prefix if it provides useful carrier or geographic info.
+
+RULES:
+- Only count reports that clearly refer to this exact number. Do not count similar numbers, same area code, or same prefix.
+- Do not invent carrier, reports, businesses, sources, or statistics.
+- Caller-ID spoofing is possible; carrier alone does not prove legitimacy.
+- Give greater weight to multiple independent reports than a single unverified one.
+- Distinguish scam, spam/telemarketing, suspicious, and legitimate reports.
+
+SCORING (0 = confirmed scam, 100 = verified legitimate):
+- 0-25: confirmed/repeated scam evidence
+- 26-40: strong scam indicators
+- 41-60: suspicious or significant spam
+- 61-75: limited/unverified negative evidence
+- 76-89: no credible negative evidence, not verified legitimate
+- 90-100: strongly verified legitimate
+
+risk_level must match: "high" (strong/repeated scam evidence), "medium" (suspicious/spam/limited negative), "low" (no credible negative reports or strong legitimacy evidence). "No reports found" does NOT mean confirmed safe.
+
+Respond with ONLY a JSON object (no markdown, no backticks, no text outside JSON):
+
+{
+  "country": "",
+  "carrier": "",
+  "reputation_score": 0,
+  "risk_level": "low",
+  "user_reports": [],
+  "scam_categories": [],
+  "summary": "",
+  "sources": [],
+  "scam_report_count": 0,
+  "spam_report_count": 0,
+  "suspicious_report_count": 0,
+  "safe_report_count": 0,
+  "verified_business": false,
+  "business_name": ""
+}
+
+- user_reports: up to 3 paraphrased summaries of the most relevant reports (do not directly quote users).
+- sources: up to 6 URLs that contained relevant info about this exact number. No search-engine URLs. Empty array if none.
+- summary: max 300 chars, what you actually found. Never mention internal processes, background checks, further analysis, or future checking.
+- If no reports found, set all counts to 0, sources to empty array, summary to "No scam reports found for this number."
+
+Respond in ${languageName}.`;
+
+    // Run the LLM web-search lookup in the background so response returns immediately
+    waitUntil((async () => {
+      try {
+        const llmResponse = await base44.integrations.Core.InvokeLLM({
+          prompt,
+          add_context_from_internet: true,
+          model: 'gemini_3_flash',
+        });
+
+        const result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
+        const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
+        const cleanSummary = sanitizeSummary(result.summary || '');
+
+        const fullResult = {
+          country: result.country || '',
+          carrier: result.carrier || '',
+          reputation_score: consistentScore,
+          risk_level: consistentRisk,
+          user_reports: Array.isArray(result.user_reports) ? result.user_reports : [],
+          scam_categories: Array.isArray(result.scam_categories) ? result.scam_categories : [],
+          summary: cleanSummary,
+          sources: Array.isArray(result.sources) ? result.sources : [],
+          report_count: (result.scam_report_count || 0) + (result.spam_report_count || 0) + (result.suspicious_report_count || 0) + (result.safe_report_count || 0),
+          scam_report_count: result.scam_report_count || 0,
+          spam_report_count: result.spam_report_count || 0,
+          suspicious_report_count: result.suspicious_report_count || 0,
+          safe_report_count: result.safe_report_count || 0,
+          caller_id_status: 'UNKNOWN',
+          confidence_score: 0,
+          verified_business: result.verified_business || false,
+          business_name: result.business_name || '',
+          caller_id_label: '',
+          last_checked_at: new Date().toISOString(),
+        };
+
+        // Persist to cache index
+        const rep = await upsertPhoneReputation(base44, {
+          normalized_number: cacheKey,
+          phone_number: displayFormat,
+          country: fullResult.country,
+          carrier: fullResult.carrier,
+          reputation_score: fullResult.reputation_score,
+          risk_level: fullResult.risk_level,
+          scam_categories: fullResult.scam_categories,
+          summary: fullResult.summary,
+          sources: fullResult.sources,
+          last_external_check_at: new Date().toISOString(),
+          verified_business: fullResult.verified_business,
+          business_name: fullResult.business_name,
+        });
+
+        fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
+        fullResult.confidence_score = rep?.confidence_score || 0;
+        fullResult.caller_id_label = rep?.caller_id_label || '';
+
+        // Update the pending lookup with the completed data
+        await base44.asServiceRole.entities.PhoneLookup.update(pendingLookup.id, {
+          status: 'complete',
+          country: fullResult.country,
+          carrier: fullResult.carrier,
+          reputation_score: fullResult.reputation_score,
+          risk_level: fullResult.risk_level,
+          user_reports: fullResult.user_reports,
+          scam_categories: fullResult.scam_categories,
+          summary: fullResult.summary,
+          sources: fullResult.sources,
+          report_count: fullResult.report_count,
+          scam_report_count: fullResult.scam_report_count,
+          spam_report_count: fullResult.spam_report_count,
+          suspicious_report_count: fullResult.suspicious_report_count,
+          safe_report_count: fullResult.safe_report_count,
+          caller_id_status: fullResult.caller_id_status,
+          confidence_score: fullResult.confidence_score,
+          verified_business: fullResult.verified_business,
+          business_name: fullResult.business_name,
+          caller_id_label: fullResult.caller_id_label,
+        });
+      } catch (bgError) {
+        console.error('lookupPhoneNumber background search failed', bgError);
+        try {
+          await base44.asServiceRole.entities.PhoneLookup.update(pendingLookup.id, {
+            status: 'error',
+            summary: 'The web search for this number failed. Please try again.',
+          });
+        } catch {}
+      }
+    })());
 
     return Response.json({
-      result: fullResult,
-      lookup: lookup ? { id: lookup.id, phone_number: displayFormat, cached: false, status: 'complete' } : { phone_number: displayFormat, cached: false, status: 'complete' },
+      result: { ...pendingLookup, phone_number: displayFormat },
+      lookup: { id: pendingLookup.id, phone_number: displayFormat, cached: false, status: 'pending' },
       cached: false,
     });
   } catch (error) {
