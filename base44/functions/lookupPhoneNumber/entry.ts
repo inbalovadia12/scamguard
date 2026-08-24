@@ -3,10 +3,25 @@ import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
 
 function sanitizeSummary(raw: string): string {
   if (!raw) return 'No scam reports found for this number.';
-  const cleaned = raw.replace(
+  const withoutProcessClaims = raw.replace(
     /[^.!?]*\b(?:deeper\s+check|running\s+in\s+the\s+background|background\s+check|ongoing\s+process|further\s+analysis|still\s+checking|currently\s+(?:checking|analyzing)|will\s+(?:be\s+)?(?:check|analyz|updat)\w*)\b[^.!?]*[.!?]*/gi,
     ''
   ).trim();
+
+  // Internet-search responses can occasionally repeat an identical finding.
+  // Keep each sentence only once so a cached result never shows duplicate evidence.
+  const seen = new Set<string>();
+  const sentences = withoutProcessClaims.match(/[^.!?]+[.!?]?/g) || [];
+  const cleaned = sentences
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => {
+      const key = sentence.replace(/\s+/g, ' ').toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(' ');
+
   return cleaned || 'No scam reports found for this number.';
 }
 
@@ -171,7 +186,7 @@ Deno.serve(async (req) => {
           risk_level: r.risk_level || 'low',
           user_reports: [],
           scam_categories: r.scam_categories || [],
-          summary: r.summary || '',
+          summary: sanitizeSummary(r.summary || ''),
           sources: r.sources || [],
           report_count: r.report_count || 0,
           scam_report_count: r.scam_report_count || 0,
