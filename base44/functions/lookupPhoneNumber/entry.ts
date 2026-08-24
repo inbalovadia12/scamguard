@@ -42,8 +42,8 @@ function checkKnownFictional(cleaned: string): any {
         reputation_score: 15,
         risk_level: 'low',
         confidence_score: 100,
-        user_reports: ['Reserved for fictional use in media and documentation.'],
-        scam_categories: ['Fictional Number'],
+        user_reports: [],
+        scam_categories: [],
         summary: 'This number is officially reserved for fictional use. It is not assigned to a real subscriber.',
         sources: [],
         scam_report_count: 0,
@@ -250,7 +250,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ---- LLM web search for new numbers ----
+    // ---- LLM web search (only for unknown numbers) ----
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
