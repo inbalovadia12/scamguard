@@ -21,8 +21,7 @@ export default function PhoneResultView({ data }) {
     (data.community?.scam_reports || 0) > 0 ||
     (data.reddit?.report_count || 0) > 0 ||
     (data.scam_report_count || 0) > 0;
-  // Keep the stored reputation score; community evidence should affect classification, not overwrite the numeric score.
-  const score = data.reputation_score ?? (confirmedCommunityScam ? 100 : 0);
+  const score = confirmedCommunityScam ? 100 : (data.reputation_score ?? 0);
   const scoreColor = score >= 71 ? "text-destructive" : score >= 31 ? "text-warning" : "text-success";
   const barColor = score >= 71 ? "bg-destructive" : score >= 31 ? "bg-warning" : "bg-success";
   const effectiveStatus = confirmedCommunityScam ? "SCAM" : (data.caller_id_status || "UNKNOWN");
