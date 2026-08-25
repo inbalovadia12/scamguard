@@ -30,7 +30,7 @@ export default function PhoneGuard() {
             <Phone className="w-4 h-4" /> Number Lookup
           </TabsTrigger>
           <TabsTrigger value="live" className="gap-2">
-            <Radio className="w-4 h-4" /> Live Guard
+            <Radio className="w-4 h-4" /> Call Guard
           </TabsTrigger>
         </TabsList>
         <TabsContent value="lookup" className="mt-6">
