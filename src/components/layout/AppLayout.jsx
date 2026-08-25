@@ -24,7 +24,7 @@ const NAV_SECTIONS = [
       { path: "/ai-negotiator", labelKey: "nav.ai_negotiator", icon: MessageCircle },
       { path: "/extension", labelKey: "nav.extension", icon: Puzzle, kidLabel: "Vardin Kid Guard" },
       { path: "/phone-lookup", labelKey: "nav.phone_guard", icon: Phone },
-      { path: "/call-guard", label: "Call Shield", icon: PhoneCall },
+      { path: "/call-screener", label: "Call Screener", icon: PhoneCall },
       { path: "/emergency-response", labelKey: "nav.emergency_response", icon: Siren, kidLabel: "Get Help" },
     ],
   },
