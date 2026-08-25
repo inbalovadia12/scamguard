@@ -10,7 +10,7 @@ const VERDICT_META = {
   scam: { label: "Scam", icon: ShieldAlert, className: "text-destructive" }
 };
 
-export default function CallGuard() {
+export default function CallScreener() {
   const { toast } = useToast();
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
