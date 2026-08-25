@@ -116,7 +116,7 @@ const AuthenticatedApp = () => {
           <Route path="/call-simulator" element={<CallSimulator />} />
           <Route path="/crypto-scanner" element={<CryptoScanner />} />
           <Route path="/bulk-scanner" element={<BulkScanner />} />
-          <Route path="/call-guard" element={<CallGuard />} />
+          <Route path="/call-screener" element={<CallScreener />} />
           <Route path="/mobile-app" element={<MobileApp />} />
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/ai-negotiator" element={<AINegotiator />} />
