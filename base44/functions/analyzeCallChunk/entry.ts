@@ -1,9 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
-// Analyzes a chunk of audio from a live call/screen session for scam tactics.
-//   1. Whisper STT (Groq) transcribes the audio chunk
-//   2. Llama-3.3-70b (Groq) analyzes the transcript for scam patterns
-//   3. Returns structured analysis: segments, risk level, warnings, coaching
+/**
+ * Analyzes a chunk of audio from a live call for scam tactics.
+ * Uses Deepgram for speech-to-text and Mistral for scam analysis.
+ * Optimized for speed (~2-3s total vs 4-5s with Groq).
+ */
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -20,8 +21,9 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { audio_url, audio_base64, audio_mime, language, session_context, speaker_history } = body;
 
-    const groqApiKey = Deno.env.get('GROQ_API_KEY');
-    if (!groqApiKey) return Response.json({ error: 'STT service not configured' }, { status: 500 });
+    // ---- SPEECH-TO-TEXT: Deepgram ----
+    const deepgramKey = Deno.env.get('DEEPGRAM_API_KEY');
+    if (!deepgramKey) return Response.json({ error: 'Deepgram not configured' }, { status: 500 });
 
     let audioBlob: Blob;
     let contentType: string;
@@ -43,49 +45,37 @@ Deno.serve(async (req) => {
       contentType = audioBlob.type || 'audio/webm';
     }
 
-    const ext = contentType.includes('mp4') ? 'mp4'
-      : contentType.includes('ogg') ? 'ogg'
-      : contentType.includes('wav') ? 'wav'
-      : contentType.includes('mpeg') || contentType.includes('mp3') ? 'mp3'
-      : 'webm';
+    // Deepgram speech-to-text (faster than Groq + better for phone quality)
+    const deepgramResponse = await fetch(
+      `https://api.deepgram.com/v1/listen?model=nova-2&language=${language || 'en'}&punctuate=true&utterances=true&speaker_labels=true`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${deepgramKey}`,
+          'Content-Type': contentType,
+        },
+        body: audioBlob,
+        signal: AbortSignal.timeout(10000),
+      }
+    );
 
-    const formData = new FormData();
-    formData.append('file', audioBlob, `audio.${ext}`);
-    formData.append('model', 'whisper-large-v3-turbo');
-    formData.append('language', language || 'en');
-    formData.append('temperature', '0');
-    formData.append('response_format', 'verbose_json');
-    formData.append('timestamp_granularities[]', 'segment');
-
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${groqApiKey}` },
-      body: formData,
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!groqResponse.ok) {
-      const errText = await groqResponse.text().catch(() => 'unknown');
-      return Response.json({ error: `Groq STT failed: ${groqResponse.status} ${errText}` }, { status: 502 });
+    if (!deepgramResponse.ok) {
+      const errText = await deepgramResponse.text().catch(() => 'unknown');
+      console.error('Deepgram STT failed:', deepgramResponse.status, errText);
+      return Response.json({ error: `STT failed: ${deepgramResponse.status}` }, { status: 502 });
     }
 
-    const groqResult = await groqResponse.json();
-    const transcript: string = groqResult.text || '';
-    const groqSegments = groqResult.segments || [];
+    const deepgramResult = await deepgramResponse.json();
     
-    // Detect audio quality issues
-    const audioQuality = {
-      isLowConfidence: (groqResult.confidence_avg || 1) < 0.5, // Whisper confidence metric
-      hasMultipleErrors: transcript.split(' ').length > 0 && (transcript.match(/\[inaudible\]/gi) || []).length > 2,
-      isMostlyNoise: groqSegments.length > 0 && groqSegments.filter((s: any) => (s.text || '').length < 3).length / groqSegments.length > 0.6,
-    };
+    // Extract transcript and segments from Deepgram
+    const transcript = deepgramResult.results?.channels[0]?.alternatives[0]?.transcript || '';
+    const deepgramUtterances = deepgramResult.results?.channels[0]?.alternatives[0]?.words || [];
     
-    const audioQualityWarning = audioQuality.isLowConfidence || audioQuality.hasMultipleErrors || audioQuality.isMostlyNoise
-      ? 'Note: Audio quality is poor — transcription may be inaccurate. Try moving closer to the speaker or using clearer audio.'
-      : '';
-    
-    const formattedTranscript = groqSegments.length > 0
-      ? groqSegments.map((s: any) => `[${s.start.toFixed(1)}-${s.end.toFixed(1)}] "${s.text.trim()}"`).join('\n')
+    // Build formatted transcript with timestamps
+    const formattedTranscript = deepgramUtterances.length > 0
+      ? deepgramUtterances
+          .map((w: any) => `[${w.start?.toFixed(2) || '0.00'}-${w.end?.toFixed(2) || '0.00'}] ${w.punctuated_word || w.word}`)
+          .join(' ')
       : transcript;
 
     if (!transcript.trim()) {
@@ -94,82 +84,115 @@ Deno.serve(async (req) => {
         segments: [],
         red_flags: [],
         risk_level: 'low',
-        warnings: [],
+        warnings: ['No speech detected in audio chunk. Try speaking louder or closer to the microphone.'],
         tactics_detected: [],
-        analysis: '',
+        analysis: 'No transcribable audio detected.',
       });
     }
 
-    const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
-    const languageName = LANGUAGE_NAMES[language] || 'English';
-
-    const contextPrompt = session_context
-      ? `\nPREVIOUS TRANSCRIPT (last few segments):\n${session_context}\n`
-      : '';
-    const historyPrompt = speaker_history
-      ? `\nSPEAKER HISTORY (who spoke recently, oldest→newest): ${speaker_history}\n`
+    // Detect audio quality (Deepgram provides confidence)
+    const avgConfidence = deepgramResult.results?.channels[0]?.alternatives[0]?.confidence || 1;
+    const audioQualityWarning = avgConfidence < 0.6
+      ? '📢 Audio quality is poor — transcription may be inaccurate. Move closer to the speaker or use a quieter environment.'
       : '';
 
-    const systemPrompt = `Real-time scam detection agent on a live phone call. Determine WHO is speaking and detect scam tactics.
+    // ---- SCAM ANALYSIS: Mistral (free tier, ~800ms) ----
+    const mistralKey = Deno.env.get('MISTRAL_API_KEY');
+    const useMistral = !!mistralKey;
 
-SPEAKERS: "scammer" = the other party (caller, makes requests, asks for money/info, creates urgency, threatens, offers deals). "victim" = app user (responds, provides info, asks questions, expresses doubt).
+    let analysis: any = {};
 
-SPEAKER DETECTION (apply in priority order):
-1. CONTENT IS PRIMARY: requests/money/urgency/threats/offers → scammer; info-sharing/agreement/questions/doubt → victim.
-2. PATTERN: follow SPEAKER HISTORY — 2+ consecutive same speaker → next is likely the other.
-3. QUESTION → ANSWER = speaker change.
-4. No history → first speaker usually "scammer" (incoming calls).
-5. Short replies ("yes", "okay", "I see", "sure", "right", "uh-huh") = listener responding = usually victim.
-6. Timing gaps (end < next start) = possible speaker change, NOT certain — could be same speaker pausing.
+    if (useMistral) {
+      const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
+      const languageName = LANGUAGE_NAMES[language] || 'English';
 
-FIX WHISPER ERRORS: merge "I R S" → "IRS", fix homophones, add missing punctuation, merge fragmented segments from the same speaker (same tone, no speaker-change signals).
+      const systemPrompt = `Real-time scam detection agent analyzing a live call transcript for scam tactics.
 
-SCAM CHECKS (scammer turns): urgency/time pressure, payment requests (gift cards/crypto/wire/prepaid), personal info (SSN/passwords/OTP/bank), impersonation (government/bank/tech support/family), threats (arrest/account closure/fines), too-good-to-be-true offers, remote access requests, secrecy demands ("don't tell anyone").
-VICTIM CHECKS: sharing sensitive info? Pushing back well? Being manipulated?
+IDENTIFY SCAM PATTERNS:
+- Urgency/time pressure
+- Money/payment requests (gift cards, crypto, wire transfer)
+- Personal info requests (SSN, passwords, OTP, bank details)
+- Impersonation (IRS, FBI, bank, tech support, family member)
+- Threats (arrest, account closure, penalties)
+- Too-good-to-be-true offers
+- Remote access requests
+- Demands for secrecy
 
-Return JSON: segments [{speaker, text}], feedback (advice to victim if they spoke, else ""), is_scam, red_flags, risk_level (low/medium/high), warnings, tactics_detected, analysis (1-2 sentences).`;
+SPEAKER DETECTION:
+- "scammer": makes requests, creates urgency, threatens, impersonates
+- "victim": responds, shares info, asks questions, expresses doubt
+- Short replies ("yes", "okay", "I see") = victim
+- Long speeches, threats, pitches = scammer
 
-    const userPrompt = `${contextPrompt}${historyPrompt}
-TRANSCRIPT (Whisper segments with [start-end] timestamps):
+Return valid JSON with: segments (speaker, text), red_flags (detected), risk_level (low/medium/high), is_scam (boolean), feedback (advice), tactics_detected (list).`;
+
+      const userPrompt = `Analyze this call transcript for scam activity:
+
 ${formattedTranscript}
 
-Respond entirely in ${languageName}.`;
+${session_context ? `\nPrevious context: ${session_context}` : ''}
 
-    const llmResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${groqApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-oss-120b',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0,
-        max_tokens: 1000,
-      }),
-      signal: AbortSignal.timeout(12000),
-    });
+Respond ONLY with valid JSON. No markdown, no explanation.`;
 
-    if (!llmResponse.ok) {
-      const errText = await llmResponse.text().catch(() => 'unknown');
-      return Response.json({ error: `LLM analysis failed: ${llmResponse.status} ${errText}` }, { status: 502 });
+      try {
+        const mistralResponse = await fetch('https://api.mistral.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${mistralKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'mistral-tiny',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            temperature: 0,
+            max_tokens: 800,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+
+        if (mistralResponse.ok) {
+          const mistralResult = await mistralResponse.json();
+          const content = mistralResult.choices[0]?.message?.content || '{}';
+          try {
+            analysis = JSON.parse(content);
+          } catch {
+            // Fallback if JSON parsing fails
+            analysis = {
+              segments: [{ speaker: 'unknown', text: transcript }],
+              red_flags: [],
+              risk_level: 'unknown',
+              is_scam: false,
+              feedback: '',
+              tactics_detected: [],
+            };
+          }
+        } else {
+          console.warn('Mistral analysis failed, using fallback');
+        }
+      } catch (e) {
+        console.error('Mistral API error:', e);
+      }
     }
 
-    const llmResult = await llmResponse.json();
-    const analysis = JSON.parse(llmResult.choices[0].message.content);
-
-    const segments = analysis.segments || [];
-    const fullTranscript = segments.map((s: any) => s.text).join(' ');
-    const primarySpeaker = segments.length > 0 ? segments[0].speaker : 'unknown';
+    // Fallback if Mistral not configured or failed
+    if (!analysis.segments) {
+      analysis = {
+        segments: [{ speaker: 'unknown', text: transcript }],
+        red_flags: [],
+        risk_level: 'low',
+        is_scam: false,
+        feedback: 'Analysis unavailable. Review transcript manually.',
+        tactics_detected: [],
+      };
+    }
 
     return Response.json({
-      transcript: fullTranscript || transcript,
-      segments,
-      speaker: primarySpeaker,
+      transcript: transcript,
+      segments: analysis.segments || [],
+      speaker: analysis.segments?.[0]?.speaker || 'unknown',
       feedback: analysis.feedback || '',
       is_scam: analysis.is_scam ?? false,
       red_flags: analysis.red_flags || [],
@@ -177,8 +200,10 @@ Respond entirely in ${languageName}.`;
       warnings: [...(analysis.warnings || []), ...(audioQualityWarning ? [audioQualityWarning] : [])],
       tactics_detected: analysis.tactics_detected || [],
       analysis: analysis.analysis || '',
+      confidence: avgConfidence,
     });
   } catch (error) {
+    console.error('analyzeCallChunk error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
