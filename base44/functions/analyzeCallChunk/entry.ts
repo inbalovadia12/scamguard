@@ -1,8 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
 /**
- * Analyzes a chunk of audio from a live call for scam tactics.
- * Uses Deepgram for STT + Base44 Agent for scam detection.
+ * LiveGuard: Analyzes audio chunks from live calls for scam tactics.
+ * 1. Deepgram: Transcribes audio (handles blurry phone quality)
+ * 2. Base44 Agent: Detects scam patterns in real-time
+ * 3. Returns: speaker, red flags, risk level, coaching feedback
  */
 Deno.serve(async (req) => {
   try {
@@ -18,14 +20,11 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { audio_url, audio_base64, audio_mime, language } = body;
+    const { audio_url, audio_base64, audio_mime, language, session_context } = body;
 
-    console.log('analyzeCallChunk called with:', { audio_url: !!audio_url, audio_base64: !!audio_base64 });
-
-    // ===== TRANSCRIBE WITH DEEPGRAM =====
+    // ===== STEP 1: TRANSCRIBE WITH DEEPGRAM =====
     const deepgramKey = Deno.env.get('DEEPGRAM_API_KEY');
     if (!deepgramKey) {
-      console.error('DEEPGRAM_API_KEY not set');
       return Response.json({ error: 'Deepgram not configured' }, { status: 500 });
     }
 
@@ -33,7 +32,6 @@ Deno.serve(async (req) => {
     let contentType: string;
 
     if (audio_base64) {
-      console.log('Using base64 audio');
       const binaryString = atob(audio_base64);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -42,53 +40,41 @@ Deno.serve(async (req) => {
       contentType = audio_mime || 'audio/webm';
       audioBlob = new Blob([bytes], { type: contentType });
     } else if (audio_url) {
-      console.log('Fetching audio from URL:', audio_url);
       const audioResponse = await fetch(audio_url);
       if (!audioResponse.ok) {
-        console.error('Failed to fetch audio:', audioResponse.status);
         return Response.json({ error: 'Failed to fetch audio' }, { status: 400 });
       }
       audioBlob = await audioResponse.blob();
       contentType = audioBlob.type || 'audio/webm';
     } else {
-      console.error('No audio data provided');
-      return Response.json({ error: 'Audio data required' }, { status: 400 });
+      return Response.json({ error: 'Audio required' }, { status: 400 });
     }
 
-    console.log('Audio blob size:', audioBlob.size, 'Type:', contentType);
-
-    // Deepgram API call
-    console.log('Calling Deepgram...');
-    const deepgramUrl = `https://api.deepgram.com/v1/listen?model=nova-2&language=${language || 'en'}&punctuate=true&utterances=true`;
-    
-    const deepgramResponse = await fetch(deepgramUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Token ${deepgramKey}`,
-        'Content-Type': contentType,
-      },
-      body: audioBlob,
-      signal: AbortSignal.timeout(15000),
-    });
-
-    console.log('Deepgram response status:', deepgramResponse.status);
+    // Deepgram STT
+    const deepgramResponse = await fetch(
+      `https://api.deepgram.com/v1/listen?model=nova-2&language=${language || 'en'}&punctuate=true&utterances=true`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${deepgramKey}`,
+          'Content-Type': contentType,
+        },
+        body: audioBlob,
+        signal: AbortSignal.timeout(15000),
+      }
+    );
 
     if (!deepgramResponse.ok) {
-      const errText = await deepgramResponse.text().catch(() => 'unknown');
-      console.error('Deepgram error:', deepgramResponse.status, errText);
-      return Response.json({ error: `Deepgram failed: ${deepgramResponse.status}` }, { status: 502 });
+      const errText = await deepgramResponse.text().catch(() => 'error');
+      console.error('Deepgram failed:', deepgramResponse.status, errText);
+      return Response.json({ error: 'STT failed' }, { status: 502 });
     }
 
     const deepgramData = await deepgramResponse.json();
-    console.log('Deepgram success, channels:', deepgramData.results?.channels?.length);
-
     const transcript = deepgramData.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
     const confidence = deepgramData.results?.channels?.[0]?.alternatives?.[0]?.confidence || 0.8;
 
-    console.log('Transcript length:', transcript.length, 'Confidence:', confidence);
-
     if (!transcript.trim()) {
-      console.log('No transcript, returning empty analysis');
       return Response.json({
         transcript: '',
         segments: [],
@@ -97,79 +83,84 @@ Deno.serve(async (req) => {
         is_scam: false,
         feedback: '',
         analysis: 'No speech detected',
-        warnings: ['No audio detected'],
+        warnings: ['No audio'],
         confidence: 0,
       });
     }
 
-    // ===== ANALYZE WITH BASE44 AGENT =====
-    console.log('Calling Base44 agent...');
-
-    const prompt = `Analyze this phone call for scam activity. Respond ONLY with valid JSON.
+    // ===== STEP 2: ANALYZE WITH BASE44 AGENT =====
+    const analysisPrompt = `You are a real-time scam detection expert. Analyze this call transcript for scam activity.
 
 TRANSCRIPT: "${transcript}"
 
-Detect:
-1. Speaker type (scammer vs victim)
-2. Red flags: urgency, money requests, info requests, impersonation, threats, offers, remote access, secrecy
-3. Scam tactics
-4. Risk level (low/medium/high)
-5. Coaching feedback
+${session_context ? `CONTEXT: ${session_context}` : ''}
 
-Return JSON only:
+DETECT:
+1. WHO IS SPEAKING (scammer vs victim)
+   - Scammer: makes requests, creates urgency, threatens, impersonates
+   - Victim: responds, asks questions, expresses doubt
+
+2. RED FLAGS (if any present):
+   - Urgency/time pressure
+   - Money requests (gift cards, crypto, wire, prepaid)
+   - Personal info (SSN, password, OTP, bank)
+   - Impersonation (IRS, FBI, bank, tech, family)
+   - Threats (arrest, account closure)
+   - Too-good offers (prizes, refunds)
+   - Remote access requests
+   - Secrecy demands
+
+3. SCAM TACTICS (name them)
+4. RISK LEVEL (low/medium/high)
+5. COACHING (if victim speaking)
+
+RESPOND WITH VALID JSON ONLY:
 {
-  "segments": [{"speaker": "scammer|victim|unknown", "text": "quote"}],
-  "red_flags": [],
-  "tactics_detected": [],
+  "segments": [{"speaker": "scammer|victim|unknown", "text": "exact quote"}],
+  "red_flags": ["flag1"],
+  "tactics_detected": ["tactic1"],
   "risk_level": "low",
   "is_scam": false,
-  "feedback": "",
-  "analysis": "summary",
-  "confidence": 0.5
+  "feedback": "coaching if victim, else empty",
+  "analysis": "1-2 sentence summary"
 }`;
 
-    let analysis: any = {
-      segments: [{ speaker: 'unknown', text: transcript }],
-      red_flags: [],
-      tactics_detected: [],
-      risk_level: 'low',
-      is_scam: false,
-      feedback: '',
-      analysis: 'Default fallback',
-      confidence: 0.5,
-    };
+    let analysis: any = {};
 
     try {
-      console.log('Invoking LLM agent...');
       const llmResponse = await base44.integrations.Core.InvokeLLM({
-        prompt: prompt,
+        prompt: analysisPrompt,
         add_context_from_internet: false,
       });
 
-      console.log('LLM response type:', typeof llmResponse);
-
       const responseText = typeof llmResponse === 'string' 
         ? llmResponse 
-        : (llmResponse as any)?.response || JSON.stringify(llmResponse);
-
-      console.log('LLM response text length:', responseText.length);
+        : (llmResponse as any)?.response || '';
 
       // Extract JSON
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        console.log('Parsed analysis successfully');
-        analysis = parsed;
-      } else {
-        console.warn('No JSON found in response');
+        analysis = JSON.parse(jsonMatch[0]);
       }
-    } catch (agentError) {
-      console.error('Agent error:', agentError instanceof Error ? agentError.message : agentError);
-      // Use default analysis above
+    } catch (err) {
+      console.error('LLM error:', err);
+      // Fallback below
     }
 
-    console.log('Returning analysis...');
+    // Ensure required fields
+    if (!analysis.segments) {
+      analysis = {
+        segments: [{ speaker: 'unknown', text: transcript }],
+        red_flags: [],
+        tactics_detected: [],
+        risk_level: 'low',
+        is_scam: false,
+        feedback: '',
+        analysis: 'Analysis unavailable',
+      };
+    }
 
+    // ===== STEP 3: RETURN RESPONSE =====
     return Response.json({
       transcript: transcript,
       segments: analysis.segments || [],
@@ -180,17 +171,15 @@ Return JSON only:
       is_scam: analysis.is_scam ?? false,
       feedback: analysis.feedback || '',
       analysis: analysis.analysis || '',
-      warnings: confidence < 0.6 ? ['Poor audio quality'] : [],
+      warnings: confidence < 0.6 ? ['Poor audio quality - move closer to speaker'] : [],
       confidence: analysis.confidence ?? confidence,
       timestamp: new Date().toISOString(),
     });
 
   } catch (error: any) {
-    const msg = error?.message || error?.toString?.() || 'Unknown error';
-    console.error('FATAL analyzeCallChunk error:', msg);
-    
+    console.error('analyzeCallChunk error:', error?.message || error);
     return Response.json({ 
-      error: msg,
+      error: error?.message || 'Analysis failed',
       transcript: '',
       segments: [],
       red_flags: [],
