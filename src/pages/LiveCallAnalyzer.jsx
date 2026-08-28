@@ -322,7 +322,7 @@ export default function LiveCallAnalyzer() {
 
       streamRef.current = stream;
       const audioMime = getSupportedAudioMime();
-      const recorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime, audioBitsPerSecond: 32000 } : { audioBitsPerSecond: 32000 });
+      const recorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime, audioBitsPerSecond: 128000 } : { audioBitsPerSecond: 128000 });
       recorderRef.current = recorder;
 
       const processNextChunk = async () => {
