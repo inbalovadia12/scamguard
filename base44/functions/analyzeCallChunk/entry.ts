@@ -174,7 +174,7 @@ Respond entirely in ${languageName}.`;
       is_scam: analysis.is_scam ?? false,
       red_flags: analysis.red_flags || [],
       risk_level: analysis.risk_level || 'low',
-      warnings: analysis.warnings || [],
+      warnings: [...(analysis.warnings || []), ...(audioQualityWarning ? [audioQualityWarning] : [])],
       tactics_detected: analysis.tactics_detected || [],
       analysis: analysis.analysis || '',
     });
