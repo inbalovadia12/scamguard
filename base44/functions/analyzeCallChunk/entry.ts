@@ -72,6 +72,18 @@ Deno.serve(async (req) => {
     const groqResult = await groqResponse.json();
     const transcript: string = groqResult.text || '';
     const groqSegments = groqResult.segments || [];
+    
+    // Detect audio quality issues
+    const audioQuality = {
+      isLowConfidence: (groqResult.confidence_avg || 1) < 0.5, // Whisper confidence metric
+      hasMultipleErrors: transcript.split(' ').length > 0 && (transcript.match(/\[inaudible\]/gi) || []).length > 2,
+      isMostlyNoise: groqSegments.length > 0 && groqSegments.filter((s: any) => (s.text || '').length < 3).length / groqSegments.length > 0.6,
+    };
+    
+    const audioQualityWarning = audioQuality.isLowConfidence || audioQuality.hasMultipleErrors || audioQuality.isMostlyNoise
+      ? 'Note: Audio quality is poor — transcription may be inaccurate. Try moving closer to the speaker or using clearer audio.'
+      : '';
+    
     const formattedTranscript = groqSegments.length > 0
       ? groqSegments.map((s: any) => `[${s.start.toFixed(1)}-${s.end.toFixed(1)}] "${s.text.trim()}"`).join('\n')
       : transcript;
