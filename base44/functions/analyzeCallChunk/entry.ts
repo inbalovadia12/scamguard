@@ -157,8 +157,8 @@ RESPOND WITH VALID JSON (no markdown, no explanation):
       // Use Base44's agent for intelligent, context-aware analysis
       const agentResponse = await base44.integrations.Core.InvokeLLM({
         prompt: agentPrompt,
-        add_context_from_internet: false, // Keep context local for speed
-        model: 'gemini_3_flash', // Fast model for real-time analysis
+        add_context_from_internet: false,
+        model: 'gemini-2.0-flash',
       });
 
       // Parse agent response
