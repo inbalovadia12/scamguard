@@ -423,9 +423,9 @@ export default function LiveCallAnalyzer() {
 
       let silenceStart = 0;
       let isSpeaking = false;
-      const SILENCE_THRESHOLD = 0.015;
-      const SILENCE_DURATION = 350;
-      const MAX_CHUNK_MS = 4500;
+      const SILENCE_THRESHOLD = 0.01;
+      const SILENCE_DURATION = 400;
+      const MAX_CHUNK_MS = 5000;
 
       const checkAudioLevel = () => {
         if (userStoppedRef.current || !analyserRef.current) return;
