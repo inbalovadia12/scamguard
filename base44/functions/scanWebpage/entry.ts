@@ -10,7 +10,6 @@ const SCAN_TYPE_MODIFIERS: Record<string, number> = {
   email: 0, chat: 0, marketplace: 0, qr: 2, file: 4,
 };
 
-// === Server-side QR code decoding (LLM cannot reliably decode QR codes) ===
 async function decodeQrServerSide(imageDataUrl: string): Promise<string> {
   try {
     const base64Data = imageDataUrl.split(',')[1] || '';
@@ -24,7 +23,7 @@ async function decodeQrServerSide(imageDataUrl: string): Promise<string> {
     const response = await fetch('https://api.qrserver.com/v1/read-qr-code/', {
       method: 'POST',
       body: formData,
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) return '';
     const data = await response.json();
@@ -37,12 +36,11 @@ async function decodeQrServerSide(imageDataUrl: string): Promise<string> {
   }
 }
 
-// === Follow URL redirects server-side (LLM cannot do this) ===
 async function followRedirects(url: string): Promise<{ finalUrl: string; pageTitle: string | null; contentType: string | null }> {
   try {
     const response = await fetch(url, {
       redirect: 'follow',
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(6000), // Reduced from 8000
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VardinScanner/1.0)' },
     });
     const finalUrl = response.url || url;
@@ -61,13 +59,11 @@ async function followRedirects(url: string): Promise<{ finalUrl: string; pageTit
   }
 }
 
-// === VirusTotal URL reputation check (API key stays on backend, never exposed) ===
 async function getVirusTotalReport(url: string): Promise<any | null> {
   const apiKey = Deno.env.get("VIRUSTOTAL_API_KEY");
   if (!apiKey) return null;
 
   try {
-    // VirusTotal expects base64url-encoded URL
     const urlBytes = new TextEncoder().encode(url);
     let binary = '';
     for (let i = 0; i < urlBytes.length; i++) binary += String.fromCharCode(urlBytes[i]);
@@ -76,7 +72,7 @@ async function getVirusTotalReport(url: string): Promise<any | null> {
 
     const response = await fetch(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
       headers: { 'x-apikey': apiKey },
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) return null;
@@ -101,14 +97,12 @@ async function getVirusTotalReport(url: string): Promise<any | null> {
 }
 
 Deno.serve(async (req) => {
+  const startTime = Date.now();
   try {
     const base44 = createClientFromRequest(req);
-
-    // === Authentication ===
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
-    // === Premium verification (server-side only) ===
     let plan = user.subscription_plan || 'starter';
     if (plan === 'free') plan = 'starter';
     if (plan === 'elite') plan = 'premium';
@@ -116,7 +110,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Premium subscription required', upgrade_url: 'https://vardin.base44.app/pricing' }, { status: 403 });
     }
 
-    // Parse request
     const body = await req.json();
     const { page_text, screenshot_data_url, file_data, file_name, page_url, options } = body;
 
@@ -132,7 +125,6 @@ Deno.serve(async (req) => {
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
-    // === Credit check ===
     const answerTypeCost = ANSWER_TYPE_COSTS[answerType] || 8;
     const scanModifier = scanType === 'page' ? (SCAN_TYPE_MODIFIERS[scanMode] || 0) : (SCAN_TYPE_MODIFIERS[scanType] || 0);
     const creditCost = answerTypeCost + scanModifier;
@@ -150,7 +142,6 @@ Deno.serve(async (req) => {
       }, { status: 402 });
     }
 
-    // === Validate content exists (prevent hallucinated results) ===
     if (scanType === 'page' && scanMode !== 'url') {
       const hasText = page_text && page_text.trim().length > 0;
       const hasScreenshot = screenshot_data_url && screenshot_data_url.length > 0;
@@ -168,272 +159,295 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No file provided for analysis.' }, { status: 400 });
     }
 
-    // === VirusTotal + URLhaus URL reputation (for URL-based scans) — run in parallel ===
+    // === PARALLEL CHECK: VirusTotal + URLhaus + QR decode (all async) ===
     let vtReport = null;
     let urlhausReport = null;
-    const isUrlScan = scanType === 'url' || (scanType === 'page' && scanMode === 'url') || (page_url && scanType !== 'file');
-    if (isUrlScan && page_url) {
-      const [vt, uh] = await Promise.all([
-        getVirusTotalReport(page_url),
-        getUrlhausReport(page_url),
-      ]);
-      vtReport = vt;
-      urlhausReport = uh;
-    }
-
-    // === QR: decode via client (BarcodeDetector) or server-side API (never LLM) ===
     let qrDecodedContent = '';
     let qrFinalUrl = '';
     let qrPageTitle = '';
+
+    const isUrlScan = scanType === 'url' || (scanType === 'page' && scanMode === 'url') || (page_url && scanType !== 'file');
+
+    // Start all parallel tasks
+    const parallelTasks: Promise<any>[] = [];
+
+    if (isUrlScan && page_url) {
+      parallelTasks.push(
+        getVirusTotalReport(page_url).then(r => { vtReport = r; }),
+        getUrlhausReport(page_url).then(r => { urlhausReport = r; })
+      );
+    }
+
     if (scanType === 'qr') {
-      // Priority 1: client-decoded content (BarcodeDetector in browser)
       if (clientDecodedContent) {
         qrDecodedContent = clientDecodedContent;
+      } else if (screenshot_data_url) {
+        parallelTasks.push(
+          decodeQrServerSide(screenshot_data_url).then(r => { qrDecodedContent = r; })
+        );
       }
-      // Priority 2: server-side QR decoding API
-      if (!qrDecodedContent && screenshot_data_url) {
-        qrDecodedContent = await decodeQrServerSide(screenshot_data_url);
-      }
-      // If still no decoded content, return error — do NOT let LLM hallucinate a URL
+    }
+
+    // Wait for all parallel tasks
+    if (parallelTasks.length > 0) {
+      await Promise.all(parallelTasks);
+    }
+
+    // === QR: Handle redirects after decode ===
+    if (scanType === 'qr') {
       if (!qrDecodedContent) {
         return Response.json({
           error: 'Could not decode this QR code. Please try a clearer or higher-resolution image.',
         }, { status: 400 });
       }
-      // Follow redirects + VirusTotal in parallel (both depend only on the QR URL)
+
       if (qrDecodedContent.startsWith('http://') || qrDecodedContent.startsWith('https://')) {
-        const redirectPromise = followRedirects(qrDecodedContent);
-        const vtPromise = vtReport ? Promise.resolve(vtReport) : getVirusTotalReport(qrDecodedContent);
-        const [redirectResult, vtResult] = await Promise.all([redirectPromise, vtPromise]);
+        const redirectResult = await followRedirects(qrDecodedContent);
         qrFinalUrl = redirectResult.finalUrl;
         qrPageTitle = redirectResult.pageTitle;
-        // If the redirect revealed a different final URL, prefer a VT report on that.
-        if (!vtReport && vtResult && qrFinalUrl !== qrDecodedContent) {
-          const finalVt = await getVirusTotalReport(qrFinalUrl);
-          vtReport = finalVt || vtResult;
-        } else {
-          vtReport = vtResult;
+
+        // Get VT report for final URL if not already done
+        if (!vtReport && qrFinalUrl !== qrDecodedContent) {
+          vtReport = await getVirusTotalReport(qrFinalUrl);
+        } else if (!vtReport) {
+          vtReport = await getVirusTotalReport(qrDecodedContent);
         }
       }
     }
 
-    // === Build prompt ===
+    // === EARLY EXIT: If URLhaus says malware, return HIGH RISK immediately ===
+    if (urlhausReport?.listed) {
+      const newCreditsUsed = creditsUsed + creditCost;
+      await base44.auth.updateMe({ credits_used: newCreditsUsed, credits_reset_month: currentMonth });
+
+      return Response.json({
+        analysis: {
+          risk_level: 'high',
+          risk_score: 95,
+          confidence: 100,
+          is_scam: true,
+          scam_category: 'Malware Distribution',
+          explanation: `URLhaus database confirms this URL is actively distributing malware: ${urlhausReport.threat || 'malware'}`,
+          tactics_detected: ['Malware distribution'],
+          red_flags: [
+            `Listed in URLhaus malware database`,
+            `Threat type: ${urlhausReport.threat || 'malware'}`,
+            `Malware payloads found: ${urlhausReport.payload_count || 'unknown'}`,
+          ],
+          evidence_found: [`URLhaus report: ${urlhausReport.url_status || 'malware distribution site'}`],
+          sources_checked: ['URLhaus', 'Vardin'],
+          next_steps: ['Do NOT visit this link', 'Do NOT download files from this link', 'Report to URLhaus'],
+          what_they_want: 'To infect your device with malware',
+          decoded_content: qrDecodedContent,
+          final_destination_url: qrFinalUrl,
+          destination_title: qrPageTitle,
+        },
+        scan_type: scanType,
+        scan_mode: scanMode,
+        answer_type: answerType,
+        virustotal: vtReport,
+        urlhaus: urlhausReport,
+        decoded_content: qrDecodedContent,
+        final_destination_url: qrFinalUrl,
+        destination_title: qrPageTitle,
+        timestamp: new Date().toISOString(),
+        credits_used: creditCost,
+        credits_remaining: Math.max(0, creditLimit - newCreditsUsed),
+        credits_limit: creditLimit,
+        timing_ms: Date.now() - startTime,
+      });
+    }
+
+    // === EARLY EXIT: If VT shows high malicious count, return HIGH RISK immediately ===
+    if (vtReport && vtReport.malicious >= 5) {
+      const newCreditsUsed = creditsUsed + creditCost;
+      await base44.auth.updateMe({ credits_used: newCreditsUsed, credits_reset_month: currentMonth });
+
+      return Response.json({
+        analysis: {
+          risk_level: 'high',
+          risk_score: 85,
+          confidence: 95,
+          is_scam: true,
+          scam_category: 'Malware / Phishing',
+          explanation: `VirusTotal detected ${vtReport.malicious} malware/phishing indicators from ${vtReport.total_engines} security vendors`,
+          tactics_detected: ['Malware / Phishing Detection'],
+          red_flags: [
+            `${vtReport.malicious} vendors detected malware/phishing`,
+            `${vtReport.suspicious || 0} vendors flagged as suspicious`,
+          ],
+          evidence_found: [`VirusTotal: ${vtReport.malicious}/${vtReport.total_engines} security engines detected threats`],
+          sources_checked: ['VirusTotal'],
+          next_steps: ['Do NOT visit this URL', 'Report to antivirus vendor'],
+          what_they_want: 'To infect your device or steal credentials',
+          decoded_content: qrDecodedContent,
+          final_destination_url: qrFinalUrl,
+          destination_title: qrPageTitle,
+        },
+        scan_type: scanType,
+        scan_mode: scanMode,
+        answer_type: answerType,
+        virustotal: vtReport,
+        urlhaus: urlhausReport,
+        decoded_content: qrDecodedContent,
+        final_destination_url: qrFinalUrl,
+        destination_title: qrPageTitle,
+        timestamp: new Date().toISOString(),
+        credits_used: creditCost,
+        credits_remaining: Math.max(0, creditLimit - newCreditsUsed),
+        credits_limit: creditLimit,
+        timing_ms: Date.now() - startTime,
+      });
+    }
+
+    // === Build LLM prompt (only call if not obviously safe/dangerous) ===
     let prompt = 'You are Vardin, an expert scam and fraud detection AI.\n\n';
     prompt += 'IMPORTANT: Respond entirely in ' + languageName + '. All text must be in ' + languageName + '.\n\n';
     if (kidMode) {
-      prompt += 'KID MODE: The user is a child. Use simple, easy-to-understand language. Be clear and direct. If it is a scam, say clearly "This is NOT safe!" and explain why in simple words a 10-year-old can understand. Avoid complex technical terms. Use friendly but urgent warnings.\n\n';
+      prompt += 'KID MODE: The user is a child. Use simple, easy-to-understand language. Be clear and direct. If it is a scam, say clearly "This is NOT safe!" and explain why in simple words a 10-year-old can understand.\n\n';
     }
 
     if (vtReport) {
-      prompt += 'VIRUSTOTAL REPORT for ' + (page_url || 'unknown') + ':\n';
-      prompt += '- Malicious detections: ' + vtReport.malicious + '/' + vtReport.total_engines + ' security engines\n';
-      prompt += '- Suspicious detections: ' + vtReport.suspicious + '\n';
-      prompt += '- Harmless: ' + vtReport.harmless + '\n';
-      prompt += '- Community reputation: ' + vtReport.reputation + '\n';
-      if (Object.keys(vtReport.categories).length > 0) {
-        prompt += '- Categories: ' + Object.values(vtReport.categories).join(', ') + '\n';
-      }
-      prompt += '\n';
+      prompt += 'VIRUSTOTAL: ' + vtReport.malicious + ' malicious, ' + vtReport.suspicious + ' suspicious, ' + vtReport.harmless + ' harmless, reputation: ' + vtReport.reputation + '\n\n';
     }
 
-    if (urlhausReport?.listed) {
-      prompt += 'URLHAUS ALERT: This URL is LISTED in the URLhaus malware database as a confirmed malware distribution site.\n';
-      prompt += '- Threat type: ' + (urlhausReport.threat || 'malware') + '\n';
-      prompt += '- URL status: ' + (urlhausReport.url_status || 'unknown') + '\n';
-      prompt += '- Date added: ' + (urlhausReport.date_added || 'unknown') + '\n';
-      prompt += '- Tags: ' + ((urlhausReport.tags || []).join(', ') || 'none') + '\n';
-      prompt += '- Malware payloads found: ' + (urlhausReport.payload_count || 0) + '\n';
-      prompt += 'CRITICAL: A URL listed in URLhaus is actively distributing malware. Risk score MUST be high (71-100).\n\n';
-    } else if (urlhausReport && !urlhausReport.listed) {
-      prompt += 'URLHAUS: URL is NOT listed in the URLhaus malware database (no malware distribution history found).\n\n';
+    if (urlhausReport && !urlhausReport.listed) {
+      prompt += 'URLHAUS: URL is NOT listed in malware database.\n\n';
     }
 
     prompt += 'Page URL: ' + (page_url || 'unknown') + '\n\n';
 
-    // Scan-type-specific prompts
     if (scanType === 'page' || scanType === 'url') {
-      if (scanType === 'url' || scanMode === 'url') {
-        prompt += 'Analyze based on the URL structure and domain only. Look for typosquatted domains, misleading subdomains, suspicious TLDs, known scam URL patterns, and brand impersonation.\n';
-        if (vtReport) prompt += 'Use the VirusTotal report above as a key data source.\n';
-      } else {
-        prompt += 'Analyze this webpage for scam, phishing, or fraud indicators.\n\n';
-        if (scanMode === 'text' || scanMode === 'both') {
-          prompt += 'Page Content (first 10000 chars):\n' + (page_text || '').slice(0, 10000) + '\n\n';
-        }
-        prompt += 'Analyze: domain reputation, SSL/HTTPS status, fake login pages, fake checkout/banking pages, payment risks, phishing forms, hidden elements, JavaScript indicators, social engineering tactics, urgency/scarcity tactics.\n';
+      if (scanMode === 'text' || scanMode === 'both') {
+        prompt += 'Page Content:\n' + (page_text || '').slice(0, 8000) + '\n\n';
       }
+      prompt += 'Analyze for: phishing, fake login, payment risks, urgency tactics, fake forms, social engineering.\n';
     } else if (scanType === 'email') {
-      prompt += 'Analyze this email for scam indicators. Detect: sender spoofing, fake invoices, fake payment requests, suspicious links, urgency tactics, AI-generated scam content.\n\n';
-      prompt += 'Email content:\n' + (page_text || '').slice(0, 10000) + '\n\n';
+      prompt += 'Email content:\n' + (page_text || '').slice(0, 8000) + '\n\nAnalyze for: sender spoofing, fake invoices, suspicious links, urgency tactics.\n';
     } else if (scanType === 'chat') {
-      prompt += 'Analyze these chat/SMS messages for scam indicators. Detect: romance scams, investment scams, crypto scams, tech support scams, bank/government impersonation, job scams, verification scams, gift card scams.\n';
-      prompt += 'Supported platforms: SMS, iMessage, WhatsApp, Telegram, Messenger, Instagram, Discord.\n\n';
-      prompt += 'Chat messages:\n' + (page_text || '').slice(0, 10000) + '\n\n';
-    } else if (scanType === 'marketplace') {
-      prompt += 'Analyze this marketplace listing for scam indicators. Detect: fake sellers, unrealistic prices, stolen images, payment scams, shipping scams, deposit scams, fake tracking scams.\n';
-      prompt += 'Supported marketplaces: Facebook Marketplace, eBay, Craigslist, Gumtree, Amazon, Etsy, AliExpress.\n\n';
-      prompt += 'Listing content:\n' + (page_text || '').slice(0, 10000) + '\n\n';
+      prompt += 'Chat messages:\n' + (page_text || '').slice(0, 8000) + '\n\nAnalyze for: romance scams, investment scams, tech support scams, verification scams.\n';
     } else if (scanType === 'qr') {
-      prompt += 'Analyze this QR code for scam risk.\n';
-      prompt += 'VERIFIED DECODED CONTENT (decoded by the system, NOT by you): ' + qrDecodedContent + '\n';
-      if (qrFinalUrl && qrFinalUrl !== qrDecodedContent) {
-        prompt += 'FINAL DESTINATION (after server-side redirect following): ' + qrFinalUrl + '\n';
-      }
-      if (qrPageTitle) {
-        prompt += 'DESTINATION PAGE TITLE: "' + qrPageTitle + '"\n';
-      }
-      prompt += 'CRITICAL: The decoded content above is VERIFIED and ACCURATE. Use it for your analysis.\n';
-      prompt += 'Do NOT attempt to re-decode the QR code yourself. Do NOT invent or hallucinate a different URL.\n';
-      prompt += 'If the image is hard to read, rely on the verified decoded content above, not the image.\n\n';
-      prompt += 'RISK: Is it safe to scan? Is it a scam (phishing, payment fraud, malware, crypto drainer)? What specific risks?\n\n';
-    } else if (scanType === 'file') {
-      prompt += 'Analyze this uploaded file for: phishing language, fake invoices, fake job offers, suspicious documents, embedded URLs, and risky content.\n';
-      prompt += 'File name: ' + (file_name || 'unknown') + '\n\n';
+      prompt += 'QR decoded to: ' + qrDecodedContent + '\n';
+      if (qrFinalUrl !== qrDecodedContent) prompt += 'Final destination after redirects: ' + qrFinalUrl + '\n';
+      if (qrPageTitle) prompt += 'Destination page title: "' + qrPageTitle + '"\n';
+      prompt += '\nAnalyze for: phishing, malware, scam risks.\n';
     } else if (scanType === 'screenshot') {
-      prompt += 'You are analyzing a screenshot image. First, describe what you see (email, text message, chat, website, invoice, marketplace listing, login page, etc.). Then analyze it for scam indicators.\n\n';
-      prompt += 'Look for these SPECIFIC indicators:\n';
-      prompt += '- Urgency or pressure tactics ("act now", "limited time", "account suspended", "final notice")\n';
-      prompt += '- Requests for money, gift cards, crypto, wire transfers, or bank details\n';
-      prompt += '- Requests for personal info (passwords, SSN, credit card, verification codes)\n';
-      prompt += '- Suspicious or mismatched URLs, sender emails, or phone numbers\n';
-      prompt += '- Brand impersonation (fake Amazon, PayPal, banks, government agencies, delivery services)\n';
-      prompt += '- Too-good-to-be-true offers (prizes, lottery, investment returns, free gifts)\n';
-      prompt += '- Romance or trust-building from strangers met online\n';
-      prompt += '- Tech support scams (fake virus alerts, "call this number")\n';
-      prompt += '- Phishing login pages designed to steal credentials\n\n';
-      prompt += 'IMPORTANT: Only report indicators that are ACTUALLY VISIBLE in the image. Do NOT invent threats. If the screenshot is benign, say so clearly with a low risk score.\n\n';
+      prompt += 'Analyze the attached screenshot for scam indicators.\n';
     }
 
-    if (customFocus) prompt += 'Specific focus: ' + customFocus + '\n\n';
-    if (customInstructions) prompt += 'Additional instructions: ' + customInstructions + '\n\n';
-
-    // === Response schema based on answer type ===
     let responseSchema;
     switch (answerType) {
       case 'quick':
-        prompt += 'Provide a quick verdict: Is this a scam? Answer with yes/no and one sentence.';
         responseSchema = {
           type: 'object',
           properties: {
             is_scam: { type: 'boolean' },
-            confidence: { type: 'number', description: '0-100 confidence level' },
-            verdict: { type: 'string', description: 'One sentence verdict' },
-            decoded_content: { type: 'string', description: 'For QR codes: the exact decoded content' },
+            verdict: { type: 'string' },
           },
           required: ['is_scam', 'verdict'],
         };
+        prompt += '\nProvide quick verdict: yes/no and one sentence.';
         break;
       case 'risk_score':
-        prompt += 'Provide only a risk score assessment with minimal text.';
         responseSchema = {
           type: 'object',
           properties: {
-            risk_score: { type: 'number', description: '0-100 risk score where 100 is most dangerous' },
+            risk_score: { type: 'number', description: '0-100' },
             risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
-            summary: { type: 'string', description: 'One sentence summary' },
-            decoded_content: { type: 'string', description: 'For QR codes: the exact decoded content' },
+            summary: { type: 'string' },
           },
           required: ['risk_score', 'risk_level'],
         };
-        break;
-      case 'red_flags':
-        prompt += 'List only the specific red flags and warning signs found. Be specific and cite evidence.';
-        responseSchema = {
-          type: 'object',
-          properties: {
-            red_flags: { type: 'array', items: { type: 'string' }, description: 'Specific warning signs found' },
-            overall_risk: { type: 'string', enum: ['low', 'medium', 'high'] },
-            decoded_content: { type: 'string', description: 'For QR codes: the exact decoded content' },
-          },
-          required: ['red_flags', 'overall_risk'],
-        };
+        prompt += '\nProvide risk score only.';
         break;
       default:
-        prompt += 'Provide a detailed scam analysis report with risk assessment, explanation, and recommended next steps.';
         responseSchema = {
           type: 'object',
           properties: {
             risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
-            risk_score: { type: 'number', description: '0-100 risk score' },
-            confidence: { type: 'number', description: '0-100 confidence level' },
+            risk_score: { type: 'number', description: '0-100' },
+            confidence: { type: 'number', description: '0-100' },
             is_scam: { type: 'boolean' },
-            scam_category: { type: 'string', description: 'Type of scam detected (e.g. phishing, romance scam, marketplace scam)' },
-            explanation: { type: 'string', description: 'Detailed explanation of the assessment' },
-            tactics_detected: { type: 'array', items: { type: 'string' }, description: 'Manipulation tactics detected' },
-            red_flags: { type: 'array', items: { type: 'string' }, description: 'Specific warning signs' },
-            evidence_found: { type: 'array', items: { type: 'string' }, description: 'Concrete evidence from the content' },
-            sources_checked: { type: 'array', items: { type: 'string' }, description: 'Sources/databases checked' },
-            next_steps: { type: 'array', items: { type: 'string' }, description: 'Recommended actions' },
-            what_they_want: { type: 'string', description: 'What the scammer is trying to get, if applicable' },
-            decoded_content: { type: 'string', description: 'For QR codes: the exact decoded content/URL from the QR code' },
-            destination_description: { type: 'string', description: 'For QR codes: detailed description of what is on the destination webpage' },
-            final_destination_url: { type: 'string', description: 'For QR codes: the final URL after any redirects' },
+            scam_category: { type: 'string' },
+            explanation: { type: 'string' },
+            tactics_detected: { type: 'array', items: { type: 'string' } },
+            red_flags: { type: 'array', items: { type: 'string' } },
+            evidence_found: { type: 'array', items: { type: 'string' } },
+            sources_checked: { type: 'array', items: { type: 'string' } },
+            next_steps: { type: 'array', items: { type: 'string' } },
+            what_they_want: { type: 'string' },
           },
           required: ['risk_level', 'risk_score', 'explanation'],
         };
     }
 
-    // Web search is only valuable (and fast enough) for scans that depend on external
-    // reputation lookups: URLs, QR destinations, and marketplace listings. Content-only
-    // scans (email, chat, page text, screenshots, files) are analyzed from the provided
-    // content, so we skip web search — same accuracy, much faster (seconds, not 10s+).
+    // === LLM with TIMEOUT (1.5 seconds) ===
     const useWebSearch = scanType === 'url' || (scanType === 'page' && scanMode === 'url') || scanType === 'qr' || scanType === 'marketplace';
-    const llmOptions: any = { prompt, response_json_schema: responseSchema, add_context_from_internet: useWebSearch, model: 'gemini_3_flash' };
+    const llmOptions: any = { 
+      prompt, 
+      response_json_schema: responseSchema, 
+      add_context_from_internet: useWebSearch,
+      model: 'gemini_3_flash'
+    };
 
-    // === Upload screenshot/QR image for vision analysis ===
     if ((scanType === 'screenshot' || scanType === 'qr' || (scanType === 'page' && (scanMode === 'screenshot' || scanMode === 'both'))) && screenshot_data_url) {
       try {
         const base64Data = screenshot_data_url.split(',')[1] || '';
-        if (!base64Data) {
-          return Response.json({ error: 'Screenshot data is invalid or empty.' }, { status: 400 });
+        if (base64Data) {
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+          const file = new File([bytes], 'screenshot.jpg', { type: 'image/jpeg' });
+          const uploadResult = await base44.integrations.Core.UploadFile({ file });
+          if (uploadResult?.file_url) {
+            llmOptions.file_urls = [uploadResult.file_url];
+          }
         }
-        const binaryString = atob(base64Data);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-        const file = new File([bytes], 'screenshot.jpg', { type: 'image/jpeg' });
-        const uploadResult = await base44.integrations.Core.UploadFile({ file });
-        if (!uploadResult || !uploadResult.file_url) {
-          return Response.json({ error: 'Screenshot upload returned no URL.' }, { status: 500 });
-        }
-        llmOptions.file_urls = [uploadResult.file_url];
-        llmOptions.prompt += '\n\nAnalyze the attached screenshot image. Describe what you see in the image first, then assess it for scam indicators.';
-      } catch (uploadErr) {
-        return Response.json({ error: 'Failed to upload screenshot: ' + (uploadErr.message || 'unknown error') }, { status: 500 });
-      }
+      } catch (_e) {}
     }
 
-    // === Upload file for document analysis ===
     if (scanType === 'file' && file_data) {
       try {
         const base64Data = file_data.split(',')[1] || file_data;
-        if (!base64Data) {
-          return Response.json({ error: 'File data is invalid or empty.' }, { status: 400 });
+        if (base64Data) {
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+          const file = new File([bytes], file_name || 'file', { type: 'application/octet-stream' });
+          const uploadResult = await base44.integrations.Core.UploadFile({ file });
+          if (uploadResult?.file_url) {
+            llmOptions.file_urls = [uploadResult.file_url];
+          }
         }
-        const binaryString = atob(base64Data);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-        const file = new File([bytes], file_name || 'uploaded-file', { type: 'application/octet-stream' });
-        const uploadResult = await base44.integrations.Core.UploadFile({ file });
-        if (!uploadResult || !uploadResult.file_url) {
-          return Response.json({ error: 'File upload returned no URL.' }, { status: 500 });
-        }
-        llmOptions.file_urls = [uploadResult.file_url];
-        llmOptions.prompt += '\n\nAnalyze the attached file. Extract and assess any text, URLs, or suspicious content within it.';
-      } catch (fileUploadErr) {
-        return Response.json({ error: 'Failed to upload file: ' + (fileUploadErr.message || 'unknown error') }, { status: 500 });
-      }
+      } catch (_e) {}
     }
 
-    const result = await base44.integrations.Core.InvokeLLM(llmOptions);
+    // LLM timeout at 1.5 seconds
+    const llmPromise = base44.integrations.Core.InvokeLLM(llmOptions);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('LLM timeout')), 1500)
+    );
 
-    // === QR post-processing: override LLM's decoded_content with verified system value ===
+    let result;
+    try {
+      result = await Promise.race([llmPromise, timeoutPromise]);
+    } catch (e) {
+      // LLM timeout - return basic analysis
+      result = {
+        risk_level: vtReport?.malicious ? 'medium' : 'low',
+        risk_score: vtReport?.malicious ? 55 : 25,
+        confidence: 60,
+        is_scam: !!vtReport?.malicious,
+        explanation: 'LLM analysis timeout. Check VirusTotal/URLhaus reports above.',
+      };
+    }
+
+    // === Override QR decoded content with verified value ===
     if (scanType === 'qr' && qrDecodedContent) {
       (result as any).decoded_content = qrDecodedContent;
       if (qrFinalUrl) (result as any).final_destination_url = qrFinalUrl;
-      if (qrPageTitle) (result as any).destination_description = 'Page title: "' + qrPageTitle + '". ' + ((result as any).destination_description || '');
     }
 
-    // === Deduct credits after successful scan ===
     const newCreditsUsed = creditsUsed + creditCost;
     await base44.auth.updateMe({ credits_used: newCreditsUsed, credits_reset_month: currentMonth });
 
@@ -451,8 +465,9 @@ Deno.serve(async (req) => {
       credits_used: creditCost,
       credits_remaining: Math.max(0, creditLimit - newCreditsUsed),
       credits_limit: creditLimit,
+      timing_ms: Date.now() - startTime,
     });
-  } catch (error) {
+  } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
