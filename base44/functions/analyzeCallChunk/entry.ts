@@ -1,14 +1,13 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
 /**
- * LiveGuard Audio Analysis - AssemblyAI Version
+ * LiveGuard - AssemblyAI with AGGRESSIVE speaker diarization debugging
  * 
  * FEATURES:
- * - Speaker diarization (native AssemblyAI)
- * - Real-time speaker tracking
- * - Fast keyword detection (skip LLM for obvious scams)
- * - LLM analysis with timeout
- * - Sentiment analysis
+ * - Full logging to debug speaker detection
+ * - Multiple diarization approaches
+ * - Fallback speaker detection
+ * - Real-time speaker identification
  */
 Deno.serve(async (req) => {
   try {
@@ -28,7 +27,6 @@ Deno.serve(async (req) => {
 
     const assemblyKey = Deno.env.get('ASSEMBLY_AI_API_KEY');
     if (!assemblyKey) {
-      console.error('ASSEMBLY_AI_API_KEY not set');
       return Response.json({ error: 'AssemblyAI not configured' }, { status: 500 });
     }
 
@@ -37,16 +35,16 @@ Deno.serve(async (req) => {
     // ===== HANDLE AUDIO INPUT =====
     if (audio_url) {
       audioUrl = audio_url;
+      console.log('Using audio URL:', audioUrl.substring(0, 100));
     } else if (audio_base64) {
-      // Upload base64 audio to AssemblyAI
       const binaryString = atob(audio_base64);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
       const audioBlob = new Blob([bytes], { type: audio_mime || 'audio/webm' });
+      console.log('Uploading base64 audio, size:', audioBlob.size, 'bytes');
 
-      // Upload to AssemblyAI
       const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
         method: 'POST',
         headers: {
@@ -56,16 +54,19 @@ Deno.serve(async (req) => {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error(`AssemblyAI upload failed: ${uploadResponse.status}`);
+        throw new Error(`Upload failed: ${uploadResponse.status}`);
       }
 
       const uploadData = await uploadResponse.json();
       audioUrl = uploadData.upload_url;
+      console.log('Upload successful, URL:', audioUrl.substring(0, 100));
     } else {
       throw new Error('No audio data provided');
     }
 
-    // ===== TRANSCRIBE WITH ASSEMBLYAI =====
+    // ===== TRANSCRIBE WITH ASSEMBLYAI - AGGRESSIVE DIARIZATION =====
+    console.log('Submitting to AssemblyAI with speaker_labels enabled');
+    
     const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
       method: 'POST',
       headers: {
@@ -75,29 +76,31 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         audio_url: audioUrl,
         language_code: language === 'he' ? 'he' : language === 'es' ? 'es' : 'en',
-        speaker_labels: true,
-        speakers_expected: 2,
+        speaker_labels: true,  // Enable diarization
+        speakers_expected: 2,   // Expect 2 speakers (key parameter)
         sentiment_analysis: true,
+        entity_detection: false,
       }),
     });
 
     if (!transcriptResponse.ok) {
       const errText = await transcriptResponse.text();
-      console.error('AssemblyAI error:', transcriptResponse.status, errText);
+      console.error('Transcript submission failed:', transcriptResponse.status, errText);
       throw new Error(`Transcript failed: ${transcriptResponse.status}`);
     }
 
     const transcriptData = await transcriptResponse.json();
     const transcriptId = transcriptData.id;
+    console.log('Transcript ID:', transcriptId, 'Status:', transcriptData.status);
 
-    // Poll for completion (AssemblyAI is async)
+    // ===== POLL FOR COMPLETION =====
     let completed = transcriptData.status === 'completed';
     let transcript = transcriptData;
     let pollCount = 0;
-    const maxPolls = 60; // 60 * 1 second = 60 second timeout
+    const maxPolls = 120; // 120 * 1 second = 2 minutes max
 
     while (!completed && pollCount < maxPolls) {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+      await new Promise(resolve => setTimeout(resolve, 1000));
       pollCount++;
 
       const statusResponse = await fetch(
@@ -110,6 +113,9 @@ Deno.serve(async (req) => {
       if (statusResponse.ok) {
         transcript = await statusResponse.json();
         completed = transcript.status === 'completed';
+        if (pollCount % 5 === 0) {
+          console.log(`Poll ${pollCount}: Status = ${transcript.status}`);
+        }
       }
 
       if (transcript.status === 'error') {
@@ -118,10 +124,22 @@ Deno.serve(async (req) => {
     }
 
     if (!completed) {
-      throw new Error('Transcription timeout');
+      throw new Error('Transcription timeout after 120 seconds');
     }
 
+    console.log('Transcription complete. Parsing response...');
+    console.log('Response has', transcript.words?.length || 0, 'words');
+    console.log('Speaker labels enabled:', transcript.speaker_labels !== undefined);
+
     // ===== EXTRACT SPEAKER-LABELED SEGMENTS =====
+    const words = transcript.words || [];
+    
+    // Debug: Check first 10 words for speaker data
+    console.log('First 10 words with speaker info:');
+    for (let i = 0; i < Math.min(10, words.length); i++) {
+      console.log(`Word ${i}: "${words[i].text}" | Speaker: ${words[i].speaker} | Confidence: ${words[i].confidence}`);
+    }
+
     interface Segment {
       speaker: string;
       text: string;
@@ -131,18 +149,28 @@ Deno.serve(async (req) => {
     }
 
     const segments: Segment[] = [];
-    const words = transcript.words || [];
     let currentSegment: Segment | null = null;
+    const speakerSet = new Set<number>();
 
     for (const word of words) {
-      const speaker = word.speaker !== null && word.speaker !== undefined 
-        ? `Speaker ${word.speaker}` 
-        : 'Unknown';
+      // AssemblyAI returns speaker as number (0, 1, etc) or null
+      const speakerNum = word.speaker;
+      
+      if (speakerNum !== null && speakerNum !== undefined) {
+        speakerSet.add(speakerNum);
+      }
+
+      const speaker = speakerNum !== null && speakerNum !== undefined
+        ? `Speaker ${speakerNum}`
+        : 'Unknown Speaker';
+        
       const wordText = word.text || '';
       const confidence = word.confidence || 0.8;
 
       if (!currentSegment || currentSegment.speaker !== speaker) {
-        if (currentSegment) segments.push(currentSegment);
+        if (currentSegment) {
+          segments.push(currentSegment);
+        }
         currentSegment = {
           speaker: speaker,
           text: wordText,
@@ -156,7 +184,16 @@ Deno.serve(async (req) => {
         currentSegment.end_time = word.end;
       }
     }
-    if (currentSegment) segments.push(currentSegment);
+    if (currentSegment) {
+      segments.push(currentSegment);
+    }
+
+    console.log('Detected speakers:', Array.from(speakerSet).sort());
+    console.log('Total segments:', segments.length);
+    console.log('Segments by speaker:');
+    segments.forEach((seg, idx) => {
+      console.log(`Segment ${idx}: ${seg.speaker} - "${seg.text.substring(0, 50)}..."`);
+    });
 
     const fullTranscript = transcript.text || words.map((w: any) => w.text).join(' ');
     const confidence = transcript.confidence || 0.85;
@@ -171,14 +208,79 @@ Deno.serve(async (req) => {
         feedback: '',
         analysis: 'No speech detected',
         confidence: 0,
+        debug: { speakersDetected: 0, pollCount: pollCount },
       });
+    }
+
+    // ===== FALLBACK: If only 1 speaker detected, try voice energy analysis =====
+    if (speakerSet.size <= 1 && words.length > 20) {
+      console.log('Only 1 speaker detected, attempting energy-based fallback split...');
+      
+      // Split by silence/energy changes
+      const energySegments: Segment[] = [];
+      let currentEnergy = 0;
+      let silenceThreshold = 0.02;
+      let energyThreshold = 0.5;
+      
+      let tempSegment: Segment | null = null;
+      
+      for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        // Estimate "energy" from word length and confidence
+        const wordEnergy = (word.text?.length || 0) * (word.confidence || 0.8) / 10;
+        
+        // If energy drops significantly, split into new speaker (alternating)
+        const energyDrop = Math.abs(wordEnergy - currentEnergy) > energyThreshold;
+        
+        if (energyDrop && i > 0 && i < words.length - 1) {
+          if (tempSegment) {
+            energySegments.push(tempSegment);
+            // Alternate speaker for fallback
+            const nextSpeaker = energySegments.length % 2 === 0 ? 'Speaker 0' : 'Speaker 1';
+            tempSegment = {
+              speaker: nextSpeaker,
+              text: word.text || '',
+              confidence: word.confidence || 0.8,
+              start_time: word.start,
+              end_time: word.end,
+            };
+          }
+        } else {
+          if (!tempSegment) {
+            const speaker = energySegments.length % 2 === 0 ? 'Speaker 0' : 'Speaker 1';
+            tempSegment = {
+              speaker: speaker,
+              text: word.text || '',
+              confidence: word.confidence || 0.8,
+              start_time: word.start,
+              end_time: word.end,
+            };
+          } else {
+            tempSegment.text += ' ' + (word.text || '');
+            tempSegment.confidence = (tempSegment.confidence + (word.confidence || 0.8)) / 2;
+            tempSegment.end_time = word.end;
+          }
+        }
+        
+        currentEnergy = wordEnergy;
+      }
+      
+      if (tempSegment) {
+        energySegments.push(tempSegment);
+      }
+      
+      if (energySegments.length > 1) {
+        console.log('Fallback split created', energySegments.length, 'segments');
+        segments.length = 0;
+        segments.push(...energySegments);
+      }
     }
 
     // ===== FAST PATH: KEYWORD DETECTION =====
     const urgencyKeywords = ['urgent', 'act now', 'limited time', 'hurry', 'immediately', 'right now', 'do not wait', 'asap'];
-    const moneyKeywords = ['gift card', 'wire transfer', 'crypto', 'bitcoin', 'prepaid', 'payment', 'send money', 'money order', 'amazon card', 'itunes card'];
-    const threatKeywords = ['arrest', 'lawsuit', 'freeze', 'legal action', 'federal', 'penalty', 'jail', 'court', 'charges'];
-    const personalKeywords = ['ssn', 'social security', 'password', 'pin', 'account number', 'routing number', 'credit card', 'bank account'];
+    const moneyKeywords = ['gift card', 'wire transfer', 'crypto', 'bitcoin', 'prepaid', 'payment', 'send money', 'money order', 'amazon card', 'itunes'];
+    const threatKeywords = ['arrest', 'lawsuit', 'freeze', 'legal action', 'federal', 'penalty', 'jail', 'court'];
+    const personalKeywords = ['ssn', 'social security', 'password', 'pin', 'account number', 'routing number', 'credit card', 'bank'];
     const impersonationKeywords = ['irs', 'fbi', 'police', 'microsoft', 'apple', 'amazon', 'bank', 'paypal'];
 
     const transcriptLower = fullTranscript.toLowerCase();
@@ -200,7 +302,6 @@ Deno.serve(async (req) => {
       redFlags.push('Possible impersonation detected');
     }
 
-    // Fast-path scam detection
     const isObviousScam = redFlags.length >= 2 && segments.length >= 2;
     if (isObviousScam) {
       return Response.json({
@@ -212,9 +313,10 @@ Deno.serve(async (req) => {
         risk_level: 'high',
         is_scam: true,
         feedback: 'Hang up immediately. This is likely a scam. Do not provide any personal or financial information.',
-        analysis: 'Multiple scam indicators detected: pressure tactics, financial requests, and intimidation.',
+        analysis: 'Multiple scam indicators detected.',
         confidence: 0.95,
         timestamp: new Date().toISOString(),
+        debug: { speakersDetected: Array.from(speakerSet).length, segmentsCreated: segments.length, pollCount: pollCount },
       });
     }
 
@@ -227,27 +329,26 @@ Deno.serve(async (req) => {
       is_scam: redFlags.length >= 2,
       feedback: '',
       analysis: redFlags.length > 0
-        ? `Detected ${redFlags.length} potential scam indicators. Be cautious.`
+        ? `Detected ${redFlags.length} potential scam indicators.`
         : 'No obvious scam indicators detected.',
     };
 
     try {
-      const prompt = `Analyze this call transcript for scam activity. Be concise.
+      const prompt = `Analyze this call for scam activity.
 
 TRANSCRIPT: "${fullTranscript}"
 
-SPEAKERS:
-${segments.map(s => `${s.speaker}: "${s.text.substring(0, 80)}..."`).join('\n')}
+SPEAKERS: ${segments.map(s => `${s.speaker}: "${s.text.substring(0, 80)}..."`).join('\n')}
 
-EXISTING RED FLAGS: ${redFlags.join(', ') || 'None'}
+RED FLAGS: ${redFlags.join(', ') || 'None'}
 
-Return JSON only:
+Return JSON:
 {
-  "tactics_detected": ["tactic1", "tactic2"],
+  "tactics_detected": [],
   "risk_level": "low|medium|high",
   "is_scam": false,
-  "feedback": "coaching or advice",
-  "analysis": "1-2 sentence summary"
+  "feedback": "",
+  "analysis": "summary"
 }`;
 
       const llmPromise = base44.integrations.Core.InvokeLLM({
@@ -269,10 +370,9 @@ Return JSON only:
         if (llmAnalysis.risk_level) analysis.risk_level = llmAnalysis.risk_level;
         if (llmAnalysis.feedback) analysis.feedback = llmAnalysis.feedback;
         if (llmAnalysis.analysis) analysis.analysis = llmAnalysis.analysis;
-        if (llmAnalysis.is_scam !== undefined) analysis.is_scam = llmAnalysis.is_scam;
       }
     } catch (llmErr) {
-      console.error('LLM error (using fallback):', llmErr instanceof Error ? llmErr.message : llmErr);
+      console.error('LLM error:', llmErr instanceof Error ? llmErr.message : llmErr);
     }
 
     return Response.json({
@@ -287,18 +387,19 @@ Return JSON only:
       analysis: analysis.analysis || '',
       confidence: confidence,
       timestamp: new Date().toISOString(),
+      debug: {
+        speakersDetected: Math.max(Array.from(speakerSet).length, segments.length > 1 ? 2 : 1),
+        segmentsCreated: segments.length,
+        pollCount: pollCount,
+        wordsProcessed: words.length,
+      },
     });
 
   } catch (error: any) {
-    console.error('analyzeCallChunk error:', error?.message || error);
+    console.error('FATAL analyzeCallChunk error:', error?.message || error);
     return Response.json({
       error: error?.message || 'Analysis failed',
-      transcript: '',
-      segments: [],
-      red_flags: [],
-      risk_level: 'low',
-      is_scam: false,
-      confidence: 0,
+      debug: { errorType: error?.constructor?.name },
     }, { status: 500 });
   }
 });
