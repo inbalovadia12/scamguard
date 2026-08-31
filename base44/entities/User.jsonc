@@ -77,6 +77,24 @@
       "type": "boolean",
       "default": false,
       "description": "Whether kid mode is enabled (simpler language, bigger text, kid-focused scam protection)"
+    },
+    "referral_code": {
+      "type": "string",
+      "description": "Unique, server-generated code this user can share with friends"
+    },
+    "referred_by": {
+      "type": "string",
+      "description": "User ID of the verified referrer, set only by the referral claim function"
+    },
+    "referral_awarded": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the referral reward has been granted for this user"
+    },
+    "referral_bonus_credits": {
+      "type": "number",
+      "default": 0,
+      "description": "Permanent monthly credits earned from successful referrals"
     }
   },
   "required": [
