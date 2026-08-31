@@ -27,105 +27,50 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { audio_url, audio_base64, audio_mime, language } = body;
 
-    const assemblyKey = Deno.env.get('ASSEMBLY_AI_API_KEY');
-    if (!assemblyKey) {
-      return Response.json({ error: 'AssemblyAI not configured' }, { status: 500 });
+    const groqKey = Deno.env.get('GROQ_STT');
+    if (!groqKey) {
+      return Response.json({ error: 'Groq speech-to-text is not configured' }, { status: 500 });
     }
 
-    let audioUrl: string;
     const startTime = Date.now();
+    const languageCode = language === 'he' ? 'he' : language === 'es' ? 'es' : 'en';
+    const form = new FormData();
+    form.set('model', 'whisper-large-v3-turbo');
+    form.set('language', languageCode);
+    form.set('response_format', 'verbose_json');
+    form.set('timestamp_granularities[]', 'segment');
 
-    // ===== HANDLE AUDIO INPUT (FAST PATH) =====
     if (audio_url) {
-      audioUrl = audio_url;
+      // Groq accepts public audio URLs directly, avoiding an extra upload hop.
+      form.set('url', audio_url);
     } else if (audio_base64) {
-      // Upload base64 quickly
       const binaryString = atob(audio_base64);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      const audioBlob = new Blob([bytes], { type: audio_mime || 'audio/webm' });
-
-      const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
-        method: 'POST',
-        headers: { 'Authorization': assemblyKey },
-        body: audioBlob,
-        signal: AbortSignal.timeout(8000),
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.status}`);
-      }
-
-      const uploadData = await uploadResponse.json();
-      audioUrl = uploadData.upload_url;
+      const mimeType = audio_mime || 'audio/webm';
+      const extension = mimeType.split('/')[1]?.split(';')[0] || 'webm';
+      form.set('file', new File([bytes], `call.${extension}`, { type: mimeType }));
     } else {
       throw new Error('No audio data');
     }
 
-    // ===== SUBMIT FOR TRANSCRIPTION (NO WAIT) =====
-    const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
+    // Groq Whisper returns the finished transcript in one request; no polling is required.
+    const transcriptResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
-      headers: {
-        'Authorization': assemblyKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        audio_url: audioUrl,
-        language_code: language === 'he' ? 'he' : language === 'es' ? 'es' : 'en',
-        speaker_labels: true,
-        speakers_expected: 2,
-        sentiment_analysis: true,
-      }),
-      signal: AbortSignal.timeout(5000),
+      headers: { Authorization: `Bearer ${groqKey}` },
+      body: form,
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!transcriptResponse.ok) {
-      throw new Error(`Transcript submission failed: ${transcriptResponse.status}`);
+      const detail = await transcriptResponse.text().catch(() => '');
+      throw new Error(`Groq transcription failed: ${transcriptResponse.status}${detail ? ` - ${detail.slice(0, 300)}` : ''}`);
     }
 
-    const transcriptData = await transcriptResponse.json();
-    const transcriptId = transcriptData.id;
-
-    // ===== POLL WITH AGGRESSIVE TIMEOUT =====
-    let completed = transcriptData.status === 'completed';
-    let transcript = transcriptData;
-    let pollCount = 0;
-    const maxPolls = 30; // 30 seconds MAX (was 120)
-    const startPoll = Date.now();
-
-    while (!completed && pollCount < maxPolls) {
-      // Dynamic polling: faster at start, slower later
-      const waitTime = pollCount < 5 ? 500 : pollCount < 15 ? 1000 : 2000;
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-      pollCount++;
-
-      const statusResponse = await fetch(
-        `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
-        {
-          headers: { 'Authorization': assemblyKey },
-          signal: AbortSignal.timeout(5000),
-        }
-      );
-
-      if (statusResponse.ok) {
-        transcript = await statusResponse.json();
-        completed = transcript.status === 'completed';
-      }
-
-      if (transcript.status === 'error') {
-        throw new Error(`Transcription failed: ${transcript.error}`);
-      }
-
-      // Hard timeout: if >15 seconds elapsed, return partial results
-      const elapsedPoll = Date.now() - startPoll;
-      if (elapsedPoll > 15000 && !completed) {
-        console.warn('Polling timeout at', elapsedPoll, 'ms, returning partial results');
-        completed = true; // Force exit
-        break;
-      }
-    }
+    const transcript = await transcriptResponse.json();
+    const pollCount = 0;
 
     // ===== FAST KEYWORD SCAN (PARALLEL WITH POLLING) =====
     const urgencyKeywords = ['urgent', 'act now', 'limited time', 'hurry', 'immediately', 'right now', 'do not wait', 'asap'];
