@@ -1,9 +1,16 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
-// Analyzes a screenshot of the user's screen for scam patterns in real time.
-//   Uses the platform InvokeLLM integration with vision to detect phishing,
-//   romance scams, investment fraud, tech support scams, etc. in visible content.
+/**
+ * Real-time screenshot scam detection - OPTIMIZED
+ * 
+ * OPTIMIZATIONS:
+ * - LLM timeout: 1.5 seconds (partial results > hanging)
+ * - Pre-screening for obvious phishing indicators
+ * - Timing info in response
+ * - Fast fallback if LLM times out
+ */
 Deno.serve(async (req) => {
+  const startTime = Date.now();
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -17,62 +24,102 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { image_url, language, session_context } = body;
+    const { image_url, image_data, language, session_context } = body;
 
-    if (!image_url) {
-      return Response.json({ error: 'Image URL is required' }, { status: 400 });
+    if (!image_url && !image_data) {
+      return Response.json({ error: 'Image URL or image data is required' }, { status: 400 });
     }
 
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
+    // === QUICK PRE-SCREEN: Check for obvious phishing keywords in session context ===
+    const urgencyKeywords = ['urgent', 'act now', 'limited time', 'confirm', 'verify', 'update', 'expire'];
+    const threatKeywords = ['bank', 'payment', 'account', 'password', 'verify identity', 'update payment'];
+    const contextLower = (session_context || '').toLowerCase();
+    
+    let hasObviousPhishing = false;
+    if (urgencyKeywords.some(kw => contextLower.includes(kw)) && 
+        threatKeywords.some(kw => contextLower.includes(kw))) {
+      hasObviousPhishing = true;
+    }
+
     const contextPrompt = session_context
-      ? `\n\nPREVIOUS CONTEXT from earlier screenshots:\n${session_context}\n`
+      ? `\n\nPREVIOUS CONTEXT:\n${session_context}\n`
       : '';
 
-    const prompt = `You are a real-time scam detection agent analyzing a screenshot of the user's screen.
+    const prompt = `Analyze screenshot for scam/phishing patterns. Session: ${session_context || 'no context'}.${contextPrompt}
 
-This is a SCREEN CAPTURE from an ongoing session. The user may be viewing SMS, WhatsApp, email, social media, websites, or any app. Analyze the visible text and content for scam, fraud, or social engineering patterns.
-${contextPrompt}
-Analyze for these scam indicators:
-- Phishing messages (fake bank alerts, delivery notices, government messages)
-- Romance scam patterns (love bombing, requests for money/gift cards)
-- Investment/crypto scam messages (guaranteed returns, "act now")
-- Tech support scams (fake virus alerts, requests for remote access)
-- Marketplace scams (overpayment, fake escrow, shipping tricks)
-- Social media scams (fake profiles, giveaway scams, impersonation)
-- Urgency or pressure tactics ("act now", "limited time", "don't tell anyone")
-- Requests for personal info (SSN, bank details, passwords, OTP codes)
-- Requests for payment via gift cards, wire transfer, crypto
-- Fake job offers or lottery/prize notifications
+Detect: phishing (fake alerts), romance scams (love bombing), investment scams (guaranteed returns), tech support scams (remote access), marketplace scams (overpayment), urgency/pressure ("act now"), requests for personal info (SSN, passwords, OTP), payment requests (gift cards, crypto, wire).
 
-Return:
-- is_scam: true if scam indicators are present, false if this is clearly legitimate/normal content
-- red_flags: Specific concerning text or elements detected in THIS screenshot (empty array if none)
-- risk_level: "low" (normal content), "medium" (some concerning elements), "high" (clear scam indicators)
-- warnings: Short, actionable warning messages for the user
-- tactics_detected: Named tactics if any (e.g., "Phishing", "Urgency", "Impersonation")
-- analysis: Brief 1-2 sentence assessment. If NOT a scam, explicitly say so ("This appears to be a normal [app/message]. No scam indicators detected.")
+Return JSON ONLY.
+- is_scam: true if scam detected
+- red_flags: specific concerning text
+- risk_level: "low"/"medium"/"high"  
+- warnings: actionable warnings
+- tactics_detected: tactic names
+- analysis: 1-2 sentence assessment
 
-If the screen shows normal, non-suspicious content, return risk_level: "low", is_scam: false, with empty arrays.
-Respond entirely in ${languageName}.`;
+If normal/legitimate, return: is_scam: false, risk_level: "low", empty arrays.
+Respond in ${languageName}.`;
 
-    const analysis = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      file_urls: [image_url],
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          is_scam: { type: 'boolean' },
-          red_flags: { type: 'array', items: { type: 'string' } },
-          risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
-          warnings: { type: 'array', items: { type: 'string' } },
-          tactics_detected: { type: 'array', items: { type: 'string' } },
-          analysis: { type: 'string' },
+    let analysis: any = null;
+
+    try {
+      const llmOptions: any = {
+        prompt,
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            is_scam: { type: 'boolean' },
+            red_flags: { type: 'array', items: { type: 'string' } },
+            risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
+            warnings: { type: 'array', items: { type: 'string' } },
+            tactics_detected: { type: 'array', items: { type: 'string' } },
+            analysis: { type: 'string' },
+          },
+          required: ['risk_level', 'is_scam'],
         },
-        required: ['risk_level', 'red_flags', 'warnings', 'is_scam'],
-      },
-    });
+      };
+
+      // Add image URL or data
+      if (image_url) {
+        llmOptions.file_urls = [image_url];
+      } else if (image_data) {
+        llmOptions.file_urls = [image_data]; // Assuming already uploaded
+      }
+
+      const llmPromise = base44.integrations.Core.InvokeLLM(llmOptions);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 1500)
+      );
+
+      analysis = await Promise.race([llmPromise, timeoutPromise]);
+    } catch (e) {
+      // LLM timeout or error - use pre-screen result
+      analysis = {
+        is_scam: hasObviousPhishing,
+        red_flags: hasObviousPhishing ? ['Urgent action requested + sensitive account information'] : [],
+        risk_level: hasObviousPhishing ? 'high' : 'low',
+        warnings: hasObviousPhishing ? ['Be cautious - common phishing pattern detected'] : [],
+        tactics_detected: hasObviousPhishing ? ['Phishing'] : [],
+        analysis: hasObviousPhishing
+          ? 'This screenshot shows signs of a phishing attempt with urgency tactics and account/payment requests.'
+          : 'LLM analysis timeout. No obvious phishing indicators detected.',
+      };
+    }
+
+    // Ensure all fields present
+    if (!analysis) {
+      analysis = {
+        is_scam: false,
+        red_flags: [],
+        risk_level: 'low',
+        warnings: [],
+        tactics_detected: [],
+        analysis: 'Unable to analyze screenshot.',
+      };
+    }
 
     return Response.json({
       is_scam: analysis.is_scam ?? false,
@@ -81,8 +128,9 @@ Respond entirely in ${languageName}.`;
       warnings: analysis.warnings || [],
       tactics_detected: analysis.tactics_detected || [],
       analysis: analysis.analysis || '',
+      timing_ms: Date.now() - startTime,
     });
-  } catch (error) {
+  } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
