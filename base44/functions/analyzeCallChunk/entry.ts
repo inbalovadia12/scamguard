@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { audio_url, audio_base64, audio_mime, language, session_context = '' } = body;
+    const { audio_url, audio_base64, audio_mime, language, session_context = '', speaker_history = '' } = body;
 
     const groqKey = Deno.env.get('GROQ_STT');
     if (!groqKey) {
@@ -155,8 +155,57 @@ Deno.serve(async (req) => {
       segments.push({ speaker: 'unknown', text: fullTranscript.trim(), confidence });
     }
 
-    // Groq STT does not perform speaker diarization, so transcripts are kept as
-    // timestamped, editable unknown-speaker segments for Call Guard.
+    // Groq STT has no acoustic diarization. Classify the speaker role from the
+    // spoken words and prior call context, but keep ambiguous turns neutral.
+    if (segments.length) {
+      try {
+        const speakerResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${groqKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'qwen/qwen3.6-27b',
+            messages: [
+              {
+                role: 'system',
+                content: 'Classify each call transcript entry as victim (the protected user), scammer (the other caller), or unknown. Use only wording and provided context, never invent voice evidence. Return exactly one role per entry and use unknown if not clear.',
+              },
+              {
+                role: 'user',
+                content: JSON.stringify({
+                  recent_context: session_context.slice(-1200),
+                  prior_roles: speaker_history,
+                  entries: segments.map((segment) => segment.text),
+                  output: { roles: ['victim|scammer|unknown'] },
+                }),
+              },
+            ],
+            response_format: { type: 'json_object' },
+            reasoning_effort: 'none',
+            temperature: 0,
+            max_completion_tokens: 40,
+          }),
+          signal: AbortSignal.timeout(900),
+        });
+
+        if (speakerResponse.ok) {
+          const speakerData = await speakerResponse.json();
+          const roles = JSON.parse(speakerData.choices?.[0]?.message?.content || '{}').roles;
+          if (Array.isArray(roles) && roles.length === segments.length) {
+            roles.forEach((role, index) => {
+              if (role === 'victim' || role === 'scammer' || role === 'unknown') {
+                segments[index].speaker = role;
+              }
+            });
+          }
+        }
+      } catch {
+        // Transcript remains editable as unknown if the fast role check is unavailable.
+      }
+    }
+
     let currentSegment: Segment | null = null;
     const speakerSet = new Set<number>();
 
