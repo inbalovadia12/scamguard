@@ -325,6 +325,9 @@ export default function LiveCallAnalyzer() {
       const audioMime = getSupportedAudioMime();
       const recorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime, audioBitsPerSecond: 64000 } : { audioBitsPerSecond: 64000 });
       recorderRef.current = recorder;
+      // Only send a recording when it contains at least 200 ms of voice activity.
+      // This prevents silent recorder windows from being transcribed as repeats.
+      let speechFramesInChunk = 0;
 
       const processNextChunk = async () => {
         if (isProcessingRef.current || chunkQueueRef.current.length === 0) return;
@@ -375,8 +378,10 @@ export default function LiveCallAnalyzer() {
       };
 
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          // Drop stale chunks when backed up — keeps feedback real-time
+        const hasSpeech = speechFramesInChunk >= 2;
+        speechFramesInChunk = 0;
+        if (e.data.size > 0 && hasSpeech) {
+          // Drop stale chunks when backed up — keeps feedback real-time.
           if (chunkQueueRef.current.length > 0) {
             chunkQueueRef.current = [e.data];
           } else {
@@ -441,6 +446,7 @@ export default function LiveCallAnalyzer() {
         const now = Date.now();
 
         if (rms > SILENCE_THRESHOLD) {
+          speechFramesInChunk++;
           isSpeaking = true;
           silenceStart = 0;
         } else if (isSpeaking) {
