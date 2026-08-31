@@ -37,8 +37,8 @@ Deno.serve(async (req) => {
     const form = new FormData();
     form.set('model', 'whisper-large-v3-turbo');
     form.set('language', languageCode);
-    form.set('response_format', 'verbose_json');
-    form.set('timestamp_granularities[]', 'segment');
+    // The compact response is fastest; the UI falls back to one editable segment.
+    form.set('response_format', 'json');
 
     if (audio_url) {
       // Groq accepts public audio URLs directly, avoiding an extra upload hop.
@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { Authorization: `Bearer ${groqKey}` },
       body: form,
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!transcriptResponse.ok) {
@@ -245,50 +245,59 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ===== LLM FOR AMBIGUOUS CASES (TIMEOUT: 2 SECONDS) =====
+    // Only a small ambiguous remainder reaches an LLM. Keep it entirely on Groq
+    // and fail open to the fast heuristic if it cannot answer almost immediately.
     let analysis: any = {
-      tactics_detected: [],
-      risk_level: 'medium',
+      tactics_detected: redFlags,
+      risk_level: redFlags.length ? 'medium' : 'low',
       is_scam: false,
       feedback: '',
-      analysis: 'Ambiguous - requires review.',
+      analysis: redFlags.length ? 'Suspicious indicator detected.' : 'No scam indicators detected.',
     };
 
     try {
-      const prompt = `Analyze call for scam. Brief JSON only.
-
-TRANSCRIPT: "${fullTranscript.substring(0, 300)}${fullTranscript.length > 300 ? '...' : ''}"
-
-RED FLAGS: ${redFlags.join(', ') || 'None'}
-
-JSON:
-{
-  "tactics_detected": [],
-  "risk_level": "low|medium|high",
-  "is_scam": false,
-  "feedback": "",
-  "analysis": "summary"
-}`;
-
-      const llmPromise = base44.integrations.Core.InvokeLLM({
-        prompt: prompt,
-        add_context_from_internet: false,
+      const llmResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${groqKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'qwen/qwen3.6-27b',
+          messages: [
+            {
+              role: 'system',
+              content: 'Classify the call excerpt for scam risk. Return only the requested compact JSON. Do not explain your reasoning.',
+            },
+            {
+              role: 'user',
+              content: JSON.stringify({
+                transcript: fullTranscript.slice(0, 300),
+                red_flags: redFlags,
+                output: {
+                  tactics_detected: ['string'],
+                  risk_level: 'low|medium|high',
+                  is_scam: false,
+                  feedback: 'string',
+                  analysis: 'string',
+                },
+              }),
+            },
+          ],
+          response_format: { type: 'json_object' },
+          reasoning_effort: 'none',
+          temperature: 0,
+          max_completion_tokens: 80,
+        }),
+        signal: AbortSignal.timeout(750),
       });
 
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 1500)
-      );
-
-      const llmResponse = await Promise.race([llmPromise, timeoutPromise]);
-      const text = typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || '';
-      const match = text.match(/\{[\s\S]*\}/);
-
-      if (match) {
-        const llmAnalysis = JSON.parse(match[0]);
-        analysis = llmAnalysis;
-      }
-    } catch (e) {
-      // LLM timeout or error - use defaults above
+      if (!llmResponse.ok) throw new Error(`Groq classifier failed: ${llmResponse.status}`);
+      const llmData = await llmResponse.json();
+      const text = llmData.choices?.[0]?.message?.content || '';
+      analysis = JSON.parse(text);
+    } catch {
+      // Never delay an alert for an LLM response; retain the fast heuristic.
     }
 
     return Response.json({
