@@ -156,14 +156,15 @@ export default function LiveCallAnalyzer() {
 
     try {
       const lang = localStorage.getItem("vardin_language") || "en";
-      const langName = { en: "English", he: "Hebrew", es: "Spanish" }[lang] || "English";
       const context = transcriptRef.current.slice(-4).map((t) => `${t.speaker}: ${t.text}`).join("\n");
-      const speakerRole = updates.speaker === "victim" ? "the app user being protected" : "the other party / potential scammer";
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a scam prevention coach on a live phone call. Analyze this corrected transcript segment:\nSpeaker: ${updates.speaker} (${speakerRole})\nText: "${updates.text}"\nRecent context: ${context}\n\nIf speaker is "victim": give brief actionable advice (1-2 sentences) — are they sharing sensitive info? Should they hang up? Are they handling it well?\nIf speaker is "scammer": briefly note what manipulation tactic they're using (1 sentence).\nRespond in ${langName}.`,
-        response_json_schema: { type: "object", properties: { feedback: { type: "string" } } },
+      const response = await base44.functions.invoke("generateCallFeedback", {
+        text: updates.text,
+        speaker: updates.speaker,
+        context,
+        language: lang,
       });
-      const newFeedback = result.feedback || "";
+      if (response.data?.error) throw new Error(response.data.error);
+      const newFeedback = response.data?.feedback || "";
       setTranscript((prev) => {
         const next = [...prev];
         next[index] = { ...next[index], feedback: newFeedback };
