@@ -79,10 +79,11 @@ Deno.serve(async (req) => {
     const personalKeywords = ['ssn', 'social security', 'password', 'pin', 'account number', 'routing number', 'credit card', 'bank'];
     const impersonationKeywords = ['irs', 'fbi', 'police', 'microsoft', 'apple', 'amazon', 'bank', 'paypal'];
 
-    // Extract words and transcript early
+    // Groq provides the complete transcript plus timestamped segments.
     const words = transcript.words || [];
     const fullTranscript = transcript.text || words.map((w: any) => w.text).join(' ');
     const confidence = transcript.confidence || 0.85;
+    const groqSegments = Array.isArray(transcript.segments) ? transcript.segments : [];
 
     // Early exit if no speech
     if (!fullTranscript.trim()) {
@@ -116,7 +117,22 @@ Deno.serve(async (req) => {
       confidence: number;
     }
 
-    const segments: Segment[] = [];
+    const segments: Segment[] = groqSegments
+      .filter((segment: any) => segment?.text?.trim())
+      .map((segment: any) => ({
+        speaker: 'unknown',
+        text: segment.text.trim(),
+        confidence: typeof segment.avg_logprob === 'number'
+          ? Math.max(0, Math.min(1, Math.exp(segment.avg_logprob)))
+          : confidence,
+      }));
+
+    if (segments.length === 0 && fullTranscript.trim()) {
+      segments.push({ speaker: 'unknown', text: fullTranscript.trim(), confidence });
+    }
+
+    // Groq STT does not perform speaker diarization, so transcripts are kept as
+    // timestamped, editable unknown-speaker segments for Call Guard.
     let currentSegment: Segment | null = null;
     const speakerSet = new Set<number>();
 
