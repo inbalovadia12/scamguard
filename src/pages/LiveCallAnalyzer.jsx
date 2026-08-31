@@ -10,7 +10,7 @@ import AIDisclaimer from "@/components/AIDisclaimer";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 
-const CHUNK_MS = 3000;
+const CHUNK_MS = 1500;
 const SCREEN_INTERVAL_OPTIONS = [
   { label: "1 sec", ms: 1000, credits: 8 },
   { label: "3 sec", ms: 3000, credits: 5 },
@@ -322,7 +322,7 @@ export default function LiveCallAnalyzer() {
 
       streamRef.current = stream;
       const audioMime = getSupportedAudioMime();
-      const recorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime, audioBitsPerSecond: 128000 } : { audioBitsPerSecond: 128000 });
+      const recorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime, audioBitsPerSecond: 64000 } : { audioBitsPerSecond: 64000 });
       recorderRef.current = recorder;
 
       const processNextChunk = async () => {
@@ -424,8 +424,8 @@ export default function LiveCallAnalyzer() {
       let silenceStart = 0;
       let isSpeaking = false;
       const SILENCE_THRESHOLD = 0.01;
-      const SILENCE_DURATION = 400;
-      const MAX_CHUNK_MS = 5000;
+      const SILENCE_DURATION = 250;
+      const MAX_CHUNK_MS = CHUNK_MS;
 
       const checkAudioLevel = () => {
         if (userStoppedRef.current || !analyserRef.current) return;
@@ -458,7 +458,7 @@ export default function LiveCallAnalyzer() {
       };
       // setInterval (not requestAnimationFrame) keeps VAD running when the tab
       // loses focus during a phone call — rAF pauses entirely on hidden tabs.
-      vadIntervalRef.current = setInterval(checkAudioLevel, 200);
+      vadIntervalRef.current = setInterval(checkAudioLevel, 100);
       setIsListening(true);
       requestWakeLock();
     } catch (e) {
