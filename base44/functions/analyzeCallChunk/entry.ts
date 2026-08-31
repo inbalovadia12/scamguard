@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { audio_url, audio_base64, audio_mime, language } = body;
+    const { audio_url, audio_base64, audio_mime, language, session_context = '' } = body;
 
     const groqKey = Deno.env.get('GROQ_STT');
     if (!groqKey) {
@@ -37,8 +37,9 @@ Deno.serve(async (req) => {
     const form = new FormData();
     form.set('model', 'whisper-large-v3-turbo');
     form.set('language', languageCode);
-    // The compact response is fastest; the UI falls back to one editable segment.
-    form.set('response_format', 'json');
+    // Segment metadata lets us reject silent/hallucinated clips without delaying transcription.
+    form.set('response_format', 'verbose_json');
+    form.set('timestamp_granularities[]', 'segment');
 
     if (audio_url) {
       // Groq accepts public audio URLs directly, avoiding an extra upload hop.
@@ -79,11 +80,34 @@ Deno.serve(async (req) => {
     const personalKeywords = ['ssn', 'social security', 'password', 'pin', 'account number', 'routing number', 'credit card', 'bank'];
     const impersonationKeywords = ['irs', 'fbi', 'police', 'microsoft', 'apple', 'amazon', 'bank', 'paypal'];
 
-    // Groq provides the complete transcript plus timestamped segments.
+    // Reject segments that Groq identifies as silence or very low-confidence audio.
     const words = transcript.words || [];
-    const fullTranscript = transcript.text || words.map((w: any) => w.text).join(' ');
-    const confidence = transcript.confidence || 0.85;
     const groqSegments = Array.isArray(transcript.segments) ? transcript.segments : [];
+    const speechSegments = groqSegments.filter((segment: any) => {
+      const noSpeech = typeof segment?.no_speech_prob === 'number' ? segment.no_speech_prob : 0;
+      const lowConfidence = typeof segment?.avg_logprob === 'number' && segment.avg_logprob < -1.5;
+      return segment?.text?.trim() && noSpeech < 0.55 && !lowConfidence;
+    });
+    const candidateTranscript = speechSegments.length
+      ? speechSegments.map((segment: any) => segment.text.trim()).join(' ')
+      : groqSegments.length
+        ? ''
+        : (transcript.text || words.map((w: any) => w.text).join(' '));
+    const normalize = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    const normalizedCandidate = normalize(candidateTranscript);
+    const normalizedContext = normalize(session_context);
+    const isUncertainRepeat = normalizedCandidate.length > 0
+      && normalizedContext.includes(normalizedCandidate)
+      && groqSegments.some((segment: any) =>
+        (typeof segment?.no_speech_prob === 'number' && segment.no_speech_prob >= 0.3)
+        || (typeof segment?.avg_logprob === 'number' && segment.avg_logprob < -1.0)
+      );
+    const fullTranscript = isUncertainRepeat ? '' : candidateTranscript;
+    const confidence = speechSegments.length
+      ? Math.max(...speechSegments.map((segment: any) =>
+          typeof segment.avg_logprob === 'number' ? Math.max(0, Math.min(1, Math.exp(segment.avg_logprob))) : 0.85
+        ))
+      : 0.85;
 
     // Early exit if no speech
     if (!fullTranscript.trim()) {
@@ -117,7 +141,7 @@ Deno.serve(async (req) => {
       confidence: number;
     }
 
-    const segments: Segment[] = groqSegments
+    const segments: Segment[] = speechSegments
       .filter((segment: any) => segment?.text?.trim())
       .map((segment: any) => ({
         speaker: 'unknown',
