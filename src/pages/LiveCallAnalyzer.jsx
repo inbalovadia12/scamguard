@@ -205,7 +205,7 @@ export default function LiveCallAnalyzer() {
         timestamp: new Date(),
         risk_level: result.risk_level,
         speaker: seg.speaker || "unknown",
-        feedback: seg.speaker === "victim" ? (result.feedback || "") : "",
+        feedback: (seg.speaker === "you" || seg.speaker === "victim") ? (result.feedback || "") : "",
       }));
       setTranscript((prev) => [...prev, ...newSegs]);
       transcriptRef.current = [...transcriptRef.current, ...newSegs];
