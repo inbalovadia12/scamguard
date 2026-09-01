@@ -10,7 +10,7 @@ import AIDisclaimer from "@/components/AIDisclaimer";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 
-const CHUNK_MS = 4000;
+const CHUNK_MS = 1500;
 const SCREEN_INTERVAL_OPTIONS = [
   { label: "1 sec", ms: 1000, credits: 8 },
   { label: "3 sec", ms: 3000, credits: 5 },
@@ -207,29 +207,8 @@ export default function LiveCallAnalyzer() {
         speaker: seg.speaker || "unknown",
         feedback: (seg.speaker === "you" || seg.speaker === "victim") ? (result.feedback || "") : "",
       }));
-      const normalizeText = (value) => value.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").replace(/\s+/g, " ").trim();
-      const nextTranscript = [...transcriptRef.current];
-
-      newSegs.forEach((newSeg) => {
-        const newKey = normalizeText(newSeg.text);
-        let matchingIndex = -1;
-        for (let i = nextTranscript.length - 1; i >= Math.max(0, nextTranscript.length - 4); i--) {
-          const previous = nextTranscript[i];
-          const previousKey = normalizeText(previous.text);
-          if (previous.speaker === newSeg.speaker && previousKey && newKey && (previousKey === newKey || previousKey.includes(newKey) || newKey.includes(previousKey))) {
-            matchingIndex = i;
-            break;
-          }
-        }
-        if (matchingIndex === -1) {
-          nextTranscript.push(newSeg);
-        } else if (newKey.length > normalizeText(nextTranscript[matchingIndex].text).length) {
-          nextTranscript[matchingIndex] = { ...newSeg, timestamp: nextTranscript[matchingIndex].timestamp };
-        }
-      });
-
-      transcriptRef.current = nextTranscript;
-      setTranscript(nextTranscript);
+      setTranscript((prev) => [...prev, ...newSegs]);
+      transcriptRef.current = [...transcriptRef.current, ...newSegs];
     } else if (result.transcript) {
       const newSeg = { text: result.transcript, timestamp: new Date(), risk_level: result.risk_level, speaker: result.speaker || "unknown", feedback: result.feedback || "" };
       setTranscript((prev) => [...prev, newSeg]);
@@ -346,8 +325,8 @@ export default function LiveCallAnalyzer() {
       const audioMime = getSupportedAudioMime();
       const recorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime, audioBitsPerSecond: 64000 } : { audioBitsPerSecond: 64000 });
       recorderRef.current = recorder;
-      // Wait for a meaningful utterance before sending audio to transcription.
-      // Very short clips are the main source of background-noise hallucinations.
+      // Only send a recording when it contains at least 200 ms of voice activity.
+      // This prevents silent recorder windows from being transcribed as repeats.
       let speechFramesInChunk = 0;
 
       const processNextChunk = async () => {
@@ -381,13 +360,12 @@ export default function LiveCallAnalyzer() {
           if (response.data?.error) throw new Error(response.data.error);
           const result = response.data;
 
-          if (result.transcript || result.segments?.length) {
-            populateResult(result);
-            incrementCreditUsage(CREDIT_COSTS.CALL_CHUNK)
-              .then(() => getCreditStatus())
-              .then(setCreditStatus)
-              .catch(() => {});
-          }
+          populateResult(result);
+
+          incrementCreditUsage(CREDIT_COSTS.CALL_CHUNK)
+            .then(() => getCreditStatus())
+            .then(setCreditStatus)
+            .catch(() => {});
         } catch (e) {
           setError(e.message || "Failed to analyze audio chunk.");
         } finally {
@@ -400,8 +378,7 @@ export default function LiveCallAnalyzer() {
       };
 
       recorder.ondataavailable = (e) => {
-        const chunkDuration = Date.now() - chunkStartRef.current;
-        const hasSpeech = speechFramesInChunk >= 5 && chunkDuration >= 900;
+        const hasSpeech = speechFramesInChunk >= 2;
         speechFramesInChunk = 0;
         if (e.data.size > 0 && hasSpeech) {
           // Drop stale chunks when backed up — keeps feedback real-time.
@@ -452,8 +429,8 @@ export default function LiveCallAnalyzer() {
 
       let silenceStart = 0;
       let isSpeaking = false;
-      const SILENCE_THRESHOLD = 0.015;
-      const SILENCE_DURATION = 700;
+      const SILENCE_THRESHOLD = 0.01;
+      const SILENCE_DURATION = 250;
       const MAX_CHUNK_MS = CHUNK_MS;
 
       const checkAudioLevel = () => {
