@@ -46,6 +46,8 @@ Deno.serve(async (req) => {
     form.set('language', languageCode);
     form.set('response_format', 'verbose_json');
     form.set('timestamp_granularities[]', 'segment');
+    form.set('temperature', '0');
+    form.set('prompt', 'Transcribe only clearly audible speech. Do not invent words from background noise or silence.');
 
     if (audio_url) {
       form.set('url', audio_url);
@@ -79,18 +81,27 @@ Deno.serve(async (req) => {
     // ===== STEP 2: EXTRACT CLEAN SEGMENTS =====
     const groqSegments: any[] = Array.isArray(transcriptData.segments) ? transcriptData.segments : [];
 
-    // Filter out silence/hallucinated segments
+    // Reject low-confidence and fragmentary transcription results before they enter
+    // the UI. This is intentionally conservative: no transcript is better than a
+    // made-up sentence from room noise.
     const speechSegments = groqSegments.filter((seg: any) => {
       const noSpeech = typeof seg?.no_speech_prob === 'number' ? seg.no_speech_prob : 0;
-      const lowConf = typeof seg?.avg_logprob === 'number' && seg.avg_logprob < -1.5;
-      return seg?.text?.trim() && noSpeech < 0.55 && !lowConf;
+      const lowConf = typeof seg?.avg_logprob === 'number' && seg.avg_logprob < -1.1;
+      return seg?.text?.trim() && noSpeech < 0.4 && !lowConf;
     });
-
-    const fullTranscript = speechSegments.length > 0
+    const isUsefulTranscript = (text: string) => {
+      const normalized = text.trim();
+      const words = normalized.split(/\s+/).filter(Boolean);
+      if (words.length >= 3) return true;
+      return /^(yes|yeah|yep|no|okay|ok|sure|hello|hi|thanks|thank you|כן|לא|בסדר|שלום|תודה|sí|si|vale|hola|gracias)[.!?]*$/i.test(normalized);
+    };
+    const usableSpeechSegments = speechSegments.filter((seg: any) => isUsefulTranscript(seg.text));
+    const fullTranscriptCandidate = speechSegments.length > 0
       ? speechSegments.map((s: any) => s.text.trim()).join(' ')
       : (transcriptData.text || '').trim();
+    const fullTranscript = isUsefulTranscript(fullTranscriptCandidate) ? fullTranscriptCandidate : '';
 
-    if (!fullTranscript.trim()) {
+    if (!fullTranscript) {
       return Response.json({
         transcript: '',
         segments: [],
@@ -122,7 +133,7 @@ Deno.serve(async (req) => {
       end?: number;
     }
 
-    const rawSegments: Segment[] = (speechSegments.length > 0 ? speechSegments : groqSegments)
+    const rawSegments: Segment[] = usableSpeechSegments
       .filter((s: any) => s?.text?.trim())
       .map((s: any) => ({
         speaker: isLikelyUserReply(s.text.trim()) ? 'you' : 'speaker',
