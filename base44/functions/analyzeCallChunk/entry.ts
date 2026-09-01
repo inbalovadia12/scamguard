@@ -5,7 +5,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
  *
  * FLOW:
  * 1. Groq Whisper → transcript + segments (with timestamps)
- * 2. Groq LLM → classify each segment: "you" vs "caller" vs "unknown"
+ * 2. Groq LLM → classify each segment as "speaker" or "you"
  * 3. Keyword fast-path → detect scam indicators
  * 4. Groq LLM → scam analysis (only if ambiguous)
  */
@@ -104,7 +104,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build raw segment list (no speaker yet)
+    // Build raw segment list. When the model call times out, use simple reply cues
+    // so common user responses still render in the "You" bubble.
+    const isLikelyUserReply = (text: string) => {
+      const normalized = text.trim().toLowerCase();
+      const wordCount = normalized.split(/\s+/).filter(Boolean).length;
+      return wordCount <= 12 && (
+        normalized.includes('?') ||
+        /^(yes|yeah|yep|no|okay|ok|sure|hello|hi|thanks|thank you|what|who|why|how|can you|i don't|i do not|please|כן|לא|בסדר|שלום|תודה|מה|מי|למה|איך|sí|si|vale|hola|gracias|qué|quién|cómo)\b/i.test(normalized)
+      );
+    };
+
     interface Segment {
       speaker: string;
       text: string;
@@ -115,25 +125,20 @@ Deno.serve(async (req) => {
     const rawSegments: Segment[] = (speechSegments.length > 0 ? speechSegments : groqSegments)
       .filter((s: any) => s?.text?.trim())
       .map((s: any) => ({
-        speaker: 'unknown',
+        speaker: isLikelyUserReply(s.text.trim()) ? 'you' : 'speaker',
         text: s.text.trim(),
         start: s.start,
         end: s.end,
       }));
 
     if (rawSegments.length === 0 && fullTranscript) {
-      rawSegments.push({ speaker: 'unknown', text: fullTranscript });
+      rawSegments.push({ speaker: isLikelyUserReply(fullTranscript) ? 'you' : 'speaker', text: fullTranscript });
     }
 
     // ===== STEP 3: CLASSIFY SPEAKERS WITH GROQ LLM =====
-    // Groq Whisper doesn't do audio diarization.
-    // We use the LLM to infer who is speaking from context:
-    // - "You" = the person holding the phone (shorter responses, questions, agreement)
-    // - "Caller" = the other person on the line (makes requests, gives instructions)
-    // - "Unknown" = cannot determine from text alone
-    //
-    // Key signal: in scam calls, the CALLER does most of the talking and makes requests.
-    // The USER tends to respond with short answers, questions, or compliance phrases.
+    // Groq Whisper does not return voice identities, so use the conversation's
+    // wording and history to select one of the two transcript bubbles:
+    // "speaker" for the other person and "you" for the user.
 
     const segmentTexts = rawSegments.map((s, i) => `[${i}] "${s.text}"`).join('\n');
 
@@ -151,19 +156,17 @@ Deno.serve(async (req) => {
               role: 'system',
               content: `You are a speaker classification expert for phone call transcripts.
 
-Classify each segment as one of:
-- "you" = the person holding the phone (user). Typically: short responses, questions, uncertainty, compliance ("okay", "sure", "I understand", "what do you mean"), giving personal info when asked.
-- "caller" = the other person on the line. Typically: longer explanations, makes requests, gives instructions, claims authority, urgency.
-- "unknown" = cannot determine from text alone.
+Classify every segment as exactly one of:
+- "you" = the person holding the phone. This includes short answers, questions, uncertainty, and agreement ("okay", "sure", "what do you mean?").
+- "speaker" = the other person on the call. This includes explanations, requests, instructions, authority claims, or urgency.
 
 Return ONLY a JSON array of roles matching the number of segments.
-Example: ["caller", "you", "caller", "you", "unknown"]
+Example: ["speaker", "you", "speaker", "you"]
 
 Rules:
-- If one person speaks 80%+ of the time, they are likely the "caller" (scammer).
-- Short "uh huh", "yes", "okay", "I see" phrases are almost always "you".
-- Imperative commands ("Don't tell", "Go to", "Send", "Stay on the line") are almost always "caller".
-- If context shows a scam call, the caller making demands = "caller", person complying = "you".
+- Never return "unknown", "caller", "victim", or "scammer".
+- Use "you" for direct replies and questions from the phone holder, even when short.
+- Use "speaker" for requests, instructions, explanations, and claims made by the other caller.
 - Return EXACTLY the same number of labels as input segments.`,
             },
             {
@@ -193,7 +196,7 @@ Return JSON array of roles only:`,
           const roles: string[] = JSON.parse(arrayMatch[0]);
           if (Array.isArray(roles) && roles.length === rawSegments.length) {
             roles.forEach((role, i) => {
-              if (role === 'you' || role === 'caller' || role === 'unknown') {
+              if (role === 'you' || role === 'speaker') {
                 rawSegments[i].speaker = role;
               }
             });
