@@ -15,7 +15,7 @@ const SPEAKER_CONFIG = {
   caller: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
   scammer: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
   victim: { label: "You", icon: User, color: "text-primary", bg: "bg-primary/10" },
-  unknown: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "-muted/50" },
+  unknown: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
 };
 
 const FEEDBACK_STYLES = {
