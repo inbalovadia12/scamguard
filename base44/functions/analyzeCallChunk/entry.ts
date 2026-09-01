@@ -86,11 +86,21 @@ Deno.serve(async (req) => {
       return seg?.text?.trim() && noSpeech < 0.55 && !lowConf;
     });
 
-    const fullTranscript = speechSegments.length > 0
+    // Ignore fragment-only results. A complete sentence will arrive in the next
+    // live chunk; showing a one- or two-word guess is worse than showing nothing.
+    const isUsefulTranscript = (text: string) => {
+      const normalized = text.trim();
+      const wordCount = normalized.split(/\s+/).filter(Boolean).length;
+      if (wordCount >= 3) return true;
+      return /^(yes|yeah|yep|no|okay|ok|sure|hello|hi|thanks|thank you|כן|לא|בסדר|שלום|תודה|sí|si|vale|hola|gracias)[.!?]*$/i.test(normalized);
+    };
+    const usableSpeechSegments = speechSegments.filter((seg: any) => isUsefulTranscript(seg.text));
+    const fullTranscriptCandidate = speechSegments.length > 0
       ? speechSegments.map((s: any) => s.text.trim()).join(' ')
       : (transcriptData.text || '').trim();
+    const fullTranscript = isUsefulTranscript(fullTranscriptCandidate) ? fullTranscriptCandidate : '';
 
-    if (!fullTranscript.trim()) {
+    if (!fullTranscript) {
       return Response.json({
         transcript: '',
         segments: [],
@@ -122,7 +132,7 @@ Deno.serve(async (req) => {
       end?: number;
     }
 
-    const rawSegments: Segment[] = (speechSegments.length > 0 ? speechSegments : groqSegments)
+    const rawSegments: Segment[] = usableSpeechSegments
       .filter((s: any) => s?.text?.trim())
       .map((s: any) => ({
         speaker: isLikelyUserReply(s.text.trim()) ? 'you' : 'speaker',
