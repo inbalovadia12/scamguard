@@ -9,12 +9,13 @@ const RISK_COLORS = {
 };
 
 const SPEAKER_CONFIG = {
-  caller: { label: "Caller", icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10" },
+  speaker: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
   you: { label: "You", icon: User, color: "text-primary", bg: "bg-primary/10" },
-  // Keep legacy labels readable in older saved sessions and manually edited lines.
-  scammer: { label: "Scammer", icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/10" },
+  // Preserve historical labels in saved sessions.
+  caller: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
+  scammer: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
   victim: { label: "You", icon: User, color: "text-primary", bg: "bg-primary/10" },
-  unknown: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
+  unknown: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "-muted/50" },
 };
 
 const FEEDBACK_STYLES = {
@@ -24,10 +25,8 @@ const FEEDBACK_STYLES = {
 };
 
 const SPEAKER_OPTIONS = [
-  { value: "caller", label: "Caller" },
+  { value: "speaker", label: "Speaker" },
   { value: "you", label: "You" },
-  { value: "scammer", label: "Scammer" },
-  { value: "unknown", label: "Speaker" },
 ];
 
 export default function TranscriptFeed({ segments, onEditSegment }) {
@@ -39,7 +38,8 @@ export default function TranscriptFeed({ segments, onEditSegment }) {
   const startEdit = (i) => {
     setEditingIndex(i);
     setEditText(segments[i].text);
-    setEditSpeaker(segments[i].speaker || "unknown");
+    const speaker = segments[i].speaker;
+    setEditSpeaker(speaker === "you" || speaker === "victim" ? "you" : "speaker");
   };
   const saveEdit = () => {
     if (editingIndex !== null && onEditSegment && editText.trim()) {
@@ -98,9 +98,12 @@ export default function TranscriptFeed({ segments, onEditSegment }) {
                 </div>
               );
             }
-            const cfg = SPEAKER_CONFIG[seg.speaker] || SPEAKER_CONFIG.unknown;
-            const SpeakerIcon = cfg.icon;
             const isYou = seg.speaker === "you" || seg.speaker === "victim";
+            const isSuspiciousSpeaker = !isYou && seg.risk_level === "high";
+            const cfg = isSuspiciousSpeaker
+              ? { label: "Speaker", icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/15" }
+              : (SPEAKER_CONFIG[seg.speaker] || SPEAKER_CONFIG.speaker);
+            const SpeakerIcon = cfg.icon;
             const sentiment = getFeedbackSentiment(seg.feedback);
             const fbStyle = FEEDBACK_STYLES[sentiment];
             const FeedbackIcon = fbStyle.icon;
@@ -110,7 +113,7 @@ export default function TranscriptFeed({ segments, onEditSegment }) {
                 key={i}
                 className={`flex flex-col ${isYou ? "items-end" : "items-start"}`}
               >
-                <div className={`text-sm p-2.5 rounded-2xl border-l-2 max-w-[85%] ${isYou ? "bg-primary/5 rounded-br-sm" : "bg-muted/30 rounded-bl-sm"} ${RISK_COLORS[seg.risk_level] || RISK_COLORS.low}`}>
+                <div className={`text-sm p-2.5 rounded-2xl border-l-2 max-w-[85%] ${isYou ? "bg-primary/5 rounded-br-sm" : isSuspiciousSpeaker ? "bg-destructive/10 rounded-bl-sm border border-destructive/50" : "bg-muted/30 rounded-bl-sm"} ${RISK_COLORS[seg.risk_level] || RISK_COLORS.low}`}>
                   <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${cfg.bg} ${cfg.color} text-xs font-medium mb-1.5`}>
                     <SpeakerIcon className="w-3 h-3" />
                     {cfg.label}
