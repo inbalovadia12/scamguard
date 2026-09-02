@@ -18,6 +18,10 @@ const SCREEN_INTERVAL_OPTIONS = [
 ];
 const RISK_ORDER = { low: 0, medium: 1, high: 2 };
 
+function getCallGuardError(error, fallback) {
+  return error?.response?.data?.error || error?.data?.error || error?.message || fallback;
+}
+
 function getSupportedAudioMime() {
   const types = ["audio/webm", "audio/mp4", "audio/ogg", "audio/aac"];
   for (const type of types) {
@@ -251,6 +255,10 @@ export default function LiveCallAnalyzer() {
       if (!file.type.startsWith("audio/")) {
         throw new Error("Please choose an audio file (m4a, mp3, wav, etc.).");
       }
+      // Groq's free-tier transcription endpoint accepts files up to 25 MB.
+      if (file.size > 25 * 1024 * 1024) {
+        throw new Error("This recording is over 25 MB. Trim it or export a smaller audio file, then upload again.");
+      }
       const uploadRes = await base44.integrations.Core.UploadFile({ file });
       const lang = localStorage.getItem("vardin_language") || "en";
       const response = await base44.functions.invoke("analyzeCallChunk", {
@@ -275,7 +283,7 @@ export default function LiveCallAnalyzer() {
       await incrementCreditUsage(CREDIT_COSTS.CALL_CHUNK);
       setCreditStatus(await getCreditStatus());
     } catch (e) {
-      setError(e.message || "Failed to analyze recording.");
+      setError(getCallGuardError(e, "Failed to analyze recording."));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -367,7 +375,7 @@ export default function LiveCallAnalyzer() {
             .then(setCreditStatus)
             .catch(() => {});
         } catch (e) {
-          setError(e.message || "Failed to analyze audio chunk.");
+          setError(getCallGuardError(e, "Failed to analyze audio chunk."));
         } finally {
           isProcessingRef.current = false;
           setProcessingChunk(false);
@@ -750,11 +758,21 @@ export default function LiveCallAnalyzer() {
               )
             )}
             {mode === "upload" && (
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
-                <Upload className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-muted-foreground">
-                  Record your call using your phone's built-in call recorder (where legal), then choose the audio file here. Vardin transcribes and analyzes the whole conversation. Best with recordings under a few minutes.
-                </p>
+              <div className="space-y-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
+                <div className="flex items-start gap-2">
+                  <Upload className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Upload a call recording to decide whether you should call back.</strong> Vardin transcribes and analyzes the whole conversation. Use m4a, mp3, wav, or another audio file up to 25 MB.
+                  </p>
+                </div>
+                <details className="text-xs text-muted-foreground">
+                  <summary className="cursor-pointer font-medium text-foreground">How to record and upload a call</summary>
+                  <div className="mt-2 space-y-2 leading-relaxed">
+                    <p><strong>iPhone:</strong> where Call Recording is available, make or answer the call in Phone, tap More, then Call Recording. Both people hear a recording notice. After the call, open Notes → Call Recordings, save or share the audio file, then return here and choose it.</p>
+                    <p><strong>Android:</strong> on supported devices and carriers, open Phone during the call and tap Record. On Pixel, use Call Assist → Call Recording. Find the saved call in Phone → Home or History, tap Share, save the audio file, then upload it here.</p>
+                    <p><strong>If the button is unavailable:</strong> recording depends on your device, carrier, region, and consent laws. With everyone’s permission, use speakerphone and record from a second device, then upload that file.</p>
+                  </div>
+                </details>
               </div>
             )}
             <Button
