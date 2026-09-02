@@ -61,6 +61,7 @@ export default function LiveCallAnalyzer() {
   const [overallRisk, setOverallRisk] = useState("low");
   const [tactics, setTactics] = useState([]);
   const [coaching, setCoaching] = useState([]);
+  const [speakerDetectionNote, setSpeakerDetectionNote] = useState("");
   const [error, setError] = useState(null);
   const [creditStatus, setCreditStatus] = useState(null);
   const [checkingPlan, setCheckingPlan] = useState(true);
@@ -221,6 +222,9 @@ export default function LiveCallAnalyzer() {
     if (result.feedback) {
       setCoaching((prev) => [{ text: result.feedback, timestamp: new Date(), risk_level: result.risk_level }, ...prev]);
     }
+    if (result.speaker_detection_note) {
+      setSpeakerDetectionNote(result.speaker_detection_note);
+    }
     const warningsArr = Array.isArray(result.warnings) ? result.warnings : [];
     if (warningsArr.length) {
       setWarnings((prev) => [...warningsArr.map((w) => ({ text: w, timestamp: new Date(), level: result.risk_level })), ...prev]);
@@ -248,6 +252,7 @@ export default function LiveCallAnalyzer() {
     setOverallRisk("low");
     setTactics([]);
     setCoaching([]);
+    setSpeakerDetectionNote("");
     transcriptRef.current = [];
     overallRiskRef.current = "low";
     setUploading(true);
@@ -297,6 +302,7 @@ export default function LiveCallAnalyzer() {
     setOverallRisk("low");
     setTactics([]);
     setCoaching([]);
+    setSpeakerDetectionNote("");
     setCallSeconds(0);
     transcriptRef.current = [];
     overallRiskRef.current = "low";
@@ -846,6 +852,9 @@ export default function LiveCallAnalyzer() {
             <p className="text-xs text-muted-foreground">
               {transcript.length} segments • {warnings.length} warnings • {creditStatus?.remaining || 0} credits left
             </p>
+            {speakerDetectionNote && (
+              <p className="text-xs text-muted-foreground mt-1">{speakerDetectionNote}</p>
+            )}
           </div>
           {tactics.length > 0 && (
             <div className="hidden sm:flex flex-wrap gap-1.5 justify-end max-w-[40%]">
