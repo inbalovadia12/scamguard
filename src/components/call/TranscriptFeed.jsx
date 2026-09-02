@@ -100,9 +100,11 @@ export default function TranscriptFeed({ segments, onEditSegment }) {
             }
             const isYou = seg.speaker === "you" || seg.speaker === "victim";
             const isSuspiciousSpeaker = !isYou && seg.risk_level === "high";
+            const voiceLabel = /^speaker_(.+)$/.exec(seg.speaker || "")?.[1];
+            const defaultCfg = SPEAKER_CONFIG[seg.speaker] || SPEAKER_CONFIG.speaker;
             const cfg = isSuspiciousSpeaker
-              ? { label: "Speaker", icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/15" }
-              : (SPEAKER_CONFIG[seg.speaker] || SPEAKER_CONFIG.speaker);
+              ? { label: voiceLabel ? `Speaker ${voiceLabel}` : "Speaker", icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/15" }
+              : { ...defaultCfg, label: voiceLabel ? `Speaker ${voiceLabel}` : defaultCfg.label };
             const SpeakerIcon = cfg.icon;
             const sentiment = getFeedbackSentiment(seg.feedback);
             const fbStyle = FEEDBACK_STYLES[sentiment];
