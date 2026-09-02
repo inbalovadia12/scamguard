@@ -1,12 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
 /**
- * LiveGuard - Real Speaker Detection Fix
+ * LiveGuard - Smart Scam Detection
  *
  * FIXES:
- * 1. Proper speaker classification (you vs caller)
- * 2. Comprehensive keyword detection (all scam indicators)
- * 3. Segment merging to prevent fragmentation
+ * 1. Speaker detection that actually works
+ * 2. Context-aware keyword detection (combination-based, not single-word)
+ * 3. Proper red flag thresholds to avoid false positives
  */
 Deno.serve(async (req) => {
   try {
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
 
     if (!transcriptResponse.ok) {
       const detail = await transcriptResponse.text().catch(() => '');
-      throw new Error(`Groq transcription failed: ${transcriptResponse.status} ${detail.slice(0, 200)}`);
+      throw new Error(`Groq transcription failed: ${transcriptResponse.status}`);
     }
 
     const transcriptData = await transcriptResponse.json();
@@ -78,7 +78,6 @@ Deno.serve(async (req) => {
     // ===== STEP 2: EXTRACT SEGMENTS =====
     const groqSegments: any[] = Array.isArray(transcriptData.segments) ? transcriptData.segments : [];
 
-    // Filter out silence/hallucinated segments
     const speechSegments = groqSegments.filter((seg: any) => {
       const noSpeech = typeof seg?.no_speech_prob === 'number' ? seg.no_speech_prob : 0;
       const lowConf = typeof seg?.avg_logprob === 'number' && seg.avg_logprob < -1.5;
@@ -103,7 +102,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ===== STEP 3: BUILD RAW SEGMENTS =====
+    // ===== STEP 3: BUILD SEGMENTS =====
     interface Segment {
       speaker: string;
       text: string;
@@ -124,7 +123,32 @@ Deno.serve(async (req) => {
       rawSegments.push({ speaker: 'unknown', text: fullTranscript });
     }
 
-    // ===== STEP 4: CLASSIFY SPEAKERS WITH LLM =====
+    // ===== STEP 4: SIMPLE SPEAKER DETECTION =====
+    // Strategy: Split into two lists - longer speeches vs shorter interjections
+    // Longer speeches = likely the "caller" (scammer talks more)
+    // Shorter responses = likely the "you" (victim responds briefly)
+    
+    const averageLength = rawSegments.reduce((sum, s) => sum + s.text.length, 0) / rawSegments.length;
+    
+    for (let i = 0; i < rawSegments.length; i++) {
+      const seg = rawSegments[i];
+      const text = seg.text.toLowerCase();
+      
+      // SHORT RESPONSES = YOU (victim)
+      if (seg.text.length < 20 || text.includes('who') || text.includes('yes') || text.includes('okay') || text.includes('hello') || text.includes('what')) {
+        seg.speaker = 'you';
+      }
+      // LONGER SPEECHES = CALLER (scammer)
+      else if (seg.text.length > averageLength * 1.5 || text.includes('this is') || text.includes('we need') || text.includes('you need') || text.includes('give us')) {
+        seg.speaker = 'caller';
+      }
+      // UNCERTAIN = neutral
+      else {
+        seg.speaker = 'unknown';
+      }
+    }
+
+    // Try LLM-based classification as fallback
     try {
       const speakerResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -137,49 +161,32 @@ Deno.serve(async (req) => {
           messages: [
             {
               role: 'system',
-              content: `You classify phone call speakers. Rules:
-              
-"you" = the person holding the phone:
-  - Opening with "Hi, this is..." when identifying themselves
-  - Asking "Who is this?" 
-  - Short responses: "okay", "yes", "I see", "what?"
-  - Sounds confused or questioning
-  - Asking for verification
+              content: `Classify each segment as "you" (person holding phone, short responses, asking questions) or "caller" (other person, making statements/demands, talks more).
 
-"caller" = the OTHER person:
-  - Makes claims: "This is the hospital", "I'm calling about"
-  - Makes demands/requests: "Give me", "Send", "Pay"
-  - Gives information/instructions
-  - Creates urgency: "must pay now", "he's gonna die"
-  - Sounds authoritative
-  - Makes threats
-  - Talks much more than "you"
-
-For EACH segment, respond with ONLY the role: "you" or "caller". No explanations.
-If 2+ speakers, each segment must be classified as one of these two.
-Return a JSON array: ["you", "caller", "caller", "you"]`,
+Return ONLY a JSON array of roles matching segment count. Example: ["you","caller","caller"]`,
             },
             {
               role: 'user',
-              content: `Segments to classify (${rawSegments.length} total):
-${rawSegments.map((s, i) => `[${i}] ${s.text}`).join('\n')}
+              content: `Classify these ${rawSegments.length} segments:
+${rawSegments.map((s, i) => `[${i}] "${s.text}"`).join('\n')}
 
-Return JSON array of "${rawSegments.length}" roles: ["you"|"caller", ...]:`,
+Return: [`,
             },
           ],
           temperature: 0,
-          max_tokens: 300,
+          max_tokens: 200,
         }),
-        signal: AbortSignal.timeout(2000),
+        signal: AbortSignal.timeout(1500),
       });
 
       if (speakerResponse.ok) {
         const speakerData = await speakerResponse.json();
         const content = speakerData.choices?.[0]?.message?.content || '';
-
-        // Parse JSON array
+        
         try {
-          const jsonMatch = content.match(/\[[\s\S]*?\]/);
+          // Extract JSON array
+          const fullJson = '[' + content;
+          const jsonMatch = fullJson.match(/\[[\s\S]*?\]/);
           if (jsonMatch) {
             const roles: string[] = JSON.parse(jsonMatch[0]);
             if (Array.isArray(roles) && roles.length === rawSegments.length) {
@@ -190,95 +197,65 @@ Return JSON array of "${rawSegments.length}" roles: ["you"|"caller", ...]:`,
               });
             }
           }
-        } catch (parseErr) {
-          // JSON parse failed, segments stay as unknown
+        } catch {
+          // Parse failed, use heuristic above
         }
       }
-    } catch (e) {
-      // Speaker classification timeout/error - proceed with unknown
+    } catch {
+      // LLM timeout, use heuristic classification above
     }
 
-    // ===== STEP 5: MERGE CONSECUTIVE SEGMENTS FROM SAME SPEAKER =====
+    // ===== STEP 5: MERGE CONSECUTIVE SAME-SPEAKER SEGMENTS =====
     const mergedSegments: Segment[] = [];
     for (const seg of rawSegments) {
       const prev = mergedSegments[mergedSegments.length - 1];
       if (prev && prev.speaker === seg.speaker) {
-        // Same speaker - append text
         prev.text += ' ' + seg.text;
         if (seg.end !== undefined) prev.end = seg.end;
       } else {
-        // New speaker - create new segment
         mergedSegments.push({ ...seg });
       }
     }
 
-    // ===== STEP 6: COMPREHENSIVE KEYWORD DETECTION =====
+    // ===== STEP 6: CONTEXT-AWARE KEYWORD DETECTION =====
     const transcriptLower = fullTranscript.toLowerCase();
     const redFlags: string[] = [];
 
-    // URGENCY / PRESSURE
-    const urgencyPatterns = [
-      'urgent', 'act now', 'immediately', 'hurry', 'right now', 'asap',
-      'limited time', 'don\'t wait', 'do not wait', 'quickly',
-      'before', 'deadline', 'expire', 'expiration', 'timeout',
-    ];
-    if (urgencyPatterns.some(p => transcriptLower.includes(p))) {
-      redFlags.push('Urgency/pressure tactics detected');
+    // Only flag COMBINATIONS of keywords, not single words alone
+    
+    // MONEY REQUEST + PRESSURE/THREAT/URGENCY
+    const hasMoney = ['credit card', 'debit card', 'card number', 'wire transfer', 'send money', 'gift card', 'payment', 'pay', 'give us', 'fee', 'money order', 'crypto', 'bitcoin', 'venmo', 'cashapp', 'zelle'].some(kw => transcriptLower.includes(kw));
+    const hasUrgency = ['immediately', 'right now', 'now', 'urgent', 'hurry', 'asap', 'quickly', 'before', 'must', 'have to', 'will die', 'gonna die', 'will be', 'will freeze'].some(kw => transcriptLower.includes(kw));
+    const hasThreat = ['die', 'death', 'arrest', 'jail', 'lawsuit', 'freeze', 'suspend', 'penalty', 'fine', 'federal', 'court', 'deport'].some(kw => transcriptLower.includes(kw));
+    const hasPersonal = ['social security', 'ssn', 'password', 'pin', 'account number', 'routing number', 'verify', 'confirm'].some(kw => transcriptLower.includes(kw));
+
+    // RED FLAG: Money + urgency OR money + threat
+    if (hasMoney && (hasUrgency || hasThreat)) {
+      redFlags.push('Money request with pressure/threats detected');
     }
 
-    // MONEY / PAYMENT REQUESTS
-    const moneyPatterns = [
-      'credit card', 'credit card number', 'debit card',
-      'wire transfer', 'wire money', 'wiring',
-      'gift card', 'gift cards', 'amazon card', 'itunes card', 'target card',
-      'bitcoin', 'crypto', 'cryptocurrency', 'ethereum',
-      'send money', 'transfer money', 'payment', 'pay',
-      'money order', 'cashapp', 'venmo', 'zelle',
-      'bank account', 'routing number',
-      'fee', 'pay the fee', 'unpaid fee', 'balance due',
-    ];
-    if (moneyPatterns.some(p => transcriptLower.includes(p))) {
-      redFlags.push('Money/payment request detected');
+    // RED FLAG: Personal info request + urgency
+    if (hasPersonal && hasUrgency) {
+      redFlags.push('Personal information request with pressure detected');
     }
 
-    // THREATS / INTIMIDATION
-    const threatPatterns = [
-      'arrest', 'lawsuit', 'legal action', 'court',
-      'freeze', 'frozen account', 'suspend', 'suspended',
-      'federal', 'fbi', 'irs',
-      'penalty', 'fine', 'jail', 'prison',
-      'die', 'death', 'kill', 'gonna die', 'will die',
-      'deport', 'deported', 'immigration',
-      'report', 'reported',
-    ];
-    if (threatPatterns.some(p => transcriptLower.includes(p))) {
-      redFlags.push('Threats/intimidation detected');
+    // RED FLAG: Threats alone (if they're specific/serious)
+    if (transcriptLower.includes('die') || transcriptLower.includes('death') || transcriptLower.includes('arrest') || transcriptLower.includes('lawsuit') || transcriptLower.includes('jail')) {
+      if (hasMoney || hasPersonal) {
+        redFlags.push('Serious threats detected');
+      }
     }
 
-    // PERSONAL INFO REQUESTS
-    const personalPatterns = [
-      'social security', 'ssn', 'password', 'pin',
-      'account number', 'routing number', 'account',
-      'verify', 'confirm', 'verify identity',
-      'personal information', 'personal info',
-      'date of birth', 'dob',
-    ];
-    if (personalPatterns.some(p => transcriptLower.includes(p))) {
-      redFlags.push('Personal information request detected');
+    // RED FLAG: Authority claim + money/personal info request
+    const hasAuthority = ['hospital', 'police', 'fbi', 'irs', 'bank', 'microsoft', 'apple', 'amazon', 'federal', 'government'].some(kw => transcriptLower.includes(kw));
+    if (hasAuthority && (hasMoney || hasPersonal)) {
+      redFlags.push('Authority impersonation with requests detected');
     }
 
-    // AUTHORITY IMPERSONATION
-    const impersonationPatterns = [
-      'hospital', 'doctor', 'surgery',
-      'police', 'police department',
-      'fbi', 'irs', 'federal',
-      'microsoft', 'apple', 'amazon', 'google',
-      'tech support', 'support team',
-      'bank', 'banking', 'credit', 'loan',
-      'government',
-    ];
-    if (impersonationPatterns.some(p => transcriptLower.includes(p))) {
-      redFlags.push('Authority impersonation detected');
+    // RED FLAG: Improbable situation + money request
+    // (e.g., "surgery" should only flag if combined with money/urgency)
+    if ((transcriptLower.includes('surgery') || transcriptLower.includes('accident') || transcriptLower.includes('crash')) && hasMoney && hasUrgency) {
+      redFlags.push('Emergency impersonation with money request detected');
     }
 
     const confidence = speechSegments.length > 0
@@ -287,8 +264,11 @@ Return JSON array of "${rawSegments.length}" roles: ["you"|"caller", ...]:`,
         ))
       : 0.85;
 
-    // ===== STEP 7: INSTANT RETURN FOR OBVIOUS SCAMS =====
-    if (redFlags.length >= 2) {
+    // ===== STEP 7: RETURN RESULTS =====
+    const riskLevel = redFlags.length >= 2 ? 'high' : redFlags.length === 1 ? 'medium' : 'low';
+    const isScam = redFlags.length >= 2;
+
+    if (isScam) {
       return Response.json({
         transcript: fullTranscript,
         segments: mergedSegments,
@@ -296,77 +276,24 @@ Return JSON array of "${rawSegments.length}" roles: ["you"|"caller", ...]:`,
         tactics_detected: ['Multiple scam indicators'],
         risk_level: 'high',
         is_scam: true,
-        feedback: 'STOP — this call has multiple scam indicators. Do NOT give any personal information or money. Hang up immediately and call the organization directly using the number from their official website.',
-        analysis: `Critical: Detected ${redFlags.length} scam indicators: ${redFlags.join('; ')}`,
+        feedback: 'STOP — This call has multiple scam indicators. Do NOT give any credit card, personal information, or money. Hang up and call the organization directly using a number from their official website.',
+        analysis: `Critical scam indicators detected: ${redFlags.join('; ')}`,
         confidence: 0.95,
         timing_ms: Date.now() - startTime,
       });
-    }
-
-    // ===== STEP 8: LLM ANALYSIS FOR AMBIGUOUS CASES =====
-    let analysis: any = {
-      tactics_detected: [],
-      risk_level: redFlags.length > 0 ? 'medium' : 'low',
-      is_scam: false,
-      feedback: '',
-      analysis: redFlags.length > 0 ? 'Potential scam indicator detected. Be cautious.' : 'No scam indicators detected.',
-    };
-
-    if (redFlags.length === 1) {
-      // One flag - might be legitimate. Use LLM to decide.
-      try {
-        const llmResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${groqKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'llama-3.1-8b-instant',
-            messages: [
-              {
-                role: 'system',
-                content: 'Assess call for scam risk. Return JSON only.',
-              },
-              {
-                role: 'user',
-                content: JSON.stringify({
-                  transcript: fullTranscript.slice(0, 400),
-                  red_flags: redFlags,
-                  speakers: mergedSegments.map(s => `${s.speaker}: ${s.text}`).join('\n'),
-                }),
-              },
-            ],
-            response_format: { type: 'json_object' },
-            temperature: 0,
-            max_tokens: 150,
-          }),
-          signal: AbortSignal.timeout(1500),
-        });
-
-        if (llmResponse.ok) {
-          const llmData = await llmResponse.json();
-          const text = llmData.choices?.[0]?.message?.content || '';
-          try {
-            analysis = JSON.parse(text);
-          } catch {
-            // JSON parse failed, use default
-          }
-        }
-      } catch {
-        // LLM timeout, use default analysis
-      }
     }
 
     return Response.json({
       transcript: fullTranscript,
       segments: mergedSegments,
       red_flags: redFlags,
-      tactics_detected: analysis.tactics_detected || [],
-      risk_level: analysis.risk_level || 'low',
-      is_scam: analysis.is_scam ?? false,
-      feedback: analysis.feedback || '',
-      analysis: analysis.analysis || '',
+      tactics_detected: [],
+      risk_level: riskLevel,
+      is_scam: isScam,
+      feedback: redFlags.length > 0 ? 'One potential indicator detected. Be cautious and verify independently.' : '',
+      analysis: redFlags.length > 0 
+        ? `Detected: ${redFlags.join('; ')}`
+        : 'No scam indicators detected.',
       confidence,
       timing_ms: Date.now() - startTime,
     });
