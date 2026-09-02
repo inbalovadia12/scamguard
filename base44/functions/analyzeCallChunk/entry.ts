@@ -393,19 +393,17 @@ Deno.serve(async (req) => {
       analysis = fallbackAnalysis(transcription.transcript);
     }
 
-    const warnings = [...new Set([
-      ...(analysis.warnings || []),
-      ...(transcriptionProvider === 'groq'
-        ? ['Speaker names are not inferred from text. Add DEEPGRAM_API_KEY to enable voice-based speaker labels.']
-        : []),
-    ])];
+    const speakerDetectionNote = transcriptionProvider === 'deepgram' && diarizationAvailable
+      ? 'Speaker labels are separated from the audio itself; they are generic labels, not guessed names or roles.'
+      : 'This transcript is analyzed without guessing who is speaking. Add DEEPGRAM_API_KEY to enable voice-based speaker labels.';
 
     return Response.json({
       transcript: transcription.transcript,
       segments: transcription.segments,
       red_flags: analysis.red_flags,
       tactics_detected: analysis.tactics_detected,
-      warnings,
+      warnings: analysis.warnings,
+      speaker_detection_note: speakerDetectionNote,
       risk_level: analysis.risk_level,
       is_scam: analysis.is_scam,
       feedback: analysis.feedback,
