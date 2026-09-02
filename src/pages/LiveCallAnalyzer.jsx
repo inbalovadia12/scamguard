@@ -740,7 +740,7 @@ export default function LiveCallAnalyzer() {
               <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
                 <Mic className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  Put your call on <strong>speakerphone</strong> and place the phone near the speaker. Live Guard will analyze the conversation in real time.
+                  Put your call on <strong>speakerphone</strong> and place the phone near the computer. Live Guard will analyze the conversation in real time.
                 </p>
               </div>
             )}
