@@ -12,10 +12,10 @@ const SPEAKER_CONFIG = {
   speaker: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
   you: { label: "You", icon: User, color: "text-primary", bg: "bg-primary/10" },
   // Preserve historical labels in saved sessions.
-  caller: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
-  scammer: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
+  caller: { label: "Caller", icon: MessageSquare, color: "text-destructive", bg: "bg-destructive/10" },
+  scammer: { label: "Caller", icon: MessageSquare, color: "text-destructive", bg: "bg-destructive/10" },
   victim: { label: "You", icon: User, color: "text-primary", bg: "bg-primary/10" },
-  unknown: { label: "Speaker", icon: MessageSquare, color: "text-muted-foreground", bg: "bg-muted/50" },
+  unknown: { label: "Caller", icon: MessageSquare, color: "text-destructive", bg: "bg-destructive/10" },
 };
 
 const FEEDBACK_STYLES = {
@@ -39,7 +39,7 @@ export default function TranscriptFeed({ segments, onEditSegment }) {
     setEditingIndex(i);
     setEditText(segments[i].text);
     const speaker = segments[i].speaker;
-    setEditSpeaker(speaker === "you" || speaker === "victim" ? "you" : "speaker");
+    setEditSpeaker(speaker === "you" || speaker === "victim" ? "you" : "caller");
   };
   const saveEdit = () => {
     if (editingIndex !== null && onEditSegment && editText.trim()) {
@@ -103,8 +103,8 @@ export default function TranscriptFeed({ segments, onEditSegment }) {
             const voiceLabel = /^speaker_(.+)$/.exec(seg.speaker || "")?.[1];
             const defaultCfg = SPEAKER_CONFIG[seg.speaker] || SPEAKER_CONFIG.speaker;
             const cfg = isSuspiciousSpeaker
-              ? { label: voiceLabel ? `Speaker ${voiceLabel}` : "Speaker", icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/15" }
-              : { ...defaultCfg, label: voiceLabel ? `Speaker ${voiceLabel}` : defaultCfg.label };
+              ? { label: voiceLabel ? `Caller ${voiceLabel}` : "Caller", icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/15" }
+              : { ...defaultCfg, label: voiceLabel ? `Caller ${voiceLabel}` : defaultCfg.label };
             const SpeakerIcon = cfg.icon;
             const sentiment = getFeedbackSentiment(seg.feedback);
             const fbStyle = FEEDBACK_STYLES[sentiment];
