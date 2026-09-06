@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { getCreditStatus, CREDIT_COSTS, incrementCreditUsage } from "@/lib/credits";
 import TranscriptFeed from "@/components/call/TranscriptFeed";
 import WarningPanel from "@/components/call/WarningPanel";
+import RedFlagDisplay from "@/components/scam/RedFlagDisplay";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -58,6 +59,7 @@ export default function LiveCallAnalyzer() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState([]);
   const [warnings, setWarnings] = useState([]);
+  const [redFlags, setRedFlags] = useState([]);
   const [overallRisk, setOverallRisk] = useState("low");
   const [tactics, setTactics] = useState([]);
   const [coaching, setCoaching] = useState([]);
@@ -229,6 +231,10 @@ export default function LiveCallAnalyzer() {
     if (warningsArr.length) {
       setWarnings((prev) => [...warningsArr.map((w) => ({ text: w, timestamp: new Date(), level: result.risk_level })), ...prev]);
     }
+    const redFlagsArr = Array.isArray(result.red_flags) ? result.red_flags : [];
+    if (redFlagsArr.length) {
+      setRedFlags((prev) => [...new Set([...prev, ...redFlagsArr])]);
+    }
     if (RISK_ORDER[result.risk_level] > RISK_ORDER[overallRiskRef.current]) {
       overallRiskRef.current = result.risk_level;
       setOverallRisk(result.risk_level);
@@ -249,6 +255,7 @@ export default function LiveCallAnalyzer() {
     setError(null);
     setTranscript([]);
     setWarnings([]);
+    setRedFlags([]);
     setOverallRisk("low");
     setTactics([]);
     setCoaching([]);
@@ -300,6 +307,7 @@ export default function LiveCallAnalyzer() {
     setError(null);
     setTranscript([]);
     setWarnings([]);
+    setRedFlags([]);
     setOverallRisk("low");
     setTactics([]);
     setCoaching([]);
@@ -870,6 +878,8 @@ export default function LiveCallAnalyzer() {
       )}
 
       <AIDisclaimer />
+
+      {redFlags.length > 0 && <RedFlagDisplay flags={redFlags} />}
 
       {(transcript.length > 0 || warnings.length > 0) && (
         <div className="grid sm:grid-cols-2 gap-4">
