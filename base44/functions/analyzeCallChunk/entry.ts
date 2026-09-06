@@ -65,7 +65,23 @@ async function retrieveAudioBytes(
     }
   }
 
-  // Case 2: URL - download to binary (THIS FIXES 302 REDIRECT)
+  // Case 2: Raw base64 (the live browser path sends audio_base64 without a data: prefix)
+  // Decode directly so the endpoint accepts both raw base64 and data URLs.
+  if (/^[A-Za-z0-9+/\s]+=*$/.test(input) && input.length > 100) {
+    try {
+      const normalized = input.replace(/\s/g, '');
+      const binaryString = atob(normalized);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return { bytes, mimeType: mimeType || 'audio/webm' };
+    } catch {
+      // Fall through to URL/invalid-input handling.
+    }
+  }
+
+  // Case 3: URL - download to binary (THIS FIXES 302 REDIRECT)
   if (input.startsWith('http://') || input.startsWith('https://')) {
     try {
       const response = await fetch(input, {
@@ -386,10 +402,17 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { audio_input, audio_mime = 'audio/webm', language = 'en' } = body;
+    // Accept the canonical audio_input field plus the two fields already used by
+    // the live recorder and upload flow. This keeps the API backwards compatible.
+    const audio_input = body.audio_input || body.audio_base64 || body.audio_url;
+    const audio_mime = body.audio_mime || body.audio_mime_type || 'audio/webm';
+    const language = body.language || 'en';
 
     if (!audio_input) {
-      return Response.json({ error: 'audio_input required' }, { status: 400 });
+      return Response.json({
+        error: 'audio_input required',
+        hint: 'Send audio_input, audio_base64, or audio_url.'
+      }, { status: 400 });
     }
 
     const startTime = Date.now();
@@ -457,13 +480,13 @@ Deno.serve(async (req) => {
 
     // ===== IDENTIFY SPEAKERS =====
     const segments = (transcriptData.segments || []).filter((s: any) => s?.text?.trim());
-    const speakerSegments = await identifySpeakers(segments, getOrCreateConversationState(user.id), groqKey);
+    const conversationState = getOrCreateConversationState(user.id);
+    const speakerSegments = await identifySpeakers(segments, conversationState, groqKey);
 
     // ===== DETECT SCAM INDICATORS =====
     const alerts = detectScamIndicators(speakerSegments);
 
     // ===== SUPPRESS DUPLICATE ALERTS =====
-    const conversationState = getOrCreateConversationState(user.id);
     const newAlerts = alerts.filter((alert) => {
       const key = `${alert.flag}`;
       const lastCount = conversationState.flags.get(key) || 0;
@@ -488,6 +511,17 @@ Deno.serve(async (req) => {
 
     // ===== GENERATE RESPONSE =====
     const redFlags = newAlerts.map((a) => `${a.flag} (from ${a.speaker})`);
+    const tacticsDetected = newAlerts.map((a) => a.flag);
+    const warnings = newAlerts.map((a) => {
+      const labels: Record<string, string> = {
+        money_request: 'Caller requested money or payment information.',
+        threat: 'Caller used a threat or consequence to pressure you.',
+        urgency: 'Caller used urgency or pressure to make you act immediately.',
+        personal_info_request: 'Caller requested sensitive personal or account information.',
+        authority_claim: 'Caller claimed to represent an organization or authority.',
+      };
+      return labels[a.flag] || `Suspicious behavior detected: ${a.flag}.`;
+    });
     const isScam = newAlerts.length >= 2;
     const riskLevel = isScam ? 'high' : newAlerts.length === 1 ? 'medium' : 'low';
 
@@ -495,6 +529,8 @@ Deno.serve(async (req) => {
       transcript: fullTranscript,
       segments: speakerSegments,
       red_flags: redFlags,
+      warnings,
+      tactics_detected: tacticsDetected,
       risk_level: riskLevel,
       is_scam: isScam,
       feedback: isScam
