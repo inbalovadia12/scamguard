@@ -267,7 +267,8 @@ export default function LiveCallAnalyzer() {
       const uploadRes = await base44.integrations.Core.UploadFile({ file });
       const lang = localStorage.getItem("vardin_language") || "en";
       const response = await base44.functions.invoke("analyzeCallChunk", {
-        audio_url: uploadRes.file_url,
+        audio_input: uploadRes.file_url,
+        audio_mime: file.type || "audio/mp4",
         language: lang,
       });
       if (response.data?.error) throw new Error(response.data.error);
@@ -364,7 +365,7 @@ export default function LiveCallAnalyzer() {
           const speakerHistory = transcriptRef.current.slice(-8).map((t) => t.speaker).filter(Boolean).join(",");
 
           const response = await base44.functions.invoke("analyzeCallChunk", {
-            audio_base64: base64,
+            audio_input: base64,
             audio_mime: blobMime,
             language: lang,
             session_context: recentContext,
