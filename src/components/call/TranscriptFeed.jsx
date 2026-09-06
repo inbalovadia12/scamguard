@@ -25,7 +25,7 @@ const FEEDBACK_STYLES = {
 };
 
 const SPEAKER_OPTIONS = [
-  { value: "speaker", label: "Speaker" },
+  { value: "caller", label: "Caller" },
   { value: "you", label: "You" },
 ];
 
