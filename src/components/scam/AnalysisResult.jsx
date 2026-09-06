@@ -137,6 +137,13 @@ export default function AnalysisResult({ analysis, showEducation = true, message
 
       {/* Score bar */}
       <AnimatedScoreBar score={riskScore} />
+      <div className="text-sm text-muted-foreground">
+        {riskScore >= 80 && "⚠️ Almost certainly a scam"}
+        {riskScore >= 60 && riskScore < 80 && "⚠️ Strong scam indicators"}
+        {riskScore >= 40 && riskScore < 60 && "⚠️ Some warning signs"}
+        {riskScore >= 20 && riskScore < 40 && "⚠️ Minor concerns"}
+        {riskScore < 20 && "✅ Likely legitimate"}
+      </div>
 
       {/* Structured threat breakdown */}
       <ThreatExplanation analysis={analysis} />
@@ -193,7 +200,7 @@ export default function AnalysisResult({ analysis, showEducation = true, message
           >
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-primary" />
-              <span className="font-semibold text-sm">{isLowRisk ? "Learn more about this result" : "Learn more about this analysis"}</span>
+              <span className="font-semibold text-sm">{isLowRisk ? "See how it works" : "See how this analysis works"}</span>
             </div>
             {eduOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
