@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
 import AppleIcon from "@/components/AppleIcon";
 import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -21,6 +22,8 @@ export default function Register() {
   const [otpCode, setOtpCode] = useState("");
   const [kidMode, setKidMode] = useState(false);
   const [legalAccepted, setLegalAccepted] = useState(false);
+  const navigate = useNavigate();
+  const { checkUserAuth } = useAuth();
 
   // Capture a referral code from ?ref= so it can be attributed after login
   useEffect(() => {
@@ -63,10 +66,16 @@ export default function Register() {
       try {
         await base44.auth.updateMe({ kid_mode: kidMode });
       } catch {}
-      window.location.href = "/dashboard";
+      
+      // Wait for auth context to update before redirecting
+      await checkUserAuth();
+      
+      // Give it a moment to ensure state is updated
+      setTimeout(() => {
+        navigate("/dashboard", { replace: true });
+      }, 100);
     } catch (err) {
       setError(err.message || "Invalid verification code");
-    } finally {
       setLoading(false);
     }
   };
