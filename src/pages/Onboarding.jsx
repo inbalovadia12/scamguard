@@ -122,7 +122,7 @@ export default function Onboarding() {
     { component: <PreferencesStep alertPref={alertPref} setAlertPref={setAlertPref} notifyEmail={notifyEmail} setNotifyEmail={setNotifyEmail} privacyAutoRedact={privacyAutoRedact} setPrivacyAutoRedact={setPrivacyAutoRedact} onNext={() => setStep(3)} onBack={() => setStep(1)} />, canSkip: true },
     { component: <InviteFamilyStep emails={familyEmails} setEmails={setFamilyEmails} onNext={handleInviteFamily} onBack={() => setStep(2)} inviting={inviting} />, canSkip: true },
     { component: <ChoosePlanStep onComplete={handleComplete} onBack={() => setStep(3)} />, canSkip: true },
-    { component: <CompletionStep onDone={() => navigate("/check")} />, canSkip: false },
+    { component: <CompletionStep onDone={() => navigate("/dashboard")} />, canSkip: false }
   ];
 
   const progress = ((step + 1) / steps.length) * 100;
@@ -151,9 +151,9 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="max-w-2xl mx-auto w-full px-4 sm:px-6 py-8 flex-1 flex flex-col">
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
+      <div className="max-w-2xl mx-auto w-full px-4 sm:px-6 py-5 sm:py-8 flex-1 flex flex-col">
+        <div className="flex items-center justify-between mb-5 sm:mb-8">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
               <ShieldCheck className="w-4 h-4 text-primary-foreground" />
