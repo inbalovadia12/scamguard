@@ -59,7 +59,7 @@ export default function WarningPanel({ warnings, tactics, coaching }) {
           <div className="text-center py-8">
             <MessageCircle className="w-8 h-8 text-success/40 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">
-              No warnings yet. Conversation seems safe.
+              No warning signals detected yet. This does not establish that the conversation is safe.
             </p>
           </div>
         ) : (
