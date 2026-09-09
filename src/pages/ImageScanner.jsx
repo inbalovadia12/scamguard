@@ -315,6 +315,8 @@ function ImageScanResult({ data, previewUrl }) {
         </div>
       )}
 
+      <AIDisclaimer compact />
+
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sources</p>
         {data.sources?.length > 0 ? (
