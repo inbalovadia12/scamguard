@@ -748,6 +748,7 @@ function displayResults(data, answerType) {
   }
 
   // Action buttons
+  html += '<div class="ai-disclaimer">AI-generated assessment: Vardin uses automated predictions that may be inaccurate or incomplete. A low-risk result does not guarantee safety, and a high-risk result does not by itself prove fraud. Independently verify important information and do not rely solely on Vardin for high-stakes decisions.</div>';
   html += '<div class="actions-bar">';
   html += '<button class="btn-action" id="act-copy">' + t('copy_report') + '</button>';
   html += '<button class="btn-action" id="act-share">' + t('share_report') + '</button>';
