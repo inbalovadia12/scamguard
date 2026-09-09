@@ -25,74 +25,23 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAppState = async () => {
+    // Keep startup auth as a single, deterministic operation. The public-settings
+    // endpoint is not consumed anywhere in the app and was introducing a second
+    // network request that could race with auth and leave a returning user on the
+    // landing page until a hard refresh. Protected routes already handle auth
+    // requirements, so there is no reason to gate the initial render on it.
+    setIsLoadingPublicSettings(false);
+    setAuthError(null);
     try {
-      setIsLoadingPublicSettings(true);
-      setAuthError(null);
-      
-      // First, check app public settings (with token if available)
-      // This will tell us if auth is required, user not registered, etc.
-      const appClient = createAxiosClient({
-        baseURL: `/api/apps/public`,
-        headers: {
-          'X-App-Id': appParams.appId
-        },
-        token: appParams.token, // Include token if available
-        interceptResponses: true
-      });
-      
-      try {
-        const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
-        setAppPublicSettings(publicSettings);
-        
-        // Always resolve the real session, including on the public landing page.
-        // The SDK may have an existing browser session even when there is no access_token
-        // in the URL/localStorage, so gating this on appParams.token breaks returning users.
-        await checkUserAuth();
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('App state check failed:', appError);
-        
-        // Handle app-level errors
-        if (appError.status === 403 && appError.data?.extra_data?.reason) {
-          const reason = appError.data.extra_data.reason;
-          if (reason === 'auth_required') {
-            setAuthError({
-              type: 'auth_required',
-              message: 'Authentication required'
-            });
-          } else if (reason === 'user_not_registered') {
-            setAuthError({
-              type: 'user_not_registered',
-              message: 'User not registered for this app'
-            });
-          } else {
-            setAuthError({
-              type: reason,
-              message: appError.message
-            });
-          }
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
-        }
-        // Public settings can fail independently of the user's browser session.
-        // Still resolve the session so a signed-in user can enter the app normally.
-        try {
-          await checkUserAuth();
-        } catch {}
-        setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
-      }
+      await checkUserAuth();
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.error('Unexpected startup auth error:', error);
       setAuthError({
         type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
+        message: error?.message || 'An unexpected error occurred'
       });
-      setIsLoadingPublicSettings(false);
       setIsLoadingAuth(false);
+      setAuthChecked(true);
     }
   };
 
