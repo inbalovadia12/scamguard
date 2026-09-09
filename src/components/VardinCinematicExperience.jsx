@@ -390,7 +390,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
       onMouseLeave={() => setPointer({ x: 0, y: 0 })}
       onTouchStart={(event) => { touchStart.current = event.changedTouches[0].clientX; }}
       onTouchEnd={(event) => { if (touchStart.current === null) return; const distance = event.changedTouches[0].clientX - touchStart.current; if (Math.abs(distance) > 45) distance < 0 ? advance() : retreat(); touchStart.current = null; }}
-      className="fixed inset-x-0 top-0 z-[100] h-[calc(100dvh+env(safe-area-inset-bottom))] min-h-screen w-full overflow-hidden bg-[#070809] font-body text-white overscroll-none"
+      className="cinematic-viewport fixed inset-x-0 top-0 z-[100] h-[calc(100dvh+env(safe-area-inset-bottom))] min-h-screen w-full overflow-hidden bg-[#070809] font-body text-white overscroll-none"
     >
       <motion.div
         className="pointer-events-none absolute -left-32 top-[10%] h-[38rem] w-[38rem] rounded-full bg-[#236f68]/[0.055] blur-[145px]"
