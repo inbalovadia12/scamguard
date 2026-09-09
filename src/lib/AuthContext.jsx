@@ -44,36 +44,55 @@ export const AuthProvider = ({ children }) => {
   };
 
   const checkUserAuth = async () => {
-    try {
-      // Now check if the user is authenticated
-      setIsLoadingAuth(true);
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      setIsAuthenticated(true);
-      setAuthError(null);
-      setIsLoadingAuth(false);
-      setAuthChecked(true);
+    setIsLoadingAuth(true);
+    setAuthError(null);
 
-      // Redirect to onboarding if the user hasn't completed it yet
-      if (currentUser && !currentUser.onboarding_completed) {
-        const currentPath = window.location.pathname;
-        if (currentPath !== "/onboarding" && !currentPath.startsWith("/login") && !currentPath.startsWith("/register") && !currentPath.startsWith("/reset-password") && currentPath !== "/") {
-          window.location.href = "/onboarding";
+    // On a cold load, Base44 can finish restoring an existing browser session
+    // just after the React bundle starts. A single `me()` call can therefore
+    // briefly return 401 even though the customer is already signed in. Never
+    // classify that transient response as "signed out" immediately: doing so
+    // causes the exact landing-page flash/blank transition seen on first load.
+    const delays = [0, 250, 600, 1200];
+    let lastError = null;
+
+    for (let attempt = 0; attempt < delays.length; attempt += 1) {
+      if (delays[attempt] > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+      }
+      try {
+        const currentUser = await base44.auth.me();
+        setUser(currentUser);
+        setIsAuthenticated(true);
+        setAuthError(null);
+        setIsLoadingAuth(false);
+        setAuthChecked(true);
+
+        // Redirect to onboarding if the user hasn't completed it yet.
+        if (currentUser && !currentUser.onboarding_completed) {
+          const currentPath = window.location.pathname;
+          if (currentPath !== "/onboarding" && !currentPath.startsWith("/login") && !currentPath.startsWith("/register") && !currentPath.startsWith("/reset-password") && currentPath !== "/") {
+            window.location.href = "/onboarding";
+          }
         }
+        return;
+      } catch (error) {
+        lastError = error;
+        // Keep the startup screen up while the session is being restored.
+        // Retry transient auth failures; only the final failure is treated as
+        // a genuine signed-out state.
       }
-    } catch (error) {
-      console.error('User auth check failed:', error);
-      setIsLoadingAuth(false);
-      setIsAuthenticated(false);
-      setAuthChecked(true);
-      
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
-        setAuthError({
-          type: 'auth_required',
-          message: 'Authentication required'
-        });
-      }
+    }
+
+    console.warn('User auth check failed after startup retries:', lastError);
+    setIsLoadingAuth(false);
+    setIsAuthenticated(false);
+    setAuthChecked(true);
+
+    if (lastError?.status === 401 || lastError?.status === 403) {
+      setAuthError({
+        type: 'auth_required',
+        message: 'Authentication required'
+      });
     }
   };
 
