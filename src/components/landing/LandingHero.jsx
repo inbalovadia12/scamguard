@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, ArrowRight, Users, Zap, Bot, ScanLine, Play } from "lucide-react";
+import { ShieldCheck, ArrowRight, Users, Zap, Bot, ScanLine } from "lucide-react";
 import VardinCinematicExperience from "@/components/VardinCinematicExperience";
 
 const stats = [
@@ -67,12 +66,10 @@ export default function LandingHero() {
               Try Free — 10 Credits
               <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
-            <Link to="/register">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto h-12 px-8 text-base">
-                <Users className="w-4 h-4 mr-1" />
-                Protect Your Family
-              </Button>
-            </Link>
+            <Button onClick={startSignup} size="lg" variant="outline" className="w-full sm:w-auto h-12 px-8 text-base">
+              <Users className="w-4 h-4 mr-1" />
+              Protect Your Family
+            </Button>
             <Link to="/landing" className="w-full sm:w-auto">
               <Button
                 size="lg"
