@@ -334,7 +334,7 @@ function SceneVisual({ type, isMobile = false }) {
     number: <div className="font-mono text-3xl tracking-[0.06em] text-white/78 sm:text-5xl">+1 212 555 0198</div>,
   }[type];
 
-  return visual ? <motion.div initial={{ opacity: 0, x: 70, y: 18, scale: 0.98 }} animate={{ opacity: 1, x: 0, y: 0, scale: 1 }} exit={{ opacity: 0, x: -60, y: -10, scale: 1.01 }} transition={{ duration: 0.7, ease: EASE, delay: 0.15 }}>{visual}</motion.div> : null;
+  return visual ? <motion.div initial={{ opacity: 0, x: 70, y: 18, scale: 0.98 }} animate={{ opacity: 1, x: 0, y: 0, scale: 1 }} exit={{ opacity: 0, x: -60, y: -10, scale: 1.01 }} transition={{ duration: 0.7, ease: EASE, delay: 0.15 }} className={type === "number" ? "mt-5 w-full sm:mt-8" : "w-full"}>{visual}</motion.div> : null;
 }
 
 export default function VardinCinematicExperience({ mode = "public", onExit, onComplete, completionLabel }) {
@@ -413,6 +413,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
   return createPortal(
     <main
       data-vardin-cinematic="true"
+      aria-label="Vardin cinematic experience"
       onWheel={onWheel}
       onMouseMove={(event) => { if (!isMobile) setPointer({ x: (event.clientX / window.innerWidth - 0.5) * 2, y: (event.clientY / window.innerHeight - 0.5) * 2 }); }}
       onMouseLeave={() => setPointer({ x: 0, y: 0 })}
