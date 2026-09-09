@@ -89,6 +89,7 @@ const AuthenticatedApp = () => {
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Landing />} />
+      <Route path="/landing" element={<Landing />} />
       {/* Public landing aliases: keep the landing experience reachable from internal links and direct URLs. */}
       <Route path="/landing" element={<Landing />} />
       <Route path="/landing/*" element={<Landing />} />
