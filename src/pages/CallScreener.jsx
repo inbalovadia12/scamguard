@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { PhoneCall, ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle2, Clock3, RefreshCw, Copy, Lock } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 const VERDICT_META = {
   safe: { label: "No Known Risk", icon: ShieldCheck, className: "text-success" },
