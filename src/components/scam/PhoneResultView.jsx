@@ -10,7 +10,7 @@ const STATUS_META = {
   SCAM: { label: "Scam Likely", color: "bg-destructive/10 text-destructive border-destructive/30" },
   SPAM: { label: "Spam", color: "bg-warning/10 text-warning border-warning/30" },
   SUSPICIOUS: { label: "Suspicious", color: "bg-warning/10 text-warning border-warning/30" },
-  SAFE: { label: "Safe", color: "bg-success/10 text-success border-success/30" },
+  SAFE: { label: "No Known Risk Found", color: "bg-success/10 text-success border-success/30" },
   UNKNOWN: { label: "Unknown", color: "bg-muted text-muted-foreground border-border/50" },
 };
 
@@ -78,9 +78,9 @@ export default function PhoneResultView({ data }) {
           <BadgeCheck className="w-4 h-4 text-success flex-shrink-0" />
           <div>
             <p className="text-sm font-semibold text-success">
-              Verified Business{data.business_name ? `: ${data.business_name}` : ""}
+              Business Match{data.business_name ? `: ${data.business_name}` : ""}
             </p>
-            <p className="text-xs text-muted-foreground">This number belongs to a known legitimate business.</p>
+            <p className="text-xs text-muted-foreground">This number matches a business record in the available data. This does not guarantee the caller is legitimate.</p>
           </div>
         </div>
       )}
