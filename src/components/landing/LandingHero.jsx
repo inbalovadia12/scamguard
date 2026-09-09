@@ -70,16 +70,6 @@ export default function LandingHero() {
               <Users className="w-4 h-4 mr-1" />
               Protect Your Family
             </Button>
-            <Link to="/landing" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                variant="ghost"
-                className="w-full sm:w-auto h-12 px-6 text-base font-semibold text-primary hover:text-primary"
-              >
-                See What Vardin Does
-                <ArrowRight className="w-4 h-4 ml-1.5" />
-              </Button>
-            </Link>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             No credit card required • Cancel anytime
