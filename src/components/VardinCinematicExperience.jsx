@@ -272,7 +272,7 @@ function SceneVisual({ type }) {
   return visual ? <motion.div initial={{ opacity: 0, scale: 0.96, filter: "blur(8px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} exit={{ opacity: 0, scale: 1.025, filter: "blur(8px)" }} transition={{ duration: 0.7, ease: EASE }}>{visual}</motion.div> : null;
 }
 
-export default function VardinCinematicExperience({ mode = "public", onExit, onComplete }) {
+export default function VardinCinematicExperience({ mode = "public", onExit, onComplete, completionLabel }) {
   const scenes = [...textScenes[mode], ...productScenes];
   const [index, setIndex] = useState(0);
   const touchStart = useRef(null);
@@ -325,7 +325,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
             </h1>
             {scene.support && <p className="mt-5 max-w-md text-balance text-sm leading-6 text-white/48 sm:text-base">{scene.support}</p>}
             <div className="mt-9 flex min-h-[96px] items-center justify-center sm:mt-12"><SceneVisual type={scene.visual} /></div>
-            {index === scenes.length - 1 && <button onClick={onComplete} className="mt-9 inline-flex items-center gap-2 rounded-sm border border-[#e45761]/60 bg-[#e45761]/10 px-4 py-2.5 text-[10px] font-medium tracking-[0.16em] text-white transition hover:bg-[#e45761]/20">{mode === "public" ? "GET STARTED" : "CONTINUE TO SETUP"} <ArrowRight className="h-3.5 w-3.5" /></button>}
+            {index === scenes.length - 1 && <button onClick={onComplete} className="mt-9 inline-flex items-center gap-2 rounded-sm border border-[#e45761]/60 bg-[#e45761]/10 px-4 py-2.5 text-[10px] font-medium tracking-[0.16em] text-white transition hover:bg-[#e45761]/20">{completionLabel || (mode === "public" ? "GET STARTED" : "CONTINUE TO SETUP")} <ArrowRight className="h-3.5 w-3.5" /></button>}
           </motion.section>
         </AnimatePresence>
       </div>
