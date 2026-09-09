@@ -239,11 +239,11 @@ function AssistantVisual() {
   );
 }
 
-function ExposerVisual() {
+function ExposerVisual({ isMobile = false }) {
   const tactics = ["URGENT DEADLINE", "IMPERSONATION", "MOVE OFFICIAL CHANNEL", "PAYMENT PRESSURE"];
   return (
     <div className="relative w-[min(92vw,470px)]">
-      <motion.div animate={{ rotate: [0, -1, 1, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
+      <motion.div animate={isMobile ? { rotate: 0 } : { rotate: [0, -1, 1, 0] }} transition={isMobile ? { duration: 0.2 } : { duration: 5, repeat: Infinity, ease: "easeInOut" }}>
         <Surface className="p-5 text-left">
           <div className="flex items-center justify-between"><span className="text-[9px] tracking-[0.2em] text-white/40">SCAM EXPOSER</span><span className="rounded-full bg-[#2f8f83]/10 px-2 py-1 text-[8px] tracking-[0.14em] text-[#79c9bd]">4 TACTICS</span></div>
           <div className="mt-5 rounded-xl border border-white/[0.08] bg-black/20 p-4 text-[11px] leading-5 text-white/58">“Act now or your account will be permanently suspended.”</div>
@@ -263,10 +263,10 @@ function BrowserVisual() {
   );
 }
 
-function PhoneGuardVisual() {
+function PhoneGuardVisual({ isMobile = false }) {
   return (
     <div className="relative w-[min(88vw,340px)]">
-      <motion.div animate={{ y: [0, -5, 0], rotate: [0, 0.5, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
+      <motion.div animate={isMobile ? { y: 0, rotate: 0 } : { y: [0, -5, 0], rotate: [0, 0.5, 0] }} transition={isMobile ? { duration: 0.2 } : { duration: 4, repeat: Infinity, ease: "easeInOut" }}>
         <Surface className="overflow-hidden p-5">
           <div className="flex items-center justify-between text-[9px] tracking-[0.18em] text-white/40"><span>PHONE GUARD</span><span className="text-[#83b9c5]">PROTECTED</span></div>
           <div className="mt-7 text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.05]"><Phone className="h-6 w-6 text-white/65" /></div><div className="mt-4 text-sm text-white/80">Unknown caller</div><div className="mt-1 font-mono text-[10px] text-white/35">+1 212 555 0198</div></div>
@@ -301,29 +301,29 @@ function CommunityVisual() {
   return <Surface className="w-[min(92vw,460px)] p-4 text-left"><div className="flex items-center gap-2"><Users className="h-4 w-4 text-[#83b9c5]" /><span className="text-[9px] tracking-[0.18em] text-white/40">COMMUNITY REPORTS</span></div><div className="mt-4 space-y-2">{posts.map(([name, text], i) => <motion.div key={name} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.14 }} className="flex items-start gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3"><div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[9px] text-white/50">{name[0]}</div><div><div className="text-[9px] text-white/35">{name}</div><div className="mt-1 text-[10px] leading-4 text-white/62">{text}</div></div></motion.div>)}</div></Surface>;
 }
 
-function ReadyVisual() {
+function ReadyVisual({ isMobile = false }) {
   return (
     <div className="relative flex h-40 w-[min(88vw,430px)] items-center justify-center">
       {[0, 1, 2].map((ring) => <motion.div key={ring} className="absolute rounded-full border border-[#2f8f83]/20" style={{ width: 92 + ring * 54, height: 92 + ring * 54 }} initial={{ opacity: 0, scale: 0.72 }} animate={{ opacity: [0.15, 0.42, 0.15], scale: [0.88, 1.05, 0.88] }} transition={{ duration: 3.8 + ring * 0.8, repeat: Infinity, ease: "easeInOut", delay: ring * 0.35 }} />)}
-      <motion.div animate={{ y: [0, -8, 0], scale: [1, 1.04, 1] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.14] bg-white/[0.055] shadow-[0_0_80px_rgba(47,143,131,0.16)]"><ShieldCheck className="h-8 w-8 text-white/80" /></motion.div>
+      <motion.div animate={isMobile ? { y: 0, scale: 1 } : { y: [0, -8, 0], scale: [1, 1.04, 1] }} transition={isMobile ? { duration: 0.2 } : { duration: 3, repeat: Infinity, ease: "easeInOut" }} className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.14] bg-white/[0.055] shadow-[0_0_80px_rgba(47,143,131,0.16)]"><ShieldCheck className="h-8 w-8 text-white/80" /></motion.div>
       <motion.span className="absolute h-1.5 w-1.5 rounded-full bg-[#83b9c5]" animate={{ x: [-130, 130], y: [22, -22], opacity: [0, 1, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} />
       <motion.span className="absolute h-1 w-1 rounded-full bg-[#2f8f83]" animate={{ x: [125, -125], y: [-18, 28], opacity: [0, 1, 0] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: 0.8 }} />
     </div>
   );
 }
 
-function SceneVisual({ type }) {
+function SceneVisual({ type, isMobile = false }) {
   const visual = {
     assistant: <AssistantVisual />,
-    exposer: <ExposerVisual />,
+    exposer: <ExposerVisual isMobile={isMobile} />,
     browser: <BrowserVisual />,
-    phone: <PhoneGuardVisual />,
+    phone: <PhoneGuardVisual isMobile={isMobile} />,
     recovery: <RecoveryVisual />,
     universal: <UniversalVisual />,
     lessons: <LessonsVisual />,
     local: <LocalVisual />,
     community: <CommunityVisual />,
-    ready: <ReadyVisual />,
+    ready: <ReadyVisual isMobile={isMobile} />,
     number: <div className="font-mono text-3xl tracking-[0.06em] text-white/78 sm:text-5xl">+1 212 555 0198</div>,
   }[type];
 
@@ -431,7 +431,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
               animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
               transition={{ duration: 0.9, delay: 0.65, ease: EASE }}
             >
-              <SceneVisual type={scene.visual} />
+              <SceneVisual type={scene.visual} isMobile={isMobile} />
             </motion.div>
             {index === scenes.length - 1 && <motion.button onClick={onComplete} initial={{ opacity: 0, y: 16, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: [1, 1.02, 1] }} transition={{ opacity: { duration: 0.7, delay: 0.9 }, y: { duration: 0.7, delay: 0.9, ease: EASE }, scale: { duration: 2.4, delay: 1.5, repeat: Infinity, ease: "easeInOut" } }} className="group mt-9 inline-flex items-center gap-2 rounded-sm border border-[#2f8f83]/60 bg-[#2f8f83]/10 px-5 py-3 text-[10px] font-medium tracking-[0.16em] text-white shadow-[0_0_35px_rgba(47,143,131,0.12)] transition hover:bg-[#2f8f83]/20">{completionLabel || (mode === "public" ? "GET STARTED" : "CONTINUE TO SETUP")} <ArrowRight className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1" /></motion.button>}
           </motion.section>
