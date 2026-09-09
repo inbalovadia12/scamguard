@@ -514,6 +514,7 @@ body.kid-mode-active .kid-mode-bar { background: #bae6fd; border-color: #0284c7;
 .credits-remaining { font-weight: 600; color: #0f766e; }
 .credits-cost { color: #64748b; font-size: 11px; }
 
+.ai-disclaimer { font-size: 10px; line-height: 1.45; color: #64748b; background: #fffbeb; border: 1px solid #fde68a; border-radius: 9px; padding: 9px 10px; margin-top: 8px; }
 .actions-bar { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
 .btn-action { flex: 1; min-width: 60px; padding: 6px 8px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #475569; cursor: pointer; transition: background 0.2s; }
 .btn-action:hover { background: #e2e8f0; }
