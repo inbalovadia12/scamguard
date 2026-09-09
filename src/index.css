@@ -15,9 +15,23 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   main, section, article { min-width: 0; max-width: 100%; }
   .overflow-x-auto { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .overflow-x-auto::-webkit-scrollbar { display: none; }
-  /* Fixed cinematic overlays must also paint the bottom safe-area strip. */
-  .cinematic-viewport { height: calc(100dvh + env(safe-area-inset-bottom)); min-height: 100svh; }
+  /* Browser-stable cinematic viewport: use the small viewport so Safari/Chrome toolbar changes cannot resize the scene mid-playback. */
+  .cinematic-viewport {
+    height: 100svh !important;
+    min-height: 100svh !important;
+    max-height: 100svh !important;
+    inset: 0 !important;
+  }
+  .cinematic-grid { animation: none !important; }
 }
+
+/* The cinematic is a true browser overlay, never a scrollable page underneath. */
+html:has(.cinematic-viewport),
+body:has(.cinematic-viewport) {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
 
 @supports (height: 100svh) {
   html, body, #root { min-height: 100svh; }
