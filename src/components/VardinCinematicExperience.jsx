@@ -418,13 +418,13 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
             {scene.support && <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="mt-5 max-w-md text-balance text-sm leading-6 text-white/48 sm:text-base">{scene.support}</motion.p>}
             <motion.div
               className="mt-9 flex min-h-[96px] items-center justify-center sm:mt-12"
-              initial={{ opacity: 0, y: 34 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.75, delay: 0.7, ease: EASE }}
+              initial={{ opacity: 0, y: 34, scale: 0.94, filter: "blur(6px)" }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+              transition={{ duration: 0.9, delay: 0.65, ease: EASE }}
             >
               <SceneVisual type={scene.visual} />
             </motion.div>
-            {index === scenes.length - 1 && <button onClick={onComplete} className="mt-9 inline-flex items-center gap-2 rounded-sm border border-[#e45761]/60 bg-[#e45761]/10 px-4 py-2.5 text-[10px] font-medium tracking-[0.16em] text-white transition hover:bg-[#e45761]/20">{completionLabel || (mode === "public" ? "GET STARTED" : "CONTINUE TO SETUP")} <ArrowRight className="h-3.5 w-3.5" /></button>}
+            {index === scenes.length - 1 && <motion.button onClick={onComplete} initial={{ opacity: 0, y: 16, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: [1, 1.02, 1] }} transition={{ opacity: { duration: 0.7, delay: 0.9 }, y: { duration: 0.7, delay: 0.9, ease: EASE }, scale: { duration: 2.4, delay: 1.5, repeat: Infinity, ease: "easeInOut" } }} className="group mt-9 inline-flex items-center gap-2 rounded-sm border border-[#e45761]/60 bg-[#e45761]/10 px-5 py-3 text-[10px] font-medium tracking-[0.16em] text-white shadow-[0_0_35px_rgba(228,87,97,0.12)] transition hover:bg-[#e45761]/20">{completionLabel || (mode === "public" ? "GET STARTED" : "CONTINUE TO SETUP")} <ArrowRight className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1" /></motion.button>}
           </motion.section>
         </AnimatePresence>
       </div>
