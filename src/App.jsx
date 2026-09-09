@@ -17,6 +17,7 @@ import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 
 // App pages
+import Dashboard from '@/pages/Dashboard';
 import Home from '@/pages/Home';
 import Alerts from '@/pages/Alerts';
 import AlertDetail from '@/pages/AlertDetail';
