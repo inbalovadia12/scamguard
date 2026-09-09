@@ -17,10 +17,11 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
   .overflow-x-auto::-webkit-scrollbar { display: none; }
   /* Browser-stable cinematic viewport: use the small viewport so Safari/Chrome toolbar changes cannot resize the scene mid-playback. */
   .cinematic-viewport {
-    height: 100svh !important;
-    min-height: 100svh !important;
-    max-height: 100svh !important;
-    inset: 0 !important;
+    inset: -2px !important;
+    width: calc(100% + 4px) !important;
+    height: calc(100svh + 4px) !important;
+    min-height: 0 !important;
+    max-height: none !important;
   }
   /* Keep full-page browser views stable while Safari/Chrome toolbars expand or collapse. */
   .min-h-screen { min-height: 100svh !important; }
