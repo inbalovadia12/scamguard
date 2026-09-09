@@ -163,6 +163,12 @@ export default function Home() {
 
   return (
     <div className="max-w-2xl mx-auto">
+      <div className="flex items-center justify-end gap-3 mb-4 sm:mb-6 text-xs">
+        <span className="text-muted-foreground">See What Vardin Does</span>
+        <Link to="/landing" className="font-medium text-primary hover:underline">
+          VIEW LANDING PAGE <span aria-hidden="true">↗</span>
+        </Link>
+      </div>
       <ConsentBanner />
 
       {credits && !result && !kidMode && (
