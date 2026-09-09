@@ -5,12 +5,12 @@ import { useState } from "react";
 
 const testimonials = [
   { name: "Sarah M.", role: "Protecting her parents", quote: "My 78-year-old father was getting bombarded with scam texts. Vardin's alerts let me intervene before he sent money. This is peace of mind.", rating: 5 },
-  { name: "James K.", role: "Tech professional", quote: "The AI analysis is shockingly accurate. It caught a sophisticated phishing attempt that I almost fell for. The tactic breakdowns are genuinely educational.", rating: 5 },
+  { name: "James K.", role: "Tech professional", quote: "The AI analysis gave me useful context on a sophisticated phishing attempt I almost fell for. The tactic breakdowns were genuinely educational.", rating: 5 },
   { name: "Linda R.", role: "Family caregiver", quote: "The Family Protection feature is exactly what I needed. My mother submits suspicious messages and I get an instant assessment. It's changed how she uses her phone.", rating: 5 },
 ];
 
 const faqs = [
-  { q: "How accurate is Vardin?", a: "Vardin uses advanced AI models trained on thousands of verified scam patterns. Each analysis includes a risk score (0-100), plain-English explanation, and recommended next steps. While no system is 100% accurate, Vardin provides highly reliable assessments with transparent reasoning." },
+  { q: "How accurate is Vardin?", a: "Vardin uses automated AI analysis and other signals to identify patterns associated with scams. Each analysis can include a risk score (0-100), plain-English explanation, and suggested next steps. Results can be inaccurate or incomplete, so important information should always be independently verified." },
   { q: "Can I protect my family members?", a: "Yes! Vardin's Family Protection system lets you invite family members via email, receive shared scam alerts, and monitor protection activity. Premium plan includes unlimited family members and shared alerts." },
   { q: "What types of scams are supported?", a: "Vardin analyzes SMS messages, emails, job offers, marketplace listings, romance scams, tech support scams, bank impersonation, and more. Premium plans also support screenshot and QR code analysis." },
   { q: "Is my data private?", a: "Yes. Messages are analyzed in real-time and only stored to your account history. Vardin auto-redacts phone numbers, emails, SSNs, credit cards, and crypto wallet addresses before storage. Your data is never sold." },
@@ -39,7 +39,7 @@ export default function LandingSocial() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight font-heading">Loved by Families Everywhere</h2>
-            <p className="mt-4 text-lg text-muted-foreground">Real stories from real users who stayed safe.</p>
+            <p className="mt-4 text-lg text-muted-foreground">Real stories from people who used Vardin to get more context before acting.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((t, i) => (
