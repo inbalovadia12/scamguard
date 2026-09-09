@@ -285,7 +285,7 @@ export default function AppLayout() {
 
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 bg-card border-b border-border/50" style={{ paddingTop: "env(safe-area-inset-top)", transform: "translateZ(0)" }}>
-        <div className="px-4 h-16 flex items-center justify-between">
+        <div className="px-3 sm:px-4 h-16 flex items-center justify-between">
           <Link to="/dashboard" className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg luxury-gradient-btn flex items-center justify-center">
               <ShieldCheck className="w-4.5 h-4.5 text-primary-foreground" />
@@ -293,10 +293,10 @@ export default function AppLayout() {
             <span className="font-bold text-lg tracking-tight font-heading">Vardin</span>
             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-fuchsia-500 via-pink-500 to-amber-400 text-white tracking-wider shadow-sm flex-shrink-0">BETA</span>
           </Link>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <LanguageToggle className="rounded-lg" />
             <ThemeToggle className="rounded-lg" />
-            <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)}>
+            <Button variant="ghost" size="icon" className="touch-manipulation" onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
           </div>
@@ -385,14 +385,14 @@ export default function AppLayout() {
           <span>🧒</span>
           <span className="truncate">Kid Mode is on</span>
         </div>
-        <main className="flex-1 max-w-4xl mx-auto w-full px-5 sm:px-8 pt-20 pb-8 md:py-12 min-w-0" style={{ paddingTop: "max(5rem, calc(4rem + env(safe-area-inset-top)))" }}>
+        <main className="flex-1 max-w-4xl mx-auto w-full min-w-0 px-4 sm:px-8 pt-20 pb-8 md:py-12" style={{ paddingTop: "max(5rem, calc(4rem + env(safe-area-inset-top)))", paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}>
           <Outlet />
         </main>
 
         {kidMode && <AskParentButton />}
 
         <footer className="border-t border-border/50 py-6 px-5 mt-auto" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
-          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
+          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
             <p>{t("footer.copyright")}</p>
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
               <Link to="/about" className="hover:text-foreground transition-colors">{t("footer.about")}</Link>
