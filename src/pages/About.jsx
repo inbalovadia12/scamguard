@@ -47,7 +47,7 @@ export default function About() {
             researchers who believe that digital safety should be accessible to everyone. Our
             mission is simple: make the internet a safer place, one scan at a time. We combine
             AI-driven analysis with real-time community reports, VirusTotal reputation data, and
-            up-to-date scam intelligence to deliver accurate, actionable guidance. We are committed
+            up-to-date scam intelligence to deliver useful, actionable context. Because automated analysis can be wrong or incomplete, we are committed
             to continuous improvement and welcome feedback from the community we serve.
           </p>
         </div>
