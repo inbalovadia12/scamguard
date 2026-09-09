@@ -5,7 +5,7 @@
 /* Mobile stability: prevent horizontal drift and browser zoom on form controls. */
 html, body, #root { width: 100%; min-width: 0; }
 html { overflow-x: hidden; }
-body { overflow-x: hidden; min-height: 100dvh; }
+body { overflow-x: hidden; min-height: 100svh; }
 button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 640px) {
   input, textarea, select { font-size: 16px !important; }
@@ -22,6 +22,8 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
     max-height: 100svh !important;
     inset: 0 !important;
   }
+  /* Keep full-page browser views stable while Safari/Chrome toolbars expand or collapse. */
+  .min-h-screen { min-height: 100svh !important; }
   .cinematic-grid { animation: none !important; }
 }
 
