@@ -10,6 +10,17 @@ button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 640px) {
   input, textarea, select { font-size: 16px !important; }
   img, video, canvas, svg { max-width: 100%; }
+  /* Keep every page inside the iPhone viewport and out of the horizontal gutter. */
+  #root { width: 100%; max-width: 100%; overflow-x: clip; }
+  main, section, article { min-width: 0; max-width: 100%; }
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .overflow-x-auto::-webkit-scrollbar { display: none; }
+  /* Fixed cinematic overlays must also paint the bottom safe-area strip. */
+  .cinematic-viewport { height: calc(100dvh + env(safe-area-inset-bottom)); min-height: 100svh; }
+}
+
+@supports (height: 100svh) {
+  html, body, #root { min-height: 100svh; }
 }
 
 @tailwind components;
