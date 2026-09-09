@@ -38,16 +38,10 @@ export const AuthProvider = ({ children }) => {
         const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
         setAppPublicSettings(publicSettings);
         
-        // Resolve the real session even on the public landing page. The landing page can render
-        // for everyone, but signed-in users must still be recognized so they don't get sent through
-        // signup/onboarding again when they continue into the app.
-        if (appParams.token) {
-          await checkUserAuth();
-        } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-          setAuthChecked(true);
-        }
+        // Always resolve the real session, including on the public landing page.
+        // The SDK may have an existing browser session even when there is no access_token
+        // in the URL/localStorage, so gating this on appParams.token breaks returning users.
+        await checkUserAuth();
         setIsLoadingPublicSettings(false);
       } catch (appError) {
         console.error('App state check failed:', appError);
@@ -77,6 +71,11 @@ export const AuthProvider = ({ children }) => {
             message: appError.message || 'Failed to load app'
           });
         }
+        // Public settings can fail independently of the user's browser session.
+        // Still resolve the session so a signed-in user can enter the app normally.
+        try {
+          await checkUserAuth();
+        } catch {}
         setIsLoadingPublicSettings(false);
         setIsLoadingAuth(false);
       }
