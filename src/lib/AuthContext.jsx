@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
@@ -13,8 +13,14 @@ export const AuthProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
+  const startupCheckStarted = useRef(false);
 
   useEffect(() => {
+    // React StrictMode intentionally runs effects twice in development. Guard the
+    // auth bootstrap so two simultaneous session checks cannot race each other
+    // and leave the app in an inconsistent startup state.
+    if (startupCheckStarted.current) return;
+    startupCheckStarted.current = true;
     checkAppState();
   }, []);
 
