@@ -5,7 +5,7 @@ import { PhoneCall, ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle2, Clock
 import { useToast } from "@/components/ui/use-toast";
 
 const VERDICT_META = {
-  safe: { label: "Safe", icon: ShieldCheck, className: "text-success" },
+  safe: { label: "No Known Risk", icon: ShieldCheck, className: "text-success" },
   suspicious: { label: "Suspicious", icon: AlertTriangle, className: "text-warning" },
   scam: { label: "Scam", icon: ShieldAlert, className: "text-destructive" }
 };
@@ -126,7 +126,7 @@ export default function CallScreener() {
         <div className="grid sm:grid-cols-3 gap-3">
           <Step number="1" title="Caller speaks to Vardin" text="Retell handles the call and asks natural questions about who is calling and why." />
           <Step number="2" title="Retell sends the transcript" text="After the call, the signed call_analyzed webhook is received by Vardin." />
-          <Step number="3" title="Vardin decides the risk" text="Vardin analyzes the transcript and returns Safe, Suspicious, or Scam with evidence and actions." />
+          <Step number="3" title="Vardin assesses the risk" text="Vardin analyzes the transcript and returns a risk assessment with evidence and suggested actions. It does not guarantee that a call is safe or fraudulent." />
         </div>
       </div>
 
