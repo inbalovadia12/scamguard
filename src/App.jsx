@@ -134,7 +134,7 @@ const AuthenticatedApp = () => {
       {/* Protected routes */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppLayout />}>
-          <Route path="/dashboard" element={<Home />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/check" element={<Home />} />
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/agent" element={<AgentChat />} />
