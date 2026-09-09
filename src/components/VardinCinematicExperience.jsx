@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  AlertTriangle, ArrowRight, Bot, Check, ChevronRight, Image as ImageIcon,
-  Link2, Phone, Radio, ScanLine, ShieldAlert, ShieldCheck, Users, X,
+  ArrowRight, Bot, ChevronRight, Image as ImageIcon, Phone, Radio,
+  ScanLine, ShieldAlert, ShieldCheck, Users, X,
 } from "lucide-react";
 
 const EASE = [0.22, 1, 0.36, 1];
