@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import {
   UserPlus, Loader2,
 } from "lucide-react";
 import confetti from "canvas-confetti";
+import VardinCinematicExperience from "@/components/VardinCinematicExperience";
 
 const goals = [
   { id: "personal", label: "Personal Use", icon: ShieldCheck, description: "Detect and avoid scams targeting me" },
@@ -21,7 +22,34 @@ const goals = [
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const [introReady, setIntroReady] = useState(false);
+  const [showCinematicIntro, setShowCinematicIntro] = useState(false);
   const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    base44.auth.me()
+      .then((user) => {
+        if (!active) return;
+        setShowCinematicIntro(!user?.has_seen_vardin_cinematic_intro);
+      })
+      .catch(() => {
+        if (active) setShowCinematicIntro(false);
+      })
+      .finally(() => {
+        if (active) setIntroReady(true);
+      });
+    return () => { active = false; };
+  }, []);
+
+  const finishCinematicIntro = async () => {
+    try {
+      await base44.auth.updateMe({ has_seen_vardin_cinematic_intro: true });
+    } catch {
+      // Do not block the existing setup if persistence is temporarily unavailable.
+    }
+    setShowCinematicIntro(false);
+  };
   const [selectedGoals, setSelectedGoals] = useState([]);
   const [alertPref, setAlertPref] = useState("all");
   const [notifyEmail, setNotifyEmail] = useState(true);
@@ -102,6 +130,20 @@ export default function Onboarding() {
       handleComplete();
     }
   };
+
+  if (!introReady) {
+    return <div className="min-h-[100dvh] bg-[#070809]" />;
+  }
+
+  if (showCinematicIntro) {
+    return (
+      <VardinCinematicExperience
+        mode="onboarding"
+        onExit={finishCinematicIntro}
+        onComplete={finishCinematicIntro}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
