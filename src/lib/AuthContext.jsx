@@ -38,8 +38,13 @@ export const AuthProvider = ({ children }) => {
         const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
         setAppPublicSettings(publicSettings);
         
-        // If we got the app public settings successfully, check if user is authenticated
-        if (appParams.token) {
+        // The landing page is always public and must render for everyone, including signed-in users.
+        // Only perform the authenticated-user check when the visitor is not on the public landing page.
+        if (window.location.pathname === "/" || window.location.pathname === "/landing" || window.location.pathname.startsWith("/landing/")) {
+          setIsLoadingAuth(false);
+          setIsAuthenticated(!!appParams.token);
+          setAuthChecked(true);
+        } else if (appParams.token) {
           await checkUserAuth();
         } else {
           setIsLoadingAuth(false);
