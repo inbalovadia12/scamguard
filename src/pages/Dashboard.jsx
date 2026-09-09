@@ -88,7 +88,7 @@ export default function Dashboard() {
           {kidMode ? "Check if messages are tricks, learn about scams, and stay safe online!" : t("dash.overview")}
         </p>
         {!kidMode && (
-          <div className="mt-3 flex flex-col items-start gap-2 xs:flex-row xs:items-center xs:gap-4 sm:flex-row sm:items-center">
+          <div className="mt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
             <button onClick={() => setShowFilm(true)} className="text-[10px] font-medium tracking-[0.15em] text-primary transition hover:text-primary/70">
               SEE WHAT VARDIN DOES <span aria-hidden="true">→</span>
             </button>
