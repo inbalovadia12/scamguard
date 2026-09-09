@@ -1,4 +1,4 @@
-import { Search, Users, Bell, Bot, Globe, Phone, Mail, ShoppingCart, Share2, BarChart3, ShieldCheck, AlertTriangle, Link2, MessageSquare, Eye } from "lucide-react";
+import { Search, Users, Bell, Bot, Globe, Phone, Mail, ShoppingCart, Share2, ShieldCheck, AlertTriangle, Link2, MessageSquare, Eye } from "lucide-react";
 
 const demos = [
   { icon: MessageSquare, title: "SMS Scam Detection", desc: "Paste a suspicious text message and get an instant risk score with tactic breakdown.", color: "bg-primary/10 text-primary" },
