@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck } from "lucide-react";
@@ -21,10 +20,8 @@ export default function LandingNav() {
           <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
         </div>
         <div className="flex items-center gap-3">
-          <>
-            <Link to="/login"><Button variant="ghost" size="sm">Log in</Button></Link>
-            <Link to="/register"><Button size="sm" className="bg-gradient-to-r from-primary to-primary/80">Try Free</Button></Link>
-          </>
+          <Link to="/login"><Button variant="ghost" size="sm">Log in</Button></Link>
+          <Link to="/register"><Button size="sm" className="bg-gradient-to-r from-primary to-primary/80">Try Free</Button></Link>
         </div>
       </div>
     </nav>
