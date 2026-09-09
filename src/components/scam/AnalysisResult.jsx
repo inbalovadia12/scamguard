@@ -6,6 +6,7 @@ import TacticTag from "@/components/scam/TacticTag";
 import ThreatExplanation from "@/components/scam/ThreatExplanation";
 import ResultActions from "@/components/scam/ResultActions";
 import CommunityIntel from "@/components/community/CommunityIntel";
+import AIDisclaimer from "@/components/AIDisclaimer";
 import { useKidMode } from "@/lib/KidModeContext";
 
 const MESSAGE_TYPE_TO_SCAM = {
@@ -138,11 +139,11 @@ export default function AnalysisResult({ analysis, showEducation = true, message
       {/* Score bar */}
       <AnimatedScoreBar score={riskScore} />
       <div className="text-sm text-muted-foreground">
-        {riskScore >= 80 && "⚠️ Almost certainly a scam"}
+        {riskScore >= 80 && "⚠️ Strong scam indicators"}
         {riskScore >= 60 && riskScore < 80 && "⚠️ Strong scam indicators"}
         {riskScore >= 40 && riskScore < 60 && "⚠️ Some warning signs"}
         {riskScore >= 20 && riskScore < 40 && "⚠️ Minor concerns"}
-        {riskScore < 20 && "✅ Likely legitimate"}
+        {riskScore < 20 && "ℹ️ Few scam indicators detected"}
       </div>
 
       {/* Structured threat breakdown */}
@@ -241,9 +242,13 @@ export default function AnalysisResult({ analysis, showEducation = true, message
       )}
 
       {/* Disclaimer */}
-      <p className="text-xs text-muted-foreground text-center leading-relaxed">
-        {kidMode ? "We do our best to keep you safe, but always ask a grown-up if you're not sure!" : "This analysis is for informational purposes only and does not constitute legal or financial advice. Results are based on pattern recognition and may not be 100% accurate."}
-      </p>
+      {kidMode ? (
+        <p className="text-xs text-muted-foreground text-center leading-relaxed">
+          We do our best to keep you safe, but always ask a grown-up if you're not sure!
+        </p>
+      ) : (
+        <AIDisclaimer compact />
+      )}
     </div>
   );
 }
