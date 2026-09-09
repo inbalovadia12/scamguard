@@ -7,6 +7,35 @@ import {
 
 const EASE = [0.22, 1, 0.36, 1];
 
+function TypingTitle({ text }) {
+  const [visible, setVisible] = useState(0);
+  useEffect(() => {
+    setVisible(0);
+    const timer = window.setInterval(() => {
+      setVisible((value) => {
+        if (value >= text.length) {
+          window.clearInterval(timer);
+          return value;
+        }
+        return value + 1;
+      });
+    }, 24);
+    return () => window.clearInterval(timer);
+  }, [text]);
+
+  return (
+    <span className="relative inline">
+      {text.slice(0, visible)}
+      <motion.span
+        aria-hidden="true"
+        className="ml-1 inline-block h-[0.8em] w-[2px] translate-y-[0.08em] bg-[#e45761] align-baseline"
+        animate={{ opacity: [1, 0, 1] }}
+        transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </span>
+  );
+}
+
 const productScenes = [
   {
     eyebrow: "PHONE GUARD",
@@ -277,6 +306,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
   const [index, setIndex] = useState(0);
   const touchStart = useRef(null);
   const wheelLock = useRef(false);
+  const [pointer, setPointer] = useState({ x: 0, y: 0 });
 
   const advance = () => {
     if (index < scenes.length - 1) setIndex((value) => value + 1);
@@ -296,6 +326,13 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
     return () => { document.documentElement.style.overflow = previousOverflow; window.removeEventListener("keydown", onKey); };
   }, [index]);
 
+  useEffect(() => {
+    const reduced = document.documentElement.classList.contains("reduced-motion");
+    if (reduced || index >= scenes.length - 1) return;
+    const timer = window.setTimeout(() => setIndex((value) => Math.min(value + 1, scenes.length - 1)), 5200);
+    return () => window.clearTimeout(timer);
+  }, [index, scenes.length]);
+
   const onWheel = (event) => {
     if (wheelLock.current || Math.abs(event.deltaY) < 16) return;
     wheelLock.current = true;
@@ -304,12 +341,30 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
   };
   const scene = scenes[index];
   const titleParts = scene.title.split(/(<em>.*?<\/em>)/g);
+  const plainTitle = titleParts.map((part) => part.replace(/<\/?em>/g, "")).join("");
 
   return (
-    <main onWheel={onWheel} onTouchStart={(event) => { touchStart.current = event.changedTouches[0].clientX; }} onTouchEnd={(event) => { if (touchStart.current === null) return; const distance = event.changedTouches[0].clientX - touchStart.current; if (Math.abs(distance) > 45) distance < 0 ? advance() : retreat(); touchStart.current = null; }} className="fixed inset-0 z-[100] min-h-[100dvh] overflow-hidden bg-[#070809] font-body text-white">
-      <div className="pointer-events-none absolute -left-32 top-[10%] h-[38rem] w-[38rem] rounded-full bg-[#9c2531]/[0.055] blur-[145px]" />
-      <div className="pointer-events-none absolute -right-40 bottom-[-12%] h-[40rem] w-[40rem] rounded-full bg-[#247b86]/[0.05] blur-[160px]" />
+    <main
+      onWheel={onWheel}
+      onMouseMove={(event) => setPointer({ x: (event.clientX / window.innerWidth - 0.5) * 2, y: (event.clientY / window.innerHeight - 0.5) * 2 })}
+      onMouseLeave={() => setPointer({ x: 0, y: 0 })}
+      onTouchStart={(event) => { touchStart.current = event.changedTouches[0].clientX; }}
+      onTouchEnd={(event) => { if (touchStart.current === null) return; const distance = event.changedTouches[0].clientX - touchStart.current; if (Math.abs(distance) > 45) distance < 0 ? advance() : retreat(); touchStart.current = null; }}
+      className="fixed inset-0 z-[100] min-h-[100dvh] overflow-hidden bg-[#070809] font-body text-white"
+    >
+      <motion.div
+        className="pointer-events-none absolute -left-32 top-[10%] h-[38rem] w-[38rem] rounded-full bg-[#9c2531]/[0.055] blur-[145px]"
+        animate={{ x: pointer.x * 24, y: pointer.y * 18, scale: [1, 1.08, 1] }}
+        transition={{ x: { duration: 1.2 }, y: { duration: 1.2 }, scale: { duration: 7, repeat: Infinity, ease: "easeInOut" } }}
+      />
+      <motion.div
+        className="pointer-events-none absolute -right-40 bottom-[-12%] h-[40rem] w-[40rem] rounded-full bg-[#247b86]/[0.05] blur-[160px]"
+        animate={{ x: pointer.x * -18, y: pointer.y * -14, scale: [1.05, 1, 1.05] }}
+        transition={{ x: { duration: 1.4 }, y: { duration: 1.4 }, scale: { duration: 8, repeat: Infinity, ease: "easeInOut" } }}
+      />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.35)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.5)_0.7px,transparent_0.8px)] [background-size:42px_42px] [mask-image:radial-gradient(ellipse_at_center,black_25%,transparent_75%)] animate-[drift-grid_18s_linear_infinite]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
       <div className="absolute right-5 top-5 z-20 flex items-center gap-3 text-[10px] font-medium tracking-[0.2em] text-white/46 sm:right-8 sm:top-8">
         <span>{String(index + 1).padStart(2, "0")} / {String(scenes.length).padStart(2, "0")}</span>
@@ -320,20 +375,36 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
         <AnimatePresence mode="wait">
           <motion.section key={index} initial={{ opacity: 0, y: 16, scale: 0.995, filter: "blur(5px)" }} animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }} exit={{ opacity: 0, y: -12, scale: 1.01, filter: "blur(6px)" }} transition={{ duration: 0.68, ease: EASE }} className="flex w-full max-w-4xl flex-col items-center text-center">
             <div className="text-[9px] font-medium tracking-[0.32em] text-white/46 sm:text-[10px]">{scene.eyebrow}</div>
-            <h1 className="mt-5 max-w-3xl text-balance font-heading text-[clamp(2.35rem,6.5vw,5.6rem)] font-medium leading-[0.98] tracking-[-0.045em] text-white">
-              {titleParts.map((part, partIndex) => part.startsWith("<em>") ? <em key={partIndex} className="not-italic text-[#e45761]">{part.replace(/<\/?em>/g, "")}</em> : <React.Fragment key={partIndex}>{part}</React.Fragment>)}
-            </h1>
+            <motion.h1
+              className="mt-5 max-w-3xl text-balance font-heading text-[clamp(2.35rem,6.5vw,5.6rem)] font-medium leading-[0.98] tracking-[-0.045em] text-white"
+              style={{ x: pointer.x * 3, y: pointer.y * 2 }}
+              transition={{ type: "spring", stiffness: 90, damping: 20 }}
+            >
+              {scene.title.includes("<em>") ? (
+                titleParts.map((part, partIndex) => part.startsWith("<em>")
+                  ? <em key={partIndex} className="not-italic text-[#e45761]"><TypingTitle text={part.replace(/<\/?em>/g, "")} /></em>
+                  : <React.Fragment key={partIndex}><TypingTitle text={part} /></React.Fragment>)
+              ) : <TypingTitle text={plainTitle} />}
+            </motion.h1>
             {scene.support && <p className="mt-5 max-w-md text-balance text-sm leading-6 text-white/48 sm:text-base">{scene.support}</p>}
-            <div className="mt-9 flex min-h-[96px] items-center justify-center sm:mt-12"><SceneVisual type={scene.visual} /></div>
+            <motion.div
+              className="mt-9 flex min-h-[96px] items-center justify-center sm:mt-12"
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <SceneVisual type={scene.visual} />
+            </motion.div>
             {index === scenes.length - 1 && <button onClick={onComplete} className="mt-9 inline-flex items-center gap-2 rounded-sm border border-[#e45761]/60 bg-[#e45761]/10 px-4 py-2.5 text-[10px] font-medium tracking-[0.16em] text-white transition hover:bg-[#e45761]/20">{completionLabel || (mode === "public" ? "GET STARTED" : "CONTINUE TO SETUP")} <ArrowRight className="h-3.5 w-3.5" /></button>}
           </motion.section>
         </AnimatePresence>
       </div>
 
       <div className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 sm:bottom-10">
-        {scenes.map((_, segment) => <button key={segment} aria-label={"Go to scene " + (segment + 1)} onClick={() => setIndex(segment)} className={"h-px w-4 transition-all duration-500 sm:w-7 " + (segment === index ? "bg-[#e45761]" : "bg-white/20 hover:bg-white/45")} />)}
+        {scenes.map((_, segment) => <button key={segment} aria-label={"Go to scene " + (segment + 1)} onClick={() => setIndex(segment)} className={"relative h-px w-4 overflow-hidden bg-white/20 transition-all duration-500 sm:w-7 " + (segment === index ? "sm:w-12" : "hover:bg-white/45")}>
+          {segment === index && <motion.span className="absolute inset-y-0 left-0 bg-[#e45761]" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 5.2, ease: "linear" }} />}
+        </button>)}
       </div>
-      {index < scenes.length - 1 && <button onClick={advance} className="absolute bottom-16 left-1/2 z-20 -translate-x-1/2 text-[10px] tracking-[0.2em] text-white/42 transition hover:text-white sm:bottom-20">CONTINUE <span aria-hidden="true">↓</span></button>}
+      {index < scenes.length - 1 && <motion.button onClick={advance} animate={{ opacity: [0.42, 0.85, 0.42], y: [0, 3, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-16 left-1/2 z-20 -translate-x-1/2 text-[10px] tracking-[0.2em] text-white/42 transition hover:text-white sm:bottom-20">CONTINUE <span aria-hidden="true">↓</span></motion.button>}
       <button onClick={onExit} aria-label="Close cinematic experience" className="sr-only"><X /></button>
     </main>
   );
