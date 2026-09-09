@@ -103,6 +103,78 @@ const productScenes = [
     support: "A quieter way to handle the unexpected.",
     visual: "summary",
   },
+  {
+    eyebrow: "AI NEGOTIATOR",
+    title: "When pressure starts, change the script.",
+    support: "Let Vardin help you slow down, ask the right questions, and protect your position.",
+    visual: "explain",
+  },
+  {
+    eyebrow: "CONVERSATION ANALYZER",
+    title: "Read the conversation between the lines.",
+    support: "Spot urgency, manipulation, impersonation, and payment pressure in a conversation.",
+    visual: "scan",
+  },
+  {
+    eyebrow: "CRYPTO SCANNER",
+    title: "Crypto requests deserve a second look.",
+    support: "Check suspicious investment and payment claims before you act.",
+    visual: "verdict",
+  },
+  {
+    eyebrow: "BULK SCANNER",
+    title: "Check more than one thing at a time.",
+    support: "Scan multiple messages, links, or numbers and see the risk together.",
+    visual: "signals",
+  },
+  {
+    eyebrow: "CALL SIMULATOR",
+    title: "Practice the moment before it happens.",
+    support: "Train your instincts with realistic scam-call scenarios.",
+    visual: "caller",
+  },
+  {
+    eyebrow: "LESSONS",
+    title: "Turn every warning into something you remember.",
+    support: "Short lessons make scam patterns easier to recognize next time.",
+    visual: "family",
+  },
+  {
+    eyebrow: "SPOT THE SCAM",
+    title: "Learn to notice the tiny tells.",
+    support: "Interactive challenges turn scam awareness into a skill.",
+    visual: "intel",
+  },
+  {
+    eyebrow: "ALERTS",
+    title: "The important things stay visible.",
+    support: "Keep high-risk findings and family alerts in one place.",
+    visual: "verdict",
+  },
+  {
+    eyebrow: "TRUST HISTORY",
+    title: "Build a record of what you checked.",
+    support: "Review previous scans and decisions when you need the context later.",
+    visual: "signals",
+  },
+  {
+    eyebrow: "COMMUNITY",
+    title: "One report can protect someone else.",
+    support: "Share useful scam intelligence and learn from patterns others have seen.",
+    visual: "family",
+  },
+  {
+    eyebrow: "WRAPPED",
+    title: "See how much sharper you have become.",
+    support: "A visual recap of your protection journey, scans, and progress.",
+    visual: "summary",
+  },
+  {
+    eyebrow: "KID GUARD",
+    title: "Give kids a safer way to ask, check, and learn.",
+    support: "Kid-friendly scanning, games, library content, and a simple way to ask a parent.",
+    visual: "family",
+  },
 ];
 
 const textScenes = {
@@ -392,7 +464,6 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
               initial={{ opacity: 0, y: 34 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.75, delay: 0.7, ease: EASE }}
-              transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
             >
               <SceneVisual type={scene.visual} />
             </motion.div>
