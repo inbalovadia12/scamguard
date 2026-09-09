@@ -1,6 +1,8 @@
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, ArrowRight, Users, Zap, Bot, ScanLine } from "lucide-react";
+import { ShieldCheck, ArrowRight, Users, Zap, Bot, ScanLine, Play } from "lucide-react";
+import VardinCinematicExperience from "@/components/VardinCinematicExperience";
 
 const stats = [
   { value: "48K+", label: "Analyses performed" },
@@ -10,8 +12,25 @@ const stats = [
 ];
 
 export default function LandingHero() {
+  const [showCinematic, setShowCinematic] = useState(false);
+
+  const openCinematic = () => {
+    try { localStorage.setItem("vardin_cinematic_seen_before_signup", "1"); } catch {}
+    setShowCinematic(true);
+  };
+
+  const closeCinematic = () => setShowCinematic(false);
+
   return (
     <>
+      {showCinematic && (
+        <VardinCinematicExperience
+          mode="public"
+          onExit={closeCinematic}
+          onComplete={closeCinematic}
+          completionLabel="BACK TO VARDIN"
+        />
+      )}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-30 dark:opacity-10"></div>
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/20 dark:bg-primary/10 blur-[120px] rounded-full"></div>
@@ -42,6 +61,15 @@ export default function LandingHero() {
                 Protect Your Family
               </Button>
             </Link>
+            <Button
+              size="lg"
+              variant="ghost"
+              onClick={openCinematic}
+              className="w-full sm:w-auto h-12 px-6 text-base font-semibold text-primary hover:text-primary"
+            >
+              <Play className="w-4 h-4 mr-1.5 fill-current" />
+              See What Vardin Does
+            </Button>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             No credit card required • Cancel anytime
