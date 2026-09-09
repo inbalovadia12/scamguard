@@ -37,6 +37,7 @@ import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
 import Lessons from '@/pages/Lessons';
 import Privacy from '@/pages/Privacy';
+import Terms from '@/pages/Terms';
 import About from '@/pages/About';
 import Contact from '@/pages/Contact';
 import Extension from '@/pages/Extension';
@@ -90,6 +91,8 @@ const AuthenticatedApp = () => {
       <Route path="/" element={<Landing />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
 
       {/* Auth routes */}
       <Route path="/login" element={<Login />} />
@@ -128,7 +131,6 @@ const AuthenticatedApp = () => {
           <Route path="/conversation-analyzer" element={<ConversationAnalyzer />} />
           <Route path="/incognito-search" element={<IncognitoSearch />} />
           <Route path="/lessons" element={<Lessons />} />
-          <Route path="/privacy" element={<Privacy />} />
           <Route path="/extension" element={<Extension />} />
           <Route path="/analytics" element={<Analytics />} />
 
