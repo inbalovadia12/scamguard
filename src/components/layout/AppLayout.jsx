@@ -127,8 +127,17 @@ export default function AppLayout() {
       } catch {}
     };
     load();
-    const unsubscribe = base44.entities.FamilyAlert.subscribe(load);
-    return () => unsubscribe();
+    let unsubscribe = null;
+    try {
+      unsubscribe = base44.entities.FamilyAlert.subscribe(load);
+    } catch (error) {
+      // Realtime is optional; never let a subscription failure blank the entire app
+      // during the first authenticated render. The initial load above is sufficient.
+      console.warn("Family alert realtime unavailable:", error);
+    }
+    return () => {
+      try { unsubscribe?.(); } catch {}
+    };
   }, []);
 
   // Apply a pending referral code (from ?ref=) to the user's account once

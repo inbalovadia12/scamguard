@@ -40,17 +40,28 @@ export default function Dashboard() {
 
   useEffect(() => {
     const load = async () => {
-      const user = await base44.auth.me();
-      const [status, seniors, analyses] = await Promise.all([
-        getCreditStatus(),
-        base44.entities.ProtectedSenior.filter({ guardian_id: user.id }),
-        base44.entities.ScamAnalysis.list("-created_date", 5),
-      ]);
-      setCredits(status);
-      setFamilyCount(seniors.length);
-      setRecent(analyses);
-      setAlertCount(analyses.filter((a) => a.guardian_status === "new").length);
-      setLoading(false);
+      try {
+        const user = await base44.auth.me();
+        if (!user?.id) throw new Error("Authenticated user could not be resolved");
+        const [status, seniors, analyses] = await Promise.all([
+          getCreditStatus(),
+          base44.entities.ProtectedSenior.filter({ guardian_id: user.id }),
+          base44.entities.ScamAnalysis.list("-created_date", 5),
+        ]);
+        setCredits(status);
+        setFamilyCount(seniors.length);
+        setRecent(analyses);
+        setAlertCount(analyses.filter((a) => a.guardian_status === "new").length);
+      } catch (error) {
+        console.error("Dashboard startup data failed:", error);
+        // Keep the dashboard usable even if a secondary data request fails.
+        setCredits({ remaining: 0, limit: 0, plan: "starter" });
+        setFamilyCount(0);
+        setRecent([]);
+        setAlertCount(0);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, []);
