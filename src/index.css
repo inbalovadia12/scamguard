@@ -246,6 +246,11 @@
     to { box-shadow: 0 0 30px hsl(var(--primary) / 0.5); }
   }
 
+  @keyframes drift-grid {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(42px, 42px, 0); }
+  }
+
   /* === Luxury Gradient Utilities === */
   .luxury-mesh {
     background-image:
