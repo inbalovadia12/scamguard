@@ -29,7 +29,7 @@
         "canceled"
       ],
       "default": "inactive",
-      "description": "Current subscription status"
+      "description": "The user's subscription status"
     },
     "credits_used": {
       "type": "number",
@@ -44,6 +44,11 @@
       "type": "boolean",
       "default": false,
       "description": "Whether the user has completed onboarding"
+    },
+    "has_seen_vardin_cinematic_intro": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the user has completed the first-time Vardin cinematic introduction"
     },
     "onboarding_goals": {
       "type": "array",
