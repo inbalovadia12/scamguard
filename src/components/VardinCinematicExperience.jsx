@@ -19,7 +19,7 @@ function TypingTitle({ text }) {
         }
         return value + 1;
       });
-    }, 24);
+    }, 52);
     return () => window.clearInterval(timer);
   }, [text]);
 
@@ -298,7 +298,7 @@ function SceneVisual({ type }) {
     number: <div className="font-mono text-3xl tracking-[0.06em] text-white/78 sm:text-5xl">+1 212 555 0198</div>,
   }[type];
 
-  return visual ? <motion.div initial={{ opacity: 0, scale: 0.96, filter: "blur(8px)" }} animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }} exit={{ opacity: 0, scale: 1.025, filter: "blur(8px)" }} transition={{ duration: 0.7, ease: EASE }}>{visual}</motion.div> : null;
+  return visual ? <motion.div initial={{ opacity: 0, x: 90, y: 24, scale: 0.92, rotate: 1.5, filter: "blur(10px)" }} animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotate: 0, filter: "blur(0px)" }} exit={{ opacity: 0, x: -80, y: -16, scale: 1.03, rotate: -1.5, filter: "blur(8px)" }} transition={{ duration: 0.95, ease: EASE, delay: 0.2 }}>{visual}</motion.div> : null;
 }
 
 export default function VardinCinematicExperience({ mode = "public", onExit, onComplete, completionLabel }) {
@@ -329,7 +329,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
   useEffect(() => {
     const reduced = document.documentElement.classList.contains("reduced-motion");
     if (reduced || index >= scenes.length - 1) return;
-    const timer = window.setTimeout(() => setIndex((value) => Math.min(value + 1, scenes.length - 1)), 5200);
+    const timer = window.setTimeout(() => setIndex((value) => Math.min(value + 1, scenes.length - 1)), 9000);
     return () => window.clearTimeout(timer);
   }, [index, scenes.length]);
 
@@ -373,8 +373,8 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
 
       <div className="relative z-10 flex min-h-[100dvh] items-center justify-center px-6 pb-28 pt-16 sm:px-12">
         <AnimatePresence mode="wait">
-          <motion.section key={index} initial={{ opacity: 0, y: 16, scale: 0.995, filter: "blur(5px)" }} animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }} exit={{ opacity: 0, y: -12, scale: 1.01, filter: "blur(6px)" }} transition={{ duration: 0.68, ease: EASE }} className="flex w-full max-w-4xl flex-col items-center text-center">
-            <div className="text-[9px] font-medium tracking-[0.32em] text-white/46 sm:text-[10px]">{scene.eyebrow}</div>
+          <motion.section key={index} initial={{ opacity: 0, y: 28, scale: 0.985, filter: "blur(7px)" }} animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }} exit={{ opacity: 0, y: -30, scale: 1.02, filter: "blur(7px)" }} transition={{ duration: 0.82, ease: EASE }} className="flex w-full max-w-4xl flex-col items-center text-center">
+            <motion.div initial={{ opacity: 0, y: 12, letterSpacing: "0.5em" }} animate={{ opacity: 1, y: 0, letterSpacing: "0.32em" }} transition={{ duration: 0.65, ease: EASE }} className="text-[9px] font-medium tracking-[0.32em] text-white/46 sm:text-[10px]">{scene.eyebrow}</motion.div>
             <motion.h1
               className="mt-5 max-w-3xl text-balance font-heading text-[clamp(2.35rem,6.5vw,5.6rem)] font-medium leading-[0.98] tracking-[-0.045em] text-white"
               style={{ x: pointer.x * 3, y: pointer.y * 2 }}
@@ -386,10 +386,12 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
                   : <React.Fragment key={partIndex}><TypingTitle text={part} /></React.Fragment>)
               ) : <TypingTitle text={plainTitle} />}
             </motion.h1>
-            {scene.support && <p className="mt-5 max-w-md text-balance text-sm leading-6 text-white/48 sm:text-base">{scene.support}</p>}
+            {scene.support && <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="mt-5 max-w-md text-balance text-sm leading-6 text-white/48 sm:text-base">{scene.support}</motion.p>}
             <motion.div
               className="mt-9 flex min-h-[96px] items-center justify-center sm:mt-12"
-              animate={{ y: [0, -5, 0] }}
+              initial={{ opacity: 0, y: 34 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.75, delay: 0.7, ease: EASE }}
               transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
             >
               <SceneVisual type={scene.visual} />
@@ -401,7 +403,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
 
       <div className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 sm:bottom-10">
         {scenes.map((_, segment) => <button key={segment} aria-label={"Go to scene " + (segment + 1)} onClick={() => setIndex(segment)} className={"relative h-px w-4 overflow-hidden bg-white/20 transition-all duration-500 sm:w-7 " + (segment === index ? "sm:w-12" : "hover:bg-white/45")}>
-          {segment === index && <motion.span className="absolute inset-y-0 left-0 bg-[#e45761]" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 5.2, ease: "linear" }} />}
+          {segment === index && <motion.span className="absolute inset-y-0 left-0 bg-[#e45761]" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 8.8, ease: "linear" }} />}
         </button>)}
       </div>
       {index < scenes.length - 1 && <motion.button onClick={advance} animate={{ opacity: [0.42, 0.85, 0.42], y: [0, 3, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-16 left-1/2 z-20 -translate-x-1/2 text-[10px] tracking-[0.2em] text-white/42 transition hover:text-white sm:bottom-20">CONTINUE <span aria-hidden="true">↓</span></motion.button>}
