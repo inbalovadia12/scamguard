@@ -88,7 +88,7 @@ export default function Dashboard() {
           {kidMode ? "Check if messages are tricks, learn about scams, and stay safe online!" : t("dash.overview")}
         </p>
         {!kidMode && (
-          <div className="mt-3 flex flex-wrap items-center gap-4">
+          <div className="mt-3 flex flex-col items-start gap-2 xs:flex-row xs:items-center xs:gap-4 sm:flex-row sm:items-center">
             <button onClick={() => setShowFilm(true)} className="text-[10px] font-medium tracking-[0.15em] text-primary transition hover:text-primary/70">
               SEE WHAT VARDIN DOES <span aria-hidden="true">→</span>
             </button>
@@ -130,7 +130,7 @@ export default function Dashboard() {
 
       {/* Stat cards */}
       {!kidMode && (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         <StatCard
           icon={Zap}
           label={t("dash.credits_left")}
@@ -149,7 +149,7 @@ export default function Dashboard() {
       <StreakBadges />
 
       {/* Quick actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5 animate-slide-up anim-delay-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5 animate-slide-up anim-delay-2">
         {quickActions.map((action, i) => (
           <Link
             key={i}
