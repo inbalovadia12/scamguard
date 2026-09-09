@@ -38,18 +38,13 @@ export const AuthProvider = ({ children }) => {
         const publicSettings = await appClient.get(`/prod/public-settings/by-id/${appParams.appId}`);
         setAppPublicSettings(publicSettings);
         
-        // The landing page is always public and must render for everyone, including signed-in users.
-        // Only perform the authenticated-user check when the visitor is not on the public landing page.
-        if (window.location.pathname === "/" || window.location.pathname === "/landing" || window.location.pathname.startsWith("/landing/")) {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(!!appParams.token);
-          setAuthChecked(true);
-        } else if (appParams.token) {
+        // Resolve the real session even on the public landing page. The landing page can render
+        // for everyone, but signed-in users must still be recognized so they don't get sent through
+        // signup/onboarding again when they continue into the app.
+        if (appParams.token) {
           await checkUserAuth();
         } else {
-          setIsLoadingAuth(false);
-          setIsAuthenticated(false);
-          setAuthChecked(true);
+          await checkUserAuth();
         }
         setIsLoadingPublicSettings(false);
       } catch (appError) {
