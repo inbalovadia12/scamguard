@@ -1,6 +1,7 @@
 import React from "react";
 import { Trophy, CheckCircle2, AlertTriangle, RotateCcw, ChevronRight, Target, ShieldCheck, Swords, PhoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 const CATEGORY_ICONS = {
   "Information Protection": ShieldCheck,
@@ -78,6 +79,8 @@ export default function CallScoreCard({ scenario, score, onRetry, onBackToScenar
       )}
 
       {/* Tactics encountered */}
+      <AIDisclaimer compact />
+
       {score.tactics_encountered?.length > 0 && (
         <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-2.5">
           <h3 className="font-semibold text-sm flex items-center gap-2">
