@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Link } from "react-router-dom";
+import AIDisclaimer from "@/components/AIDisclaimer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -255,6 +256,7 @@ export default function UniversalScan() {
       {/* Results */}
       {result && (
         <div className="space-y-4 animate-slide-up">
+          <AIDisclaimer compact />
           {/* Risk Badge */}
           {(() => {
             const cfg = RISK_CONFIG[result.risk_level] || RISK_CONFIG.low;
