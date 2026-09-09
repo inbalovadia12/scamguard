@@ -200,7 +200,7 @@ export default function AppLayout() {
   const plan = user?.subscription_plan || "starter";
 
   return (
-    <div className="min-h-screen bg-background luxury-mesh flex">
+    <div className="min-h-[100dvh] bg-background luxury-mesh flex overflow-x-hidden">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-r border-border/50 luxury-sidebar backdrop-blur-sm fixed inset-y-0 left-0 z-30">
         <div className="px-6 py-6">
@@ -379,13 +379,13 @@ export default function AppLayout() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 md:ml-64 flex flex-col min-h-screen overflow-x-hidden">
+      <div className="flex-1 md:ml-64 flex flex-col min-h-[100dvh] min-w-0 overflow-x-hidden">
         <BroadcastBanner />
         <div className="kid-banner items-center gap-2 px-3 py-2 bg-primary/10 border-b border-primary/20 text-xs sm:text-sm font-medium text-primary min-w-0">
           <span>🧒</span>
           <span className="truncate">Kid Mode is on</span>
         </div>
-        <main className="flex-1 max-w-4xl mx-auto w-full min-w-0 px-4 sm:px-8 pt-20 pb-8 md:py-12" style={{ paddingTop: "max(5rem, calc(4rem + env(safe-area-inset-top)))", paddingBottom: "max(2rem, env(safe-area-inset-bottom))" }}>
+        <main className="flex-1 max-w-4xl mx-auto w-full min-w-0 px-4 sm:px-8 pt-20 pb-8 md:py-12" style={{ paddingTop: "max(5rem, calc(4rem + env(safe-area-inset-top)))", paddingBottom: "max(2rem, env(safe-area-inset-bottom))", paddingLeft: "max(1rem, env(safe-area-inset-left))", paddingRight: "max(1rem, env(safe-area-inset-right))" }}>
           <Outlet />
         </main>
 
