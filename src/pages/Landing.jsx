@@ -64,6 +64,9 @@ export default function Landing() {
               SEE WHAT VARDIN DOES
             </button>
           </div>
+          <p className="mt-6 max-w-xl text-[10px] leading-5 text-white/32">
+            AI-generated assessments are automated predictions and may be inaccurate or incomplete. Vardin does not guarantee that something is safe or fraudulent. Independently verify important information and do not rely solely on Vardin for high-stakes decisions.
+          </p>
         </section>
 
         <div className="text-center text-[9px] tracking-[0.22em] text-white/26">CONTEXT BEFORE ACTION</div>
