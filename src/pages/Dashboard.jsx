@@ -12,10 +12,12 @@ import { isWrappedSeason } from "@/lib/wrappedSeason";
 import StreakBadges from "@/components/gamification/StreakBadges";
 import Analytics from "@/pages/Analytics";
 import { useKidMode } from "@/lib/KidModeContext";
+import VardinCinematicExperience from "@/components/VardinCinematicExperience";
 
 export default function Dashboard() {
   const { t } = useI18n();
   const { kidMode } = useKidMode();
+  const [showFilm, setShowFilm] = useState(false);
 
   const quickActions = kidMode ? [
     { path: "/check", label: "Check a Message", desc: "Is it safe or a trick?", icon: Search, color: "from-primary to-primary/80" },
@@ -74,6 +76,11 @@ export default function Dashboard() {
         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
           {kidMode ? "Check if messages are tricks, learn about scams, and stay safe online!" : t("dash.overview")}
         </p>
+        {!kidMode && (
+          <button onClick={() => setShowFilm(true)} className="mt-3 text-[10px] font-medium tracking-[0.15em] text-primary transition hover:text-primary/70">
+            SEE WHAT VARDIN DOES <span aria-hidden="true">→</span>
+          </button>
+        )}
       </div>
       )}
 
@@ -199,6 +206,15 @@ export default function Dashboard() {
       </>
       ) : (
         <Analytics />
+      )}
+
+      {showFilm && (
+        <VardinCinematicExperience
+          mode="public"
+          completionLabel="RETURN TO HOME"
+          onExit={() => setShowFilm(false)}
+          onComplete={() => setShowFilm(false)}
+        />
       )}
     </div>
   );
