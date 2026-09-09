@@ -14,7 +14,8 @@ export default function Landing() {
     base44.auth.isAuthenticated()
       .then((authed) => {
         if (!active) return;
-        if (authed) {
+        const previewMode = new URLSearchParams(window.location.search).get("view") === "1";
+        if (authed && !previewMode) {
           navigate("/dashboard", { replace: true });
         } else {
           setCheckingAuth(false);
@@ -53,9 +54,12 @@ export default function Landing() {
             Vardin adds context to suspicious calls, messages, links, and screenshots before you act.
           </p>
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row">
-            <Link to="/register" className="inline-flex items-center gap-2 rounded-sm border border-[#e45761]/60 bg-[#e45761]/10 px-4 py-3 text-[10px] font-medium tracking-[0.17em] text-white transition hover:bg-[#e45761]/20">
+            <button
+              onClick={() => setShowFilm(true)}
+              className="inline-flex items-center gap-2 rounded-sm border border-[#e45761]/60 bg-[#e45761]/10 px-4 py-3 text-[10px] font-medium tracking-[0.17em] text-white transition hover:bg-[#e45761]/20"
+            >
               GET STARTED <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            </button>
             <button onClick={() => setShowFilm(true)} className="rounded-sm border border-white/[0.16] px-4 py-3 text-[10px] font-medium tracking-[0.17em] text-white/70 transition hover:border-white/35 hover:text-white">
               SEE WHAT VARDIN DOES
             </button>
@@ -69,7 +73,10 @@ export default function Landing() {
         <VardinCinematicExperience
           mode="public"
           onExit={() => setShowFilm(false)}
-          onComplete={() => navigate("/register")}
+          onComplete={() => {
+            try { localStorage.setItem("vardin_cinematic_seen_before_signup", "1"); } catch {}
+            navigate("/register");
+          }}
         />
       )}
     </main>
