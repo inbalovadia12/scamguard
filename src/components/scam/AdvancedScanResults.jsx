@@ -92,7 +92,7 @@ function QuickResult({ a }) {
   return (
     <div className={`rounded-2xl border p-6 space-y-3 ${scam ? "border-destructive/30 bg-destructive/5" : "border-success/30 bg-success/5"}`}>
       <div className={`text-2xl font-bold ${scam ? "text-destructive" : "text-success"}`}>
-        {scam ? "⚠️ Likely Scam" : "✅ Likely Safe"}
+        {scam ? "⚠️ Likely Scam" : "ℹ️ No Scam Indicators Detected"}
       </div>
       <p className="text-base leading-relaxed">{a.verdict}</p>
       {a.confidence != null && <p className="text-sm text-muted-foreground">Confidence: {a.confidence}%</p>}
@@ -162,7 +162,7 @@ function DetailedResult({ a, scanType }) {
         <RiskBadge level={level} size="lg" />
         {a.is_scam != null && (
           <span className={`text-sm font-bold ${a.is_scam ? "text-destructive" : "text-success"}`}>
-            {a.is_scam ? "⚠️ Likely Scam" : "✅ Likely Safe"}
+            {a.is_scam ? "⚠️ Likely Scam" : "ℹ️ No Scam Indicators Detected"}
           </span>
         )}
       </div>
