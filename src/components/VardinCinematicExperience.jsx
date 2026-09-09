@@ -225,19 +225,92 @@ function SummaryVisual() {
   return <div className="flex h-24 w-24 items-center justify-center rounded-full border border-white/[0.11] bg-white/[0.035] shadow-[0_0_80px_rgba(196,51,60,0.11)]"><ShieldCheck className="h-9 w-9 text-white/78" /></div>;
 }
 
+function AssistantVisual() {
+  return (
+    <Surface className="w-[min(92vw,470px)] overflow-hidden p-4 text-left">
+      <div className="flex items-center gap-2 border-b border-white/[0.08] pb-3"><Bot className="h-4 w-4 text-[#83b9c5]" /><span className="text-[9px] tracking-[0.18em] text-white/45">VARDIN AI</span><span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#83b9c5]" /></div>
+      <div className="space-y-3 py-4">
+        <div className="ml-auto max-w-[78%] rounded-2xl rounded-br-sm bg-white/[0.08] px-3 py-2 text-[11px] leading-5 text-white/68">They say my account will be closed today. Is this real?</div>
+        <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.55, duration: 0.6 }} className="max-w-[84%] rounded-2xl rounded-bl-sm border border-[#83b9c5]/15 bg-[#83b9c5]/[0.06] px-3 py-2 text-[11px] leading-5 text-white/75">That urgency is a warning sign. Don't use their link. Let's check the sender and decide what to do next.</motion.div>
+      </div>
+      <div className="flex items-center gap-2 border-t border-white/[0.08] pt-3 text-[9px] text-white/35"><span className="h-1.5 w-1.5 rounded-full bg-[#83b9c5] animate-pulse" /> THINKING WITH YOU</div>
+    </Surface>
+  );
+}
+
+function ExposerVisual() {
+  const tactics = ["URGENT DEADLINE", "IMPERSONATION", "MOVE OFFICIAL CHANNEL", "PAYMENT PRESSURE"];
+  return (
+    <div className="relative w-[min(92vw,470px)]">
+      <motion.div animate={{ rotate: [0, -1, 1, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}>
+        <Surface className="p-5 text-left">
+          <div className="flex items-center justify-between"><span className="text-[9px] tracking-[0.2em] text-white/40">SCAM EXPOSER</span><span className="rounded-full bg-[#e94b58]/10 px-2 py-1 text-[8px] tracking-[0.14em] text-[#f07780]">4 TACTICS</span></div>
+          <div className="mt-5 rounded-xl border border-white/[0.08] bg-black/20 p-4 text-[11px] leading-5 text-white/58">“Act now or your account will be permanently suspended.”</div>
+          <div className="mt-4 grid grid-cols-2 gap-2">{tactics.map((t, i) => <motion.div key={t} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 + i * 0.1 }} className="rounded-lg border border-[#e94b58]/15 bg-[#e94b58]/[0.05] p-2.5 text-[8px] tracking-[0.08em] text-[#f07780]">{t}</motion.div>)}</div>
+        </Surface>
+      </motion.div>
+    </div>
+  );
+}
+
+function BrowserVisual() {
+  return (
+    <Surface className="w-[min(94vw,520px)] overflow-hidden text-left">
+      <div className="flex items-center gap-1.5 border-b border-white/[0.08] bg-white/[0.025] px-3 py-2"><span className="h-1.5 w-1.5 rounded-full bg-white/20" /><span className="h-1.5 w-1.5 rounded-full bg-white/20" /><span className="h-1.5 w-1.5 rounded-full bg-white/20" /><div className="ml-3 flex-1 rounded-md bg-black/25 px-3 py-1.5 text-[8px] text-white/32">example-login-security.com</div><span className="text-[8px] text-[#e94b58]">V</span></div>
+      <div className="relative h-36 overflow-hidden bg-white/[0.018] p-5"><div className="h-3 w-28 rounded bg-white/10" /><div className="mt-4 h-2 w-52 rounded bg-white/[0.06]" /><div className="mt-2 h-2 w-40 rounded bg-white/[0.06]" /><motion.div initial={{ x: 70, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.35, duration: 0.7, ease: EASE }} className="absolute right-4 top-5 w-40 rounded-xl border border-[#e94b58]/25 bg-[#110b0d]/95 p-3 shadow-2xl"><div className="text-[8px] tracking-[0.16em] text-[#f07780]">VARDIN WARNING</div><div className="mt-2 text-[10px] text-white/75">Possible impersonation</div><div className="mt-1 text-[8px] text-white/35">Check before signing in.</div></motion.div></div>
+    </Surface>
+  );
+}
+
+function PhoneGuardVisual() {
+  return (
+    <div className="relative w-[min(88vw,340px)]">
+      <motion.div animate={{ y: [0, -5, 0], rotate: [0, 0.5, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
+        <Surface className="overflow-hidden p-5">
+          <div className="flex items-center justify-between text-[9px] tracking-[0.18em] text-white/40"><span>PHONE GUARD</span><span className="text-[#83b9c5]">PROTECTED</span></div>
+          <div className="mt-7 text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.05]"><Phone className="h-6 w-6 text-white/65" /></div><div className="mt-4 text-sm text-white/80">Unknown caller</div><div className="mt-1 font-mono text-[10px] text-white/35">+1 212 555 0198</div></div>
+          <motion.div initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ delay: 0.5, duration: 0.8 }} className="mt-6 h-px bg-gradient-to-r from-transparent via-[#e94b58]/60 to-transparent" />
+          <div className="mt-4 flex items-center gap-2 text-[9px] text-white/48"><ShieldAlert className="h-3.5 w-3.5 text-[#f07780]" /> Risk context available</div>
+        </Surface>
+      </motion.div>
+    </div>
+  );
+}
+
+function RecoveryVisual() {
+  const steps = ["Secure accounts", "Report the scam", "Save evidence", "Start recovery"];
+  return <Surface className="w-[min(92vw,440px)] p-5 text-left"><div className="text-[9px] tracking-[0.2em] text-white/40">RECOVERY HELP</div><div className="mt-5 space-y-3">{steps.map((step, i) => <motion.div key={step} initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.12 }} className="flex items-center gap-3"><div className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[9px] text-white/50">{i + 1}</div><span className="text-[11px] text-white/68">{step}</span><motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5 + i * 0.12, type: "spring" }} className="ml-auto text-[#83b9c5]">✓</motion.span></motion.div>)}</div></Surface>;
+}
+
+function UniversalVisual() {
+  const types = [["MSG", "message"], ["IMG", "image"], ["CRYPTO", "wallet"], ["LINK", "web"]];
+  return <div className="grid w-[min(92vw,500px)] grid-cols-2 gap-2 sm:grid-cols-4">{types.map(([label, sub], i) => <motion.div key={label} initial={{ opacity: 0, y: 20, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: i * 0.1, duration: 0.55, ease: EASE }}><Surface className="h-24 p-3 text-left"><div className="flex h-full flex-col justify-between"><ScanLine className="h-4 w-4 text-[#83b9c5]" /><div><div className="text-[10px] font-medium text-white/75">{label}</div><div className="mt-0.5 text-[8px] text-white/30">{sub}</div></div></Surface></div>)}</div>;
+}
+
+function LessonsVisual() {
+  return <Surface className="w-[min(92vw,440px)] p-4 text-left"><div className="flex items-center justify-between"><span className="text-[9px] tracking-[0.2em] text-white/40">LESSON 04</span><span className="text-[9px] text-[#83b9c5]">3 MIN</span></div><div className="mt-5 text-base text-white/82">Can you spot the pressure tactic?</div><div className="mt-4 h-1 overflow-hidden rounded-full bg-white/[0.08]"><motion.div initial={{ width: 0 }} animate={{ width: "68%" }} transition={{ delay: 0.4, duration: 1 }} className="h-full rounded-full bg-[#83b9c5]" /></div><div className="mt-4 flex gap-2"><span className="rounded-lg border border-[#e94b58]/20 bg-[#e94b58]/[0.05] px-3 py-2 text-[9px] text-[#f07780]">Urgency</span><span className="rounded-lg border border-white/10 px-3 py-2 text-[9px] text-white/42">Normal request</span></div></Surface>;
+}
+
+function LocalVisual() {
+  return <Surface className="relative w-[min(92vw,470px)] overflow-hidden p-5"><div className="text-[9px] tracking-[0.2em] text-white/40">LOCAL SCAM INTELLIGENCE</div><div className="relative mt-5 h-28 overflow-hidden rounded-xl border border-white/[0.08] bg-[#0a0d0f]"><div className="absolute inset-0 opacity-40 [background-image:linear-gradient(30deg,transparent_48%,rgba(131,185,197,0.14)_49%,transparent_50%),linear-gradient(120deg,transparent_48%,rgba(255,255,255,0.07)_49%,transparent_50%)] [background-size:42px_42px]" />{[[24,28],[58,54],[72,32],[42,76],[82,68]].map(([x,y], i) => <motion.span key={i} initial={{ scale: 0 }} animate={{ scale: [0, 1.15, 1] }} transition={{ delay: i * 0.16, duration: 0.6 }} className="absolute h-2.5 w-2.5 rounded-full bg-[#e94b58] shadow-[0_0_18px_rgba(228,87,97,0.55)]" style={{ left: `${x}%`, top: `${y}%` }} />)}</div><div className="mt-3 text-[10px] text-white/42">New reports are changing the local pattern.</div></Surface>;
+}
+
+function CommunityVisual() {
+  const posts = [["Maya", "Fake delivery text using a local courier name"], ["Daniel", "Investment group asking for crypto deposit"], ["Noa", "Caller claiming to be from the bank"]];
+  return <Surface className="w-[min(92vw,460px)] p-4 text-left"><div className="flex items-center gap-2"><Users className="h-4 w-4 text-[#83b9c5]" /><span className="text-[9px] tracking-[0.18em] text-white/40">COMMUNITY REPORTS</span></div><div className="mt-4 space-y-2">{posts.map(([name, text], i) => <motion.div key={name} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.14 }} className="flex items-start gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3"><div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[9px] text-white/50">{name[0]}</div><div><div className="text-[9px] text-white/35">{name}</div><div className="mt-1 text-[10px] leading-4 text-white/62">{text}</div></div></motion.div>)}</div></Surface>;
+}
+
 function SceneVisual({ type }) {
   const visual = {
-    caller: <CallerVisual />,
-    "call-risk": <CallerVisual risk />,
-    signals: <SignalsVisual />,
-    verdict: <VerdictVisual />,
-    explain: <ExplainVisual />,
-    scan: <ScanVisual />,
-    image: <ImageVisual />,
-    live: <LiveVisual />,
-    family: <FamilyVisual />,
-    intel: <IntelVisual />,
-    summary: <SummaryVisual />,
+    assistant: <AssistantVisual />,
+    exposer: <ExposerVisual />,
+    browser: <BrowserVisual />,
+    phone: <PhoneGuardVisual />,
+    recovery: <RecoveryVisual />,
+    universal: <UniversalVisual />,
+    lessons: <LessonsVisual />,
+    local: <LocalVisual />,
+    community: <CommunityVisual />,
     number: <div className="font-mono text-3xl tracking-[0.06em] text-white/78 sm:text-5xl">+1 212 555 0198</div>,
   }[type];
 
