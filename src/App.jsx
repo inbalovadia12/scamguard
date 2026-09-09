@@ -66,7 +66,9 @@ import AppLayout from '@/components/layout/AppLayout';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated, authChecked, authError } = useAuth();
-  const isPublicLanding = window.location.pathname === "/" || window.location.pathname === "/landing" || window.location.pathname.startsWith("/landing/");
+  const isRootLanding = window.location.pathname === "/";
+  const isLandingPage = window.location.pathname === "/landing" || window.location.pathname.startsWith("/landing/");
+  const isPublicLanding = isRootLanding || isLandingPage;
 
   // The root URL is the entry point for returning customers. Do not render the
   // public landing page while we are still resolving an existing session: doing
@@ -88,7 +90,9 @@ const AuthenticatedApp = () => {
     );
   }
 
-  if (isPublicLanding && isAuthenticated) {
+  // Only the root URL is the first-time visitor entry point. Keep /landing
+  // available from inside the app so returning users can explicitly view it.
+  if (isRootLanding && isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
