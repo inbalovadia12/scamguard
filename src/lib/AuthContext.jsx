@@ -44,7 +44,9 @@ export const AuthProvider = ({ children }) => {
         if (appParams.token) {
           await checkUserAuth();
         } else {
-          await checkUserAuth();
+          setIsLoadingAuth(false);
+          setIsAuthenticated(false);
+          setAuthChecked(true);
         }
         setIsLoadingPublicSettings(false);
       } catch (appError) {
