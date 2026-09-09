@@ -304,7 +304,7 @@ function CommunityVisual() {
 function ReadyVisual({ isMobile = false }) {
   return (
     <div className="relative flex h-40 w-[min(88vw,430px)] items-center justify-center">
-      {[0, 1, 2].map((ring) => <motion.div key={ring} className="absolute rounded-full border border-[#2f8f83]/20" style={{ width: 92 + ring * 54, height: 92 + ring * 54 }} initial={{ opacity: 0, scale: 0.72 }} animate={{ opacity: [0.15, 0.42, 0.15], scale: [0.88, 1.05, 0.88] }} transition={{ duration: 3.8 + ring * 0.8, repeat: Infinity, ease: "easeInOut", delay: ring * 0.35 }} />)}
+      {[0, 1, 2].map((ring) => <motion.div key={ring} className="absolute rounded-full border border-[#2f8f83]/20" style={{ width: 92 + ring * 54, height: 92 + ring * 54 }} initial={{ opacity: 0, scale: 0.72 }} animate={isMobile ? { opacity: 0.28, scale: 1 } : { opacity: [0.15, 0.42, 0.15], scale: [0.88, 1.05, 0.88] }} transition={isMobile ? { duration: 0.2 } : { duration: 3.8 + ring * 0.8, repeat: Infinity, ease: "easeInOut", delay: ring * 0.35 }} />)}
       <motion.div animate={isMobile ? { y: 0, scale: 1 } : { y: [0, -8, 0], scale: [1, 1.04, 1] }} transition={isMobile ? { duration: 0.2 } : { duration: 3, repeat: Infinity, ease: "easeInOut" }} className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.14] bg-white/[0.055] shadow-[0_0_80px_rgba(47,143,131,0.16)]"><ShieldCheck className="h-8 w-8 text-white/80" /></motion.div>
       {!isMobile && <>
         <motion.span className="absolute h-1.5 w-1.5 rounded-full bg-[#83b9c5]" animate={{ x: [-130, 130], y: [22, -22], opacity: [0, 1, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} />
