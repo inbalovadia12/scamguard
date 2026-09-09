@@ -7,12 +7,28 @@ import VardinCinematicExperience from "@/components/VardinCinematicExperience";
 export default function Landing() {
   const navigate = useNavigate();
   const [showFilm, setShowFilm] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    base44.auth.isAuthenticated().then((authed) => {
-      if (authed) navigate("/dashboard", { replace: true });
-    }).catch(() => {});
+    let active = true;
+    base44.auth.isAuthenticated()
+      .then((authed) => {
+        if (!active) return;
+        if (authed) {
+          navigate("/dashboard", { replace: true });
+        } else {
+          setCheckingAuth(false);
+        }
+      })
+      .catch(() => {
+        if (active) setCheckingAuth(false);
+      });
+    return () => { active = false; };
   }, [navigate]);
+
+  if (checkingAuth) {
+    return <div className="min-h-[100dvh] bg-[#070809]" aria-hidden="true" />;
+  }
 
   return (
     <main className="relative min-h-[100dvh] overflow-hidden bg-[#070809] font-body text-white">
