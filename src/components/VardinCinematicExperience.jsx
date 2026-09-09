@@ -410,7 +410,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
   const titleParts = scene.title.split(/(<em>.*?<\/em>)/g);
   const plainTitle = titleParts.map((part) => part.replace(/<\/?em>/g, "")).join("");
 
-  return (
+  return createPortal(
     <main
       data-vardin-cinematic="true"
       onWheel={onWheel}
@@ -475,6 +475,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
       </div>
       {index < scenes.length - 1 && <motion.button onClick={advance} animate={{ opacity: [0.42, 0.85, 0.42], y: [0, 3, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[calc(3.75rem+env(safe-area-inset-bottom))] left-1/2 z-20 -translate-x-1/2 text-[10px] tracking-[0.2em] text-white/42 transition hover:text-white sm:bottom-20">CONTINUE <span aria-hidden="true">↓</span></motion.button>}
       <button onClick={onExit} aria-label="Close cinematic experience" className="sr-only"><X /></button>
-    </main>
+    </main>,
+    document.body
   );
 }
