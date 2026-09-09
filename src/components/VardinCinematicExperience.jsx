@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight, Bot, ChevronRight, Image as ImageIcon, Phone, Radio,
@@ -359,12 +360,20 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
   const retreat = () => setIndex((value) => Math.max(0, value - 1));
 
   useEffect(() => {
-    const previousOverflow = document.documentElement.style.overflow;
+    const scrollY = window.scrollY;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyOverscroll = document.body.style.overscrollBehavior;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyWidth = document.body.style.width;
     document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
     document.body.style.overflow = "hidden";
     document.body.style.overscrollBehavior = "none";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
     const onKey = (event) => {
       if (event.key === "ArrowRight" || event.key === "Enter" || event.key === " ") { event.preventDefault(); advance(); }
       if (event.key === "ArrowLeft") { event.preventDefault(); retreat(); }
@@ -372,9 +381,14 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
     };
     window.addEventListener("keydown", onKey);
     return () => {
-      document.documentElement.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = "";
       document.body.style.overflow = previousBodyOverflow;
       document.body.style.overscrollBehavior = previousBodyOverscroll;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.width = previousBodyWidth;
+      window.scrollTo(0, scrollY);
       window.removeEventListener("keydown", onKey);
     };
   }, [index]);
@@ -398,12 +412,13 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
 
   return (
     <main
+      data-vardin-cinematic="true"
       onWheel={onWheel}
       onMouseMove={(event) => { if (!isMobile) setPointer({ x: (event.clientX / window.innerWidth - 0.5) * 2, y: (event.clientY / window.innerHeight - 0.5) * 2 }); }}
       onMouseLeave={() => setPointer({ x: 0, y: 0 })}
       onTouchStart={(event) => { touchStart.current = event.changedTouches[0].clientX; }}
       onTouchEnd={(event) => { if (touchStart.current === null) return; const distance = event.changedTouches[0].clientX - touchStart.current; if (Math.abs(distance) > 45) distance < 0 ? advance() : retreat(); touchStart.current = null; }}
-      className="cinematic-viewport fixed inset-0 z-[100] h-[100svh] min-h-[100svh] max-h-[100svh] w-full overflow-hidden bg-[#070809] font-body text-white overscroll-none touch-none"
+      className="cinematic-viewport fixed inset-0 z-[2147483647] h-[100dvh] min-h-[100dvh] max-h-[100dvh] w-screen overflow-hidden bg-[#070809] font-body text-white overscroll-none touch-none"
     >
       <motion.div
         className="pointer-events-none absolute -left-32 top-[10%] h-[38rem] w-[38rem] rounded-full bg-[#236f68]/[0.055] blur-[145px]"
@@ -453,8 +468,8 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
         </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-1.5 sm:bottom-10">
-        {scenes.map((_, segment) => <button key={segment} aria-label={"Go to scene " + (segment + 1)} onClick={() => setIndex(segment)} className={"relative h-1 w-3 overflow-hidden rounded-full bg-white/20 transition-all duration-500 sm:h-px sm:w-7 " + (segment === index ? "w-5 sm:w-12" : "hover:bg-white/45")}>
+      <div className="absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex w-max max-w-[calc(100%-1.5rem)] -translate-x-1/2 items-center justify-center gap-1.5 px-1 sm:bottom-10 sm:gap-2">
+        {scenes.map((_, segment) => <button key={segment} aria-label={"Go to scene " + (segment + 1)} onClick={() => setIndex(segment)} className={"relative h-1 shrink-0 w-3 overflow-hidden rounded-full bg-white/30 transition-all duration-500 sm:h-px sm:w-7 " + (segment === index ? "w-5 sm:w-12" : "hover:bg-white/55")}>
           {segment === index && <motion.span className="absolute inset-y-0 left-0 bg-[#2f8f83]" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 10.3, ease: "linear" }} />}
         </button>)}
       </div>
