@@ -37,144 +37,15 @@ function TypingTitle({ text }) {
 }
 
 const productScenes = [
-  {
-    eyebrow: "PHONE GUARD",
-    title: "Context starts with the call.",
-    support: "Before you answer, see more than a number.",
-    visual: "caller",
-  },
-  {
-    eyebrow: "CALL GUARD",
-    title: "A signal can change the conversation.",
-    support: "Vardin surfaces risk without getting in the way.",
-    visual: "call-risk",
-  },
-  {
-    eyebrow: "RISK SIGNALS",
-    title: "Look beyond the number itself.",
-    support: "Reports, reputation, and patterns are brought together.",
-    visual: "signals",
-  },
-  {
-    eyebrow: "SCAM ANALYSIS",
-    title: "Turn the signal into a clear decision.",
-    support: "A concise result, not another thing to decipher.",
-    visual: "verdict",
-  },
-  {
-    eyebrow: "AI ANALYSIS",
-    title: "Understand <em>why</em> it may be suspicious.",
-    support: "Vardin explains the tactics behind the warning.",
-    visual: "explain",
-  },
-  {
-    eyebrow: "UNIVERSAL SCAN",
-    title: "Messages. Links. Numbers. Screenshots.",
-    support: "Start with the interaction in front of you.",
-    visual: "scan",
-  },
-  {
-    eyebrow: "IMAGE SCAN",
-    title: "A screenshot can carry a warning too.",
-    support: "Check a suspicious page, profile, or QR code.",
-    visual: "image",
-  },
-  {
-    eyebrow: "LIVE PROTECTION",
-    title: "Stay present during a live call.",
-    support: "Call Guard can surface a warning as things unfold.",
-    visual: "live",
-  },
-  {
-    eyebrow: "FAMILY PROTECTION",
-    title: "Give the people you love another set of eyes.",
-    support: "Keep important alerts visible to the right person.",
-    visual: "family",
-  },
-  {
-    eyebrow: "LOCAL INTELLIGENCE",
-    title: "A pattern is easier to spot together.",
-    support: "Community reports add context when it matters.",
-    visual: "intel",
-  },
-  {
-    eyebrow: "VARDIN",
-    title: "Pause. Understand. Decide.",
-    support: "A quieter way to handle the unexpected.",
-    visual: "summary",
-  },
-  {
-    eyebrow: "AI NEGOTIATOR",
-    title: "When pressure starts, change the script.",
-    support: "Let Vardin help you slow down, ask the right questions, and protect your position.",
-    visual: "explain",
-  },
-  {
-    eyebrow: "CONVERSATION ANALYZER",
-    title: "Read the conversation between the lines.",
-    support: "Spot urgency, manipulation, impersonation, and payment pressure in a conversation.",
-    visual: "scan",
-  },
-  {
-    eyebrow: "CRYPTO SCANNER",
-    title: "Crypto requests deserve a second look.",
-    support: "Check suspicious investment and payment claims before you act.",
-    visual: "verdict",
-  },
-  {
-    eyebrow: "BULK SCANNER",
-    title: "Check more than one thing at a time.",
-    support: "Scan multiple messages, links, or numbers and see the risk together.",
-    visual: "signals",
-  },
-  {
-    eyebrow: "CALL SIMULATOR",
-    title: "Practice the moment before it happens.",
-    support: "Train your instincts with realistic scam-call scenarios.",
-    visual: "caller",
-  },
-  {
-    eyebrow: "LESSONS",
-    title: "Turn every warning into something you remember.",
-    support: "Short lessons make scam patterns easier to recognize next time.",
-    visual: "family",
-  },
-  {
-    eyebrow: "SPOT THE SCAM",
-    title: "Learn to notice the tiny tells.",
-    support: "Interactive challenges turn scam awareness into a skill.",
-    visual: "intel",
-  },
-  {
-    eyebrow: "ALERTS",
-    title: "The important things stay visible.",
-    support: "Keep high-risk findings and family alerts in one place.",
-    visual: "verdict",
-  },
-  {
-    eyebrow: "TRUST HISTORY",
-    title: "Build a record of what you checked.",
-    support: "Review previous scans and decisions when you need the context later.",
-    visual: "signals",
-  },
-  {
-    eyebrow: "COMMUNITY",
-    title: "One report can protect someone else.",
-    support: "Share useful scam intelligence and learn from patterns others have seen.",
-    visual: "family",
-  },
-  {
-    eyebrow: "WRAPPED",
-    title: "See how much sharper you have become.",
-    support: "A visual recap of your protection journey, scans, and progress.",
-    visual: "summary",
-  },
-  {
-    eyebrow: "KID GUARD",
-    title: "Give kids a safer way to ask, check, and learn.",
-    support: "Kid-friendly scanning, games, library content, and a simple way to ask a parent.",
-    visual: "family",
-  },
+  { eyebrow: "AI ASSISTANT", title: "When something feels off, ask Vardin.", support: "A calm AI guide helps you understand the situation, choose your next move, and know what not to do.", visual: "assistant" },
+  { eyebrow: "SCAM EXPOSER", title: "See the tactic, not just the warning.", support: "Vardin breaks down urgency, impersonation, manipulation, and payment pressure so the scam becomes obvious.", visual: "exposer" },
+  { eyebrow: "BROWSER EXTENSION", title: "Check the web while you browse.", support: "Bring Vardin into the page you are already looking at and get context before you click, pay, or sign in.", visual: "browser" },
+  { eyebrow: "PHONE GUARD", title: "Know who is calling before you react.", support: "Phone Guard puts caller context and risk signals beside the moment they matter.", visual: "phone" },
+  { eyebrow: "RECOVERY HELP", title: "If you already acted, start here.", support: "Vardin helps you move from panic to a practical recovery plan: secure, report, document, and recover.", visual: "recovery" },
+  { eyebrow: "UNIVERSAL SCANNER", title: "One place to check the things you receive.", support: "Messages, links, numbers, screenshots, images, and crypto requests can all be checked before you act.", visual: "universal" },
+  { eyebrow: "LESSONS", title: "Protection gets stronger when you learn the pattern.", support: "Short, focused lessons turn real scam tactics into instincts you can recognize next time.", visual: "lessons" },
+  { eyebrow: "LOCAL SCAM INTELLIGENCE", title: "Know what is happening around you.", support: "Local reports surface the scams, impersonations, and patterns appearing in your area.", visual: "local" },
+  { eyebrow: "COMMUNITY", title: "Your experience can protect the next person.", support: "Report what you found, learn from other people, and turn isolated scams into shared intelligence.", visual: "community" },
 ];
 
 const textScenes = {
