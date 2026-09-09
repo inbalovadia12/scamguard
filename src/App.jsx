@@ -65,7 +65,7 @@ import CallScreener from '@/pages/CallScreener';
 import AppLayout from '@/components/layout/AppLayout';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated, authChecked, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated, authChecked, authError } = useAuth();
   const isPublicLanding = window.location.pathname === "/" || window.location.pathname === "/landing" || window.location.pathname.startsWith("/landing/");
 
   // The root URL is the entry point for returning customers. Do not render the
