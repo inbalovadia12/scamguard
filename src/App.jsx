@@ -66,12 +66,29 @@ import CallScreener from '@/pages/CallScreener';
 import AppLayout from '@/components/layout/AppLayout';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated, authChecked, authError, navigateToLogin } = useAuth();
   const isPublicLanding = window.location.pathname === "/" || window.location.pathname === "/landing" || window.location.pathname.startsWith("/landing/");
 
-  // Never block the public landing page on auth resolution.
-  // Render it immediately so first paint is never a blank/white loading screen.
-  // Once the existing browser session is resolved, authenticated users are sent to the app.
+  // The root URL is the entry point for returning customers. Do not render the
+  // public landing page while we are still resolving an existing session: doing
+  // so creates a visible landing -> dashboard transition and can race with the
+  // protected route bootstrap. Show the same startup screen until auth is known.
+  // Once resolved, authenticated users go directly to the dashboard; signed-out
+  // visitors see the original green landing page.
+  if (isPublicLanding && !authChecked) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-[#f7fbfa]">
+        <div className="flex flex-col items-center gap-3 text-primary">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-600/20">
+            <img src="/favicon.svg" alt="" width="32" height="32" />
+          </div>
+          <div className="text-xl font-bold tracking-tight">Vardin</div>
+          <div className="w-6 h-6 border-3 border-primary/20 border-t-primary rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
   if (isPublicLanding && isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
