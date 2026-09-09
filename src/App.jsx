@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -66,7 +66,8 @@ import AppLayout from '@/components/layout/AppLayout';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated, authChecked, authError } = useAuth();
-  const isPublicLanding = window.location.pathname === "/" || window.location.pathname === "/landing" || window.location.pathname.startsWith("/landing/");
+  const location = useLocation();
+  const isPublicLanding = location.pathname === "/" || location.pathname === "/landing" || location.pathname.startsWith("/landing/");
 
   // The root URL is the entry point for returning customers. Do not render the
   // public landing page while we are still resolving an existing session: doing
