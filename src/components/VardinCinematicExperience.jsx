@@ -127,7 +127,7 @@ function SignalsVisual() {
     <div className="grid w-[min(90vw,440px)] grid-cols-3 gap-2">
       {[["72", "RISK SCORE"], ["14", "REPORTS"], ["3", "SIGNALS"]].map(([value, label], index) => (
         <Surface key={label} className="p-4 text-center">
-          <div className={index === 0 ? "text-2xl font-semibold text-[#ee5964]" : "text-2xl font-semibold text-white/85"}>{value}</div>
+          <div className={index === 0 ? "text-2xl font-semibold text-[#79c9bd]" : "text-2xl font-semibold text-white/85"}>{value}</div>
           <div className="mt-2 text-[8px] tracking-[0.18em] text-white/38">{label}</div>
         </Surface>
       ))}
@@ -223,7 +223,7 @@ function IntelVisual() {
 }
 
 function SummaryVisual() {
-  return <div className="flex h-24 w-24 items-center justify-center rounded-full border border-white/[0.11] bg-white/[0.035] shadow-[0_0_80px_rgba(196,51,60,0.11)]"><ShieldCheck className="h-9 w-9 text-white/78" /></div>;
+  return <div className="flex h-24 w-24 items-center justify-center rounded-full border border-white/[0.11] bg-white/[0.035] shadow-[0_0_80px_rgba(47,143,131,0.11)]"><ShieldCheck className="h-9 w-9 text-white/78" /></div>;
 }
 
 function AssistantVisual() {
@@ -415,7 +415,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
                   : <React.Fragment key={partIndex}><TypingTitle text={part} /></React.Fragment>)
               ) : <TypingTitle text={plainTitle} />}
             </motion.h1>
-            {scene.support && <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="mt-5 max-w-md text-balance text-sm leading-6 text-white/48 sm:text-base">{scene.support}</motion.p>}
+            {scene.support && <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="mt-4 w-full max-w-md px-2 text-balance text-sm leading-6 text-white/48 sm:mt-5 sm:px-0 sm:text-base">{scene.support}</motion.p>}
             <motion.div
               className="mt-6 flex min-h-[84px] w-full max-w-full items-center justify-center overflow-visible sm:mt-12 sm:min-h-[96px]"
               initial={{ opacity: 0, y: 34, scale: 0.94, filter: "blur(6px)" }}
@@ -429,12 +429,12 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
         </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 sm:bottom-10">
+      <div className="absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 sm:bottom-10">
         {scenes.map((_, segment) => <button key={segment} aria-label={"Go to scene " + (segment + 1)} onClick={() => setIndex(segment)} className={"relative h-1 w-3 overflow-hidden rounded-full bg-white/20 transition-all duration-500 sm:h-px sm:w-7 " + (segment === index ? "w-5 sm:w-12" : "hover:bg-white/45")}>
           {segment === index && <motion.span className="absolute inset-y-0 left-0 bg-[#2f8f83]" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 10.3, ease: "linear" }} />}
         </button>)}
       </div>
-      {index < scenes.length - 1 && <motion.button onClick={advance} animate={{ opacity: [0.42, 0.85, 0.42], y: [0, 3, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-16 left-1/2 z-20 -translate-x-1/2 text-[10px] tracking-[0.2em] text-white/42 transition hover:text-white sm:bottom-20">CONTINUE <span aria-hidden="true">↓</span></motion.button>}
+      {index < scenes.length - 1 && <motion.button onClick={advance} animate={{ opacity: [0.42, 0.85, 0.42], y: [0, 3, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-[calc(3.75rem+env(safe-area-inset-bottom))] left-1/2 z-20 -translate-x-1/2 text-[10px] tracking-[0.2em] text-white/42 transition hover:text-white sm:bottom-20">CONTINUE <span aria-hidden="true">↓</span></motion.button>}
       <button onClick={onExit} aria-label="Close cinematic experience" className="sr-only"><X /></button>
     </main>
   );
