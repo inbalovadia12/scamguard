@@ -24,14 +24,18 @@ function TypingTitle({ text }) {
   }, [text]);
 
   return (
-    <span className="relative inline">
-      {text.slice(0, visible)}
-      <motion.span
-        aria-hidden="true"
-        className="ml-1 inline-block h-[0.8em] w-[2px] translate-y-[0.08em] bg-[#2f8f83] align-baseline"
-        animate={{ opacity: [1, 0, 1] }}
-        transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
-      />
+    <span className="relative inline-block align-top">
+      {/* Reserve the final line box so the centered title never shifts while typing. */}
+      <span aria-hidden="true" className="invisible whitespace-pre-wrap">{text}</span>
+      <span className="absolute inset-0 whitespace-pre-wrap">
+        {text.slice(0, visible)}
+        <motion.span
+          aria-hidden="true"
+          className="ml-1 inline-block h-[0.8em] w-[2px] translate-y-[0.08em] bg-[#2f8f83] align-baseline"
+          animate={{ opacity: [1, 0, 1] }}
+          transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </span>
     </span>
   );
 }
@@ -356,14 +360,23 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
 
   useEffect(() => {
     const previousOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyOverscroll = document.body.style.overscrollBehavior;
     document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
     const onKey = (event) => {
       if (event.key === "ArrowRight" || event.key === "Enter" || event.key === " ") { event.preventDefault(); advance(); }
       if (event.key === "ArrowLeft") { event.preventDefault(); retreat(); }
       if (event.key === "Escape") onExit?.();
     };
     window.addEventListener("keydown", onKey);
-    return () => { document.documentElement.style.overflow = previousOverflow; window.removeEventListener("keydown", onKey); };
+    return () => {
+      document.documentElement.style.overflow = previousOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.overscrollBehavior = previousBodyOverscroll;
+      window.removeEventListener("keydown", onKey);
+    };
   }, [index]);
 
   useEffect(() => {
@@ -390,20 +403,20 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
       onMouseLeave={() => setPointer({ x: 0, y: 0 })}
       onTouchStart={(event) => { touchStart.current = event.changedTouches[0].clientX; }}
       onTouchEnd={(event) => { if (touchStart.current === null) return; const distance = event.changedTouches[0].clientX - touchStart.current; if (Math.abs(distance) > 45) distance < 0 ? advance() : retreat(); touchStart.current = null; }}
-      className="cinematic-viewport fixed inset-x-0 top-0 z-[100] h-[calc(100dvh+env(safe-area-inset-bottom))] min-h-screen w-full overflow-hidden bg-[#070809] font-body text-white overscroll-none"
+      className="cinematic-viewport fixed inset-0 z-[100] h-[100svh] min-h-[100svh] max-h-[100svh] w-full overflow-hidden bg-[#070809] font-body text-white overscroll-none touch-none"
     >
       <motion.div
         className="pointer-events-none absolute -left-32 top-[10%] h-[38rem] w-[38rem] rounded-full bg-[#236f68]/[0.055] blur-[145px]"
-        animate={{ x: isMobile ? 0 : pointer.x * 24, y: isMobile ? 0 : pointer.y * 18, scale: [1, 1.04, 1] }}
-        transition={{ x: { duration: 1.2 }, y: { duration: 1.2 }, scale: { duration: 7, repeat: Infinity, ease: "easeInOut" } }}
+        animate={isMobile ? { x: 0, y: 0, scale: 1 } : { x: pointer.x * 24, y: pointer.y * 18, scale: [1, 1.04, 1] }}
+        transition={isMobile ? { duration: 0 } : { x: { duration: 1.2 }, y: { duration: 1.2 }, scale: { duration: 7, repeat: Infinity, ease: "easeInOut" } }}
       />
       <motion.div
         className="pointer-events-none absolute -right-40 bottom-[-12%] h-[40rem] w-[40rem] rounded-full bg-[#247b86]/[0.05] blur-[160px]"
-        animate={{ x: isMobile ? 0 : pointer.x * -18, y: isMobile ? 0 : pointer.y * -14, scale: [1.05, 1, 1.05] }}
-        transition={{ x: { duration: 1.4 }, y: { duration: 1.4 }, scale: { duration: 8, repeat: Infinity, ease: "easeInOut" } }}
+        animate={isMobile ? { x: 0, y: 0, scale: 1 } : { x: pointer.x * -18, y: pointer.y * -14, scale: [1.05, 1, 1.05] }}
+        transition={isMobile ? { duration: 0 } : { x: { duration: 1.4 }, y: { duration: 1.4 }, scale: { duration: 8, repeat: Infinity, ease: "easeInOut" } }}
       />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.35)_100%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.5)_0.7px,transparent_0.8px)] [background-size:42px_42px] [mask-image:radial-gradient(ellipse_at_center,black_25%,transparent_75%)] animate-[drift-grid_18s_linear_infinite]" />
+      <div className="cinematic-grid pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.5)_0.7px,transparent_0.8px)] [background-size:42px_42px] [mask-image:radial-gradient(ellipse_at_center,black_25%,transparent_75%)] animate-[drift-grid_18s_linear_infinite]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
       <div className="absolute right-3 top-3 z-20 flex items-center gap-2 text-[9px] font-medium tracking-[0.16em] text-white/46 sm:right-8 sm:top-8 sm:gap-3 sm:text-[10px] sm:tracking-[0.2em]">
@@ -411,9 +424,9 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
         <button onClick={onExit} className="min-h-9 rounded-sm border border-white/[0.14] px-2.5 py-1.5 tracking-[0.12em] text-white/62 transition hover:border-white/35 hover:text-white touch-manipulation">SKIP <span aria-hidden="true">→</span></button>
       </div>
 
-      <div className="relative z-10 flex h-full min-h-0 w-full items-center justify-center overflow-y-auto overscroll-contain px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(4rem+env(safe-area-inset-top))] sm:px-8 sm:pb-28 sm:pt-16">
+      <div className="relative z-10 flex h-full min-h-0 w-full items-center justify-center overflow-hidden overscroll-none px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(4rem+env(safe-area-inset-top))] sm:px-8 sm:pb-28 sm:pt-16">
         <AnimatePresence mode="wait">
-          <motion.section key={index} initial={{ opacity: 0, y: 28, scale: 0.985, filter: "blur(7px)" }} animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }} exit={{ opacity: 0, y: -30, scale: 1.02, filter: "blur(7px)" }} transition={{ duration: 0.82, ease: EASE }} className="flex w-full max-w-4xl shrink-0 flex-col items-center justify-center text-center py-2 sm:py-0">
+          <motion.section key={index} initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 28, scale: 0.985, filter: "blur(7px)" }} animate={isMobile ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }} exit={isMobile ? { opacity: 0 } : { opacity: 0, y: -30, scale: 1.02, filter: "blur(7px)" }} transition={{ duration: isMobile ? 0.25 : 0.82, ease: EASE }} className="flex w-full max-w-4xl shrink-0 flex-col items-center justify-center text-center py-2 sm:py-0">
             <motion.div initial={{ opacity: 0, y: 12, letterSpacing: "0.5em" }} animate={{ opacity: 1, y: 0, letterSpacing: "0.32em" }} transition={{ duration: 0.65, ease: EASE }} className="text-[9px] font-medium tracking-[0.32em] text-white/46 sm:text-[10px]">{scene.eyebrow}</motion.div>
             <motion.h1
               className="mt-4 w-full max-w-3xl px-1 text-center text-balance font-heading text-[clamp(1.9rem,8.5vw,5.6rem)] font-medium leading-[0.98] tracking-[-0.045em] text-white sm:mt-5 sm:px-0"
@@ -429,18 +442,18 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
             {scene.support && <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="mt-4 w-full max-w-md px-2 text-balance text-sm leading-6 text-white/48 sm:mt-5 sm:px-0 sm:text-base">{scene.support}</motion.p>}
             <motion.div
               className="mt-6 flex min-h-[84px] w-full max-w-full items-center justify-center overflow-visible sm:mt-12 sm:min-h-[96px]"
-              initial={{ opacity: 0, y: 34, scale: 0.94, filter: "blur(6px)" }}
-              animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-              transition={{ duration: 0.9, delay: 0.65, ease: EASE }}
+              initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 34, scale: 0.94, filter: "blur(6px)" }}
+              animate={isMobile ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+              transition={{ duration: isMobile ? 0.25 : 0.9, delay: isMobile ? 0.1 : 0.65, ease: EASE }}
             >
               <SceneVisual type={scene.visual} isMobile={isMobile} />
             </motion.div>
-            {index === scenes.length - 1 && <motion.button onClick={onComplete} initial={{ opacity: 0, y: 16, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: [1, 1.02, 1] }} transition={{ opacity: { duration: 0.7, delay: 0.9 }, y: { duration: 0.7, delay: 0.9, ease: EASE }, scale: { duration: 2.4, delay: 1.5, repeat: Infinity, ease: "easeInOut" } }} className="group mt-9 inline-flex items-center gap-2 rounded-sm border border-[#2f8f83]/60 bg-[#2f8f83]/10 px-5 py-3 text-[10px] font-medium tracking-[0.16em] text-white shadow-[0_0_35px_rgba(47,143,131,0.12)] transition hover:bg-[#2f8f83]/20">{completionLabel || (mode === "public" ? "GET STARTED" : "CONTINUE TO SETUP")} <ArrowRight className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1" /></motion.button>}
+            {index === scenes.length - 1 && <motion.button onClick={onComplete} initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.96 }} animate={isMobile ? { opacity: 1 } : { opacity: 1, y: 0, scale: [1, 1.02, 1] }} transition={isMobile ? { duration: 0.25, delay: 0.15 } : { opacity: { duration: 0.7, delay: 0.9 }, y: { duration: 0.7, delay: 0.9, ease: EASE }, scale: { duration: 2.4, delay: 1.5, repeat: Infinity, ease: "easeInOut" } }} className="group mt-9 inline-flex items-center gap-2 rounded-sm border border-[#2f8f83]/60 bg-[#2f8f83]/10 px-5 py-3 text-[10px] font-medium tracking-[0.16em] text-white shadow-[0_0_35px_rgba(47,143,131,0.12)] transition hover:bg-[#2f8f83]/20">{completionLabel || (mode === "public" ? "GET STARTED" : "CONTINUE TO SETUP")} <ArrowRight className="h-3.5 w-3.5 transition-transform duration-500 group-hover:translate-x-1" /></motion.button>}
           </motion.section>
         </AnimatePresence>
       </div>
 
-      <div className="absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 sm:bottom-10">
+      <div className="absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-1.5 sm:bottom-10">
         {scenes.map((_, segment) => <button key={segment} aria-label={"Go to scene " + (segment + 1)} onClick={() => setIndex(segment)} className={"relative h-1 w-3 overflow-hidden rounded-full bg-white/20 transition-all duration-500 sm:h-px sm:w-7 " + (segment === index ? "w-5 sm:w-12" : "hover:bg-white/45")}>
           {segment === index && <motion.span className="absolute inset-y-0 left-0 bg-[#2f8f83]" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 10.3, ease: "linear" }} />}
         </button>)}
