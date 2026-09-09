@@ -119,6 +119,8 @@ export default function CallScreener() {
         </div>
       }
 
+      <AIDisclaimer compact />
+
       <div className="rounded-2xl border border-border/50 bg-card p-5 sm:p-6 space-y-5">
         <div>
           <h2 className="text-lg font-semibold font-heading">How Call Shield works</h2>
