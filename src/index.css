@@ -1,6 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
+
+/* Mobile stability: prevent horizontal drift and browser zoom on form controls. */
+html, body, #root { width: 100%; min-width: 0; }
+html { overflow-x: hidden; }
+body { overflow-x: hidden; min-height: 100dvh; }
+button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+@media (max-width: 640px) {
+  input, textarea, select { font-size: 16px !important; }
+  img, video, canvas, svg { max-width: 100%; }
+}
+
 @tailwind components;
 @tailwind utilities;
 
