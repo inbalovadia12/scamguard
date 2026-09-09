@@ -9,7 +9,6 @@ import {
   Heart, Landmark, HelpCircle, Lock, Link2, TrendingUp, Package, Gift, HeartHandshake, Globe,
   AlertTriangle, Crown, X, EyeOff,
 } from "lucide-react";
-import { Link } from "react-router-dom";
 import TruncatedText from "@/components/TruncatedText";
 import AnalysisResult from "@/components/scam/AnalysisResult";
 import CommunityDataToggle from "@/components/community/CommunityDataToggle";
@@ -163,12 +162,6 @@ export default function Home() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="flex items-center justify-end gap-3 mb-4 sm:mb-6 text-xs">
-        <span className="text-muted-foreground">See What Vardin Does</span>
-        <Link to="/landing" className="font-medium text-primary hover:underline">
-          VIEW LANDING PAGE <span aria-hidden="true">↗</span>
-        </Link>
-      </div>
       <ConsentBanner />
 
       {credits && !result && !kidMode && (
