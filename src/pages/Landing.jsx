@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import LandingNav from "@/components/landing/LandingNav";
 import LandingHero from "@/components/landing/LandingHero";
 import LandingSections from "@/components/landing/LandingSections";
