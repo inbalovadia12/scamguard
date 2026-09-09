@@ -46,6 +46,7 @@ const productScenes = [
   { eyebrow: "LESSONS", title: "Protection gets stronger when you learn the pattern.", support: "Short, focused lessons turn real scam tactics into instincts you can recognize next time.", visual: "lessons" },
   { eyebrow: "LOCAL SCAM INTELLIGENCE", title: "Know what is happening around you.", support: "Local reports surface the scams, impersonations, and patterns appearing in your area.", visual: "local" },
   { eyebrow: "COMMUNITY", title: "Your experience can protect the next person.", support: "Report what you found, learn from other people, and turn isolated scams into shared intelligence.", visual: "community" },
+  { eyebrow: "VARDIN SCAMGUARD", title: "Ready to stay one step ahead?", support: "Everything you need to pause, check, understand, and act with confidence is ready when you are.", visual: "ready" },
 ];
 
 const textScenes = {
@@ -300,6 +301,17 @@ function CommunityVisual() {
   return <Surface className="w-[min(92vw,460px)] p-4 text-left"><div className="flex items-center gap-2"><Users className="h-4 w-4 text-[#83b9c5]" /><span className="text-[9px] tracking-[0.18em] text-white/40">COMMUNITY REPORTS</span></div><div className="mt-4 space-y-2">{posts.map(([name, text], i) => <motion.div key={name} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.14 }} className="flex items-start gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-3"><div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[9px] text-white/50">{name[0]}</div><div><div className="text-[9px] text-white/35">{name}</div><div className="mt-1 text-[10px] leading-4 text-white/62">{text}</div></div></motion.div>)}</div></Surface>;
 }
 
+function ReadyVisual() {
+  return (
+    <div className="relative flex h-40 w-[min(88vw,430px)] items-center justify-center">
+      {[0, 1, 2].map((ring) => <motion.div key={ring} className="absolute rounded-full border border-[#e45761]/20" style={{ width: 92 + ring * 54, height: 92 + ring * 54 }} initial={{ opacity: 0, scale: 0.72 }} animate={{ opacity: [0.15, 0.42, 0.15], scale: [0.88, 1.05, 0.88] }} transition={{ duration: 3.8 + ring * 0.8, repeat: Infinity, ease: "easeInOut", delay: ring * 0.35 }} />)}
+      <motion.div animate={{ y: [0, -8, 0], scale: [1, 1.04, 1] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }} className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/[0.14] bg-white/[0.055] shadow-[0_0_80px_rgba(228,87,97,0.16)]"><ShieldCheck className="h-8 w-8 text-white/80" /></motion.div>
+      <motion.span className="absolute h-1.5 w-1.5 rounded-full bg-[#83b9c5]" animate={{ x: [-130, 130], y: [22, -22], opacity: [0, 1, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }} />
+      <motion.span className="absolute h-1 w-1 rounded-full bg-[#e45761]" animate={{ x: [125, -125], y: [-18, 28], opacity: [0, 1, 0] }} transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: 0.8 }} />
+    </div>
+  );
+}
+
 function SceneVisual({ type }) {
   const visual = {
     assistant: <AssistantVisual />,
@@ -311,6 +323,7 @@ function SceneVisual({ type }) {
     lessons: <LessonsVisual />,
     local: <LocalVisual />,
     community: <CommunityVisual />,
+    ready: <ReadyVisual />,
     number: <div className="font-mono text-3xl tracking-[0.06em] text-white/78 sm:text-5xl">+1 212 555 0198</div>,
   }[type];
 
@@ -345,7 +358,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
   useEffect(() => {
     const reduced = document.documentElement.classList.contains("reduced-motion");
     if (reduced || index >= scenes.length - 1) return;
-    const timer = window.setTimeout(() => setIndex((value) => Math.min(value + 1, scenes.length - 1)), 9000);
+    const timer = window.setTimeout(() => setIndex((value) => Math.min(value + 1, scenes.length - 1)), 10500);
     return () => window.clearTimeout(timer);
   }, [index, scenes.length]);
 
@@ -418,7 +431,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
 
       <div className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 sm:bottom-10">
         {scenes.map((_, segment) => <button key={segment} aria-label={"Go to scene " + (segment + 1)} onClick={() => setIndex(segment)} className={"relative h-px w-4 overflow-hidden bg-white/20 transition-all duration-500 sm:w-7 " + (segment === index ? "sm:w-12" : "hover:bg-white/45")}>
-          {segment === index && <motion.span className="absolute inset-y-0 left-0 bg-[#e45761]" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 8.8, ease: "linear" }} />}
+          {segment === index && <motion.span className="absolute inset-y-0 left-0 bg-[#e45761]" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 10.3, ease: "linear" }} />}
         </button>)}
       </div>
       {index < scenes.length - 1 && <motion.button onClick={advance} animate={{ opacity: [0.42, 0.85, 0.42], y: [0, 3, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-16 left-1/2 z-20 -translate-x-1/2 text-[10px] tracking-[0.2em] text-white/42 transition hover:text-white sm:bottom-20">CONTINUE <span aria-hidden="true">↓</span></motion.button>}
