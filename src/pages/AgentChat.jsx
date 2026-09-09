@@ -6,6 +6,7 @@ import { Send, Loader2, Bot, X, Menu } from "lucide-react";
 import MessageBubble from "@/components/agent/MessageBubble";
 import ImageUpload from "@/components/scam/ImageUpload";
 import ConversationSidebar from "@/components/agent/ConversationSidebar";
+import AIDisclaimer from "@/components/AIDisclaimer";
 import LockedFeature from "@/components/LockedFeature";
 import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
 import { toast } from "@/components/ui/use-toast";
@@ -240,6 +241,7 @@ export default function AgentChat() {
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-4 p-4 pb-4">
+          <AIDisclaimer compact />
           {messages.length === 0 && (
             <div className="text-center py-16 space-y-3">
               <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
