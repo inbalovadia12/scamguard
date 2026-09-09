@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
+import AIDisclaimer from "@/components/AIDisclaimer";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Siren, DollarSign, Lock, CreditCard, MousePointerClick, Monitor, IdCard,
@@ -223,6 +224,8 @@ Respond with:
           Already sent money or shared your info? Don't panic — follow the exact recovery steps for your situation.
         </p>
       </div>
+
+      <AIDisclaimer highStakes />
 
       {/* Emergency Banner */}
       <div className="flex items-start gap-3 p-3 sm:p-4 rounded-2xl bg-destructive/5 border border-destructive/20 animate-slide-up" style={{ animationDelay: "30ms" }}>
