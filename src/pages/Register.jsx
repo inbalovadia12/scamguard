@@ -20,6 +20,7 @@ export default function Register() {
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [kidMode, setKidMode] = useState(false);
+  const [legalAccepted, setLegalAccepted] = useState(false);
 
   // Capture a referral code from ?ref= so it can be attributed after login
   useEffect(() => {
@@ -32,6 +33,10 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (!legalAccepted) {
+      setError("Please review and accept the Terms of Service and AI limitations before creating your account.");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -251,7 +256,18 @@ export default function Register() {
             🧒 Kid Mode — simpler language and kid-friendly scam protection
           </label>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
+        <label className="flex items-start gap-3 p-3 rounded-xl bg-warning/5 border border-warning/20 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={legalAccepted}
+            onChange={(e) => setLegalAccepted(e.target.checked)}
+            className="w-4 h-4 mt-0.5 rounded accent-primary flex-shrink-0"
+          />
+          <span className="text-xs text-muted-foreground leading-relaxed">
+            I agree to the <Link to="/terms" className="text-primary font-medium hover:underline" target="_blank">Terms of Service</Link> and understand that Vardin's AI analyses are automated predictions that may be inaccurate or incomplete. I will independently verify important information and will not rely solely on Vardin for financial, legal, medical, security, or other high-stakes decisions.
+          </span>
+        </label>
+        <Button type="submit" className="w-full h-12 font-medium" disabled={loading || !legalAccepted}>
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
