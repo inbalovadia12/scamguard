@@ -77,9 +77,14 @@ export default function Dashboard() {
           {kidMode ? "Check if messages are tricks, learn about scams, and stay safe online!" : t("dash.overview")}
         </p>
         {!kidMode && (
-          <button onClick={() => setShowFilm(true)} className="mt-3 text-[10px] font-medium tracking-[0.15em] text-primary transition hover:text-primary/70">
-            SEE WHAT VARDIN DOES <span aria-hidden="true">→</span>
-          </button>
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <button onClick={() => setShowFilm(true)} className="text-[10px] font-medium tracking-[0.15em] text-primary transition hover:text-primary/70">
+              SEE WHAT VARDIN DOES <span aria-hidden="true">→</span>
+            </button>
+            <Link to="/landing?view=1" className="text-[10px] font-medium tracking-[0.15em] text-muted-foreground transition hover:text-foreground">
+              VIEW LANDING PAGE <span aria-hidden="true">↗</span>
+            </Link>
+          </div>
         )}
       </div>
       )}
