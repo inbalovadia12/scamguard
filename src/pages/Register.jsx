@@ -85,10 +85,18 @@ export default function Register() {
   };
 
   const handleGoogle = () => {
+    if (!legalAccepted) {
+      setError("Please review and accept the Terms of Service and AI limitations first.");
+      return;
+    }
     base44.auth.loginWithProvider("google", "/dashboard");
   };
 
   const handleApple = () => {
+    if (!legalAccepted) {
+      setError("Please review and accept the Terms of Service and AI limitations first.");
+      return;
+    }
     base44.auth.loginWithProvider("apple", "/dashboard");
   };
 
