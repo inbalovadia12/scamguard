@@ -69,16 +69,9 @@ const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated, authError, navigateToLogin } = useAuth();
   const isPublicLanding = window.location.pathname === "/" || window.location.pathname === "/landing" || window.location.pathname.startsWith("/landing/");
 
-  // Resolve the browser session before deciding what to show at the landing URL.
-  // Returning users go straight back into the app; signed-out visitors see the landing page.
-  if (isPublicLanding && isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
+  // Never block the public landing page on auth resolution.
+  // Render it immediately so first paint is never a blank/white loading screen.
+  // Once the existing browser session is resolved, authenticated users are sent to the app.
   if (isPublicLanding && isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
