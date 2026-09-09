@@ -379,7 +379,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
       onMouseLeave={() => setPointer({ x: 0, y: 0 })}
       onTouchStart={(event) => { touchStart.current = event.changedTouches[0].clientX; }}
       onTouchEnd={(event) => { if (touchStart.current === null) return; const distance = event.changedTouches[0].clientX - touchStart.current; if (Math.abs(distance) > 45) distance < 0 ? advance() : retreat(); touchStart.current = null; }}
-      className="fixed inset-0 z-[100] min-h-[100dvh] overflow-hidden bg-[#070809] font-body text-white"
+      className="fixed inset-0 z-[100] h-[100dvh] w-screen overflow-hidden bg-[#070809] font-body text-white overscroll-none"
     >
       <motion.div
         className="pointer-events-none absolute -left-32 top-[10%] h-[38rem] w-[38rem] rounded-full bg-[#236f68]/[0.055] blur-[145px]"
@@ -395,17 +395,17 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
       <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.5)_0.7px,transparent_0.8px)] [background-size:42px_42px] [mask-image:radial-gradient(ellipse_at_center,black_25%,transparent_75%)] animate-[drift-grid_18s_linear_infinite]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-      <div className="absolute right-5 top-5 z-20 flex items-center gap-3 text-[10px] font-medium tracking-[0.2em] text-white/46 sm:right-8 sm:top-8">
+      <div className="absolute right-3 top-3 z-20 flex items-center gap-2 text-[9px] font-medium tracking-[0.16em] text-white/46 sm:right-8 sm:top-8 sm:gap-3 sm:text-[10px] sm:tracking-[0.2em]">
         <span>{String(index + 1).padStart(2, "0")} / {String(scenes.length).padStart(2, "0")}</span>
-        <button onClick={onExit} className="rounded-sm border border-white/[0.14] px-2.5 py-1.5 tracking-[0.12em] text-white/62 transition hover:border-white/35 hover:text-white">SKIP <span aria-hidden="true">→</span></button>
+        <button onClick={onExit} className="min-h-9 rounded-sm border border-white/[0.14] px-2.5 py-1.5 tracking-[0.12em] text-white/62 transition hover:border-white/35 hover:text-white touch-manipulation">SKIP <span aria-hidden="true">→</span></button>
       </div>
 
-      <div className="relative z-10 flex min-h-[100dvh] w-full items-center justify-center px-4 pb-24 pt-16 sm:px-8 sm:pb-28 sm:pt-16">
+      <div className="relative z-10 flex h-full min-h-0 w-full items-center justify-center overflow-y-auto overscroll-contain px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-[calc(4.5rem+env(safe-area-inset-top))] sm:px-8 sm:pb-28 sm:pt-16">
         <AnimatePresence mode="wait">
-          <motion.section key={index} initial={{ opacity: 0, y: 28, scale: 0.985, filter: "blur(7px)" }} animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }} exit={{ opacity: 0, y: -30, scale: 1.02, filter: "blur(7px)" }} transition={{ duration: 0.82, ease: EASE }} className="flex w-full max-w-4xl flex-col items-center text-center">
+          <motion.section key={index} initial={{ opacity: 0, y: 28, scale: 0.985, filter: "blur(7px)" }} animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }} exit={{ opacity: 0, y: -30, scale: 1.02, filter: "blur(7px)" }} transition={{ duration: 0.82, ease: EASE }} className="flex w-full max-w-4xl shrink-0 flex-col items-center justify-center text-center py-2 sm:py-0">
             <motion.div initial={{ opacity: 0, y: 12, letterSpacing: "0.5em" }} animate={{ opacity: 1, y: 0, letterSpacing: "0.32em" }} transition={{ duration: 0.65, ease: EASE }} className="text-[9px] font-medium tracking-[0.32em] text-white/46 sm:text-[10px]">{scene.eyebrow}</motion.div>
             <motion.h1
-              className="mt-5 w-full max-w-3xl text-center text-balance font-heading text-[clamp(2rem,8vw,5.6rem)] font-medium leading-[0.98] tracking-[-0.045em] text-white"
+              className="mt-4 w-full max-w-3xl px-1 text-center text-balance font-heading text-[clamp(1.9rem,8.5vw,5.6rem)] font-medium leading-[0.98] tracking-[-0.045em] text-white sm:mt-5 sm:px-0"
               style={{ x: pointer.x * 3, y: pointer.y * 2 }}
               transition={{ type: "spring", stiffness: 90, damping: 20 }}
             >
@@ -417,7 +417,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
             </motion.h1>
             {scene.support && <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="mt-5 max-w-md text-balance text-sm leading-6 text-white/48 sm:text-base">{scene.support}</motion.p>}
             <motion.div
-              className="mt-7 flex min-h-[96px] w-full items-center justify-center sm:mt-12"
+              className="mt-6 flex min-h-[84px] w-full max-w-full items-center justify-center overflow-visible sm:mt-12 sm:min-h-[96px]"
               initial={{ opacity: 0, y: 34, scale: 0.94, filter: "blur(6px)" }}
               animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
               transition={{ duration: 0.9, delay: 0.65, ease: EASE }}
@@ -430,7 +430,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
       </div>
 
       <div className="absolute bottom-8 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 sm:bottom-10">
-        {scenes.map((_, segment) => <button key={segment} aria-label={"Go to scene " + (segment + 1)} onClick={() => setIndex(segment)} className={"relative h-px w-4 overflow-hidden bg-white/20 transition-all duration-500 sm:w-7 " + (segment === index ? "sm:w-12" : "hover:bg-white/45")}>
+        {scenes.map((_, segment) => <button key={segment} aria-label={"Go to scene " + (segment + 1)} onClick={() => setIndex(segment)} className={"relative h-1 w-3 overflow-hidden rounded-full bg-white/20 transition-all duration-500 sm:h-px sm:w-7 " + (segment === index ? "w-5 sm:w-12" : "hover:bg-white/45")}>
           {segment === index && <motion.span className="absolute inset-y-0 left-0 bg-[#2f8f83]" initial={{ width: 0 }} animate={{ width: "100%" }} transition={{ duration: 10.3, ease: "linear" }} />}
         </button>)}
       </div>
