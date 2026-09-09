@@ -333,7 +333,7 @@ function SceneVisual({ type, isMobile = false }) {
     number: <div className="font-mono text-3xl tracking-[0.06em] text-white/78 sm:text-5xl">+1 212 555 0198</div>,
   }[type];
 
-  return visual ? <motion.div initial={{ opacity: 0, x: 90, y: 24, scale: 0.92, rotate: 1.5, filter: "blur(10px)" }} animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotate: 0, filter: "blur(0px)" }} exit={{ opacity: 0, x: -80, y: -16, scale: 1.03, rotate: -1.5, filter: "blur(8px)" }} transition={{ duration: 0.95, ease: EASE, delay: 0.2 }}>{visual}</motion.div> : null;
+  return visual ? <motion.div initial={{ opacity: 0, x: 70, y: 18, scale: 0.98 }} animate={{ opacity: 1, x: 0, y: 0, scale: 1 }} exit={{ opacity: 0, x: -60, y: -10, scale: 1.01 }} transition={{ duration: 0.7, ease: EASE, delay: 0.15 }}>{visual}</motion.div> : null;
 }
 
 export default function VardinCinematicExperience({ mode = "public", onExit, onComplete, completionLabel }) {
@@ -426,7 +426,7 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
 
       <div className="relative z-10 flex h-full min-h-0 w-full items-center justify-center overflow-hidden overscroll-none px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(4rem+env(safe-area-inset-top))] sm:px-8 sm:pb-28 sm:pt-16">
         <AnimatePresence mode="wait">
-          <motion.section key={index} initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 28, scale: 0.985, filter: "blur(7px)" }} animate={isMobile ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }} exit={isMobile ? { opacity: 0 } : { opacity: 0, y: -30, scale: 1.02, filter: "blur(7px)" }} transition={{ duration: isMobile ? 0.25 : 0.82, ease: EASE }} className="flex w-full max-w-4xl shrink-0 flex-col items-center justify-center text-center py-2 sm:py-0">
+          <motion.section key={index} initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 22, scale: 0.99 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={isMobile ? { opacity: 0 } : { opacity: 0, y: -20, scale: 1.01 }} transition={{ duration: isMobile ? 0.2 : 0.65, ease: EASE }} className="flex w-full max-w-4xl shrink-0 flex-col items-center justify-center text-center py-2 sm:py-0">
             <motion.div initial={{ opacity: 0, y: 12, letterSpacing: "0.5em" }} animate={{ opacity: 1, y: 0, letterSpacing: "0.32em" }} transition={{ duration: 0.65, ease: EASE }} className="text-[9px] font-medium tracking-[0.32em] text-white/46 sm:text-[10px]">{scene.eyebrow}</motion.div>
             <motion.h1
               className="mt-4 w-full max-w-3xl px-1 text-center text-balance font-heading text-[clamp(1.9rem,8.5vw,5.6rem)] font-medium leading-[0.98] tracking-[-0.045em] text-white sm:mt-5 sm:px-0"
@@ -442,9 +442,9 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
             {scene.support && <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.5, ease: EASE }} className="mt-4 w-full max-w-md px-2 text-balance text-sm leading-6 text-white/48 sm:mt-5 sm:px-0 sm:text-base">{scene.support}</motion.p>}
             <motion.div
               className="mt-6 flex min-h-[84px] w-full max-w-full items-center justify-center overflow-visible sm:mt-12 sm:min-h-[96px]"
-              initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 34, scale: 0.94, filter: "blur(6px)" }}
-              animate={isMobile ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-              transition={{ duration: isMobile ? 0.25 : 0.9, delay: isMobile ? 0.1 : 0.65, ease: EASE }}
+              initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 28, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: isMobile ? 0.2 : 0.7, delay: isMobile ? 0.08 : 0.45, ease: EASE }}
             >
               <SceneVisual type={scene.visual} isMobile={isMobile} />
             </motion.div>
