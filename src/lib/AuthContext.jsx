@@ -88,11 +88,10 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
     setAuthChecked(true);
 
+    // A failed session check means this browser is signed out. Keep the public
+    // landing page available instead of throwing during the render phase.
     if (lastError?.status === 401 || lastError?.status === 403) {
-      setAuthError({
-        type: 'auth_required',
-        message: 'Authentication required'
-      });
+      setAuthError(null);
     }
   };
 
