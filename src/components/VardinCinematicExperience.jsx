@@ -336,6 +336,15 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
   const touchStart = useRef(null);
   const wheelLock = useRef(false);
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 640px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener?.("change", update);
+    return () => media.removeEventListener?.("change", update);
+  }, []);
 
   const advance = () => {
     if (index < scenes.length - 1) setIndex((value) => value + 1);
@@ -375,20 +384,20 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
   return (
     <main
       onWheel={onWheel}
-      onMouseMove={(event) => setPointer({ x: (event.clientX / window.innerWidth - 0.5) * 2, y: (event.clientY / window.innerHeight - 0.5) * 2 })}
+      onMouseMove={(event) => { if (!isMobile) setPointer({ x: (event.clientX / window.innerWidth - 0.5) * 2, y: (event.clientY / window.innerHeight - 0.5) * 2 }); }}
       onMouseLeave={() => setPointer({ x: 0, y: 0 })}
       onTouchStart={(event) => { touchStart.current = event.changedTouches[0].clientX; }}
       onTouchEnd={(event) => { if (touchStart.current === null) return; const distance = event.changedTouches[0].clientX - touchStart.current; if (Math.abs(distance) > 45) distance < 0 ? advance() : retreat(); touchStart.current = null; }}
-      className="fixed inset-0 z-[100] h-[100dvh] w-screen overflow-hidden bg-[#070809] font-body text-white overscroll-none"
+      className="fixed inset-x-0 top-0 z-[100] h-[calc(100dvh+env(safe-area-inset-bottom))] min-h-screen w-full overflow-hidden bg-[#070809] font-body text-white overscroll-none"
     >
       <motion.div
         className="pointer-events-none absolute -left-32 top-[10%] h-[38rem] w-[38rem] rounded-full bg-[#236f68]/[0.055] blur-[145px]"
-        animate={{ x: pointer.x * 24, y: pointer.y * 18, scale: [1, 1.08, 1] }}
+        animate={{ x: isMobile ? 0 : pointer.x * 24, y: isMobile ? 0 : pointer.y * 18, scale: [1, 1.04, 1] }}
         transition={{ x: { duration: 1.2 }, y: { duration: 1.2 }, scale: { duration: 7, repeat: Infinity, ease: "easeInOut" } }}
       />
       <motion.div
         className="pointer-events-none absolute -right-40 bottom-[-12%] h-[40rem] w-[40rem] rounded-full bg-[#247b86]/[0.05] blur-[160px]"
-        animate={{ x: pointer.x * -18, y: pointer.y * -14, scale: [1.05, 1, 1.05] }}
+        animate={{ x: isMobile ? 0 : pointer.x * -18, y: isMobile ? 0 : pointer.y * -14, scale: [1.05, 1, 1.05] }}
         transition={{ x: { duration: 1.4 }, y: { duration: 1.4 }, scale: { duration: 8, repeat: Infinity, ease: "easeInOut" } }}
       />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(0,0,0,0.35)_100%)]" />
@@ -400,13 +409,13 @@ export default function VardinCinematicExperience({ mode = "public", onExit, onC
         <button onClick={onExit} className="min-h-9 rounded-sm border border-white/[0.14] px-2.5 py-1.5 tracking-[0.12em] text-white/62 transition hover:border-white/35 hover:text-white touch-manipulation">SKIP <span aria-hidden="true">→</span></button>
       </div>
 
-      <div className="relative z-10 flex h-full min-h-0 w-full items-center justify-center overflow-y-auto overscroll-contain px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-[calc(4.5rem+env(safe-area-inset-top))] sm:px-8 sm:pb-28 sm:pt-16">
+      <div className="relative z-10 flex h-full min-h-0 w-full items-center justify-center overflow-y-auto overscroll-contain px-3 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(4rem+env(safe-area-inset-top))] sm:px-8 sm:pb-28 sm:pt-16">
         <AnimatePresence mode="wait">
           <motion.section key={index} initial={{ opacity: 0, y: 28, scale: 0.985, filter: "blur(7px)" }} animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }} exit={{ opacity: 0, y: -30, scale: 1.02, filter: "blur(7px)" }} transition={{ duration: 0.82, ease: EASE }} className="flex w-full max-w-4xl shrink-0 flex-col items-center justify-center text-center py-2 sm:py-0">
             <motion.div initial={{ opacity: 0, y: 12, letterSpacing: "0.5em" }} animate={{ opacity: 1, y: 0, letterSpacing: "0.32em" }} transition={{ duration: 0.65, ease: EASE }} className="text-[9px] font-medium tracking-[0.32em] text-white/46 sm:text-[10px]">{scene.eyebrow}</motion.div>
             <motion.h1
               className="mt-4 w-full max-w-3xl px-1 text-center text-balance font-heading text-[clamp(1.9rem,8.5vw,5.6rem)] font-medium leading-[0.98] tracking-[-0.045em] text-white sm:mt-5 sm:px-0"
-              style={{ x: pointer.x * 3, y: pointer.y * 2 }}
+              style={{ x: isMobile ? 0 : pointer.x * 3, y: isMobile ? 0 : pointer.y * 2 }}
               transition={{ type: "spring", stiffness: 90, damping: 20 }}
             >
               {scene.title.includes("<em>") ? (
