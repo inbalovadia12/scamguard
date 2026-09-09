@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, ArrowRight, Users, Zap, Bot, ScanLine, Play } from "lucide-react";
@@ -13,22 +14,35 @@ const stats = [
 
 export default function LandingHero() {
   const [showCinematic, setShowCinematic] = useState(false);
+  const navigate = useNavigate();
 
-  const openCinematic = () => {
+  // The cinematic is part of the first-time sign-up journey, not a general
+  // landing-page preview. Once a visitor starts sign-up, show it once and then
+  // continue to registration.
+  const startSignup = () => {
+    let alreadySeen = false;
+    try { alreadySeen = localStorage.getItem("vardin_cinematic_seen_before_signup") === "1"; } catch {}
+    if (alreadySeen) {
+      navigate("/register");
+      return;
+    }
     try { localStorage.setItem("vardin_cinematic_seen_before_signup", "1"); } catch {}
     setShowCinematic(true);
   };
 
-  const closeCinematic = () => setShowCinematic(false);
+  const finishSignupIntro = () => {
+    setShowCinematic(false);
+    navigate("/register");
+  };
 
   return (
     <>
       {showCinematic && (
         <VardinCinematicExperience
           mode="public"
-          onExit={closeCinematic}
-          onComplete={closeCinematic}
-          completionLabel="BACK TO VARDIN"
+          onExit={finishSignupIntro}
+          onComplete={finishSignupIntro}
+          completionLabel="CONTINUE TO SIGN UP"
         />
       )}
       <section className="relative overflow-hidden">
@@ -49,27 +63,26 @@ export default function LandingHero() {
             phone number and get an instant risk assessment.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 animate-slide-up">
-            <Link to="/register">
-              <Button size="lg" className="w-full sm:w-auto h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20">
-                Try Free — 10 Credits
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
+            <Button onClick={startSignup} size="lg" className="w-full sm:w-auto h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20">
+              Try Free — 10 Credits
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
             <Link to="/register">
               <Button size="lg" variant="outline" className="w-full sm:w-auto h-12 px-8 text-base">
                 <Users className="w-4 h-4 mr-1" />
                 Protect Your Family
               </Button>
             </Link>
-            <Button
-              size="lg"
-              variant="ghost"
-              onClick={openCinematic}
-              className="w-full sm:w-auto h-12 px-6 text-base font-semibold text-primary hover:text-primary"
-            >
-              <Play className="w-4 h-4 mr-1.5 fill-current" />
-              See What Vardin Does
-            </Button>
+            <Link to="/landing" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                variant="ghost"
+                className="w-full sm:w-auto h-12 px-6 text-base font-semibold text-primary hover:text-primary"
+              >
+                See What Vardin Does
+                <ArrowRight className="w-4 h-4 ml-1.5" />
+              </Button>
+            </Link>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             No credit card required • Cancel anytime
