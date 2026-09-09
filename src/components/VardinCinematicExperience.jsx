@@ -284,7 +284,7 @@ function RecoveryVisual() {
 
 function UniversalVisual() {
   const types = [["MSG", "message"], ["IMG", "image"], ["CRYPTO", "wallet"], ["LINK", "web"]];
-  return <div className="grid w-[min(92vw,500px)] grid-cols-2 gap-2 sm:grid-cols-4">{types.map(([label, sub], i) => <motion.div key={label} initial={{ opacity: 0, y: 20, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: i * 0.1, duration: 0.55, ease: EASE }}><Surface className="h-24 p-3 text-left"><div className="flex h-full flex-col justify-between"><ScanLine className="h-4 w-4 text-[#83b9c5]" /><div><div className="text-[10px] font-medium text-white/75">{label}</div><div className="mt-0.5 text-[8px] text-white/30">{sub}</div></div></Surface></div>)}</div>;
+  return <div className="grid w-[min(92vw,500px)] grid-cols-2 gap-2 sm:grid-cols-4">{types.map(([label, sub], i) => <motion.div key={label} initial={{ opacity: 0, y: 20, scale: 0.92 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: i * 0.1, duration: 0.55, ease: EASE }}><Surface className="h-24 p-3 text-left"><div className="flex h-full flex-col justify-between"><ScanLine className="h-4 w-4 text-[#83b9c5]" /><div><div className="text-[10px] font-medium text-white/75">{label}</div><div className="mt-0.5 text-[8px] text-white/30">{sub}</div></div></div></Surface></motion.div>)}</div>;
 }
 
 function LessonsVisual() {
