@@ -82,7 +82,18 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="startup-screen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f7fbfa;font-family:Inter,system-ui,-apple-system,sans-serif;color:#115e59">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:14px">
+          <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#14b8a6,#0d9488);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(13,148,136,.2)">
+            <img src="/favicon.svg" alt="" width="32" height="32" style="display:block" />
+          </div>
+          <div style="font-size:20px;font-weight:700;letter-spacing:-.02em">Vardin</div>
+          <div style="width:24px;height:24px;border:3px solid rgba(13,148,136,.18);border-top-color:#0d9488;border-radius:50%;animation:vardin-startup-spin .8s linear infinite"></div>
+        </div>
+      </div>
+    </div>
+    <style>@keyframes vardin-startup-spin{to{transform:rotate(360deg)}}</style>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
