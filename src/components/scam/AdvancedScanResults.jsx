@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Copy, Share2, Download, RotateCcw, CheckCircle2, ShieldAlert, ShieldCheck, QrCode, ExternalLink, FileText, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import RiskBadge, { getRiskLevelFromScore, getRiskBarColor } from "@/components/scam/RiskBadge";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 function QRDestinationCard({ data }) {
   if (data.scan_type !== "qr") return null;
@@ -260,6 +261,8 @@ export default function AdvancedScanResults({ data, onRescan }) {
       {mode === "risk_score" && <RiskScoreResult a={a} />}
       {mode === "red_flags" && <RedFlagsResult a={a} />}
       {mode === "detailed" && <DetailedResult a={a} scanType={data.scan_type} />}
+
+      <AIDisclaimer compact />
 
       {data.timestamp && (
         <p className="text-xs text-muted-foreground">Scanned on {new Date(data.timestamp).toLocaleString()}</p>
