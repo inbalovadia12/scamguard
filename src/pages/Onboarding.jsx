@@ -29,9 +29,14 @@ export default function Onboarding() {
   useEffect(() => {
     let active = true;
     base44.auth.me()
-      .then((user) => {
+      .then(async (user) => {
         if (!active) return;
-        setShowCinematicIntro(!user?.has_seen_vardin_cinematic_intro);
+        let seenBeforeSignup = false;
+        try { seenBeforeSignup = localStorage.getItem("vardin_cinematic_seen_before_signup") === "1"; } catch {}
+        if (seenBeforeSignup && !user?.has_seen_vardin_cinematic_intro) {
+          try { await base44.auth.updateMe({ has_seen_vardin_cinematic_intro: true }); } catch {}
+        }
+        setShowCinematicIntro(!user?.has_seen_vardin_cinematic_intro && !seenBeforeSignup);
       })
       .catch(() => {
         if (active) setShowCinematicIntro(false);
