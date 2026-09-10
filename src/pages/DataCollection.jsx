@@ -15,7 +15,7 @@ const rows = [
 
 export default function DataCollection() {
   return (
-    <div className="w-full max-w-5xl mx-auto pb-10 sm:pb-16 break-words">
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-16 break-words [overflow-wrap:anywhere]">
       <header className="border-b border-border/60 pb-7 sm:pb-10">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Legal notice</p>
         <h1 className="mt-3 text-[2rem] leading-tight sm:text-4xl font-bold tracking-tight">Data Collection Notice</h1>
@@ -25,7 +25,7 @@ export default function DataCollection() {
         </p>
       </header>
 
-      <section className="py-7 sm:py-8 border-b border-border/60">
+      <section className="py-7 sm:py-8 border-b border-border/60 min-w-0">
         <h2 className="text-lg sm:text-xl font-semibold">What we collect</h2>
         <div className="mt-4 sm:mt-5 space-y-3 md:hidden">
           {rows.map(([category, examples, purpose]) => (
