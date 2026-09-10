@@ -68,7 +68,13 @@ import AppLayout from '@/components/layout/AppLayout';
 
 const RootEntry = () => {
   const { isLoadingAuth, isAuthenticated, authChecked } = useAuth();
-  const isLandingPreview = new URLSearchParams(window.location.search).get("view") === "1";
+  const hasVisitedSite = (() => {
+    try {
+      return window.localStorage.getItem("vardin_site_visited") === "1";
+    } catch {
+      return false;
+    }
+  })();
 
   // Root is a deterministic entry point: authenticated users enter the app,
   // while first-time/signed-out visitors see the original landing page.
@@ -87,7 +93,13 @@ const RootEntry = () => {
     );
   }
 
-  if (isAuthenticated && !isLandingPreview) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+
+  // The real landing page is only the first-time browser entry point. Once this
+  // browser has visited Vardin before, an unauthenticated return goes to login
+  // instead of showing the landing page again. The dedicated /landing?view=1
+  // route remains the in-app, view-only landing experience.
+  if (hasVisitedSite) return <Navigate to="/login" replace />;
   return <Landing />;
 };
 
