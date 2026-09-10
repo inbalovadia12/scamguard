@@ -155,12 +155,13 @@ function UsersTab() {
     }
     setGranting((prev) => ({ ...prev, [userId]: true }));
     try {
-      const response = await base44.functions.invoke("grantAdminCredits", { user_id: userId, amount });
-      const data = response.data || response;
-      if (data.error) throw new Error(data.error);
-      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, admin_credit_balance: data.admin_credit_balance } : u));
-      setGrantAmounts((prev) => ({ ...prev, [userId]: "" }));
       const target = users.find((u) => u.id === userId);
+      if (!target) throw new Error("User not found");
+      const currentBalance = Math.max(0, Number(target.admin_credit_balance) || 0);
+      const newBalance = currentBalance + amount;
+      await base44.entities.User.update(userId, { admin_credit_balance: newBalance });
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, admin_credit_balance: newBalance } : u));
+      setGrantAmounts((prev) => ({ ...prev, [userId]: "" }));
       toast({ title: "Credits granted", description: `${amount} credits added to ${target?.full_name || target?.email || "user"}.` });
     } catch (e) {
       toast({ title: "Could not grant credits", description: e.message, variant: "destructive" });
