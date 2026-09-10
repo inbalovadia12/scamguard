@@ -69,6 +69,7 @@ import AppLayout from '@/components/layout/AppLayout';
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated, authChecked, authError } = useAuth();
   const isRootLanding = window.location.pathname === "/";
+  const isLandingPreview = isRootLanding && new URLSearchParams(window.location.search).get("view") === "1";
   const isLandingPage = window.location.pathname === "/landing" || window.location.pathname.startsWith("/landing/");
   const isPublicLanding = isRootLanding || isLandingPage;
 
@@ -94,7 +95,7 @@ const AuthenticatedApp = () => {
 
   // Only the root URL is the first-time visitor entry point. Keep /landing
   // available from inside the app so returning users can explicitly view it.
-  if (isRootLanding && isAuthenticated) {
+  if (isRootLanding && isAuthenticated && !isLandingPreview) {
     return <Navigate to="/dashboard" replace />;
   }
 
