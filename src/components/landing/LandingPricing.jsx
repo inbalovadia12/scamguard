@@ -38,7 +38,9 @@ const plans = [
   },
 ];
 
-export default function LandingPricing() {
+export default function LandingPricing({ preview = false }) {
+  const ctaHref = preview ? "/" : "/register";
+
   return (
     <section id="pricing" className="py-24 border-y border-border/50 bg-card/50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -71,7 +73,7 @@ export default function LandingPricing() {
                 <span className="text-sm text-muted-foreground">{plan.period}</span>
               </div>
               <p className="text-sm font-medium text-primary mt-1">{plan.credits}</p>
-              <Link to="/register" className="block mt-5">
+              <Link to={ctaHref} className="block mt-5">
                 <Button className={`w-full ${plan.highlighted ? "bg-gradient-to-r from-primary to-primary/80" : ""}`} variant={plan.highlighted ? "default" : "outline"}>
                   Get Started <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
