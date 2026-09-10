@@ -8,10 +8,10 @@ const plans = [
     price: "$0",
     period: "/month",
     description: "For occasional checks",
-    credits: "10 analyses/month",
+    credits: "30 AI credits/month",
     icon: Shield,
     color: "from-muted-foreground/40 to-muted-foreground/20",
-    features: ["10 AI analyses per month", "Basic risk scores", "Community reports", "1 protected family member"],
+    features: ["30 AI credits/month", "Message Check", "Vardin AI Assistant", "Basic risk scores"],
     highlighted: false,
   },
   {
@@ -19,10 +19,10 @@ const plans = [
     price: "$40",
     period: "/year",
     description: "For proactive individuals",
-    credits: "100 analyses/month",
+    credits: "250 AI credits/month",
     icon: Zap,
     color: "from-primary to-primary/80",
-    features: ["100 AI analyses/month", "AI explanations", "Email & SMS analysis", "Marketplace protection", "Screenshot analysis", "Priority support"],
+    features: ["250 AI credits/month", "Crypto link & investment scanning", "URL & link scanning", "Phone & image checks", "Scam Exposer", "Browser Extension"],
     highlighted: true,
   },
   {
@@ -30,10 +30,10 @@ const plans = [
     price: "$80",
     period: "/year",
     description: "Complete family protection",
-    credits: "250 analyses/month",
+    credits: "500 AI credits/month",
     icon: Sparkles,
     color: "from-chart-5 to-chart-5/80",
-    features: ["250 AI analyses/month", "Family protection system", "Shared scam alerts", "Unlimited family members", "Advanced AI models", "Premium analytics"],
+    features: ["500 AI credits/month", "Universal Scanner", "Live Guard", "Local Scam Intelligence", "Faster processing", "Early access to new features"]
     highlighted: false,
   },
 ];
