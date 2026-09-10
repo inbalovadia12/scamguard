@@ -134,8 +134,8 @@ export default function Dashboard() {
         <StatCard
           icon={Zap}
           label={t("dash.credits_left")}
-          value={`${credits.remaining}/${credits.limit}`}
-          sub={PLAN_NAMES[credits.plan]}
+          value={credits.remaining}
+          sub={`${PLAN_NAMES[credits.plan]}${credits.adminCreditBalance > 0 ? ` · +${credits.adminCreditBalance} bonus` : ""}`}
           pct={creditPct}
           animate="anim-delay-1"
         />
