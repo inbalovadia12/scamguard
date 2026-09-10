@@ -51,12 +51,31 @@ export default function CryptoScanner() {
     setAnalyzing(true);
     setResult(null);
     try {
-      const res = await base44.functions.invoke("scanCrypto", {
-        mode,
-        input: text,
-        blockchain: mode === "address" ? blockchain : undefined,
-      });
-      const data = res.data;
+      // Investment/giveaway links should use the same URL-analysis pipeline as
+      // Message Check's Link mode so Vardin inspects the actual destination,
+      // not just the words surrounding the link.
+      const urlMatch = text.match(/https?:\/\/[^\s<>"']+/i);
+      let data;
+      if (mode === "investment" && urlMatch) {
+        const urlRes = await base44.functions.invoke("scanUrl", { url: urlMatch[0] });
+        data = {
+          ...urlRes.data,
+          is_likely_scam: urlRes.data?.risk_level === "high" || (urlRes.data?.risk_score ?? 0) >= 71,
+          red_flags: urlRes.data?.red_flags || urlRes.data?.tactics_detected || [],
+          sources: urlRes.data?.sources || [],
+          contract_verified: false,
+          honeypot_risk: "Unknown",
+          rug_pull_risk: "Unknown",
+          liquidity_status: "Not applicable to URL scan",
+        };
+      } else {
+        const res = await base44.functions.invoke("scanCrypto", {
+          mode,
+          input: text,
+          blockchain: mode === "address" ? blockchain : undefined,
+        });
+        data = res.data;
+      }
       await base44.entities.ScamAnalysis.create({
         message_text: redactMessage(text),
         message_type: "crypto_investment",
