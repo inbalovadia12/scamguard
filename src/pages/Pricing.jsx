@@ -24,7 +24,7 @@ const plans = [
     price: "$75",
     period: "/year",
     description: "For proactive individuals",
-    credits: "250 AI credits/month",
+    credits: "350 AI credits/month",
     features: PLAN_FEATURES.plus,
     icon: Zap,
     color: "from-primary to-primary/80",
