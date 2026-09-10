@@ -1,4 +1,4 @@
-export const PLAN_LIMITS: Record<string, number> = { starter: 30, plus: 250, premium: 500 };
+export const PLAN_LIMITS: Record<string, number> = { starter: 30, plus: 350, premium: 500 };
 
 export function normalizePlan(plan: string | undefined) {
   if (plan === "free" || !plan) return "starter";
