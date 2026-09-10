@@ -174,7 +174,7 @@ These Terms, together with the Privacy Policy, Data Collection Notice, and any a
 
 export default function Terms() {
   return (
-    <div className="w-full max-w-4xl mx-auto pb-10 sm:pb-16 break-words [overflow-wrap:anywhere]">
+    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-16 break-words [overflow-wrap:anywhere]">
       <header className="border-b border-border pb-7 sm:pb-8 mb-7 sm:mb-8">
         <div className="flex items-center gap-3 text-primary mb-5">
           <FileText className="w-6 h-6" />
@@ -188,7 +188,7 @@ export default function Terms() {
       </header>
 
       <div className="mb-7 sm:mb-8 border border-primary/20 bg-primary/5 rounded-xl p-4 sm:p-6 overflow-hidden">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 min-w-0">
           <ShieldCheck className="w-5 h-5 text-primary mt-0.5 shrink-0" />
           <div>
             <h2 className="font-semibold">Please read before using Vardin</h2>
