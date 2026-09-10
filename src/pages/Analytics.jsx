@@ -74,7 +74,7 @@ export default function Analytics() {
   if (!credits?.isPaid) {
     return (
       <LockedFeature
-        title="Premium Feature"
+        title="Plus Feature"
         description="The Advanced Analytics Dashboard is a Plus plan feature. Upgrade to access scam trend analysis, risk distribution charts, and CSV exports."
         buttonLabel="Upgrade to Plus"
       />
