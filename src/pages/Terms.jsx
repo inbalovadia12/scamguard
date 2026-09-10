@@ -65,7 +65,7 @@ If you use Vardin to protect another person, you are responsible for using the f
     title: "8. Children and Minors",
     body: `Vardin includes family-oriented and educational features. Those features do not mean that Vardin may lawfully collect personal information from every child without parental authorization. Where applicable law requires parental consent or another special authorization for a minor's use of the Service, the required parent or guardian must provide it.
 
-Parents and guardians are responsible for supervising minors' use of the Service and for ensuring that their use complies with applicable law. If you believe a child has provided personal information to Vardin in circumstances where consent was required but was not obtained, contact us at support@vardin.app so the matter can be reviewed.`
+Parents and guardians are responsible for supervising minors' use of the Service and for ensuring that their use complies with applicable law. If you believe a child has provided personal information to Vardin in circumstances where consent was required but was not obtained, contact us at inbal5252@gmail.com so the matter can be reviewed.`
   },
   {
     title: "9. Acceptable Use",
@@ -144,7 +144,7 @@ This obligation does not apply to the extent a claim results from Vardin's own u
   },
   {
     title: "18. Disputes and Applicable Law",
-    body: `Before starting formal proceedings, you agree to give Vardin a reasonable opportunity to investigate and resolve a dispute by contacting support@vardin.app with a description of the issue and the requested resolution. Nothing in this section prevents you from contacting a regulator or exercising a consumer right that applicable law makes non-waivable.
+    body: `Before starting formal proceedings, you agree to give Vardin a reasonable opportunity to investigate and resolve a dispute by contacting inbal5252@gmail.com with a description of the issue and the requested resolution. Nothing in this section prevents you from contacting a regulator or exercising a consumer right that applicable law makes non-waivable.
 
 These Terms are governed by the laws applicable to the jurisdiction in which Vardin's operating entity is established, without regard to conflict-of-law principles, except where mandatory consumer-protection law requires otherwise. Subject to mandatory law, disputes that cannot be resolved informally will be brought before a court with appropriate jurisdiction over the parties and the dispute.
 
@@ -168,26 +168,26 @@ These Terms, together with the Privacy Policy, Data Collection Notice, and any a
   },
   {
     title: "21. Contact",
-    body: `Questions, legal notices, privacy requests, and complaints concerning these Terms may be sent to support@vardin.app. Please include enough information for us to identify the relevant account or issue without unnecessarily sending sensitive personal information.`
+    body: `Questions, legal notices, privacy requests, and complaints concerning these Terms may be sent to inbal5252@gmail.com. Please include enough information for us to identify the relevant account or issue without unnecessarily sending sensitive personal information.`
   },
 ];
 
 export default function Terms() {
   return (
-    <div className="max-w-4xl mx-auto pb-16">
-      <header className="border-b border-border pb-8 mb-8">
+    <div className="w-full max-w-4xl mx-auto pb-10 sm:pb-16 break-words [overflow-wrap:anywhere]">
+      <header className="border-b border-border pb-7 sm:pb-8 mb-7 sm:mb-8">
         <div className="flex items-center gap-3 text-primary mb-5">
           <FileText className="w-6 h-6" />
           <span className="text-sm font-semibold tracking-wide uppercase">Legal</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight font-heading">Terms of Service</h1>
+        <h1 className="text-[2rem] leading-tight sm:text-4xl font-bold tracking-tight font-heading">Terms of Service</h1>
         <p className="mt-3 text-sm text-muted-foreground">Last updated: September 2026</p>
-        <p className="mt-5 max-w-3xl text-sm sm:text-base leading-7 text-muted-foreground">
+        <p className="mt-4 sm:mt-5 max-w-3xl text-[14px] sm:text-base leading-6 sm:leading-7 text-muted-foreground break-words">
           These Terms govern your use of Vardin and explain the rules, limitations, payment terms, AI limitations, and legal responsibilities that apply when you use the Service.
         </p>
       </header>
 
-      <div className="mb-8 border border-primary/20 bg-primary/5 rounded-xl p-5 sm:p-6">
+      <div className="mb-7 sm:mb-8 border border-primary/20 bg-primary/5 rounded-xl p-4 sm:p-6 overflow-hidden">
         <div className="flex items-start gap-3">
           <ShieldCheck className="w-5 h-5 text-primary mt-0.5 shrink-0" />
           <div>
@@ -199,17 +199,17 @@ export default function Terms() {
         </div>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-0">
         {sections.map((section) => (
-          <section key={section.title} className="border-b border-border/70 pb-8 last:border-0">
-            <h2 className="text-lg sm:text-xl font-semibold tracking-tight">{section.title}</h2>
-            <p className="mt-3 text-sm sm:text-[15px] leading-7 text-muted-foreground whitespace-pre-line">{section.body}</p>
+          <section key={section.title} className="border-b border-border/70 py-7 sm:py-8 last:border-0">
+            <h2 className="text-lg sm:text-xl leading-6 sm:leading-7 font-semibold tracking-tight">{section.title}</h2>
+            <p className="mt-3 text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-muted-foreground whitespace-pre-line break-words [overflow-wrap:anywhere]">{section.body}</p>
           </section>
         ))}
       </div>
 
-      <footer className="mt-8 pt-6 border-t border-border text-sm text-muted-foreground">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <footer className="mt-7 sm:mt-8 pt-6 border-t border-border text-sm text-muted-foreground break-words [overflow-wrap:anywhere]">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-x-5 sm:gap-y-2">
           <Link to="/privacy" className="text-primary hover:underline inline-flex items-center gap-1">
             Privacy Policy <ArrowRight className="w-3.5 h-3.5" />
           </Link>
