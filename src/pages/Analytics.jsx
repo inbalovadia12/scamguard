@@ -31,7 +31,7 @@ export default function Analytics() {
       const creditStatus = await getCreditStatus();
       setCredits(creditStatus);
 
-      if (!creditStatus.isPremiumPlan) {
+      if (!creditStatus.isPaid) {
         setLoading(false);
         return;
       }
@@ -71,12 +71,12 @@ export default function Analytics() {
     );
   }
 
-  if (!credits?.isPremiumPlan) {
+  if (!credits?.isPaid) {
     return (
       <LockedFeature
         title="Premium Feature"
-        description="The Advanced Analytics Dashboard is a Premium plan feature. Upgrade to access scam trend analysis, risk distribution charts, and CSV exports."
-        buttonLabel="Upgrade to Premium"
+        description="The Advanced Analytics Dashboard is a Plus plan feature. Upgrade to access scam trend analysis, risk distribution charts, and CSV exports."
+        buttonLabel="Upgrade to Plus"
       />
     );
   }
