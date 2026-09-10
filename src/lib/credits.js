@@ -16,7 +16,7 @@ export const CREDIT_COSTS = {
 
 export const PLAN_LIMITS = {
   starter: 30,
-  plus: 250,
+  plus: 350,
   premium: 500,
 };
 
@@ -49,7 +49,7 @@ export const PLAN_FEATURES = {
   ],
   plus: [
     "Everything in Starter, plus:",
-    "250 AI credits per month",
+    "350 AI credits per month",
     "Crypto link & investment message scanning",
     "URL & link scanning with live web checks",
     "Phone number lookup & caller check",
