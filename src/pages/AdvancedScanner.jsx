@@ -35,7 +35,7 @@ export default function AdvancedScanner() {
   const selectedType = SCAN_TYPES.find((t) => t.value === scanType);
   const cost = getScanCost(scanType, answerType);
   const outOfCredits = credits && !credits.canAnalyze;
-  const isPaid = credits?.isPaid;
+  const isPremium = credits?.isPremiumPlan;
   const insufficientCredits = credits && credits.remaining > 0 && credits.remaining < cost;
 
   const canScan = () => {
@@ -124,7 +124,7 @@ export default function AdvancedScanner() {
   };
 
   // Premium gate
-  if (credits && !isPaid) {
+  if (credits && !isPremium) {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="text-center space-y-3 mb-8 animate-slide-up">
@@ -142,7 +142,7 @@ export default function AdvancedScanner() {
           </div>
           <h3 className="font-semibold text-lg">Premium Feature</h3>
           <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-            The Advanced Scanner is available on Plus and Premium plans. Upgrade to access all scan types, VirusTotal integration, and detailed reports.
+            The Universal Scanner is one of Vardin's most resource-intensive tools, combining advanced page, QR, file, screenshot, and threat-intelligence analysis. It is available on Premium.
           </p>
           <Link to="/pricing">
             <Button className="gap-2 bg-gradient-to-r from-primary to-primary/80">
@@ -169,7 +169,7 @@ export default function AdvancedScanner() {
       </div>
 
       {scanning ?
-      <LongLoadingScreen type={scanType === "url" || scanType === "qr" ? "url" : "scanner"} /> :
+      <LongLoadingScreen type="universal" /> :
       result ?
       <div className="space-y-6 animate-scale-in">
           <div className="flex items-center justify-between">
