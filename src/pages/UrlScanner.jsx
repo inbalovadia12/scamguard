@@ -104,7 +104,7 @@ export default function UrlScanner() {
     return (
       <LockedFeature
         title="Not Enough Credits"
-        description={`URL scans use ${CREDIT_COSTS.URL_SCAN} credits each. You have ${credits.remaining} / ${credits.limit} credits left. Your credits reset next month, or upgrade for more.`}
+        description={`URL scans use ${CREDIT_COSTS.URL_SCAN} credits each. You have ${credits.remaining} total credits left${credits.adminCreditBalance > 0 ? `, including ${credits.adminCreditBalance} admin bonus` : ""}. Monthly credits reset next month, or upgrade for more.`}
         buttonLabel="Manage Subscription"
       />
     );
@@ -158,7 +158,7 @@ export default function UrlScanner() {
 
       {credits && (
         <div className="text-center text-xs text-muted-foreground">
-          {credits.remaining} / {credits.limit} credits left
+          {credits.remaining} credits left{credits.adminCreditBalance > 0 ? ` · ${credits.adminCreditBalance} bonus` : ""}
         </div>
       )}
 
