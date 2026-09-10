@@ -135,6 +135,9 @@ export const AuthProvider = ({ children }) => {
     }
 
     console.warn('User auth check failed after startup retries:', lastError);
+    // Never leave the router waiting forever. A browser/network failure is
+    // treated as signed out after the bounded retry window, so the UI can
+    // always render a recovery/login route without requiring a manual refresh.
     setIsLoadingAuth(false);
     setIsAuthenticated(false);
     setAuthChecked(true);
