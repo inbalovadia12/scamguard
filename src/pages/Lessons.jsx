@@ -47,7 +47,7 @@ export default function Lessons() {
     const init = async () => {
       const status = await getCreditStatus();
       setCredits(status);
-      if (!status.isPaid) { setLoading(false); return; }
+      if (!status.isPremiumPlan) { setLoading(false); return; }
 
       try {
         const allProgress = await base44.entities.LessonProgress.list();
@@ -126,12 +126,12 @@ export default function Lessons() {
     );
   }
 
-  if (credits && !credits.isPaid) {
+  if (credits && !credits.isPremiumPlan) {
     return (
       <LockedFeature
-        title="Learning Center — Plus Feature"
-        description="Interactive lessons, quizzes, XP, and achievement badges to help you master scam detection. Available on Plus and Premium."
-        buttonLabel="Upgrade to Plus"
+        title="Premium Learning Center"
+        description="Interactive lessons, quizzes, XP, and achievement badges to help you master scam detection. Available exclusively on Premium."
+        buttonLabel="Upgrade to Premium"
         icon={GraduationCap}
       />
     );
