@@ -16,15 +16,31 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { checkUserAuth } = useAuth();
+  const { isAuthenticated, authChecked, checkUserAuth } = useAuth();
+
+  // A returning customer should never be asked to enter credentials again while
+  // the browser still has a valid Vardin session. This is especially important
+  // when the user visits the public landing page and taps "Log in".
+  React.useEffect(() => {
+    if (authChecked && isAuthenticated) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [authChecked, isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await base44.auth.loginViaEmailPassword(email, password);
-      
+      const result = await base44.auth.loginViaEmailPassword(email, password);
+
+      // Explicitly persist the issued session token when the SDK returns one.
+      // This makes email/password sessions survive navigation back to the public
+      // landing page and subsequent visits in the same browser.
+      if (result?.access_token) {
+        base44.auth.setToken(result.access_token);
+      }
+
       // Wait for auth context to update before redirecting
       await checkUserAuth();
       
