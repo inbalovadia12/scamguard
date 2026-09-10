@@ -36,7 +36,7 @@ const plans = [
     price: "$149",
     period: "/year",
     description: "Complete family protection",
-    credits: "500 AI credits/month"
+    credits: "500 AI credits/month",
     features: PLAN_FEATURES.premium,
     icon: Sparkles,
     color: "from-chart-5 to-chart-5/80",
