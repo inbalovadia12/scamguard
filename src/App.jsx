@@ -37,6 +37,7 @@ import Profile from '@/pages/Profile';
 import Admin from '@/pages/Admin';
 import Lessons from '@/pages/Lessons';
 import Privacy from '@/pages/Privacy';
+import DataCollection from '@/pages/DataCollection';
 import Terms from '@/pages/Terms';
 import About from '@/pages/About';
 import Contact from '@/pages/Contact';
@@ -124,6 +125,7 @@ const AuthenticatedApp = () => {
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
       <Route path="/privacy" element={<Privacy />} />
+      <Route path="/data-collection" element={<DataCollection />} />
       <Route path="/terms" element={<Terms />} />
 
       {/* Auth routes */}
