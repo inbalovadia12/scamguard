@@ -25,8 +25,9 @@ const footerSections = [
     links: [
       { label: "About", href: "/landing" },
       { label: "Contact", href: "mailto:support@vardin.app" },
-      { label: "Privacy Policy", href: "#" },
-      { label: "Terms of Service", href: "#" },
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Data Collection", href: "/data-collection" },
+      { label: "Terms of Service", href: "/terms" },
     ],
   },
 ];
