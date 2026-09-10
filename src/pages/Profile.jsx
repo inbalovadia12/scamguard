@@ -98,6 +98,7 @@ export default function Profile() {
   };
 
   const handleLogout = () => {
+    try { localStorage.removeItem("vardin_remembered_session"); } catch {}
     base44.auth.logout("/login");
   };
 
@@ -138,7 +139,10 @@ export default function Profile() {
     try {
       await base44.functions.invoke("deleteAccountData", {});
       toast({ title: "Account data deleted", description: "All your data has been removed." });
-      setTimeout(() => base44.auth.logout("/login"), 1500);
+      setTimeout(() => {
+        try { localStorage.removeItem("vardin_remembered_session"); } catch {}
+        base44.auth.logout("/login");
+      }, 1500);
     } catch (err) {
       toast({ title: "Deletion failed", description: err.message || "Please try again.", variant: "destructive" });
     } finally {
