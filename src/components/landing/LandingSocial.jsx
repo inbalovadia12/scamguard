@@ -31,7 +31,9 @@ function FAQItem({ q, a }) {
   );
 }
 
-export default function LandingSocial() {
+export default function LandingSocial({ preview = false }) {
+  const ctaHref = preview ? "/" : "/register";
+
   return (
     <>
       {/* Testimonials */}
@@ -87,7 +89,7 @@ export default function LandingSocial() {
           <p className="mt-4 text-lg text-muted-foreground max-w-xl mx-auto">
             Join thousands of families who use Vardin to stay safe from scams. Free to start, no credit card required.
           </p>
-          <Link to="/register" className="inline-block mt-8">
+          <Link to={ctaHref} className="inline-block mt-8">
             <Button size="lg" className="h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20">
               Get Started Free
               <ArrowRight className="w-4 h-4 ml-1" />
