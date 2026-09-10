@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck } from "lucide-react";
 
-export default function LandingNav() {
+export default function LandingNav({ preview = false }) {
   const { isAuthenticated, authChecked } = useAuth();
 
   return (
@@ -21,18 +21,20 @@ export default function LandingNav() {
           <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
           <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
         </div>
-        <div className="flex items-center gap-3">
-          {authChecked && isAuthenticated ? (
-            <Link to="/dashboard">
-              <Button size="sm" className="bg-gradient-to-r from-primary to-primary/80">Go to Dashboard</Button>
-            </Link>
-          ) : (
-            <>
-              <Link to="/login"><Button variant="ghost" size="sm">Log in</Button></Link>
-              <Link to="/register"><Button size="sm" className="bg-gradient-to-r from-primary to-primary/80">Try Free</Button></Link>
-            </>
-          )}
-        </div>
+        {!preview && (
+          <div className="flex items-center gap-3">
+            {authChecked && isAuthenticated ? (
+              <Link to="/dashboard">
+                <Button size="sm" className="bg-gradient-to-r from-primary to-primary/80">Go to Dashboard</Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/login"><Button variant="ghost" size="sm">Log in</Button></Link>
+                <Link to="/register"><Button size="sm" className="bg-gradient-to-r from-primary to-primary/80">Try Free</Button></Link>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </nav>
   );
