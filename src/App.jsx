@@ -93,36 +93,10 @@ const RootEntry = () => {
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authChecked, authError } = useAuth();
-  const isRootLanding = window.location.pathname === "/";
-  const isLandingPreview = isRootLanding && new URLSearchParams(window.location.search).get("view") === "1";
-  const isLandingPage = window.location.pathname === "/landing" || window.location.pathname.startsWith("/landing/");
+  const currentPath = window.location.pathname;
+  const isRootLanding = currentPath === "/";
+  const isLandingPage = currentPath === "/landing" || currentPath.startsWith("/landing/");
   const isPublicLanding = isRootLanding || isLandingPage;
-
-  // The root URL is the entry point for returning customers. Do not render the
-  // public landing page while we are still resolving an existing session: doing
-  // so creates a visible landing -> dashboard transition and can race with the
-  // protected route bootstrap. Show the same startup screen until auth is known.
-  // Once resolved, authenticated users go directly to the dashboard; signed-out
-  // visitors see the original green landing page.
-  if (isPublicLanding && !authChecked) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[#f7fbfa]">
-        <div className="flex flex-col items-center gap-3 text-primary">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-600/20">
-            <img src="/favicon.svg" alt="" width="32" height="32" />
-          </div>
-          <div className="text-xl font-bold tracking-tight">Vardin</div>
-          <div className="w-6 h-6 border-3 border-primary/20 border-t-primary rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
-
-  // Only the root URL is the first-time visitor entry point. Keep /landing
-  // available from inside the app so returning users can explicitly view it.
-  if (isRootLanding && isAuthenticated && !isLandingPreview) {
-    return <Navigate to="/dashboard" replace />;
-  }
 
   if (!isPublicLanding && (isLoadingPublicSettings || isLoadingAuth)) {
     return (
