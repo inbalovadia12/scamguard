@@ -97,19 +97,29 @@ export async function getCreditStatus() {
 
   const limit = (PLAN_LIMITS[plan] || PLAN_LIMITS.starter) + (user.referral_bonus_credits || 0);
   const adminCreditBalance = Math.max(0, user.admin_credit_balance || 0);
-  const remaining = Math.max(0, limit - creditsUsed + adminCreditBalance);
+  // `credits_used` records real usage and can legitimately be higher than the
+  // current plan limit after an admin changes a user from a larger plan to a
+  // smaller one. Never let that historical number make the UI look broken.
+  // Monthly allowance and admin-granted bonus credits are separate buckets.
+  const monthlyRemaining = Math.max(0, limit - creditsUsed);
+  const remaining = monthlyRemaining + adminCreditBalance;
+  const displayedCreditsUsed = Math.min(creditsUsed, limit);
   const lowThreshold = Math.ceil(limit * LOW_CREDIT_THRESHOLD);
 
   return {
     plan,
-    creditsUsed,
+    // Keep the public usage display within the current plan's allowance.
+    // The raw value remains available for diagnostics/history if needed.
+    creditsUsed: displayedCreditsUsed,
+    rawCreditsUsed: creditsUsed,
     limit,
+    monthlyRemaining,
     remaining,
     canAnalyze: remaining > 0,
     isPaid: plan === "plus" || plan === "premium",
     isPremium: plan === "plus" || plan === "premium",
     isPremiumPlan: plan === "premium",
-    lowCredit: remaining > 0 && remaining <= lowThreshold,
+    lowCredit: remaining > 0 && monthlyRemaining <= lowThreshold,
     adminCreditBalance,
     lowThreshold,
   };
