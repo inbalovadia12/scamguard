@@ -92,7 +92,7 @@ export default function Dashboard() {
             <button onClick={() => setShowFilm(true)} className="text-[10px] font-medium tracking-[0.15em] text-primary transition hover:text-primary/70">
               SEE WHAT VARDIN DOES <span aria-hidden="true">→</span>
             </button>
-            <Link to="/?view=1" className="text-[10px] font-medium tracking-[0.15em] text-muted-foreground transition hover:text-foreground">
+            <Link to="/landing?view=1" className="text-[10px] font-medium tracking-[0.15em] text-muted-foreground transition hover:text-foreground">
               VIEW LANDING PAGE <span aria-hidden="true">↗</span>
             </Link>
           </div>
