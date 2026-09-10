@@ -31,7 +31,7 @@ export default function LandingHero() {
             phone number and get an instant risk assessment.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 animate-slide-up">
-            <a href="/landing?view=1" className="w-full sm:w-auto">
+            <a href="/register" className="w-full sm:w-auto">
               <Button
                 type="button"
                 size="lg"
