@@ -208,6 +208,46 @@ Deno.serve(async (req) => {
       };
     }
 
+    // Safety floor for a specific high-confidence wallet-drainer pattern.
+    // AI still performs the full analysis; this prevents a legitimate token name
+    // from accidentally overriding multiple concrete scam signals in combination.
+    if (mode === 'investment') {
+      const message = inputLower;
+      const hasReward = /(selected|eligible|claim|reward|airdrop|giveaway).{0,180}(usdt|usdc|btc|eth|token|crypto|\$)/i.test(message);
+      const hasLargeAmount = /(?:\b\d[\d,.]*\s*(?:usdt|usdc|btc|eth|tokens?)\b|\$\s*\d[\d,.]*\b)/i.test(message);
+      const hasUrgency = /(closes? in|expires? in|\b\d+\s*(?:minutes?|hours?)\b|don't miss|hurry|limited time|deadline|timer)/i.test(message);
+      const hasClaimLink = /https?:\/\//i.test(message);
+      const hasWalletAction = /(connect (?:your )?wallet|approve (?:the )?transaction|sign (?:the )?transaction|approve|connect wallet)/i.test(message);
+
+      if (hasReward && hasLargeAmount && hasUrgency && hasClaimLink && hasWalletAction) {
+        result.risk_level = 'high';
+        result.risk_score = Math.max(Number(result.risk_score) || 0, 90);
+        result.is_likely_scam = true;
+        result.explanation = `This message is highly suspicious. It combines an unsolicited crypto reward with a large amount, a short deadline, a claim link, and a request to connect a wallet or approve a transaction. Those are classic social-engineering and wallet-drainer warning signs. The fact that it mentions a legitimate token such as USDT does not make the message legitimate.`;
+        result.red_flags = Array.from(new Set([
+          ...(Array.isArray(result.red_flags) ? result.red_flags : []),
+          'Unsolicited crypto reward offer',
+          'Large/free token amount',
+          'Short deadline or urgency',
+          'External claim link',
+          'Request to connect a wallet or approve a transaction',
+        ]));
+        result.tactics_detected = Array.from(new Set([
+          ...(Array.isArray(result.tactics_detected) ? result.tactics_detected : []),
+          'Urgency',
+          'Scarcity',
+          'Fake giveaway / reward',
+          'Wallet-drainer risk',
+        ]));
+        result.next_steps = [
+          'Do NOT connect your wallet or approve/sign the transaction',
+          'Do NOT send crypto or pay a claim fee',
+          'Close the link and report/block the sender',
+          'If you already connected a wallet, revoke suspicious approvals and move remaining funds to a safe wallet',
+        ];
+      }
+    }
+
     (result as any).timing_ms = Date.now() - startTime;
     return Response.json(result);
   } catch (error: any) {
