@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-const PLAN_LIMITS = { starter: 30, plus: 250, premium: 500 };
+const PLAN_LIMITS = { starter: 30, plus: 350, premium: 500 };
 
 Deno.serve(async (req) => {
   try {
