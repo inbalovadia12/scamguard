@@ -4,12 +4,12 @@ const EFFECTIVE_DATE = "September 10, 2026";
 
 function Section({ number, title, children }) {
   return (
-    <section className="border-b border-border/60 py-8 last:border-b-0">
+    <section className="border-b border-border/60 py-7 sm:py-8 last:border-b-0">
       <div className="flex gap-5">
         <div className="hidden sm:block w-8 shrink-0 pt-1 text-xs font-semibold text-muted-foreground tabular-nums">{String(number).padStart(2, "0")}</div>
         <div className="min-w-0 flex-1">
           <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-foreground">{title}</h2>
-          <div className="mt-4 space-y-4 text-sm sm:text-[15px] leading-7 text-muted-foreground">{children}</div>
+          <div className="mt-3 sm:mt-4 space-y-4 text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-muted-foreground break-words [overflow-wrap:anywhere]">{children}</div>
         </div>
       </div>
     </section>
@@ -26,15 +26,15 @@ function BulletList({ items }) {
 
 export default function Privacy() {
   return (
-    <div className="max-w-4xl mx-auto pb-16">
-      <header className="border-b border-border/60 pb-8 sm:pb-10">
+    <div className="w-full max-w-4xl mx-auto pb-10 sm:pb-16 break-words">
+      <header className="border-b border-border/60 pb-7 sm:pb-10">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Legal</p>
-        <h1 className="mt-3 text-3xl sm:text-4xl font-bold tracking-tight text-foreground">Privacy Policy</h1>
+        <h1 className="mt-3 text-[2rem] leading-tight sm:text-4xl font-bold tracking-tight text-foreground">Privacy Policy</h1>
         <p className="mt-3 text-sm text-muted-foreground">Effective date: {EFFECTIVE_DATE}</p>
         <p className="mt-6 max-w-3xl text-sm sm:text-base leading-7 text-muted-foreground">
           This Privacy Policy explains how Vardin collects, uses, discloses, retains, and protects personal information when you use the Vardin website, applications, scam-detection tools, family-protection features, browser extension, and related services (collectively, the “Services”).
         </p>
-        <div className="mt-6 rounded-lg border border-border bg-muted/30 p-4 text-sm leading-6 text-foreground">
+        <div className="mt-5 sm:mt-6 rounded-xl border border-border bg-muted/30 p-4 sm:p-5 text-sm leading-6 text-foreground overflow-hidden">
           <strong>Important:</strong> This policy describes Vardin’s actual data practices as currently implemented. Privacy law varies by jurisdiction and depends on factors including where you live, the nature and scale of the business, and how the Services are used. No privacy policy can guarantee that a business will never face a claim or regulatory action. Vardin should have this policy and its underlying data practices reviewed by qualified privacy counsel before commercial launch.
         </div>
       </header>
@@ -42,7 +42,7 @@ export default function Privacy() {
       <Section number={1} title="Who We Are and Scope">
         <p>Vardin is the operator of the Services. In this Policy, “Vardin,” “we,” “us,” and “our” refer to the Vardin service and its operator. “You” means the person using the Services.</p>
         <p>For privacy-law purposes, Vardin may act as a controller, business, or similar responsible party for information about its users. Where another organization processes information on Vardin’s behalf, that organization may act as a processor or service provider.</p>
-        <p>Questions and privacy requests can be sent to <a className="text-primary underline underline-offset-2" href="mailto:support@vardin.app">support@vardin.app</a>.</p>
+        <p>Questions and privacy requests can be sent to <a className="text-primary underline underline-offset-2 break-all" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a>.</p>
       </Section>
 
       <Section number={2} title="Information We Collect">
@@ -120,7 +120,7 @@ export default function Privacy() {
           "Appeal a privacy-rights decision where required by applicable law.",
           "Lodge a complaint with a competent data-protection or privacy regulator."
         ]} />
-        <p>To submit a request, email <a className="text-primary underline underline-offset-2" href="mailto:support@vardin.app">support@vardin.app</a>. We may need to verify your identity before fulfilling a request. We will not discriminate against you for exercising privacy rights that apply to you.</p>
+        <p>To submit a request, email <a className="text-primary underline underline-offset-2 break-all" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a>. We may need to verify your identity before fulfilling a request. We will not discriminate against you for exercising privacy rights that apply to you.</p>
         <p>For California residents, rights may include the rights to know, delete, correct, opt out of sale or sharing, limit certain uses of sensitive personal information, and receive equal treatment as provided by the California Consumer Privacy Act and applicable regulations. California rights apply only where the business and processing are within the law’s scope.</p>
         <p>For individuals in the European Economic Area, United Kingdom, Switzerland, or other jurisdictions with comprehensive data-protection laws, additional rights and requirements may apply, including rights concerning lawful bases, international transfers, objection, restriction, and complaints to a supervisory authority.</p>
       </Section>
@@ -136,7 +136,7 @@ export default function Privacy() {
 
       <Section number={11} title="Children and Family Features">
         <p>The Services include family and educational features. Privacy obligations relating to children vary significantly by jurisdiction. We do not intend to collect personal information from children in circumstances where parental authorization is legally required unless the required authorization and safeguards are in place.</p>
-        <p>Parents or guardians who believe a child has provided personal information to Vardin without appropriate authorization should contact <a className="text-primary underline underline-offset-2" href="mailto:support@vardin.app">support@vardin.app</a>. We will evaluate and respond in accordance with applicable law.</p>
+        <p>Parents or guardians who believe a child has provided personal information to Vardin without appropriate authorization should contact <a className="text-primary underline underline-offset-2 break-all" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a>. We will evaluate and respond in accordance with applicable law.</p>
         <p>Family-protection features are designed around consent and account permissions. Adding another person to a protection feature does not itself create unlimited permission to access that person’s information. Users must have a lawful basis and appropriate authorization to submit or share another person’s information.</p>
       </Section>
 
@@ -157,7 +157,7 @@ export default function Privacy() {
         <p>Privacy questions, requests, complaints, and notices should be sent to:</p>
         <div className="rounded-lg border border-border bg-muted/20 p-4 text-foreground">
           <p className="font-semibold">Vardin — Privacy</p>
-          <p className="mt-1">Email: <a className="text-primary underline underline-offset-2" href="mailto:support@vardin.app">support@vardin.app</a></p>
+          <p className="mt-1 break-all">Email: <a className="text-primary underline underline-offset-2" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a></p>
         </div>
       </Section>
 
