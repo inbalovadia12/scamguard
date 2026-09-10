@@ -190,7 +190,7 @@ export default function AdvancedScanner() {
               <span className="text-sm text-muted-foreground">
                 ✦ {credits.plan === "premium" ? "Premium" : "Plus"} plan
               </span>
-              <span className="text-sm font-medium">{credits.remaining} / {credits.limit} credits left</span>
+              <span className="text-sm font-medium">{credits.remaining} credits left{credits.adminCreditBalance > 0 ? ` · ${credits.adminCreditBalance} bonus` : ""}</span>
             </div>
         }
 
