@@ -39,8 +39,6 @@ export default function AgentChat() {
     const init = async () => {
       const creditStatus = await getCreditStatus();
       setCredits(creditStatus);
-      if (!creditStatus.isPremium) { setLoading(false); return; }
-
       const list = await loadConversations();
       if (list && list.length > 0) {
         const conv = await base44.agents.getConversation(list[0].id);
@@ -164,16 +162,6 @@ export default function AgentChat() {
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
-    );
-  }
-
-  if (credits && !credits.isPremium) {
-    return (
-      <LockedFeature
-        title="Premium Feature"
-        description="The AI Agent Chat with image upload is a paid feature. Upgrade to chat with Vardin's AI, upload suspicious screenshots, and get real-time analysis."
-        buttonLabel="Upgrade Now"
-      />
     );
   }
 
