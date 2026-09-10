@@ -1,0 +1,93 @@
+{
+  "name": "CallGuardReport",
+  "type": "object",
+  "properties": {
+    "call_id": {
+      "type": "string",
+      "description": "Retell's unique call identifier (used for deduplication on webhook retries)"
+    },
+    "event": {
+      "type": "string",
+      "description": "Retell webhook event type (e.g. call_analyzed)"
+    },
+    "transcript": {
+      "type": "string",
+      "description": "Full call transcript collected by the Retell voice agent"
+    },
+    "call_summary": {
+      "type": "string",
+      "description": "Retell's call_analysis.call_summary field"
+    },
+    "call_analysis_data": {
+      "type": "string",
+      "description": "JSON string of Retell's full call_analysis post-call analysis object"
+    },
+    "vardin_verdict": {
+      "type": "string",
+      "enum": [
+        "safe",
+        "suspicious",
+        "scam"
+      ],
+      "description": "Vardin's final scam verdict after AI analysis"
+    },
+    "vardin_confidence_score": {
+      "type": "number",
+      "default": 0,
+      "description": "0-100 confidence score for Vardin's verdict"
+    },
+    "vardin_explanation": {
+      "type": "string",
+      "description": "Plain-English explanation of Vardin's scam verdict"
+    },
+    "vardin_tactics_detected": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Scam tactics detected by Vardin's AI"
+    },
+    "vardin_recommended_actions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Recommended next steps for the user"
+    },
+    "processed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether Vardin's AI analysis has been completed"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
+    }
+  },
+  "required": [
+    "call_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

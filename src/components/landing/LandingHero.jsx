@@ -38,7 +38,7 @@ export default function LandingHero({ preview = false }) {
                 size="lg"
                 className="w-full sm:w-auto h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20"
               >
-                Try Free — 10 Credits
+                {preview ? "Go Back to Dashboard" : "Try Free — 10 Credits"}
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </a>
