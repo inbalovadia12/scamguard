@@ -208,7 +208,7 @@ export default function Profile() {
           <div className="pt-4 border-t border-border/50 space-y-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm text-muted-foreground">AI Credits this month</span>
-              <span className="text-sm font-medium">{credits.creditsUsed} / {credits.limit} used</span>
+              <span className="text-sm font-medium">{credits.creditsUsed} / {credits.limit} used{credits.adminCreditBalance > 0 ? ` · ${credits.adminCreditBalance} bonus` : ""}</span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
@@ -221,7 +221,7 @@ export default function Profile() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-primary">{credits.remaining} remaining</span>
+              <span className="text-sm font-semibold text-primary">{credits.remaining} remaining{credits.adminCreditBalance > 0 ? ` · ${credits.adminCreditBalance} admin bonus` : ""}</span>
               {credits.lowCredit && (
                 <span className="flex items-center gap-1 text-xs font-medium text-warning">
                   <AlertTriangle className="w-3.5 h-3.5" />
