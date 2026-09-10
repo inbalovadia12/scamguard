@@ -74,7 +74,7 @@ export default function Dashboard() {
     );
   }
 
-  const creditPct = Math.round((credits.remaining / credits.limit) * 100);
+  const creditPct = credits.limit > 0 ? Math.min(100, Math.round((credits.monthlyRemaining ?? Math.min(credits.remaining, credits.limit)) / credits.limit * 100)) : 0;
 
   return (
     <div className="space-y-6 sm:space-y-8">
