@@ -46,7 +46,7 @@ export default function IncognitoSearch() {
           setIsChild(true);
           setAllowed(seniors[0].incognito_allowed === true);
         } else {
-          setAllowed(status.isPremiumPlan);
+          setAllowed(status.isPaid);
         }
       } catch {
         setAllowed(false);
@@ -216,13 +216,13 @@ export default function IncognitoSearch() {
           ) : (
             <>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                Scan anything privately — no history saved, no guardian alerts. Available on Premium.
+                Scan anything privately — no history saved, no guardian alerts. Available on Plus and Premium.
               </p>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                <Crown className="w-4 h-4" /> Premium Feature
+                <Crown className="w-4 h-4" /> Plus Feature
               </div>
               <Button asChild className="w-full max-w-xs">
-                <Link to="/pricing">Upgrade to Premium</Link>
+                <Link to="/pricing">Upgrade to Plus</Link>
               </Button>
             </>
           )}
