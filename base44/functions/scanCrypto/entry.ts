@@ -4,11 +4,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
  * scanCrypto - OPTIMIZED
  * 
  * OPTIMIZATIONS:
- * - Known verified token database (instant result, skip LLM)
- * - Known scam detection (instant HIGH RISK, skip LLM)
- * - LLM timeout: 1.5 seconds
+ * - AI-first analysis for investment messages (no keyword-only verdicts)
+ * - Live web context for token/project/address verification
+ * - Longer LLM timeout so the model can actually complete the message check
  * - Timing info in response
- * - Early detection for obvious red flags
  */
 
 const RESPONSE_SCHEMA = {
@@ -96,8 +95,14 @@ Deno.serve(async (req) => {
 
     const inputLower = input.toLowerCase();
 
-    // === EARLY EXIT: Known safe tokens ===
-    for (const [key, token] of Object.entries(KNOWN_SAFE_TOKENS)) {
+    // Investment messages must be analyzed as messages. A mention of a legitimate
+    // token (e.g. BTC/USDT) does NOT make the surrounding DM legitimate, so never
+    // use the token list as an early exit for this mode.
+    if (mode === 'investment') {
+      // Skip all keyword-based early exits and send the complete message to AI.
+    } else {
+      // === EARLY EXIT: Known safe tokens (address mode only) ===
+      for (const [key, token] of Object.entries(KNOWN_SAFE_TOKENS)) {
       if (inputLower.includes(key)) {
         return Response.json({
           risk_level: 'low',
@@ -119,14 +124,19 @@ Deno.serve(async (req) => {
           timing_ms: Date.now() - startTime,
         });
       }
+      }
     }
 
-    // === EARLY EXIT: Obvious scam patterns ===
+    // === EARLY EXIT: Obvious scam patterns (address mode only) ===
+    // Investment messages intentionally skip this path so AI can evaluate context
+    // instead of declaring a message a scam from a single matching phrase.
     let hasObviousScamPattern = false;
-    for (const indicator of KNOWN_SCAM_INDICATORS) {
-      if (inputLower.includes(indicator)) {
-        hasObviousScamPattern = true;
-        break;
+    if (mode !== 'investment') {
+      for (const indicator of KNOWN_SCAM_INDICATORS) {
+        if (inputLower.includes(indicator)) {
+          hasObviousScamPattern = true;
+          break;
+        }
       }
     }
 
@@ -159,8 +169,8 @@ Deno.serve(async (req) => {
 
     // === LLM ANALYSIS (WITH TIMEOUT) ===
     const prompt = mode === 'address'
-      ? `Assess this ${blockchain || 'blockchain'} wallet/contract for scam signals.\nAddress: "${input}"\nSearch: block explorers, scam databases, honeypot detectors, liquidity lock status, verified status, community reports. High-signal results only. Respond plain English. Always include source URLs.`
-      : `Analyze this investment opportunity for crypto scams.\nContent: "${input}"\nSearch: token, project, team, giveaway, exchange, celebrity mentioned. Identify: pig-butchering, fake giveaways, impersonation, rug-pull, phishing, unrealistic returns, pressure. High-signal results only. Respond plain English. Always include source URLs.`;
+      ? `You are Vardin's crypto safety analyst. Analyze this ${blockchain || 'blockchain'} wallet/contract address using live web information where available. Address: "${input}". Check authoritative block explorers, token/project documentation, known scam reports, contract verification, honeypot signals, liquidity/lock information, and reputable community/security reports. Separate verified facts from uncertainty. Do not claim a contract is safe merely because it is verified, and do not invent on-chain facts. Explain exactly what evidence supports the risk score. Include source URLs only when they were actually consulted.`
+      : `You are Vardin's AI message-checking engine. Analyze the COMPLETE crypto DM/investment message below, not just isolated keywords.\n\nMESSAGE:\n"""${input}"""\n\nDetermine whether the message itself is likely legitimate, suspicious, or a scam. Consider context, sender claims, requests for money/crypto, wallet connection or transaction approval requests, links/domains, guarantees, urgency, impersonation, investment promises, social proof, withdrawal claims, and pig-butchering/drainer patterns. A message mentioning a legitimate cryptocurrency does NOT make the message legitimate. Likewise, crypto terminology alone is not evidence of a scam. Only report red flags that are actually present in the supplied message or supported by live web evidence. If a link, project, company, person, token, or domain is present, use live web context to verify it when possible and clearly distinguish verified information from inference. Do not invent sources or facts. Give a calibrated 0-100 risk score and explain the strongest evidence for and against risk. For a benign message, explicitly say why it appears benign and keep the score low. Respond in plain English suitable for a non-technical user. Include source URLs only for sources actually consulted.`;
 
     let result;
     try {
@@ -172,7 +182,7 @@ Deno.serve(async (req) => {
       });
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 1500)
+        setTimeout(() => reject(new Error('timeout')), 15000)
       );
 
       result = await Promise.race([llmPromise, timeoutPromise]);
@@ -181,18 +191,18 @@ Deno.serve(async (req) => {
       result = {
         risk_level: 'medium',
         risk_score: 50,
-        explanation: 'LLM analysis timeout. Unable to complete full analysis.',
+        explanation: 'The AI analysis could not be completed in time, so Vardin cannot reliably classify this message. No scam verdict was inferred from the timeout.'
         is_likely_scam: false,
         contract_verified: false,
         honeypot_risk: 'medium',
         rug_pull_risk: 'medium',
         liquidity_status: 'Unknown',
-        red_flags: ['Unable to verify - assume medium risk'],
+        red_flags: ['AI verification was incomplete'],
         tactics_detected: [],
         what_they_want: 'Unknown',
         why_scammers_do_this: 'Unknown',
-        what_to_say: 'Be cautious. Cannot verify this token.',
-        next_steps: ['Research independently on blockchain explorer', 'Never send cryptocurrency to unknown addresses'],
+        what_to_say: 'I could not complete the AI check, so I cannot reliably classify this message.'
+        next_steps: ['Do not send funds or connect a wallet until the AI check can be completed', 'Try the scan again']
         sources: [],
       };
     }
