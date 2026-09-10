@@ -61,8 +61,15 @@ export default function CryptoScanner() {
       if (mode === "investment") {
         let urlContext;
         if (urlMatch) {
-          const urlRes = await base44.functions.invoke("scanUrl", { url: urlMatch[0] });
-          urlContext = urlRes.data;
+          // URL inspection is supporting evidence. If the URL scanner fails,
+          // the complete message must still reach the AI message checker.
+          const cleanUrl = urlMatch[0].replace(/[),.!?;:]+$/g, "");
+          try {
+            const urlRes = await base44.functions.invoke("scanUrl", { url: cleanUrl });
+            urlContext = urlRes.data;
+          } catch {
+            urlContext = { scan_failed: true, url: cleanUrl };
+          }
         }
         const res = await base44.functions.invoke("scanCrypto", {
           mode,
