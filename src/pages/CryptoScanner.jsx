@@ -3,11 +3,10 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Bitcoin, Wallet, TrendingUp, Crown, AlertTriangle, ShieldCheck,
-} from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  Bitcoin, TrendingUp, Link2, Crown, AlertTriangle, ShieldCheck,
+} from "lucide-react";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import CryptoScanResult from "@/components/scam/CryptoScanResult";
@@ -16,13 +15,27 @@ import { getSeniorLink } from "@/lib/guardianAlerts";
 import { redactMessage } from "@/lib/redact";
 import { useToast } from "@/components/ui/use-toast";
 
-const BLOCKCHAINS = ["Ethereum", "BSC", "Solana", "Polygon", "Base", "Arbitrum", "Other"];
+const RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    risk_level: { type: "string", enum: ["low", "medium", "high"] },
+    risk_score: { type: "number", description: "0-100 risk score. Low risk = 0-35, Medium risk = 36-70, High risk = 71-100. Must match the risk_level." },
+    explanation: { type: "string" },
+    is_likely_scam: { type: "boolean" },
+    red_flags: { type: "array", items: { type: "string" } },
+    tactics_detected: { type: "array", items: { type: "string" } },
+    what_they_want: { type: "string" },
+    why_scammers_do_this: { type: "string" },
+    what_to_say: { type: "string" },
+    next_steps: { type: "array", items: { type: "string" } },
+    sources: { type: "array", items: { type: "string" } },
+  },
+};
 
 export default function CryptoScanner() {
   const { toast } = useToast();
-  const [mode, setMode] = useState("address");
+  const [mode, setMode] = useState("link");
   const [input, setInput] = useState("");
-  const [blockchain, setBlockchain] = useState("Ethereum");
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [credits, setCredits] = useState(null);
@@ -30,68 +43,47 @@ export default function CryptoScanner() {
 
   useEffect(() => {
     const load = async () => {
-      setCredits(await getCreditStatus());
-      const user = await base44.auth.me();
-      setSeniorLink(await getSeniorLink(user.id));
+      try {
+        setCredits(await getCreditStatus());
+        const user = await base44.auth.me();
+        setSeniorLink(await getSeniorLink(user.id));
+      } catch {}
     };
     load();
   }, []);
 
-  const cost = CREDIT_COSTS.URL_SCAN;
+  const cost = mode === "link" ? CREDIT_COSTS.URL_SCAN : CREDIT_COSTS.MESSAGE;
   const outOfCredits = credits && !credits.canAnalyze;
   const insufficient = credits && credits.remaining > 0 && credits.remaining < cost;
 
   const handleAnalyze = async () => {
     const text = input.trim();
-    if (!text) return;
-    if (credits && credits.remaining < cost) {
-      toast({ title: "Not enough credits", description: `Crypto scans use ${cost} credits.`, variant: "destructive" });
+    if (!text || (credits && credits.remaining < cost)) {
+      if (credits && credits.remaining < cost) {
+        toast({ title: "Not enough credits", description: `This crypto scan uses ${cost} credits.`, variant: "destructive" });
+      }
       return;
     }
+
     setAnalyzing(true);
     setResult(null);
     try {
       let data;
-      if (mode === "investment") {
-        // IMPORTANT: Investment messages intentionally use the SAME AI agent,
-        // model, and message-check prompt as Home.jsx. Crypto only changes the
-        // response schema/UI — it must not use a separate crypto reasoning prompt.
-        const CRYPTO_MESSAGE_RESPONSE_SCHEMA = {
-          type: "object",
-          properties: {
-            risk_level: { type: "string", enum: ["low", "medium", "high"] },
-            risk_score: { type: "number", description: "0-100 risk score. Low risk = 0-35, Medium risk = 36-70, High risk = 71-100. Must match the risk_level. Vary the score based on actual danger — do not default to a fixed number." },
-            explanation: { type: "string" },
-            is_likely_scam: { type: "boolean" },
-            contract_verified: { type: "boolean" },
-            honeypot_risk: { type: "string", enum: ["low", "medium", "high"] },
-            rug_pull_risk: { type: "string", enum: ["low", "medium", "high"] },
-            liquidity_status: { type: "string" },
-            red_flags: { type: "array", items: { type: "string" } },
-            tactics_detected: { type: "array", items: { type: "string" } },
-            what_they_want: { type: "string" },
-            why_scammers_do_this: { type: "string" },
-            what_to_say: { type: "string" },
-            next_steps: { type: "array", items: { type: "string" } },
-            sources: { type: "array", items: { type: "string" } },
-          },
-        };
-        const llmResult = await base44.integrations.Core.InvokeLLM({
-          prompt: `Scam detection expert: analyze this crypto_investment message for scam risk.\nMessage: "${text}"\nRules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics when applicable (e.g. Urgency, Authority Impersonation, Scarcity, Love Bombing, Payment Red Flags) and concrete next steps (e.g. Do not reply, Block sender, Report to carrier).\n\nRISK SCORE: Set risk_score as a whole number 0-100 that reflects the ACTUAL danger of this message. Low risk = 0-35, Medium risk = 36-70, High risk = 71-100. The score MUST match the risk_level. Do NOT default to 10 or any fixed number — vary it based on how many scam indicators are present and how severe they are.`,
-          response_json_schema: CRYPTO_MESSAGE_RESPONSE_SCHEMA,
-        });
-        data = llmResult;
+      if (mode === "link") {
+        const response = await base44.functions.invoke("scanUrl", { url: text });
+        if (response.data?.error) throw new Error(response.data.error);
+        data = response.data;
       } else {
-        const res = await base44.functions.invoke("scanCrypto", {
-          mode,
-          input: text,
-          blockchain: mode === "address" ? blockchain : undefined,
+        // Keep crypto investment messages on the exact same Message Check AI path.
+        data = await base44.integrations.Core.InvokeLLM({
+          prompt: `Scam detection expert: analyze this crypto_investment message for scam risk.\nMessage: "${text}"\nRules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics when applicable (e.g. Urgency, Authority Impersonation, Scarcity, Love Bombing, Payment Red Flags) and concrete next steps (e.g. Do not reply, Block sender, Report to carrier).\n\nRISK SCORE: Set risk_score as a whole number 0-100 that reflects the ACTUAL danger of this message. Low risk = 0-35, Medium risk = 36-70, High risk = 71-100. The score MUST match the risk_level. Do NOT default to 10 or any fixed number — vary it based on how many scam indicators are present and how severe they are.`,
+          response_json_schema: RESPONSE_SCHEMA,
         });
-        data = res.data;
       }
+
       await base44.entities.ScamAnalysis.create({
-        message_text: redactMessage(text),
-        message_type: "crypto_investment",
+        message_text: mode === "link" ? text : redactMessage(text),
+        message_type: mode === "link" ? "crypto_link" : "crypto_investment",
         submitted_by_senior: !!seniorLink,
         senior_id: seniorLink?.id,
         guardian_id: seniorLink?.guardian_id,
@@ -107,7 +99,7 @@ export default function CryptoScanner() {
       setCredits(await getCreditStatus());
       setResult(data);
     } catch (e) {
-      toast({ title: "Scan failed", description: e.message || "Try again.", variant: "destructive" });
+      toast({ title: "Crypto scan failed", description: e.message || "Try again.", variant: "destructive" });
     } finally {
       setAnalyzing(false);
     }
@@ -128,7 +120,7 @@ export default function CryptoScanner() {
           <h1 className="text-2xl font-bold tracking-tight font-heading">Crypto Scam Scanner</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Check a wallet/contract address or an "investment opportunity" against live on-chain and scam-report data.
+          Check a crypto link or investment message for phishing, giveaway, wallet-draining, and manipulation signals.
         </p>
       </div>
 
@@ -140,7 +132,7 @@ export default function CryptoScanner() {
       )}
 
       {analyzing ? (
-        <LongLoadingScreen type="url" />
+        <LongLoadingScreen type={mode === "link" ? "cryptoLink" : "cryptoInvestment"} />
       ) : result ? (
         <div className="space-y-5 animate-scale-in">
           <div className="flex items-center justify-between">
@@ -148,9 +140,7 @@ export default function CryptoScanner() {
             <Button variant="outline" onClick={handleReset}>New Scan</Button>
           </div>
           <div className="bg-card rounded-2xl border border-border/50 p-3">
-            <p className="text-xs text-muted-foreground mb-1">
-              {mode === "address" ? "Address / Contract" : "Investment content"}
-            </p>
+            <p className="text-xs text-muted-foreground mb-1">{mode === "link" ? "Crypto link" : "Investment message"}</p>
             <p className="text-sm font-mono break-all">{input}</p>
           </div>
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6">
@@ -162,58 +152,44 @@ export default function CryptoScanner() {
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl animate-slide-up anim-delay-1">
             <button
-              onClick={() => setMode("address")}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${mode === "address" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
+              onClick={() => { setMode("link"); setInput(""); }}
+              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${mode === "link" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
             >
-              <Wallet className="w-4 h-4" /> Address
+              <Link2 className="w-4 h-4" /> Crypto Link
             </button>
             <button
-              onClick={() => setMode("investment")}
+              onClick={() => { setMode("investment"); setInput(""); }}
               className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${mode === "investment" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
             >
-              <TrendingUp className="w-4 h-4" /> Investment
+              <TrendingUp className="w-4 h-4" /> Investment Message
             </button>
           </div>
 
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6 space-y-4 animate-slide-up anim-delay-2">
-            {mode === "address" && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Blockchain</label>
-                <Select value={blockchain} onValueChange={setBlockchain}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BLOCKCHAINS.map((b) => (
-                      <SelectItem key={b} value={b}>{b}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
             <div className="space-y-2">
               <label className="text-sm font-medium">
-                {mode === "address" ? "Wallet or contract address" : "Paste the investment offer / message"}
+                {mode === "link" ? "Paste the crypto link" : "Paste the crypto investment message"}
               </label>
-              {mode === "address" ? (
+              {mode === "link" ? (
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="0x..."
-                  className="h-11 font-mono rounded-xl"
+                  placeholder="https://claim-token.example/..."
+                  className="h-11 rounded-xl"
                   disabled={outOfCredits}
                 />
               ) : (
                 <Textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Paste the DM, giveaway link, or token pitch..."
-                  className="min-h-[120px] rounded-xl"
+                  placeholder="Paste the giveaway, airdrop, investment pitch, or crypto DM..."
+                  className="min-h-[150px] rounded-xl"
                   disabled={outOfCredits}
                 />
               )}
-              <p className="text-xs text-muted-foreground">Uses live web data · {cost} credits</p>
+              <p className="text-xs text-muted-foreground">
+                {mode === "link" ? "Checks the destination with Vardin's existing URL threat-intelligence pipeline." : "Uses the same AI reasoning system as Message Check."} · {cost} credits
+              </p>
             </div>
 
             {outOfCredits ? (
