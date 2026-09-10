@@ -7,7 +7,6 @@ import MessageBubble from "@/components/agent/MessageBubble";
 import ImageUpload from "@/components/scam/ImageUpload";
 import ConversationSidebar from "@/components/agent/ConversationSidebar";
 import AIDisclaimer from "@/components/AIDisclaimer";
-import LockedFeature from "@/components/LockedFeature";
 import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
 import { toast } from "@/components/ui/use-toast";
 
