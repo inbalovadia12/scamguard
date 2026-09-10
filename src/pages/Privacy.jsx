@@ -5,7 +5,7 @@ const EFFECTIVE_DATE = "September 10, 2026";
 function Section({ number, title, children }) {
   return (
     <section className="border-b border-border/60 py-7 sm:py-8 last:border-b-0">
-      <div className="flex gap-5">
+      <div className="flex gap-3 sm:gap-5">
         <div className="hidden sm:block w-8 shrink-0 pt-1 text-xs font-semibold text-muted-foreground tabular-nums">{String(number).padStart(2, "0")}</div>
         <div className="min-w-0 flex-1">
           <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-foreground">{title}</h2>
@@ -26,7 +26,7 @@ function BulletList({ items }) {
 
 export default function Privacy() {
   return (
-    <div className="w-full max-w-4xl mx-auto pb-10 sm:pb-16 break-words">
+    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-16 break-words [overflow-wrap:anywhere]">
       <header className="border-b border-border/60 pb-7 sm:pb-10">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Legal</p>
         <h1 className="mt-3 text-[2rem] leading-tight sm:text-4xl font-bold tracking-tight text-foreground">Privacy Policy</h1>
