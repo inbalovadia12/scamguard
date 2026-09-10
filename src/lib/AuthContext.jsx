@@ -1,7 +1,25 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 
-const SESSION_STORAGE_KEYS = ['base44_access_token', 'token'];
+const SESSION_STORAGE_KEYS = ['vardin_remembered_session', 'base44_access_token', 'token'];
+const REMEMBERED_SESSION_KEY = 'vardin_remembered_session';
+
+const rememberBrowserSession = () => {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const token = window.localStorage.getItem('base44_access_token') || window.localStorage.getItem('token');
+    if (token) window.localStorage.setItem(REMEMBERED_SESSION_KEY, token);
+  } catch (error) {
+    console.warn('Could not persist Vardin browser session:', error);
+  }
+};
+
+const clearRememberedBrowserSession = () => {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    window.localStorage.removeItem(REMEMBERED_SESSION_KEY);
+  } catch {}
+};
 
 const restoreBrowserSession = () => {
   if (typeof window === 'undefined' || !window.localStorage) return false;
@@ -15,6 +33,11 @@ const restoreBrowserSession = () => {
         // prevents a client created before storage was populated from behaving
         // like a signed-out user after returning from the public landing page.
         base44.auth.setToken(token, true);
+        // Keep a dedicated browser-session copy so navigation through the public
+        // landing page cannot accidentally lose the returning user's session.
+        try {
+          window.localStorage.setItem(REMEMBERED_SESSION_KEY, token);
+        } catch {}
         return true;
       }
     } catch (error) {
@@ -93,6 +116,7 @@ export const AuthProvider = ({ children }) => {
         setAuthError(null);
         setIsLoadingAuth(false);
         setAuthChecked(true);
+        rememberBrowserSession();
 
         // Redirect to onboarding if the user hasn't completed it yet.
         if (currentUser && !currentUser.onboarding_completed) {
@@ -125,6 +149,7 @@ export const AuthProvider = ({ children }) => {
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
+    clearRememberedBrowserSession();
     
     if (shouldRedirect) {
       // Use the SDK's logout method which handles token cleanup and redirect
