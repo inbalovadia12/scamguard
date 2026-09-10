@@ -248,7 +248,7 @@ export default function Pricing() {
 
       {credits && (
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <span>You've used {credits.creditsUsed} of {credits.limit} AI credits this month.</span>
+          <span>You've used {credits.creditsUsed} of {credits.limit} monthly AI credits{credits.adminCreditBalance > 0 ? `, plus ${credits.adminCreditBalance} admin-granted bonus credits.` : "."}</span>
         </div>
       )}
 
