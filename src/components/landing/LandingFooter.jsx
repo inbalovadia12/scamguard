@@ -24,7 +24,7 @@ const footerSections = [
     title: "Company",
     links: [
       { label: "About", href: "/landing" },
-      { label: "Contact", href: "mailto:support@vardin.app" },
+      { label: "Contact", href: "mailto:inbal5252@gmail.com" },
       { label: "Privacy Policy", href: "/privacy" },
       { label: "Data Collection", href: "/data-collection" },
       { label: "Terms of Service", href: "/terms" },
