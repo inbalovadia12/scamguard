@@ -66,8 +66,33 @@ import CallScreener from '@/pages/CallScreener';
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
 
+const RootEntry = () => {
+  const { isLoadingAuth, isAuthenticated, authChecked } = useAuth();
+  const isLandingPreview = new URLSearchParams(window.location.search).get("view") === "1";
+
+  // Root is a deterministic entry point: authenticated users enter the app,
+  // while first-time/signed-out visitors see the original landing page.
+  // Using a router element avoids a full-page redirect and the refresh race.
+  if (!authChecked || isLoadingAuth) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-[#f7fbfa]">
+        <div className="flex flex-col items-center gap-3 text-primary">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-600/20">
+            <img src="/favicon.svg" alt="" width="32" height="32" />
+          </div>
+          <div className="text-xl font-bold tracking-tight">Vardin</div>
+          <div className="w-6 h-6 border-3 border-primary/20 border-t-primary rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated && !isLandingPreview) return <Navigate to="/dashboard" replace />;
+  return <Landing />;
+};
+
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, isAuthenticated, authChecked, authError } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authChecked, authError } = useAuth();
   const isRootLanding = window.location.pathname === "/";
   const isLandingPreview = isRootLanding && new URLSearchParams(window.location.search).get("view") === "1";
   const isLandingPage = window.location.pathname === "/landing" || window.location.pathname.startsWith("/landing/");
