@@ -6,13 +6,15 @@ import LandingSocial from "@/components/landing/LandingSocial";
 import LandingFooter from "@/components/landing/LandingFooter";
 
 export default function Landing() {
+  const isPreview = new URLSearchParams(window.location.search).get("view") === "1";
+
   return (
     <div className="min-h-screen bg-background">
-      <LandingNav />
-      <LandingHero />
+      <LandingNav preview={isPreview} />
+      <LandingHero preview={isPreview} />
       <LandingSections />
-      <LandingPricing />
-      <LandingSocial />
+      <LandingPricing preview={isPreview} />
+      <LandingSocial preview={isPreview} />
       <LandingFooter />
     </div>
   );
