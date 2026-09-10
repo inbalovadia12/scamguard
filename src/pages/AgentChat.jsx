@@ -221,7 +221,7 @@ export default function AgentChat() {
     return (
       <LockedFeature
         title="Not Enough Credits"
-        description={`You have ${credits.remaining} of ${credits.limit} credits left, but each message uses ${CREDIT_COSTS.MESSAGE} credits. Your credits reset next month, or upgrade for more.`}
+        description={`You have ${credits.remaining} total credits left${credits.adminCreditBalance > 0 ? `, including ${credits.adminCreditBalance} admin bonus` : ""}. Each message uses ${CREDIT_COSTS.MESSAGE} credits. Monthly credits reset next month, or upgrade for more.`}
         buttonLabel="Manage Subscription"
       />
     );
@@ -275,7 +275,7 @@ export default function AgentChat() {
           </div>
           {credits && (
             <div className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full">
-              {credits.remaining} / {credits.limit} credits left
+              {credits.remaining} credits left{credits.adminCreditBalance > 0 ? ` · ${credits.adminCreditBalance} bonus` : ""}
             </div>
           )}
         </div>
