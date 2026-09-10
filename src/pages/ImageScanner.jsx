@@ -114,13 +114,13 @@ export default function ImageScanner() {
     );
   }
 
-  if (credits && !credits.isPaid) {
+  if (credits && !credits.isPremiumPlan) {
     return (
       <PlanGate
         icon={ImageIcon}
         title="Reverse Image Scam Detector"
-        description="Upload a profile photo to check if it appears elsewhere online or resembles common scam profiles."
-        plan="Plus"
+        description="Upload a profile photo to check if it appears elsewhere online or resembles common scam profiles. Advanced visual analysis is available on Premium."
+        plan="Premium"
       />
     );
   }
