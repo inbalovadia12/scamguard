@@ -250,8 +250,11 @@ Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urge
     let result;
     try {
       const llmPromise = base44.integrations.Core.InvokeLLM(llmOptions);
+      // Give the AI enough time to inspect the fetched page and threat-intel
+      // context. A 1.5s timeout caused legitimate scans to fall back before
+      // the model could actually analyze the destination.
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 1500)
+        setTimeout(() => reject(new Error('timeout')), 15000)
       );
       result = await Promise.race([llmPromise, timeoutPromise]);
     } catch (e) {
