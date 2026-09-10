@@ -398,6 +398,8 @@ export default function AppLayout() {
               <Link to="/about" className="hover:text-foreground transition-colors">{t("footer.about")}</Link>
               <Link to="/contact" className="hover:text-foreground transition-colors">{t("footer.contact")}</Link>
               <Link to="/privacy" className="hover:text-foreground transition-colors">{t("footer.privacy")}</Link>
+              <Link to="/data-collection" className="hover:text-foreground transition-colors">Data Collection</Link>
+              <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
               <Link to="/pricing" className="hover:text-foreground transition-colors">{t("footer.pricing")}</Link>
               <Link to="/admin" className="hover:text-muted-foreground text-xs opacity-40 hover:opacity-100 transition-opacity">{t("footer.admin")}</Link>
             </div>
