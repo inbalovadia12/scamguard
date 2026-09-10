@@ -51,23 +51,25 @@ export default function CryptoScanner() {
     setAnalyzing(true);
     setResult(null);
     try {
-      // Investment/giveaway links should use the same URL-analysis pipeline as
-      // Message Check's Link mode so Vardin inspects the actual destination,
-      // not just the words surrounding the link.
+      // Investment mode is a MESSAGE checker, not a URL-only checker. Analyze
+      // the complete giveaway/investment message with AI, and when it contains
+      // a link also give that AI the live URL-scan evidence. This means text
+      // tactics (urgency, fake rewards, wallet approvals, etc.) and the actual
+      // destination are evaluated together.
       const urlMatch = text.match(/https?:\/\/[^\s<>"']+/i);
       let data;
-      if (mode === "investment" && urlMatch) {
-        const urlRes = await base44.functions.invoke("scanUrl", { url: urlMatch[0] });
-        data = {
-          ...urlRes.data,
-          is_likely_scam: urlRes.data?.risk_level === "high" || (urlRes.data?.risk_score ?? 0) >= 71,
-          red_flags: urlRes.data?.red_flags || urlRes.data?.tactics_detected || [],
-          sources: urlRes.data?.sources || [],
-          contract_verified: false,
-          honeypot_risk: "Unknown",
-          rug_pull_risk: "Unknown",
-          liquidity_status: "Not applicable to URL scan",
-        };
+      if (mode === "investment") {
+        let urlContext;
+        if (urlMatch) {
+          const urlRes = await base44.functions.invoke("scanUrl", { url: urlMatch[0] });
+          urlContext = urlRes.data;
+        }
+        const res = await base44.functions.invoke("scanCrypto", {
+          mode,
+          input: text,
+          url_context: urlContext,
+        });
+        data = res.data;
       } else {
         const res = await base44.functions.invoke("scanCrypto", {
           mode,
