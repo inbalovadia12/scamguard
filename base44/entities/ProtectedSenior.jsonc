@@ -79,10 +79,6 @@
           "type": "boolean",
           "default": true
         },
-        "call_protection": {
-          "type": "boolean",
-          "default": true
-        },
         "ask_family": {
           "type": "boolean",
           "default": true
