@@ -70,13 +70,41 @@ export default function Home() {
   const [showPostScam, setShowPostScam] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
-      const status = await getCreditStatus();
-      setCredits(status);
-      const user = await base44.auth.me();
-      setSeniorLink(await getSeniorLink(user.id));
+      // These are auxiliary startup requests. Neither is allowed to prevent the
+      // Message Check screen from rendering if the API is slow, unavailable, or
+      // the session is still settling after a fresh browser load.
+      const creditResult = await Promise.allSettled([getCreditStatus()]);
+      if (!cancelled && creditResult[0].status === "fulfilled") {
+        setCredits(creditResult[0].value);
+      }
+
+      try {
+        const user = await base44.auth.me();
+        if (!cancelled && user?.id) {
+          try {
+            const link = await getSeniorLink(user.id);
+            if (!cancelled) setSeniorLink(link);
+          } catch (error) {
+            console.warn("Guardian link lookup unavailable:", error);
+          }
+        }
+      } catch (error) {
+        // AuthContext owns authentication state. This optional lookup must never
+        // turn a successful route mount into an unhandled promise rejection.
+        console.warn("Check page user lookup unavailable:", error);
+      }
     };
-    load();
+
+    load().catch((error) => {
+      console.error("Check page startup failed:", error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleAnalyze = async () => {
@@ -97,11 +125,12 @@ export default function Home() {
     setAnalyzing(true);
     setResult(null);
 
-    let fileUrls = [];
-    for (const img of images) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: img });
-      fileUrls.push(file_url);
-    }
+    try {
+      let fileUrls = [];
+      for (const img of images) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: img });
+        fileUrls.push(file_url);
+      }
 
     const effectiveInput = input || (fileUrls.length > 0 ? "Screenshot(s) uploaded for analysis" : "");
 
@@ -131,8 +160,13 @@ export default function Home() {
       await incrementCreditUsage(cost);
       setCredits(await getCreditStatus());
     }
-    setResult(llmResult);
-    setAnalyzing(false);
+      setResult(llmResult);
+    } catch (error) {
+      console.error("Scam analysis failed:", error);
+      setResult(null);
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const handleReset = () => {
