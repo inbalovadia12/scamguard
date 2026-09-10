@@ -117,8 +117,8 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
-      {/* Public routes */}
-      <Route path="/" element={<Landing />} />
+      {/* Root entry: returning users -> dashboard; first-time/signed-out users -> original landing. */}
+      <Route path="/" element={<RootEntry />} />
       {/* Public landing aliases: keep the existing Landing page reachable from internal links and direct URLs. */}
       <Route path="/landing" element={<Landing />} />
       <Route path="/landing/*" element={<Landing />} />
