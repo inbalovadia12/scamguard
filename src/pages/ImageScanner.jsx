@@ -22,7 +22,7 @@ const USE_CASE_TO_SCAM = {
   marketplace: "marketplace",
 };
 
-const CREDIT_COST = 10;
+const CREDIT_COST = 8;
 
 export default function ImageScanner() {
   const [selectedFile, setSelectedFile] = useState(null);
