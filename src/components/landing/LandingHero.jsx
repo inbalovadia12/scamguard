@@ -32,12 +32,14 @@ export default function LandingHero() {
             phone number and get an instant risk assessment.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 animate-slide-up">
-            <Link to="/">
-              <Button size="lg" className="w-full sm:w-auto h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20">
-                Try Free — 10 Credits
-                <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </Link>
+            <Button
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              size="lg"
+              className="w-full sm:w-auto h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20"
+            >
+              Try Free — 10 Credits
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             No credit card required • Cancel anytime
