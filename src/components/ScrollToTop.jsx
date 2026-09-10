@@ -26,13 +26,7 @@ export default function ScrollToTop() {
       return () => window.clearTimeout(timer);
     }
 
-    // `behavior: "instant"` is not consistently supported by older Safari/WebKit
-    // builds and can throw during route transitions. `auto` is universally safe.
-    try {
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    } catch {
-      window.scrollTo(0, 0);
-    }
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname, hash, navigationType]);
 
   return null;
