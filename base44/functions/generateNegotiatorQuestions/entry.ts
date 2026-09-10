@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
-const PLAN_LIMITS: Record<string, number> = { starter: 30, plus: 250, premium: 500 };
+const PLAN_LIMITS: Record<string, number> = { starter: 30, plus: 350, premium: 500 };
 const CREDIT_COST = 3;
 
 Deno.serve(async (req) => {
