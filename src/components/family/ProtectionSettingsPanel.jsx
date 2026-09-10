@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Switch } from "@/components/ui/switch";
-import { Link2, MessageSquare, Image, QrCode, Mail, Phone, MessageCircle, Bell, Shield } from "lucide-react";
+import { Link2, MessageSquare, Image, QrCode, Mail, MessageCircle, Bell, Shield } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
 const DEFAULTS = {
   link_protection: true, message_protection: true, image_scanning: true,
-  qr_scanning: true, email_protection: true, call_protection: true,
+  qr_scanning: true, email_protection: true,
   ask_family: true, guardian_notifications: true, protection_level: "standard",
 };
 
@@ -22,7 +22,6 @@ const TOGGLES = [
   { key: "image_scanning", label: "Image Scanning", icon: Image },
   { key: "qr_scanning", label: "QR Scanning", icon: QrCode },
   { key: "email_protection", label: "Email Protection", icon: Mail },
-  { key: "call_protection", label: "Call Protection", icon: Phone },
   { key: "ask_family", label: "Ask Family", icon: MessageCircle },
   { key: "guardian_notifications", label: "Guardian Notifications", icon: Bell },
 ];
