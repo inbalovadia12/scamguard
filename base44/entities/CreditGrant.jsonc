@@ -1,0 +1,57 @@
+{
+  "name": "CreditGrant",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User who received the admin-granted credits"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Number of credits granted"
+    },
+    "admin_id": {
+      "type": "string",
+      "description": "Admin who granted the credits"
+    },
+    "admin_email": {
+      "type": "string",
+      "description": "Admin email for audit trail"
+    },
+    "created_date": {
+      "type": "string",
+      "description": "Grant timestamp"
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional admin note"
+    }
+  },
+  "required": [
+    "user_id",
+    "amount",
+    "admin_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

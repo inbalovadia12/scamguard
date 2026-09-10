@@ -40,6 +40,11 @@
       "type": "string",
       "description": "Month when credits were last reset (YYYY-MM format)"
     },
+    "admin_credit_balance": {
+      "type": "number",
+      "default": 0,
+      "description": "One-time credits granted manually by an admin; consumed before monthly plan credits"
+    },
     "onboarding_completed": {
       "type": "boolean",
       "default": false,
