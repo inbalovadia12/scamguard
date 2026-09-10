@@ -3,7 +3,7 @@ import { getGmailSenderEmail, sendGmail, buildMimeMessage } from "../../shared/g
 
 const DEFAULT_SETTINGS = {
   link_protection: true, message_protection: true, image_scanning: true,
-  qr_scanning: true, email_protection: true, call_protection: true,
+  qr_scanning: true, email_protection: true,
   ask_family: true, guardian_notifications: true, protection_level: "standard",
 };
 
