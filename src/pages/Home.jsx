@@ -204,8 +204,8 @@ export default function Home() {
           <span className="text-sm text-muted-foreground">
             {credits.isPaid ? "✦ " + (credits.plan === "premium" ? "Premium" : "Plus") + " plan" : "Starter plan"}
           </span>
-          <span className="text-sm font-medium">
-            {credits.remaining} / {credits.limit} credits left
+          <span className="text-sm font-medium text-right">
+            {credits.remaining} credits left{credits.adminCreditBalance > 0 ? ` · ${credits.adminCreditBalance} bonus` : ""}
           </span>
         </div>
       )}
@@ -250,7 +250,7 @@ export default function Home() {
             <Lock className="w-8 h-8 text-warning mx-auto" />
             <h3 className="font-semibold">You're out of AI credits</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              You've used all {credits.limit} of your monthly credits. Upgrade for more analyses, URL scanning, AI chat, and family protection.
+              Your monthly allowance is exhausted{credits.adminCreditBalance > 0 ? `, but you still have ${credits.adminCreditBalance} admin-granted bonus credits available` : ""}. Upgrade for more analyses, URL scanning, AI chat, and family protection.
             </p>
           </div>
           <Link to="/pricing">
