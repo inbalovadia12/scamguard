@@ -3,7 +3,7 @@ import { resolveFamilyLimit } from "@/lib/planPricing";
 
 export const CREDIT_COSTS = {
   MESSAGE: 3,
-  URL_SCAN: 12,
+  URL_SCAN: 7,
   IMAGE_UPLOAD: 8,
   AGENT_CHAT: 2,
   IMAGE_SCAN: 10,
