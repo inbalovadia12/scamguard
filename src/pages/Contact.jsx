@@ -59,7 +59,7 @@ export default function Contact() {
                 <Mail className="w-5 h-5 text-primary" />
                 <h3 className="font-semibold text-sm">Email</h3>
               </div>
-              <p className="text-sm text-muted-foreground">support@vardin.app</p>
+              <p className="text-sm text-muted-foreground">inbal5252@gmail.com</p>
             </div>
             <div className="bg-card rounded-2xl border border-border/50 p-5">
               <div className="flex items-center gap-2 mb-2">
