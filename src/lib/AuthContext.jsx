@@ -1,6 +1,30 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 
+const SESSION_STORAGE_KEYS = ['base44_access_token', 'token'];
+
+const restoreBrowserSession = () => {
+  if (typeof window === 'undefined' || !window.localStorage) return false;
+
+  for (const key of SESSION_STORAGE_KEYS) {
+    try {
+      const token = window.localStorage.getItem(key);
+      if (token) {
+        // Rehydrate the SDK's in-memory Authorization header on every app boot.
+        // The SDK also persists this token, but explicitly restoring it here
+        // prevents a client created before storage was populated from behaving
+        // like a signed-out user after returning from the public landing page.
+        base44.auth.setToken(token, true);
+        return true;
+      }
+    } catch (error) {
+      console.warn(`Could not restore Vardin browser session from ${key}:`, error);
+    }
+  }
+
+  return false;
+};
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -31,6 +55,9 @@ export const AuthProvider = ({ children }) => {
     setIsLoadingPublicSettings(false);
     setAuthError(null);
     try {
+      // Rehydrate the persisted browser session before the first auth check.
+      // Never store or restore passwords — only the SDK's existing session token.
+      restoreBrowserSession();
       await checkUserAuth();
     } catch (error) {
       console.error('Unexpected startup auth error:', error);
