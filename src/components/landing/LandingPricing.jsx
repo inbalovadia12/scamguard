@@ -19,10 +19,10 @@ const plans = [
     price: "$75",
     period: "/year",
     description: "For proactive individuals",
-    credits: "250 AI credits/month",
+    credits: "350 AI credits/month",
     icon: Zap,
     color: "from-primary to-primary/80",
-    features: ["250 AI credits/month", "Crypto link & investment scanning", "URL & link scanning", "Phone checks", "Scam Exposer", "Analytics & Incognito Search"],
+    features: ["350 AI credits/month", "Crypto link & investment scanning", "URL & link scanning", "Phone checks", "Scam Exposer", "Analytics & Incognito Search"],
     highlighted: true,
   },
   {
