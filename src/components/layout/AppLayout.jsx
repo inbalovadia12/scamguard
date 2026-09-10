@@ -21,7 +21,7 @@ const NAV_SECTIONS = [
     items: [
       { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
       { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
-      { path: "/ai-negotiator", labelKey: "nav.ai_negotiator", icon: MessageCircle },
+      { path: "/scam-exposer", labelKey: "nav.ai_negotiator", icon: MessageCircle },
       { path: "/extension", labelKey: "nav.extension", icon: Puzzle, kidLabel: "Vardin Kid Guard" },
       { path: "/phone-lookup", labelKey: "nav.phone_guard", icon: Phone },
       { path: "/call-screener", label: "Call Screener", icon: PhoneCall },
@@ -96,7 +96,7 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [alertBadge, setAlertBadge] = useState(0);
 
-  const KID_HIDDEN_PATHS = ["/ai-negotiator", "/phone-lookup", "/call-guard", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/feedback", "/projects", "/pricing"];
+  const KID_HIDDEN_PATHS = ["/scam-exposer", "/phone-lookup", "/call-guard", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/feedback", "/projects", "/pricing"];
   const visibleSections = kidMode
     ? NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !KID_HIDDEN_PATHS.includes(i.path)) })).filter(s => s.items.length > 0)
     : NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !i.kidOnly) })).filter(s => s.items.length > 0);
