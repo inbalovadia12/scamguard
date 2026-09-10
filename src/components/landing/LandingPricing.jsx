@@ -16,7 +16,7 @@ const plans = [
   },
   {
     name: "Plus",
-    price: "$40",
+    price: "$75",
     period: "/year",
     description: "For proactive individuals",
     credits: "250 AI credits/month",
@@ -27,13 +27,13 @@ const plans = [
   },
   {
     name: "Premium",
-    price: "$80",
+    price: "$149",
     period: "/year",
     description: "Complete family protection",
     credits: "500 AI credits/month",
     icon: Sparkles,
     color: "from-chart-5 to-chart-5/80",
-    features: ["500 AI credits/month", "Universal Scanner", "Live Guard", "Local Scam Intelligence", "Faster processing", "Early access to new features"]
+    features: ["500 AI credits/month", "Universal Scanner", "Live Guard", "Local Scam Intelligence", "Faster processing", "Early access to new features"],
     highlighted: false,
   },
 ];
