@@ -127,7 +127,7 @@ export default function CryptoScanner() {
       {credits && !result && (
         <div className="flex items-center justify-between px-4 py-2.5 bg-muted rounded-xl text-sm">
           <span className="text-muted-foreground">{credits.isPaid ? `${credits.plan} plan` : "Starter plan"}</span>
-          <span className="font-medium">{credits.remaining} / {credits.limit} credits left</span>
+          <span className="font-medium">{credits.remaining} credits left{credits.adminCreditBalance > 0 ? ` · ${credits.adminCreditBalance} bonus` : ""}</span>
         </div>
       )}
 
