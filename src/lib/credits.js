@@ -15,9 +15,9 @@ export const CREDIT_COSTS = {
 };
 
 export const PLAN_LIMITS = {
-  starter: 15,
-  plus: 150,
-  premium: 400,
+  starter: 30,
+  plus: 250,
+  premium: 500,
 };
 
 export const PLAN_PRICES = {
@@ -42,36 +42,36 @@ export const LOW_CREDIT_THRESHOLD = 0.2;
 
 export const PLAN_FEATURES = {
   starter: [
-    "15 AI credits per month (~5 analyses)",
-    "12 scam categories (SMS, email, crypto & more)",
-    "Risk scores & plain-English explanations",
-    "1 protected family member",
+    "30 AI credits per month",
+    "Message Check with all supported message types",
+    "Vardin AI Assistant",
+    "Basic risk scores & plain-English explanations",
   ],
   plus: [
     "Everything in Starter, plus:",
-    "150 AI credits per month (~50 analyses)",
+    "250 AI credits per month",
+    "Crypto link & investment message scanning",
     "URL & link scanning with live web checks",
     "Phone number lookup & caller check",
     "Reverse image scam detector",
-    "Conversation analyzer (multi-message patterns)",
-    "Advanced scanner (pages, QR, files, screenshots)",
+    "Conversation analyzer",
     "Scam Exposer for marketplace deals",
     "Marketplace listing analysis",
-    "AI explanations & tactic breakdowns",
-    "AI Agent chat",
+    "AI tactic breakdowns",
+    "Browser Extension",
+    "Analytics dashboard & CSV export",
+    "Learning Center & interactive lessons",
+    "Incognito Search",
     "1 member included · add more at $2/mo each",
     "Guardian email alerts",
     "Priority support",
   ],
   premium: [
     "Everything in Plus, plus:",
-    "400 AI credits per month (~133 analyses)",
+    "500 AI credits per month",
+    "Universal Scanner — pages, QR, files & advanced web analysis",
     "Live Guard — real-time call & screen monitoring",
-    "Local scam intelligence by location",
-    "1 member included · add more at $2/mo each",
-    "Full analytics dashboard with trends",
-    "CSV export of your analysis history",
-    "Premium Learning Center with interactive lessons",
+    "Local Scam Intelligence — location-based threat research",
     "Faster processing priority",
     "Early access to new features",
   ],
