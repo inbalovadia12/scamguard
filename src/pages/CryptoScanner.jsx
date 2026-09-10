@@ -51,32 +51,36 @@ export default function CryptoScanner() {
     setAnalyzing(true);
     setResult(null);
     try {
-      // Investment mode is a MESSAGE checker, not a URL-only checker. Analyze
-      // the complete giveaway/investment message with AI, and when it contains
-      // a link also give that AI the live URL-scan evidence. This means text
-      // tactics (urgency, fake rewards, wallet approvals, etc.) and the actual
-      // destination are evaluated together.
-      const urlMatch = text.match(/https?:\/\/[^\s<>"']+/i);
       let data;
       if (mode === "investment") {
-        let urlContext;
-        if (urlMatch) {
-          // URL inspection is supporting evidence. If the URL scanner fails,
-          // the complete message must still reach the AI message checker.
-          const cleanUrl = urlMatch[0].replace(/[),.!?;:]+$/g, "");
-          try {
-            const urlRes = await base44.functions.invoke("scanUrl", { url: cleanUrl });
-            urlContext = urlRes.data;
-          } catch {
-            urlContext = { scan_failed: true, url: cleanUrl };
-          }
-        }
-        const res = await base44.functions.invoke("scanCrypto", {
-          mode,
-          input: text,
-          url_context: urlContext,
+        // IMPORTANT: Investment messages intentionally use the SAME AI agent,
+        // model, and message-check prompt as Home.jsx. Crypto only changes the
+        // response schema/UI — it must not use a separate crypto reasoning prompt.
+        const CRYPTO_MESSAGE_RESPONSE_SCHEMA = {
+          type: "object",
+          properties: {
+            risk_level: { type: "string", enum: ["low", "medium", "high"] },
+            risk_score: { type: "number", description: "0-100 risk score. Low risk = 0-35, Medium risk = 36-70, High risk = 71-100. Must match the risk_level. Vary the score based on actual danger — do not default to a fixed number." },
+            explanation: { type: "string" },
+            is_likely_scam: { type: "boolean" },
+            contract_verified: { type: "boolean" },
+            honeypot_risk: { type: "string", enum: ["low", "medium", "high"] },
+            rug_pull_risk: { type: "string", enum: ["low", "medium", "high"] },
+            liquidity_status: { type: "string" },
+            red_flags: { type: "array", items: { type: "string" } },
+            tactics_detected: { type: "array", items: { type: "string" } },
+            what_they_want: { type: "string" },
+            why_scammers_do_this: { type: "string" },
+            what_to_say: { type: "string" },
+            next_steps: { type: "array", items: { type: "string" } },
+            sources: { type: "array", items: { type: "string" } },
+          },
+        };
+        const llmResult = await base44.integrations.Core.InvokeLLM({
+          prompt: `Scam detection expert: analyze this crypto_investment message for scam risk.\nMessage: "${text}"\nRules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics when applicable (e.g. Urgency, Authority Impersonation, Scarcity, Love Bombing, Payment Red Flags) and concrete next steps (e.g. Do not reply, Block sender, Report to carrier).\n\nRISK SCORE: Set risk_score as a whole number 0-100 that reflects the ACTUAL danger of this message. Low risk = 0-35, Medium risk = 36-70, High risk = 71-100. The score MUST match the risk_level. Do NOT default to 10 or any fixed number — vary it based on how many scam indicators are present and how severe they are.`,
+          response_json_schema: CRYPTO_MESSAGE_RESPONSE_SCHEMA,
         });
-        data = res.data;
+        data = llmResult;
       } else {
         const res = await base44.functions.invoke("scanCrypto", {
           mode,
