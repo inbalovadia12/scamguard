@@ -132,7 +132,8 @@ Deno.serve(async (req) => {
     let creditsUsed = user.credits_used || 0;
     if (user.credits_reset_month !== currentMonth) creditsUsed = 0;
     const creditLimit = (PLAN_LIMITS[plan] || PLAN_LIMITS.starter) + (user.referral_bonus_credits || 0);
-    const creditsRemaining = Math.max(0, creditLimit - creditsUsed);
+    const adminCreditBalance = Math.max(0, Number(user.admin_credit_balance) || 0);
+    const creditsRemaining = Math.max(0, creditLimit - creditsUsed + adminCreditBalance);
 
     if (creditsRemaining < creditCost) {
       return Response.json({
@@ -217,8 +218,10 @@ Deno.serve(async (req) => {
 
     // === EARLY EXIT: If URLhaus says malware, return HIGH RISK immediately ===
     if (urlhausReport?.listed) {
-      const newCreditsUsed = creditsUsed + creditCost;
-      await base44.auth.updateMe({ credits_used: newCreditsUsed, credits_reset_month: currentMonth });
+      const fromAdmin = Math.min(adminCreditBalance, creditCost);
+      const newCreditsUsed = creditsUsed + (creditCost - fromAdmin);
+      const newAdminCreditBalance = adminCreditBalance - fromAdmin;
+      await base44.auth.updateMe({ credits_used: newCreditsUsed, admin_credit_balance: newAdminCreditBalance, credits_reset_month: currentMonth });
 
       return Response.json({
         analysis: {
@@ -260,8 +263,10 @@ Deno.serve(async (req) => {
 
     // === EARLY EXIT: If VT shows high malicious count, return HIGH RISK immediately ===
     if (vtReport && vtReport.malicious >= 5) {
-      const newCreditsUsed = creditsUsed + creditCost;
-      await base44.auth.updateMe({ credits_used: newCreditsUsed, credits_reset_month: currentMonth });
+      const fromAdmin = Math.min(adminCreditBalance, creditCost);
+      const newCreditsUsed = creditsUsed + (creditCost - fromAdmin);
+      const newAdminCreditBalance = adminCreditBalance - fromAdmin;
+      await base44.auth.updateMe({ credits_used: newCreditsUsed, admin_credit_balance: newAdminCreditBalance, credits_reset_month: currentMonth });
 
       return Response.json({
         analysis: {
@@ -448,8 +453,10 @@ Deno.serve(async (req) => {
       if (qrFinalUrl) (result as any).final_destination_url = qrFinalUrl;
     }
 
-    const newCreditsUsed = creditsUsed + creditCost;
-    await base44.auth.updateMe({ credits_used: newCreditsUsed, credits_reset_month: currentMonth });
+    const fromAdmin = Math.min(adminCreditBalance, creditCost);
+      const newCreditsUsed = creditsUsed + (creditCost - fromAdmin);
+      const newAdminCreditBalance = adminCreditBalance - fromAdmin;
+    await base44.auth.updateMe({ credits_used: newCreditsUsed, admin_credit_balance: newAdminCreditBalance, credits_reset_month: currentMonth });
 
     return Response.json({
       analysis: result,

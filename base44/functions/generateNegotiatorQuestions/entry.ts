@@ -17,7 +17,8 @@ Deno.serve(async (req) => {
     let creditsUsed = user.credits_used || 0;
     if (user.credits_reset_month !== currentMonth) creditsUsed = 0;
     const creditLimit = (PLAN_LIMITS[plan] || PLAN_LIMITS.starter) + (user.referral_bonus_credits || 0);
-    const creditsRemaining = Math.max(0, creditLimit - creditsUsed);
+    const adminCreditBalance = Math.max(0, Number(user.admin_credit_balance) || 0);
+    const creditsRemaining = Math.max(0, creditLimit - creditsUsed + adminCreditBalance);
 
     if (creditsRemaining < CREDIT_COST) {
       return Response.json({
@@ -83,8 +84,10 @@ Respond entirely in ${languageName}.`;
     const result = await base44.integrations.Core.InvokeLLM(llmOptions);
 
     // Deduct credits
-    const newCreditsUsed = creditsUsed + CREDIT_COST;
-    await base44.auth.updateMe({ credits_used: newCreditsUsed, credits_reset_month: currentMonth });
+    const fromAdmin = Math.min(adminCreditBalance, CREDIT_COST);
+    const newCreditsUsed = creditsUsed + (CREDIT_COST - fromAdmin);
+    const newAdminCreditBalance = adminCreditBalance - fromAdmin;
+    await base44.auth.updateMe({ credits_used: newCreditsUsed, admin_credit_balance: newAdminCreditBalance, credits_reset_month: currentMonth });
 
     return Response.json({
       questions: result.questions || [],

@@ -96,7 +96,8 @@ export async function getCreditStatus() {
   }
 
   const limit = (PLAN_LIMITS[plan] || PLAN_LIMITS.starter) + (user.referral_bonus_credits || 0);
-  const remaining = Math.max(0, limit - creditsUsed);
+  const adminCreditBalance = Math.max(0, user.admin_credit_balance || 0);
+  const remaining = Math.max(0, limit - creditsUsed + adminCreditBalance);
   const lowThreshold = Math.ceil(limit * LOW_CREDIT_THRESHOLD);
 
   return {
@@ -109,6 +110,7 @@ export async function getCreditStatus() {
     isPremium: plan === "plus" || plan === "premium",
     isPremiumPlan: plan === "premium",
     lowCredit: remaining > 0 && remaining <= lowThreshold,
+    adminCreditBalance,
     lowThreshold,
   };
 }
@@ -138,8 +140,12 @@ export async function incrementCreditUsage(amount = 1) {
     creditsUsed = amount;
   }
 
+  const adminBalance = Math.max(0, user.admin_credit_balance || 0);
+  const fromAdmin = Math.min(adminBalance, amount);
+  const fromMonthly = amount - fromAdmin;
   await base44.auth.updateMe({
-    credits_used: creditsUsed,
+    credits_used: creditsUsed + fromMonthly,
+    admin_credit_balance: adminBalance - fromAdmin,
     credits_reset_month: currentMonth,
   });
 

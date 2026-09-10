@@ -28,8 +28,9 @@ Deno.serve(async (req) => {
     if (user.credits_reset_month !== currentMonth) {
       creditsUsed = 0;
     }
-    const creditLimit = PLAN_LIMITS[plan] || PLAN_LIMITS.starter;
-    const creditsRemaining = Math.max(0, creditLimit - creditsUsed);
+    const creditLimit = (PLAN_LIMITS[plan] || PLAN_LIMITS.starter) + (user.referral_bonus_credits || 0);
+    const adminCreditBalance = Math.max(0, Number(user.admin_credit_balance) || 0);
+    const creditsRemaining = Math.max(0, creditLimit - creditsUsed + adminCreditBalance);
 
     return Response.json({
       authenticated: true,

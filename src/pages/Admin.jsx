@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Lock, Loader2, MessageSquare, Users, ShieldCheck, Star, Trash2,
   Mail, AlertTriangle, CheckCircle2, Crown, TrendingUp, Activity, Megaphone,
-  Download, PhoneCall,
+  Download, PhoneCall, Zap,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -131,6 +131,8 @@ function FeedbackTab() {
 function UsersTab() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [grantAmounts, setGrantAmounts] = useState({});
+  const [granting, setGranting] = useState({});
 
   const load = async () => {
     try {
@@ -144,6 +146,28 @@ function UsersTab() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const grantCredits = async (userId) => {
+    const amount = Number(grantAmounts[userId]);
+    if (!Number.isInteger(amount) || amount <= 0) {
+      toast({ title: "Invalid credit amount", description: "Enter a positive whole number.", variant: "destructive" });
+      return;
+    }
+    setGranting((prev) => ({ ...prev, [userId]: true }));
+    try {
+      const response = await base44.functions.invoke("grantAdminCredits", { user_id: userId, amount });
+      const data = response.data || response;
+      if (data.error) throw new Error(data.error);
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, admin_credit_balance: data.admin_credit_balance } : u));
+      setGrantAmounts((prev) => ({ ...prev, [userId]: "" }));
+      const target = users.find((u) => u.id === userId);
+      toast({ title: "Credits granted", description: `${amount} credits added to ${target?.full_name || target?.email || "user"}.` });
+    } catch (e) {
+      toast({ title: "Could not grant credits", description: e.message, variant: "destructive" });
+    } finally {
+      setGranting((prev) => ({ ...prev, [userId]: false }));
+    }
+  };
 
   const changePlan = async (userId, plan) => {
     try {
@@ -168,7 +192,16 @@ function UsersTab() {
             </div>
             <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+            <div className="flex items-center gap-1.5">
+              <Input type="number" min="1" step="1" placeholder="Credits" value={grantAmounts[user.id] ?? ""}
+                onChange={(e) => setGrantAmounts((prev) => ({ ...prev, [user.id]: e.target.value }))}
+                className="w-24 h-8 text-xs" aria-label={`Credits to grant to ${user.full_name || user.email}`} />
+              <Button size="sm" variant="outline" onClick={() => grantCredits(user.id)} disabled={granting[user.id]} className="gap-1">
+                {granting[user.id] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />} Give
+              </Button>
+            </div>
+            <Badge variant="secondary" className="text-xs">+{user.admin_credit_balance || 0} bonus</Badge>
             {user.subscription_plan && (
               <Badge variant="outline" className="capitalize">{user.subscription_plan}</Badge>
             )}
