@@ -186,6 +186,7 @@ export default function AppLayout() {
   }, [user]);
 
   const handleLogout = () => {
+    try { localStorage.removeItem("vardin_remembered_session"); } catch {}
     base44.auth.logout("/login");
   };
 
