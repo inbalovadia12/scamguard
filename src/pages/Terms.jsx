@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, ArrowRight, CheckCircle2, FileText, Lock, Scale, ShieldCheck } from "lucide-react";
+import { ArrowRight, FileText, ShieldCheck } from "lucide-react";
 
 const sections = [
   {
