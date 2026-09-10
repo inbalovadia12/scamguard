@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
       result = {
         risk_level: 'medium',
         risk_score: 50,
-        explanation: 'The AI analysis could not be completed in time, so Vardin cannot reliably classify this message. No scam verdict was inferred from the timeout.'
+        explanation: 'The AI analysis could not be completed in time, so Vardin cannot reliably classify this message. No scam verdict was inferred from the timeout.',
         is_likely_scam: false,
         contract_verified: false,
         honeypot_risk: 'medium',
@@ -201,8 +201,8 @@ Deno.serve(async (req) => {
         tactics_detected: [],
         what_they_want: 'Unknown',
         why_scammers_do_this: 'Unknown',
-        what_to_say: 'I could not complete the AI check, so I cannot reliably classify this message.'
-        next_steps: ['Do not send funds or connect a wallet until the AI check can be completed', 'Try the scan again']
+        what_to_say: 'I could not complete the AI check, so I cannot reliably classify this message.',
+        next_steps: ['Do not send funds or connect a wallet until the AI check can be completed', 'Try the scan again'],
         sources: [],
       };
     }
