@@ -7,6 +7,7 @@ import MessageBubble from "@/components/agent/MessageBubble";
 import ImageUpload from "@/components/scam/ImageUpload";
 import ConversationSidebar from "@/components/agent/ConversationSidebar";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import LockedFeature from "@/components/LockedFeature";
 import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
 import { toast } from "@/components/ui/use-toast";
 
@@ -35,18 +36,51 @@ export default function AgentChat() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     const init = async () => {
-      const creditStatus = await getCreditStatus();
-      setCredits(creditStatus);
-      const list = await loadConversations();
-      if (list && list.length > 0) {
-        const conv = await base44.agents.getConversation(list[0].id);
-        setConversation(conv);
-        setMessages(conv.messages || []);
+      try {
+        const creditStatus = await getCreditStatus();
+        if (cancelled) return;
+        setCredits(creditStatus);
+
+        const list = await loadConversations();
+        if (cancelled) return;
+
+        if (list && list.length > 0) {
+          try {
+            const conv = await base44.agents.getConversation(list[0].id);
+            if (!cancelled) {
+              setConversation(conv);
+              setMessages(conv.messages || []);
+            }
+          } catch {
+            // Keep the assistant usable even if an older conversation cannot be loaded.
+            if (!cancelled) {
+              setConversation(null);
+              setMessages([]);
+            }
+          }
+        }
+      } catch (error) {
+        // A credit/conversation API failure must never blank the entire assistant page.
+        if (!cancelled) {
+          setCredits(null);
+          setConversations([]);
+          setConversation(null);
+          setMessages([]);
+          toast({
+            title: "Vardin AI is ready",
+            description: "Your chat history could not be loaded, but you can start a new conversation.",
+          });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
     };
+
     init();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -119,34 +153,53 @@ export default function AgentChat() {
     const messageContent = input.trim();
     setInput("");
 
-    let fileUrls = [];
-    for (const img of selectedImages) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: img });
-      fileUrls.push(file_url);
+    try {
+      let activeConversation = conversation;
+      if (!activeConversation) {
+        activeConversation = await base44.agents.createConversation({
+          agent_name: "scam_analyzer",
+          metadata: { name: "New Chat" },
+        });
+        setConversation(activeConversation);
+        setConversations((prev) => [activeConversation, ...prev]);
+      }
+
+      let fileUrls = [];
+      for (const img of selectedImages) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: img });
+        fileUrls.push(file_url);
+      }
+      setSelectedImages([]);
+      setImagePreviews([]);
+
+      await base44.agents.addMessage(activeConversation, {
+        role: "user",
+        content: messageContent || "Please analyze this screenshot for scam indicators.",
+        file_urls: fileUrls.length > 0 ? fileUrls : undefined,
+      });
+
+      // Update conversation name if it's still "New Chat"
+      if (activeConversation?.metadata?.name === "New Chat" && messageContent) {
+        const title = messageContent.slice(0, 40) + (messageContent.length > 40 ? "…" : "");
+        try {
+          await base44.agents.updateConversation(activeConversation.id, { metadata: { name: title } });
+          setConversation((prev) => prev?.id === activeConversation.id
+            ? { ...prev, metadata: { ...prev.metadata, name: title } }
+            : prev);
+          setConversations((prev) => prev.map((c) => c.id === activeConversation.id
+            ? { ...c, metadata: { ...c.metadata, name: title } }
+            : c));
+        } catch {}
+      }
+
+      await incrementCreditUsage(cost);
+      const updated = await getCreditStatus();
+      setCredits(updated);
+    } catch (e) {
+      toast({ title: "Could not send message", description: e.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setSending(false);
     }
-    setSelectedImages([]);
-    setImagePreviews([]);
-
-    await base44.agents.addMessage(conversation, {
-      role: "user",
-      content: messageContent || "Please analyze this screenshot for scam indicators.",
-      file_urls: fileUrls.length > 0 ? fileUrls : undefined,
-    });
-
-    // Update conversation name if it's still "New Chat"
-    if (conversation?.metadata?.name === "New Chat" && messageContent) {
-      const title = messageContent.slice(0, 40) + (messageContent.length > 40 ? "…" : "");
-      try {
-        await base44.agents.updateConversation(conversation.id, { metadata: { name: title } });
-        setConversation({ ...conversation, metadata: { ...conversation.metadata, name: title } });
-        setConversations(conversations.map((c) => c.id === conversation.id ? { ...c, metadata: { ...c.metadata, name: title } } : c));
-      } catch {}
-    }
-
-    await incrementCreditUsage(cost);
-    const updated = await getCreditStatus();
-    setCredits(updated);
-    setSending(false);
   };
 
   const handleKeyDown = (e) => {
