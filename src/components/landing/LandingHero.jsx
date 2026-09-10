@@ -10,7 +10,7 @@ const stats = [
 ];
 
 export default function LandingHero({ preview = false }) {
-  const ctaHref = preview ? "/" : "/register";
+  const ctaHref = preview ? "/dashboard" : "/register";
 
   return (
     <>
