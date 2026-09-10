@@ -133,12 +133,8 @@ export async function getFamilyStatus() {
 export async function incrementCreditUsage(amount = 1) {
   const user = await base44.auth.me();
   const currentMonth = new Date().toISOString().slice(0, 7);
-  let creditsUsed = (user.credits_used || 0) + amount;
   const resetMonth = user.credits_reset_month;
-
-  if (resetMonth !== currentMonth) {
-    creditsUsed = amount;
-  }
+  let creditsUsed = resetMonth === currentMonth ? (user.credits_used || 0) : 0;
 
   const adminBalance = Math.max(0, user.admin_credit_balance || 0);
   const fromAdmin = Math.min(adminBalance, amount);

@@ -92,7 +92,7 @@ Respond entirely in ${languageName}.`;
     return Response.json({
       questions: result.questions || [],
       credits_used: CREDIT_COST,
-      credits_remaining: Math.max(0, creditLimit - newCreditsUsed),
+      credits_remaining: Math.max(0, creditLimit - newCreditsUsed + newAdminCreditBalance),
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

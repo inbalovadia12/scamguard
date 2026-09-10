@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
         destination_title: qrPageTitle,
         timestamp: new Date().toISOString(),
         credits_used: creditCost,
-        credits_remaining: Math.max(0, creditLimit - newCreditsUsed),
+        credits_remaining: Math.max(0, creditLimit - newCreditsUsed + newAdminCreditBalance),
         credits_limit: creditLimit,
         timing_ms: Date.now() - startTime,
       });
@@ -299,7 +299,7 @@ Deno.serve(async (req) => {
         destination_title: qrPageTitle,
         timestamp: new Date().toISOString(),
         credits_used: creditCost,
-        credits_remaining: Math.max(0, creditLimit - newCreditsUsed),
+        credits_remaining: Math.max(0, creditLimit - newCreditsUsed + newAdminCreditBalance),
         credits_limit: creditLimit,
         timing_ms: Date.now() - startTime,
       });
@@ -470,7 +470,7 @@ Deno.serve(async (req) => {
       destination_title: qrPageTitle,
       timestamp: new Date().toISOString(),
       credits_used: creditCost,
-      credits_remaining: Math.max(0, creditLimit - newCreditsUsed),
+      credits_remaining: Math.max(0, creditLimit - newCreditsUsed + newAdminCreditBalance),
       credits_limit: creditLimit,
       timing_ms: Date.now() - startTime,
     });

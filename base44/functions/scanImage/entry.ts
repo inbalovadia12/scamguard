@@ -107,7 +107,7 @@ Only report verifiable findings. Respond in ${languageName}.`;
       result,
       scan: saved,
       credits_used: CREDIT_COST,
-      credits_remaining: Math.max(0, creditLimit - newCreditsUsed),
+      credits_remaining: Math.max(0, creditLimit - newCreditsUsed + newAdminCreditBalance),
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
