@@ -9,7 +9,8 @@ const stats = [
   { value: "100%", label: "Privacy committed" },
 ];
 
-export default function LandingHero() {
+export default function LandingHero({ preview = false }) {
+  const ctaHref = preview ? "/" : "/register";
 
   return (
     <>
@@ -31,7 +32,7 @@ export default function LandingHero() {
             phone number and get an instant risk assessment.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 animate-slide-up">
-            <a href="/register" className="w-full sm:w-auto">
+            <a href={ctaHref} className="w-full sm:w-auto">
               <Button
                 type="button"
                 size="lg"
