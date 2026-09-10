@@ -53,7 +53,7 @@ export default function Extension() {
     getCreditStatus().then(setCreditStatus).catch(() => {});
   }, []);
 
-  const isPlusOrPremium = creditStatus?.isPaid;
+  const isPremium = creditStatus?.isPremiumPlan;
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -105,7 +105,7 @@ export default function Extension() {
 
       {/* Download section */}
       <div className="bg-card rounded-2xl border border-border/50 p-6 space-y-4 animate-slide-up" style={{ animationDelay: "100ms" }}>
-        {!isPlusOrPremium ? (
+        {!isPremium ? (
           <div className="text-center space-y-4">
             <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center mx-auto">
               <Lock className="w-6 h-6 text-warning" />
@@ -113,7 +113,7 @@ export default function Extension() {
             <div>
               <h2 className="font-semibold text-base">{t("ext.premium_required")}</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {t("ext.premium_desc")}
+                {t("ext.premium_desc").replace("Plus and Premium", "Premium")}
               </p>
             </div>
             <Link to="/pricing">
