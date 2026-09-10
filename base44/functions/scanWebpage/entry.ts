@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { getUrlhausReport } from '../../shared/urlhaus.ts';
 
-const PLAN_LIMITS = { starter: 30, plus: 250, premium: 500 };
+const PLAN_LIMITS = { starter: 30, plus: 350, premium: 500 };
 const ANSWER_TYPE_COSTS: Record<string, number> = {
   quick: 3, risk_score: 4, red_flags: 5, detailed: 8,
 };
