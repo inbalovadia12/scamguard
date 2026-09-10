@@ -10,15 +10,15 @@ export default function Landing() {
   const isPreview = new URLSearchParams(window.location.search).get("view") === "1";
 
   useEffect(() => {
-    // Visiting the real landing page establishes that this browser has already
-    // seen Vardin. Future visits to the bare root URL can then go to login
-    // instead of presenting the first-time acquisition page again.
+    // Only the real root landing establishes a first visit. The authenticated
+    // /landing?view=1 preview must never change first-visit state.
+    if (isPreview) return;
     try {
       localStorage.setItem("vardin_site_visited", "1");
     } catch {
       // If storage is unavailable, the app still renders normally.
     }
-  }, []);
+  }, [isPreview]);
 
   return (
     <div className="min-h-screen bg-background">
