@@ -22,7 +22,7 @@ const plans = [
     credits: "250 AI credits/month",
     icon: Zap,
     color: "from-primary to-primary/80",
-    features: ["250 AI credits/month", "Crypto link & investment scanning", "URL & link scanning", "Phone & image checks", "Scam Exposer", "Browser Extension"],
+    features: ["250 AI credits/month", "Crypto link & investment scanning", "URL & link scanning", "Phone checks", "Scam Exposer", "Analytics & Incognito Search"],
     highlighted: true,
   },
   {
@@ -33,7 +33,7 @@ const plans = [
     credits: "500 AI credits/month",
     icon: Sparkles,
     color: "from-chart-5 to-chart-5/80",
-    features: ["500 AI credits/month", "Universal Scanner", "Live Guard", "Local Scam Intelligence", "Faster processing", "Early access to new features"],
+    features: ["500 AI credits/month", "Universal Scanner", "Live Guard", "Local Scam Intelligence", "Browser Extension", "Image Scanner", "Learning Center", "Faster processing"]
     highlighted: false,
   },
 ];
