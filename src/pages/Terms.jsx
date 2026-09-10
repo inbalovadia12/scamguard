@@ -1,92 +1,226 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ShieldCheck, AlertTriangle, Scale, Lock, Ban, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, FileText, Lock, Scale, ShieldCheck } from "lucide-react";
 
 const sections = [
   {
-    icon: AlertTriangle,
-    title: "AI and Scam-Detection Limitations",
-    body: `Vardin uses automated systems, including artificial intelligence, statistical pattern recognition, reputation data, and other automated signals. These systems can make mistakes, miss relevant information, rely on incomplete or outdated data, or produce results that are misleading in a particular situation.
+    title: "1. About These Terms",
+    body: `These Terms of Service ("Terms") govern your access to and use of Vardin, including the Vardin website, web application, account features, scam-detection tools, family-protection features, AI-assisted analysis, educational content, paid subscriptions, credit purchases, and related services (collectively, the "Service").
 
-A Vardin risk score, risk level, warning, classification, recommendation, explanation, confidence indicator, or other AI-generated output is a prediction or assessment — not a guarantee, certification, determination of fact, or professional opinion.
+The Service is operated under the Vardin name. References to "Vardin," "we," "us," or "our" mean the operator of the Service. "You" means the individual or organization using the Service.
 
-Vardin does not guarantee that any call, message, link, website, image, wallet, transaction, business, account, or person is safe, legitimate, fraudulent, malicious, or trustworthy. A low-risk or "safe" result must not be treated as proof of safety. A high-risk or "scam" result is not, by itself, proof of fraud or malicious intent.`
+By creating an account, purchasing a subscription or credits, or otherwise accessing or using the Service, you agree to these Terms and our Privacy Policy and Data Collection Notice. If you do not agree, do not use the Service.`
   },
   {
-    icon: Scale,
-    title: "No Professional Advice",
-    body: `Vardin provides general informational and educational assistance. It is not a substitute for professional advice. Do not rely solely on Vardin for financial, legal, medical, cybersecurity, identity-theft, tax, insurance, investment, employment, or other high-stakes decisions.
+    title: "2. Eligibility and Accounts",
+    body: `You must provide accurate information when creating an account and keep your account information reasonably current. You are responsible for maintaining the confidentiality of your credentials and for activity occurring through your account, except to the extent caused by Vardin's failure to use reasonable security measures.
 
-When the consequences of a decision could be significant, independently verify the relevant facts and contact the appropriate bank, merchant, platform, government authority, security professional, lawyer, doctor, financial professional, or other qualified professional.`
+You may not create an account for another person without authorization, impersonate another person, or use the Service where doing so would violate applicable law or another person's rights.
+
+If you use Vardin on behalf of an organization, you represent that you have authority to bind that organization to these Terms.`
   },
   {
-    icon: CheckCircle2,
-    title: "Independent Verification",
-    body: `You are responsible for evaluating information before acting on it. Verify important requests through an independent channel that you find yourself rather than using contact details supplied by a suspicious message or caller. When appropriate, seek confirmation from the organization or person through a known, trusted contact method.`
+    title: "3. What Vardin Does — and What It Does Not Do",
+    body: `Vardin is a consumer safety and scam-awareness service. It may analyze messages, URLs, images, conversations, phone numbers, files, calls, screen content, or other information that you choose to submit or authorize the Service to process. Vardin may use automated systems, artificial intelligence, statistical methods, reputation information, and other signals to generate assessments, explanations, alerts, recommendations, or educational information.
+
+Vardin is not an emergency service, law-enforcement service, bank, insurer, credit-reporting agency, financial adviser, lawyer, medical provider, cybersecurity incident-response provider, or identity-theft recovery provider. The Service does not replace professional judgment or direct confirmation with the relevant institution.
+
+You remain responsible for decisions you make after receiving a Vardin result.`
   },
   {
-    icon: Ban,
-    title: "Emergency and Recovery Situations",
-    body: `Vardin may provide suggested recovery steps, but those suggestions may be incomplete, jurisdiction-specific, delayed, or inappropriate to your circumstances. If you believe money, credentials, identity information, devices, or accounts are at immediate risk, contact the relevant institution or competent authority directly and promptly.`
+    title: "4. AI, Automated Decisions, and Accuracy",
+    body: `AI and automated detection systems are probabilistic and can be wrong. Vardin may incorrectly identify legitimate content as suspicious, fail to identify fraudulent or malicious content, misunderstand context, rely on incomplete or outdated information, or generate an explanation that is incomplete or inaccurate.
+
+A Vardin score, warning, classification, label, recommendation, confidence level, explanation, or other output is an automated assessment and is not a guarantee, certification, finding of fact, or professional opinion. A result indicating low risk or safety is not proof that a person, message, website, transaction, caller, business, wallet, account, or other item is legitimate. A result indicating high risk or a scam is not, by itself, conclusive proof of fraud.
+
+Do not use Vardin as the sole basis for a decision involving substantial financial loss, personal safety, medical care, legal rights, access to an account, employment, housing, insurance, investment, or another high-stakes matter. Independently verify important information through a trusted channel.`
   },
   {
-    icon: Lock,
-    title: "User Responsibility and Inputs",
-    body: `You are responsible for the information you choose to submit and for complying with applicable laws and third-party terms. Do not submit information you are not authorized to share. You should remove unnecessary sensitive information before uploading content whenever practical.`
+    title: "5. User Content and Your Responsibility",
+    body: `You may submit text, messages, URLs, images, screenshots, files, audio or video, conversation content, phone numbers, and other information to the Service ("User Content"). You retain whatever ownership rights you have in User Content.
+
+You represent that you have the rights and permissions necessary to submit User Content and to permit Vardin to process it for the purposes described in these Terms and the Privacy Policy. You must not submit information that you are prohibited from sharing or that would cause Vardin to violate another person's rights.
+
+You should avoid submitting unnecessary sensitive information. Before uploading content, consider removing passwords, authentication codes, payment-card numbers, government identification numbers, private medical information, or other information that is not necessary for the requested analysis.
+
+You grant Vardin a limited, non-exclusive, worldwide license to host, reproduce, process, transmit, and otherwise use User Content only as reasonably necessary to provide, secure, maintain, troubleshoot, support, and improve the Service and as otherwise described in the Privacy Policy. This license ends when the relevant User Content is deleted, except to the extent retention is required by law, necessary for security or legal claims, or reasonably included in backups that are subsequently overwritten in the ordinary course.`
   },
   {
-    icon: ShieldCheck,
-    title: "Service Provided As Is",
-    body: `To the maximum extent permitted by applicable law, Vardin is provided on an "as is" and "as available" basis. We do not promise uninterrupted availability, complete accuracy, error-free operation, or that every scam, threat, fraud attempt, or unsafe situation will be detected. To the maximum extent permitted by applicable law, Vardin and its providers disclaim liability for losses arising from reliance on automated assessments or recommendations, except where such liability cannot lawfully be excluded.`
+    title: "6. AI Processing and Third-Party Providers",
+    body: `Some Service functions may use third-party infrastructure, AI models, payment processors, hosting providers, communications providers, analytics services, or other technology providers. User Content may therefore be transmitted to or processed by service providers acting on Vardin's behalf.
+
+Vardin will handle personal information according to its Privacy Policy and Data Collection Notice. We do not promise that every automated model or third-party provider will produce correct results, and we do not represent that every third-party provider is under Vardin's direct control.
+
+Vardin will not make a promise in these Terms or elsewhere about data use that conflicts with the actual practices described in our Privacy Policy. Material changes to data practices will be handled in accordance with applicable law and the notice requirements described in the Privacy Policy.`
+  },
+  {
+    title: "7. Family Protection and Guardian Features",
+    body: `Vardin may allow an account holder to connect or protect another person, receive family alerts, or manage certain protection settings. You may only create or manage a family connection when you have the authority and permission required to do so.
+
+Guardian features are communication and safety-assistance tools. They do not guarantee that every event will be detected, that every alert will be delivered, or that an alert will arrive before a person takes action. Network failures, device settings, third-party services, incorrect information, and other circumstances can delay or prevent notifications.
+
+If you use Vardin to protect another person, you are responsible for using the feature lawfully and for providing any notices or obtaining any consent that applicable law requires.`
+  },
+  {
+    title: "8. Children and Minors",
+    body: `Vardin includes family-oriented and educational features. Those features do not mean that Vardin may lawfully collect personal information from every child without parental authorization. Where applicable law requires parental consent or another special authorization for a minor's use of the Service, the required parent or guardian must provide it.
+
+Parents and guardians are responsible for supervising minors' use of the Service and for ensuring that their use complies with applicable law. If you believe a child has provided personal information to Vardin in circumstances where consent was required but was not obtained, contact us at support@vardin.app so the matter can be reviewed.`
+  },
+  {
+    title: "9. Acceptable Use",
+    body: `You may use Vardin only for lawful purposes and in accordance with these Terms. You may not:
+
+• use the Service to commit, facilitate, conceal, or plan fraud, harassment, abuse, identity theft, unauthorized surveillance, or other unlawful activity;
+• attempt to gain unauthorized access to the Service, another account, or any system connected to the Service;
+• probe, scan, test, reverse engineer, decompile, or circumvent security or access controls except where applicable law expressly permits it;
+• interfere with the Service, overload infrastructure, introduce malicious code, or attempt to bypass usage or credit limits;
+• use automated scraping, bots, or other automated access methods except where Vardin expressly permits them;
+• use Vardin outputs to make decisions that unlawfully discriminate against another person;
+• submit content that you do not have permission to submit; or
+• use Vardin in a way that violates applicable law or the rights of others.`
+  },
+  {
+    title: "10. Paid Plans, Credits, and Billing",
+    body: `Vardin offers a free Starter plan and paid plans that may include recurring subscriptions and additional AI credits. Current prices, included features, credit allocations, family-member pricing, and billing frequency are displayed at the time of purchase and may change prospectively.
+
+Paid subscriptions currently use annual billing through PayPal. The Service may display a monthly equivalent for comparison while charging the applicable annual amount. Additional family members may incur additional annual charges as displayed during checkout.
+
+Credit purchases are separate from subscriptions unless expressly stated otherwise. Credits are for use within the Service, are non-transferable, and have no cash value except where applicable law requires otherwise. Credit consumption varies by feature and may change when Vardin changes or adds features; the applicable credit cost is displayed or communicated by the Service.
+
+Cancellation stops future renewal but does not necessarily create a refund for a period that has already been paid. Refunds, where available, are governed by applicable law, the terms presented at checkout, and any mandatory consumer rights. Nothing in these Terms limits a refund right that cannot lawfully be excluded.
+
+If a payment is reversed, disputed, charged back, refunded, or otherwise not successfully completed, Vardin may suspend or limit paid features associated with that payment, subject to applicable law.`
+  },
+  {
+    title: "11. Intellectual Property",
+    body: `The Service, including its software, interface, branding, designs, text, graphics, audiovisual materials, databases, compilations, and other Vardin-provided content, is owned by or licensed to Vardin and is protected by applicable intellectual-property laws.
+
+Subject to these Terms, Vardin grants you a limited, non-exclusive, non-transferable, revocable right to access and use the Service for its intended purpose. No ownership rights are transferred to you.
+
+You may not copy, reproduce, distribute, sell, sublicense, publicly display, commercially exploit, or create derivative works from Vardin's proprietary materials except as permitted by law or with written authorization.`
+  },
+  {
+    title: "12. Third-Party Services and Links",
+    body: `The Service may contain links to or integrations with third-party websites and services, including payment providers and technology providers. Third-party services are governed by their own terms and privacy practices. Vardin is not responsible for third-party services that it does not control.
+
+A link, integration, or reference does not constitute an endorsement or guarantee of a third party's products, services, security, accuracy, availability, or conduct.`
+  },
+  {
+    title: "13. Availability, Changes, and Beta Features",
+    body: `Vardin may add, modify, suspend, or discontinue features. Some features may be experimental, in testing, or subject to limits. We may perform maintenance, security updates, or other changes that temporarily affect availability.
+
+We do not guarantee that the Service will always be available, uninterrupted, timely, secure, or error-free. We will use reasonable efforts to maintain the Service and address material technical problems, but outages and failures can occur.`
+  },
+  {
+    title: "14. Suspension and Termination",
+    body: `You may stop using the Service at any time. Subject to applicable law and any surviving contractual obligations, you may request account deletion through the methods described in the Privacy Policy.
+
+Vardin may suspend or terminate access where reasonably necessary to prevent abuse, protect users or the Service, investigate suspected fraud or security incidents, comply with law, enforce these Terms, or address non-payment. Where reasonably practicable and legally permitted, we will provide notice and an opportunity to resolve the issue.
+
+Termination does not eliminate obligations that by their nature should survive, including provisions concerning intellectual property, disclaimers, limitations of liability, dispute resolution, payment obligations already incurred, and User Content rights necessary to comply with law or resolve disputes.`
+  },
+  {
+    title: "15. Disclaimers",
+    body: `TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE." VARDIN DISCLAIMS WARRANTIES AND CONDITIONS, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT, ACCURACY, RELIABILITY, AND UNINTERRUPTED OR ERROR-FREE OPERATION.
+
+VARDIN DOES NOT WARRANT THAT THE SERVICE WILL DETECT EVERY SCAM, FRAUD, THREAT, MALICIOUS WEBSITE, COMPROMISED ACCOUNT, OR OTHER HARMFUL EVENT; THAT ALERTS WILL ALWAYS BE DELIVERED; THAT INFORMATION WILL ALWAYS BE CURRENT; OR THAT USE OF THE SERVICE WILL PREVENT FINANCIAL LOSS, IDENTITY THEFT, CYBERATTACK, OR OTHER HARM.
+
+NOTHING IN THESE TERMS EXCLUDES A WARRANTY OR RIGHT THAT APPLICABLE LAW DOES NOT PERMIT US TO EXCLUDE.`
+  },
+  {
+    title: "16. Limitation of Liability",
+    body: `TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, VARDIN AND ITS AFFILIATES, SERVICE PROVIDERS, LICENSORS, OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS WILL NOT BE LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR FOR LOSS OF PROFITS, REVENUE, DATA, GOODWILL, BUSINESS OPPORTUNITY, OR ANTICIPATED SAVINGS, ARISING OUT OF OR RELATED TO THE SERVICE OR THESE TERMS.
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, VARDIN'S TOTAL AGGREGATE LIABILITY FOR CLAIMS ARISING OUT OF OR RELATING TO THE SERVICE OR THESE TERMS WILL NOT EXCEED THE GREATER OF (A) THE AMOUNT YOU PAID TO VARDIN FOR THE SERVICE DURING THE TWELVE MONTHS BEFORE THE EVENT GIVING RISE TO THE CLAIM OR (B) US $100.
+
+THESE LIMITATIONS APPLY ONLY TO THE EXTENT PERMITTED BY LAW. THEY DO NOT LIMIT LIABILITY THAT CANNOT LAWFULLY BE LIMITED OR EXCLUDED, INCLUDING LIABILITY THAT A JURISDICTION PROHIBITS A CONTRACT FROM EXCLUDING.`
+  },
+  {
+    title: "17. Indemnification",
+    body: `To the maximum extent permitted by applicable law, you agree to defend, indemnify, and hold harmless Vardin and its affiliates, service providers, licensors, officers, directors, employees, and agents from claims, liabilities, damages, losses, and reasonable expenses arising from your unlawful use of the Service, your violation of these Terms, your infringement or misappropriation of another person's rights, or User Content that you submit without the necessary rights or permissions.
+
+This obligation does not apply to the extent a claim results from Vardin's own unlawful conduct or from a matter that cannot lawfully be allocated to you.`
+  },
+  {
+    title: "18. Disputes and Applicable Law",
+    body: `Before starting formal proceedings, you agree to give Vardin a reasonable opportunity to investigate and resolve a dispute by contacting support@vardin.app with a description of the issue and the requested resolution. Nothing in this section prevents you from contacting a regulator or exercising a consumer right that applicable law makes non-waivable.
+
+These Terms are governed by the laws applicable to the jurisdiction in which Vardin's operating entity is established, without regard to conflict-of-law principles, except where mandatory consumer-protection law requires otherwise. Subject to mandatory law, disputes that cannot be resolved informally will be brought before a court with appropriate jurisdiction over the parties and the dispute.
+
+If the law of your country or state gives you mandatory rights that conflict with this section, those rights prevail.`
+  },
+  {
+    title: "19. Changes to These Terms",
+    body: `We may update these Terms when the Service, law, or our business practices change. We will not rely on a material change to these Terms merely by quietly changing a page after you have already agreed to materially different terms.
+
+For material changes, Vardin will provide notice through a reasonable method, which may include an in-product notice, email, or a prominent notice on the Service. Where applicable law requires affirmative acceptance or additional notice, we will provide it. The "Last updated" date at the top of this page identifies the current version.
+
+Your continued use after the effective date of a properly notified change constitutes acceptance only to the extent permitted by applicable law.`
+  },
+  {
+    title: "20. General Contract Terms",
+    body: `If any provision of these Terms is found unenforceable, it will be modified or severed to the minimum extent necessary, and the remaining provisions will remain in effect. A failure to enforce a provision is not a waiver of the right to enforce it later.
+
+You may not assign your rights or obligations under these Terms without Vardin's written consent, except where applicable law permits an assignment connected with a merger, acquisition, reorganization, or sale of substantially all relevant assets. Vardin may assign these Terms in connection with such a transaction.
+
+These Terms, together with the Privacy Policy, Data Collection Notice, and any additional terms expressly presented for a particular feature or purchase, constitute the agreement between you and Vardin concerning the Service and supersede prior agreements concerning the same subject matter, except where applicable law provides otherwise.`
+  },
+  {
+    title: "21. Contact",
+    body: `Questions, legal notices, privacy requests, and complaints concerning these Terms may be sent to support@vardin.app. Please include enough information for us to identify the relevant account or issue without unnecessarily sending sensitive personal information.`
   },
 ];
 
 export default function Terms() {
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-10">
-      <div className="text-center space-y-3 animate-slide-up">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
-          <ShieldCheck className="w-7 h-7 text-primary-foreground" />
+    <div className="max-w-4xl mx-auto pb-16">
+      <header className="border-b border-border pb-8 mb-8">
+        <div className="flex items-center gap-3 text-primary mb-5">
+          <FileText className="w-6 h-6" />
+          <span className="text-sm font-semibold tracking-wide uppercase">Legal</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Terms of Service</h1>
-        <p className="text-muted-foreground text-sm">Last updated: September 2026</p>
-      </div>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight font-heading">Terms of Service</h1>
+        <p className="mt-3 text-sm text-muted-foreground">Last updated: September 2026</p>
+        <p className="mt-5 max-w-3xl text-sm sm:text-base leading-7 text-muted-foreground">
+          These Terms govern your use of Vardin and explain the rules, limitations, payment terms, AI limitations, and legal responsibilities that apply when you use the Service.
+        </p>
+      </header>
 
-      <div className="bg-warning/5 rounded-2xl border border-warning/25 p-5 sm:p-6 animate-slide-up">
+      <div className="mb-8 border border-primary/20 bg-primary/5 rounded-xl p-5 sm:p-6">
         <div className="flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+          <ShieldCheck className="w-5 h-5 text-primary mt-0.5 shrink-0" />
           <div>
-            <h2 className="font-semibold">Important AI notice</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed mt-1">
-              Vardin's AI analyses are automated predictions and may be inaccurate or incomplete. No Vardin result guarantees that something is safe or fraudulent. Independently verify important information and do not rely solely on Vardin for high-stakes decisions.
+            <h2 className="font-semibold">Please read before using Vardin</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Vardin is a scam-detection and safety-assistance service. Its automated results can be wrong and must not be treated as guarantees or as professional advice. You remain responsible for independently verifying important information before acting on it.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="bg-card rounded-2xl border border-border/50 p-5 sm:p-6 space-y-3 animate-slide-up">
-        <h2 className="font-semibold">Acceptance</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          By creating or using a Vardin account, you agree to these Terms of Service and acknowledge the limitations of automated scam detection described below. If you do not agree, do not use the service.
+      <div className="space-y-8">
+        {sections.map((section) => (
+          <section key={section.title} className="border-b border-border/70 pb-8 last:border-0">
+            <h2 className="text-lg sm:text-xl font-semibold tracking-tight">{section.title}</h2>
+            <p className="mt-3 text-sm sm:text-[15px] leading-7 text-muted-foreground whitespace-pre-line">{section.body}</p>
+          </section>
+        ))}
+      </div>
+
+      <footer className="mt-8 pt-6 border-t border-border text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <Link to="/privacy" className="text-primary hover:underline inline-flex items-center gap-1">
+            Privacy Policy <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+          <Link to="/data-collection" className="text-primary hover:underline inline-flex items-center gap-1">
+            Data Collection Notice <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+        <p className="mt-4 text-xs leading-5">
+          These Terms are intended to be comprehensive, but no online terms can guarantee that every provision will be enforceable in every jurisdiction. Mandatory rights under applicable law remain unaffected.
         </p>
-      </div>
-
-      {sections.map((section, i) => (
-        <section key={i} className="bg-card rounded-2xl border border-border/50 p-5 sm:p-6 space-y-3 animate-slide-up" style={{ animationDelay: `${(i + 1) * 60}ms` }}>
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-              <section.icon className="w-4.5 h-4.5 text-primary" />
-            </div>
-            <h2 className="font-semibold text-base">{section.title}</h2>
-          </div>
-          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{section.body}</p>
-        </section>
-      ))}
-
-      <div className="text-center text-xs text-muted-foreground leading-relaxed px-4">
-        These Terms are intended to describe the service's limitations and are not a guarantee that any particular limitation of liability is enforceable in every jurisdiction. If you have a legal question about your circumstances, consult a qualified lawyer.
-        <div className="mt-3"><Link to="/privacy" className="text-primary hover:underline">Privacy & Data Policy</Link></div>
-      </div>
+      </footer>
     </div>
   );
 }
