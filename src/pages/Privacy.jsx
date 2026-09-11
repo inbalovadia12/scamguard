@@ -41,7 +41,7 @@ export default function Privacy() {
           This Privacy Policy describes the Vardin application and website as they are currently implemented. It explains what information Vardin receives, what Vardin stores, what Vardin sends to service providers, how automated analysis works, and the controls currently available to users.
         </p>
         <div className="mt-5 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5 text-sm leading-6 text-foreground">
-          <strong>Important:</strong> This Policy is written to describe Vardin's current data practices as accurately as the application and configured providers can be verified. It does not promise that a provider retains data for a particular period when Vardin cannot control that provider setting, and it does not claim legal compliance in every jurisdiction. The operator should have qualified privacy counsel review the final policy, contracts, transfer mechanisms, children's-privacy controls and retention settings before launch.
+          <strong>Important:</strong> This Policy is written to describe Vardin's current data practices as accurately as the application and configured providers can be verified. It does not promise that a provider retains data for a particular period when Vardin cannot control that provider setting, and it does not claim legal compliance in every jurisdiction. The operator should have qualified privacy counsel review the final policy, contracts, transfer mechanisms and retention settings before launch.
         </div>
       </header>
 
@@ -240,9 +240,9 @@ export default function Privacy() {
       </Section>
 
       <Section number={26} title="Age Suitability">
-        <p>Vardin is a general consumer scam-awareness service and does not currently offer a dedicated child or kid mode. The Service is not designed as a child-directed service.</p>
+        <p>Vardin is a general consumer scam-awareness service and does not currently offer a child-directed mode. The Service is not designed as a child-directed service.</p>
         <p>If a person is below the age required to enter a binding agreement or use a particular feature under the law that applies to them, they should use Vardin only with the involvement or authorization required by that law.</p>
-        <p>Vardin does not knowingly market the Service as a children's service. If the product later introduces child-directed features or intentionally targets children, this Policy and the product's consent, age-assurance and data-protection controls should be updated before that launch.</p>
+        <p>Vardin does not knowingly market the Service as a service for children. If the product later introduces child-directed features or intentionally targets children, this Policy and the product's consent, age-assurance and data-protection controls should be updated before that launch.</p>
       </Section>
 
       <Section number={27} title="Information About Other People and Non-Users">
