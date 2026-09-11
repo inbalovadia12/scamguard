@@ -13,7 +13,12 @@ export default function Cookies() {
           <span className="text-sm font-semibold tracking-wide uppercase">Legal</span>
         </div>
         <h1 className="text-[2rem] leading-tight sm:text-4xl font-bold tracking-tight font-heading">Cookie Policy</h1>
-        <p className="mt-3 text-sm text-muted-foreground">Last updated: {EFFECTIVE_DATE}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="mt-3 text-sm text-muted-foreground">Last updated: {EFFECTIVE_DATE}</p>
+          <Link to="/dashboard" className="mt-3 inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors">
+            Back to Dashboard
+          </Link>
+        </div>
         <p className="mt-4 max-w-3xl text-[14px] sm:text-base leading-6 sm:leading-7 text-muted-foreground">
           This Cookie Policy explains how Vardin uses cookies and similar browser storage technologies in the current application.
         </p>
