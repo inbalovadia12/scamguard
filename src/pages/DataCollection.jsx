@@ -20,7 +20,12 @@ export default function DataCollection() {
       <header className="border-b border-border/60 pb-7 sm:pb-10">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Legal notice</p>
         <h1 className="mt-3 text-[2rem] leading-tight sm:text-4xl font-bold tracking-tight">Data Collection Notice</h1>
-        <p className="mt-3 text-sm text-muted-foreground">Last Updated: {EFFECTIVE_DATE}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="mt-3 text-sm text-muted-foreground">Last Updated: {EFFECTIVE_DATE}</p>
+          <Link to="/dashboard" className="mt-3 inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors">
+            Back to Dashboard
+          </Link>
+        </div>
         <p className="mt-5 max-w-4xl text-sm sm:text-base leading-7 text-muted-foreground">
           This is Vardin's concise notice of the principal categories of information processed by the current application. Vardin is currently in beta, so features and data flows may change as the product is tested and improved. It supplements, and does not replace, the <Link className="text-primary underline underline-offset-2" to="/privacy">Privacy Policy</Link>.
         </p>
