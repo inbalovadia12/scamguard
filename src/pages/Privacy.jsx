@@ -1,12 +1,12 @@
 import React from "react";
 
-const EFFECTIVE_DATE = "September 10, 2026";
+const EFFECTIVE_DATE = "September 11, 2026";
 
 function Section({ number, title, children }) {
   return (
-    <section className="border-b border-border/60 py-7 sm:py-8 last:border-b-0">
+    <section id={`privacy-${number}`} className="border-b border-border/60 py-7 sm:py-9 last:border-b-0 scroll-mt-24">
       <div className="flex gap-3 sm:gap-5">
-        <div className="hidden sm:block w-8 shrink-0 pt-1 text-xs font-semibold text-muted-foreground tabular-nums">{String(number).padStart(2, "0")}</div>
+        <div className="hidden sm:block w-9 shrink-0 pt-1 text-xs font-semibold text-muted-foreground tabular-nums">{String(number).padStart(2, "0")}</div>
         <div className="min-w-0 flex-1">
           <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-foreground">{title}</h2>
           <div className="mt-3 sm:mt-4 space-y-4 text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-muted-foreground break-words [overflow-wrap:anywhere]">{children}</div>
@@ -17,152 +17,273 @@ function Section({ number, title, children }) {
 }
 
 function BulletList({ items }) {
-  return (
-    <ul className="list-disc pl-5 space-y-2">
-      {items.map((item) => <li key={item}>{item}</li>)}
-    </ul>
-  );
+  return <ul className="list-disc pl-5 space-y-2">{items.map((item) => <li key={item}>{item}</li>)}</ul>;
 }
+
+const providerLinks = [
+  ["Base44", "https://base44.com/privacy-policy"],
+  ["Google Gemini API", "https://ai.google.dev/gemini-api/docs/logs-policy"],
+  ["Groq", "https://groq.com/privacy-policy"],
+  ["Deepgram", "https://deepgram.com/terms"],
+  ["ElevenLabs", "https://elevenlabs.io/docs/eleven-api/resources/zero-retention-mode"],
+  ["PayPal", "https://www.paypal.com/us/legalhub/paypal/privacy-full?redirect=false"],
+  ["Google Workspace / Gmail API", "https://developers.google.com/workspace/workspace-api-user-data-developer-policy"],
+  ["VirusTotal", "https://docs.virustotal.com/docs/private-scanning"],
+];
 
 export default function Privacy() {
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-16 break-words [overflow-wrap:anywhere]">
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 sm:pb-16 break-words [overflow-wrap:anywhere]">
       <header className="border-b border-border/60 pb-7 sm:pb-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Legal</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Legal · Privacy</p>
         <h1 className="mt-3 text-[2rem] leading-tight sm:text-4xl font-bold tracking-tight text-foreground">Privacy Policy</h1>
-        <p className="mt-3 text-sm text-muted-foreground">Effective date: {EFFECTIVE_DATE}</p>
-        <p className="mt-6 max-w-3xl text-sm sm:text-base leading-7 text-muted-foreground">
-          This Privacy Policy explains how Vardin collects, uses, discloses, retains, and protects personal information when you use the Vardin website, applications, scam-detection tools, family-protection features, browser extension, and related services (collectively, the “Services”).
+        <p className="mt-3 text-sm text-muted-foreground">Last Updated: {EFFECTIVE_DATE}</p>
+        <p className="mt-5 max-w-4xl text-sm sm:text-base leading-7 text-muted-foreground">
+          This Privacy Policy describes the Vardin application and website as they are currently implemented. It explains what information Vardin receives, what Vardin stores, what Vardin sends to service providers, how automated analysis works, and the controls currently available to users.
         </p>
-        <div className="mt-5 sm:mt-6 rounded-xl border border-border bg-muted/30 p-4 sm:p-5 text-sm leading-6 text-foreground overflow-hidden">
-          <strong>Important:</strong> This policy describes Vardin’s actual data practices as currently implemented. Privacy law varies by jurisdiction and depends on factors including where you live, the nature and scale of the business, and how the Services are used. No privacy policy can guarantee that a business will never face a claim or regulatory action. Vardin should have this policy and its underlying data practices reviewed by qualified privacy counsel before commercial launch.
+        <div className="mt-5 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5 text-sm leading-6 text-foreground">
+          <strong>Important limitation:</strong> Vardin currently has some privacy controls, including account-data deletion, but it does not yet enforce a complete, automated retention schedule for every data category or provide a self-service data-export tool. The operator and its qualified privacy counsel should review the unresolved items identified in this Policy before relying on it as a statement of legal compliance.
         </div>
       </header>
 
-      <Section number={1} title="Who We Are and Scope">
-        <p>Vardin is the operator of the Services. In this Policy, “Vardin,” “we,” “us,” and “our” refer to the Vardin service and its operator. “You” means the person using the Services.</p>
-        <p>For privacy-law purposes, Vardin may act as a controller, business, or similar responsible party for information about its users. Where another organization processes information on Vardin’s behalf, that organization may act as a processor or service provider.</p>
-        <p>Questions and privacy requests can be sent to <a className="text-primary underline underline-offset-2 break-all" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a>.</p>
+      <nav aria-label="Privacy Policy sections" className="my-6 rounded-xl border border-border bg-card p-4 sm:p-5">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">On this page</p>
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+          {[
+            [1, "Introduction"], [2, "Who Vardin Is"], [3, "Scope"], [4, "Information We Collect"], [5, "Automatic Collection"],
+            [6, "User-Provided Content"], [7, "Call Guard"], [8, "Speaker Diarization"], [9, "AI Processing"], [10, "Scam Detection"],
+            [11, "Messages & Media"], [12, "Family Protection"], [13, "Community Reports"], [14, "Uses"], [15, "Legal Bases"],
+            [16, "Sharing"], [17, "Third Parties"], [18, "AI Providers"], [19, "International Transfers"], [20, "Retention"],
+            [21, "Security"], [22, "Privacy Rights"], [23, "Access & Export"], [24, "Account Deletion"], [25, "Cookies"],
+            [26, "Children & Teens"], [27, "Non-Users"], [28, "Changes"], [29, "Contact"], [30, "Requests & Complaints"],
+          ].map(([n, label]) => <a key={n} href={`#privacy-${n}`} className="rounded-lg px-2 py-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">{n}. {label}</a>)}
+        </div>
+      </nav>
+
+      <Section number={1} title="Introduction">
+        <p>Vardin is an AI-assisted scam-awareness and consumer-safety service. This Policy applies to the Vardin website, web application, browser-extension functionality, scam scanners, phone-reputation features, Live Guard, family-protection features, educational features, subscriptions, credit purchases, and related services.</p>
+        <p>Because users can submit communications and media belonging to other people, Vardin may process information about people who do not have Vardin accounts. The person submitting that information is responsible for having the authority required to do so.</p>
       </Section>
 
-      <Section number={2} title="Information We Collect">
-        <p>We collect information that you provide, information generated when you use the Services, and information received from service providers or other sources necessary to operate the Services.</p>
+      <Section number={2} title="Who Vardin Is">
+        <p>The Service is operated under the Vardin name. The current application identifies <a className="text-primary underline underline-offset-2 break-all" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a> as its privacy and support contact.</p>
+        <p>The application code does not establish a verified legal entity name, registered office, telephone number, jurisdiction of incorporation, or formal data-protection-officer identity. This Policy therefore does not invent any of those details.</p>
+      </Section>
+
+      <Section number={3} title="Scope">
+        <p>This Policy covers personal information processed through Vardin's current application architecture. It does not govern independent third-party services that Vardin does not control, including external payment-provider accounts, Google accounts, websites reached through links, or other services that you use separately.</p>
+        <p>Where a third party processes information directly under its own terms, its own privacy policy may apply in addition to this Policy.</p>
+      </Section>
+
+      <Section number={4} title="Information We Collect">
+        <p>The current application can process the following categories:</p>
         <BulletList items={[
-          "Account and identity information, such as name, email address, authentication information, subscription status, preferences, and account settings.",
-          "Content you submit for analysis, including messages, URLs, screenshots, images, documents, call-related files, and other material you choose to submit. Such material may contain personal or sensitive information about you or other people.",
-          "Analysis and activity information, including scan type, risk results, explanations, detected tactics, usage and credit consumption, lesson progress, and related account activity.",
-          "Family-protection information, such as the name, email address, relationship, consent status, protection settings, alert preferences, and identifiers of people you add to family-protection features.",
-          "Payment and subscription information. Payments are processed through third-party payment providers such as PayPal. Vardin does not need to receive or store your full payment-card number to provide subscription services.",
-          "Device, browser, and technical information, which may include IP address, browser type, operating system, device characteristics, approximate location derived from IP address, timestamps, referring pages, and security or diagnostic information.",
-          "Communications and support information, including messages you send to us, feedback, support requests, and records needed to respond to you.",
-          "Information provided by others where the Services support family protection, invitations, consent workflows, or other features involving another person."
+          "Account information: email address, name, role, subscription plan and status, onboarding choices, alert preferences, notification preferences, language and other account settings.",
+          "Submitted content: messages, emails, chat transcripts, URLs, website text, marketplace content, screenshots, images, files, QR-code content, crypto-investment messages, phone numbers, and uploaded call recordings.",
+          "Call information: live microphone or system-audio chunks, uploaded call recordings, transcripts, speaker labels such as 'you' and 'caller', detected tactics, warnings, risk levels, coaching/feedback, duration and segment counts.",
+          "Analysis information: risk scores, classifications, explanations, detected tactics, recommended actions, false-positive flags, sources and other AI-generated results.",
+          "Phone information: phone numbers searched by users, country/carrier information, reputation results, community reports and caller-ID classifications. Vardin also maintains administrator-managed reputation and caller-ID datasets.",
+          "Family information: names, email addresses, phone numbers, guardian/member identifiers, consent status, alert preferences, protection settings, notes and family-alert information.",
+          "Community information: scam reports, community stories, display names, country, scam type, channel, likes and moderation status.",
+          "Education and usage information: lesson progress, scores, XP, scan activity, credit usage, referrals and subscription-related activity.",
+          "Payment information: subscription and credit-purchase transaction information. Payment processing is performed through PayPal; Vardin's code does not request a full payment-card number.",
+          "Support and feedback information: feedback content, ratings, name and email when supplied, support communications and administrative responses.",
+          "Technical information: information available to the application platform and service providers as part of authentication, requests, security, hosting and normal web operation. Vardin's application code does not intentionally collect precise GPS location except when you actively request Local Scam Intelligence and grant browser location permission."
         ]} />
-        <p>We do not intentionally require you to submit sensitive information that is unnecessary for the requested feature. You should avoid submitting unnecessary passwords, authentication codes, full payment-card details, government identification numbers, medical records, or other highly sensitive information.</p>
       </Section>
 
-      <Section number={3} title="How We Use Personal Information">
-        <p>We use information for specific business and service purposes, including:</p>
+      <Section number={5} title="Information Collected Automatically">
+        <p>Vardin uses browser storage for functional purposes such as session restoration, language, theme, accessibility settings, referrals, dismissed notices, privacy preferences and other local application state. The UI also writes a sidebar preference cookie.</p>
+        <p>The current source code does not contain a dedicated third-party advertising analytics SDK such as Google Analytics, Mixpanel, PostHog or Sentry. This Policy therefore does not claim that Vardin operates one.</p>
+        <p>Base44, the application platform, and other infrastructure providers may independently process technical information such as IP address, device/browser information, request metadata and security logs. Their own policies apply to their processing.</p>
+      </Section>
+
+      <Section number={6} title="User-Provided Information and Submitted Content">
+        <p>When you use a scanner, you choose what to submit. Vardin's scanners can receive text, URLs, screenshots, images, files, phone numbers, marketplace material, social-profile material, QR codes and other content. Uploaded files may be placed in Vardin/Base44-managed file storage so the requested analysis can be performed.</p>
+        <p>Some records are stored in Vardin's database. Examples include scam analyses, conversation analyses, image scans, phone lookups, local scam scans, community reports, family alerts, lesson progress and Live Guard sessions.</p>
+        <p>Vardin has an optional automatic-redaction setting for certain stored messages. Redaction is not a guarantee that personal information will be removed, and it does not prevent the original content from being transmitted to a provider when transmission is required to perform the requested analysis.</p>
+      </Section>
+
+      <Section number={7} title="Call Guard, Audio, and Transcripts">
+        <p><strong>Call Guard does capture audio.</strong> In microphone mode, the browser requests microphone access and records short audio chunks locally before sending them to Vardin's backend for analysis. In system-audio/phone-call modes, the browser uses display-media capture when supported. In upload mode, the user selects an existing audio recording and Vardin uploads it for analysis.</p>
+        <p>For uploaded recordings, the current application uploads the audio file through Base44's file-upload service and then sends the resulting file URL to the Vardin <code>analyzeCallChunk</code> function. The backend downloads the audio and sends the audio bytes to Groq for speech-to-text. If Groq fails and a Deepgram credential is configured, Vardin sends the audio to Deepgram as a fallback.</p>
+        <p>The current Vardin database does <strong>not</strong> contain a field for storing the original call-audio bytes. It does, however, store <code>LiveGuardSession</code> records containing transcripts/analysis segments, risk level, warnings, tactics, duration and segment count. Uploaded audio is also placed in platform file storage during processing, and the current code does not implement a Vardin-managed automatic deletion schedule for those uploaded files.</p>
+        <p>Live audio is therefore not accurately described as “local only,” “never transmitted,” or “never stored.” Vardin transmits live audio to its backend and third-party speech-to-text providers as necessary to perform Call Guard, and uploaded recordings pass through platform file storage.</p>
+      </Section>
+
+      <Section number={8} title="Speaker Diarization and 'You' vs. 'Caller'">
+        <p>Call Guard attempts to label transcript segments as <strong>you</strong>, <strong>caller</strong>, or <strong>unknown</strong>. The current implementation uses Groq's language model to classify speakers based on transcript text and recent conversation context, with a heuristic fallback when that classification fails.</p>
+        <p>These labels are probabilistic and can be wrong. Vardin does not use a biometric voiceprint or claim that its speaker labels identify a person with certainty. Speaker labels and confidence information are part of the in-memory processing state and the resulting transcript/analysis shown to the user; stored Live Guard session records include speaker labels in their transcript JSON.</p>
+      </Section>
+
+      <Section number={9} title="AI Processing">
+        <p>Vardin uses automated AI processing for scam detection, website analysis, image analysis, crypto-message analysis, local scam intelligence, conversation analysis, emergency guidance, educational features, Scam Exposer and other features. Depending on the feature, content may be processed through Base44's Core AI integration, Google Gemini, Groq, or another provider explicitly described in this Policy.</p>
+        <p>Vardin does not claim that AI output is always accurate. AI results are assessments, not guarantees, professional advice or proof of fraud.</p>
+        <p>Vardin's current code does not state that customer content is used to train Vardin's own models. Provider-specific retention and training terms can differ, and the operator must maintain the provider settings and contracts needed to support any promises made in this Policy.</p>
+      </Section>
+
+      <Section number={10} title="Scam Detection, Risk Scores, and Automated Results">
+        <p>Vardin generates risk levels, numeric scores, scam categories, warnings, tactics, explanations and recommendations from submitted content and external threat information. These outputs may affect what warnings or family alerts you see, but Vardin's code does not make legal, credit, employment, insurance or other regulated eligibility decisions about users.</p>
+        <p>Risk scores can be wrong or stale. A low-risk result is not proof that content is safe, and a high-risk result is not by itself a legal finding that a person or business committed fraud.</p>
+      </Section>
+
+      <Section number={11} title="Messages, Emails, Screenshots, Links, Websites, and Marketplace Content">
+        <p>Message and conversation scanners process text you provide, including SMS, email, WhatsApp/social-style chat, dating conversations, job offers, delivery notices, bank/government impersonation and crypto-investment messages.</p>
+        <p>URL and Universal Scanner features can fetch a submitted URL, follow redirects, inspect page content, decode QR codes, and query threat-intelligence sources. URL scanning currently uses URLhaus and, when configured, VirusTotal. Website text and screenshots may be sent to AI processing.</p>
+        <p>Marketplace analysis can process seller/listing content and URLs. Image Scanner uploads the image to Vardin/Base44 storage and sends it to AI analysis with web-search context when enabled. Vardin may return public source URLs found during analysis.</p>
+        <p>Because these materials can contain information about other people, do not submit content you are not authorized to process.</p>
+      </Section>
+
+      <Section number={12} title="Family Protection">
+        <p>Family Protection stores relationships between guardians and protected members, including names, emails, phone numbers, guardian identifiers, consent status, protection settings and alert preferences. A protected member can have a Vardin account linked to the family record.</p>
+        <p>When enabled, high-risk or configured scans can create a Family Alert. Alerts can contain a short excerpt, risk level, scam type and a member note. Guardian notifications can be sent by email through Vardin's Gmail integration. The current email implementation may include the member's name, risk level, risk score, message type and AI explanation, and Ask Family alerts can include the excerpt and member note.</p>
+        <p>Family Protection is permission-based, not unrestricted surveillance. A guardian must have the authorization required by applicable law to add and monitor another person. The protected member's consent field is part of the data model.</p>
+      </Section>
+
+      <Section number={13} title="Community Reports and Public-Facing Information">
+        <p>Users can submit scam reports and community stories. A community story can include a title, the user's story, scam type, delivery channel, country, an anonymous setting and an author display name. Community content is readable by users through the Community/Scam Feed features according to the application's access rules.</p>
+        <p>Phone community reports are administrator-readable and may be incorporated into Vardin's phone reputation results. Reddit-derived phone intelligence is imported from publicly indexed information and stored in an administrator-managed dataset.</p>
+        <p>Do not publish personal information about another person in a community report unless you have a lawful reason and appropriate authorization.</p>
+      </Section>
+
+      <Section number={14} title="How We Use Information">
         <BulletList items={[
-          "Providing, operating, maintaining, and securing the Services.",
-          "Authenticating accounts, preventing abuse, detecting fraud, troubleshooting, and protecting users and the Services.",
-          "Processing submitted content through automated analysis systems and returning scam-risk assessments, educational explanations, and suggested next steps.",
-          "Providing family-protection features, including alerts and consent-based sharing where those features are enabled.",
-          "Managing subscriptions, credits, billing status, refunds, and payment-related support through our payment providers.",
-          "Remembering settings such as language, accessibility, privacy preferences, and other account choices.",
-          "Providing customer support and responding to communications.",
-          "Measuring product performance, diagnosing technical problems, improving reliability, and developing the Services.",
-          "Complying with legal obligations, enforcing our agreements, resolving disputes, and protecting the rights, safety, and property of Vardin, users, and others."
+          "Provide and operate the requested Vardin features.",
+          "Analyze submitted content and produce scam-risk assessments, warnings and explanations.",
+          "Provide Call Guard transcription, speaker labeling and scam detection.",
+          "Provide family alerts and guardian/member workflows.",
+          "Maintain accounts, authentication, subscriptions, credits and referrals.",
+          "Process payments and subscription changes through PayPal.",
+          "Send requested or configured email notifications through Gmail or Vardin's email facilities.",
+          "Prevent abuse, troubleshoot failures, protect the Service and investigate security incidents.",
+          "Maintain threat-intelligence and community datasets.",
+          "Provide educational content, lesson progress and product functionality.",
+          "Comply with legal obligations and respond to lawful requests."
         ]} />
-        <p>We do not use submitted scam-analysis content for a purpose materially different from the purpose disclosed to you without providing any notice or consent required by applicable law.</p>
+        <p>Vardin does not currently describe a separate advertising-business purpose for submitted scam content.</p>
       </Section>
 
-      <Section number={4} title="AI Processing and Submitted Content">
-        <p>Vardin uses automated systems, including artificial-intelligence models and related services, to analyze content you submit. Depending on the feature, submitted content may be transmitted to infrastructure operated by Vardin and its technology providers so that the requested analysis can be performed.</p>
-        <p>For some scam-analysis workflows, Vardin applies automated redaction before saving analysis records. Redaction is not perfect and should never be treated as a guarantee that personal information has been removed. Content may also be processed before storage to produce the requested result.</p>
-        <p>Vardin does not represent that AI output is always accurate. A result may be wrong, incomplete, outdated, or based on information that changes. Do not submit information that you are prohibited from sharing or that you do not have authority to process.</p>
+      <Section number={15} title="Legal Bases for Processing">
+        <p>Where the GDPR, UK GDPR or another law requiring a lawful basis applies, the appropriate basis depends on the processing. Potential bases include performance of a contract or requested service; legitimate interests such as security and fraud prevention; consent for processing that requires consent; and compliance with legal obligations.</p>
+        <p>Call audio, transcripts and other communications may contain sensitive or special-category information depending on their content. Vardin does not claim that every such processing activity is automatically lawful under every jurisdiction. The operator should document the applicable Article 6 and, where relevant, Article 9 conditions before serving users in those jurisdictions.</p>
       </Section>
 
-      <Section number={5} title="How We Share Information">
-        <p>We may disclose personal information only as reasonably necessary to provide the Services, operate the business, comply with law, or protect users and the Services. Categories of recipients may include:</p>
+      <Section number={16} title="How We Share Information">
+        <p>Vardin shares information only as needed for the feature or purpose involved, subject to applicable law. Recipients can include:</p>
         <BulletList items={[
-          "Cloud hosting, database, authentication, file-storage, infrastructure, and application-platform providers, including Base44 and its underlying service providers.",
-          "AI and automated-processing providers used to provide requested analysis features.",
-          "Payment and subscription providers, including PayPal, for billing and payment processing.",
-          "Email, notification, customer-support, security, analytics, and operational vendors where needed for the Services.",
-          "Professional advisers such as lawyers, accountants, auditors, insurers, and security advisers where appropriate.",
-          "Government authorities, courts, regulators, or other parties when disclosure is required by law or reasonably necessary to prevent fraud, abuse, or harm.",
-          "A successor or transaction counterparty in connection with a merger, acquisition, financing, reorganization, sale of assets, or similar business transaction, subject to applicable law."
+          "Base44 and its infrastructure providers for application hosting, authentication, database, file storage and platform operations.",
+          "AI and speech providers used for requested analysis, including Google Gemini, Groq and, for Call Guard fallback transcription, Deepgram.",
+          "PayPal for subscriptions and credit purchases.",
+          "Google/Gmail for configured guardian and family notification email delivery.",
+          "VirusTotal and URLhaus for URL threat intelligence when the relevant scanner is used.",
+          "QR Server for server-side QR decoding when QR analysis uses the server decoder.",
+          "ElevenLabs for text-to-speech when Vardin's voice features are used.",
+          "Professional advisers, regulators, courts, law enforcement or other parties when required or permitted by law.",
+          "A successor or transaction counterparty if Vardin is involved in a merger, acquisition, financing, reorganization or sale of relevant assets, subject to applicable law."
         ]} />
-        <p>We do not sell personal information for money. If our practices change in a way that constitutes a “sale” or “sharing” of personal information under an applicable privacy law, we will provide the notices and choices required by that law.</p>
+        <p>The current code does not contain a dedicated advertising-data sale/sharing system. Vardin therefore does not represent that it sells personal information for money.</p>
       </Section>
 
-      <Section number={6} title="Cookies, Local Storage, and Similar Technologies">
-        <p>The Services may use browser storage, cookies, session mechanisms, and similar technologies to keep you signed in, remember settings, provide security, support navigation, and maintain service functionality.</p>
-        <p>Some third-party services may use their own technologies when they provide functionality such as authentication, payment processing, embedded services, or security. Browser controls may allow you to block some technologies, but doing so can interfere with essential functionality.</p>
+      <Section number={17} title="Third-Party Providers">
+        <p>The current code identifies the following external services or provider families as part of the data flows:</p>
+        <div className="rounded-xl border border-border overflow-hidden bg-card">
+          {providerLinks.map(([name, url]) => <div key={name} className="flex items-center justify-between gap-4 border-b last:border-b-0 border-border px-4 py-3 text-sm"><span className="font-medium text-foreground">{name}</span><a className="text-primary underline underline-offset-2 break-all" href={url} target="_blank" rel="noreferrer">Provider documentation</a></div>)}
+        </div>
+        <p>Provider terms and retention settings can change. This Policy describes Vardin's current code-level integrations, not a guarantee that a provider's practices will remain unchanged.</p>
       </Section>
 
-      <Section number={7} title="Data Retention and Deletion">
-        <p>We retain personal information for as long as reasonably necessary for the purposes described in this Policy, including to provide the Services, maintain account records, meet contractual and legal obligations, resolve disputes, prevent abuse, and enforce agreements.</p>
-        <p>Retention periods vary by data type and purpose. When information is no longer required, we may delete it, anonymize it, or securely isolate it where deletion is not immediately possible because of backups, security controls, legal obligations, or legitimate operational needs.</p>
-        <p>Deleting an account does not necessarily cause immediate deletion from every backup or third-party system. Where applicable law gives you a right to deletion, we will process a valid request subject to lawful exceptions.</p>
+      <Section number={18} title="AI Providers and Training/Retention Controls">
+        <p><strong>Groq:</strong> Vardin sends Call Guard audio to Groq's transcription API and sends transcript segments/context to Groq's language model for speaker identification. Groq's current documentation states that inference customer data is not retained by default, while reliability/abuse logs can be retained for up to 30 days unless Zero Data Retention is enabled. Groq also states that customer inputs/outputs are not used for model training unless permission is explicitly granted. Vardin's current code does not itself configure Groq's Zero Data Retention setting. citeturn2search0turn2search1</p>
+        <p><strong>Deepgram:</strong> Vardin can send Call Guard audio to Deepgram if Groq transcription fails. Deepgram's current terms provide a per-request training opt-out mechanism for API customers, but the Vardin code inspected for this Policy does not set such an opt-out parameter. The operator should confirm the applicable Deepgram account/data-processing configuration before promising that Deepgram will never use submitted content for model improvement. citeturn2search10</p>
+        <p><strong>Google Gemini / Base44 AI:</strong> Vardin uses Base44's Core InvokeLLM integration for many analyses and explicitly uses the Gemini 3 Flash model in several backend functions. Google states that for billed Gemini API projects, prompts and responses in developer logs are not used for product improvement by default; logged API data can be retained for up to 55 days, with configurable shorter windows, and data voluntarily added to datasets can have different retention and use rules. Vardin does not have source-level visibility into every Base44-managed logging setting, so the operator should verify the actual Base44/Google configuration. citeturn0search1</p>
+        <p><strong>ElevenLabs:</strong> Vardin uses ElevenLabs only for generated speech in the inspected application code; it sends text and voice configuration, not a user call recording. ElevenLabs states that API logging is enabled by default and that Zero Retention Mode is an enterprise option; retained API generations can be deleted, with backups potentially retaining deleted data for up to 30 days. citeturn3search0turn3search1</p>
       </Section>
 
-      <Section number={8} title="Your Privacy Rights">
-        <p>Depending on where you live and the laws that apply to you, you may have rights to:</p>
-        <BulletList items={[
-          "Access or know what personal information we hold about you and how it is used.",
-          "Request correction of inaccurate personal information.",
-          "Request deletion of personal information, subject to legal exceptions.",
-          "Request a portable copy of certain information.",
-          "Object to or restrict certain processing, where applicable.",
-          "Withdraw consent where processing is based on consent, without affecting processing that occurred before withdrawal.",
-          "Opt out of certain sale, sharing, targeted-advertising, or profiling activities where applicable.",
-          "Appeal a privacy-rights decision where required by applicable law.",
-          "Lodge a complaint with a competent data-protection or privacy regulator."
-        ]} />
-        <p>To submit a request, email <a className="text-primary underline underline-offset-2 break-all" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a>. We may need to verify your identity before fulfilling a request. We will not discriminate against you for exercising privacy rights that apply to you.</p>
-        <p>For California residents, rights may include the rights to know, delete, correct, opt out of sale or sharing, limit certain uses of sensitive personal information, and receive equal treatment as provided by the California Consumer Privacy Act and applicable regulations. California rights apply only where the business and processing are within the law’s scope.</p>
-        <p>For individuals in the European Economic Area, United Kingdom, Switzerland, or other jurisdictions with comprehensive data-protection laws, additional rights and requirements may apply, including rights concerning lawful bases, international transfers, objection, restriction, and complaints to a supervisory authority.</p>
+      <Section number={19} title="International Data Transfers">
+        <p>Vardin's provider architecture can involve processing outside the country where you live. For example, Groq states that customer data is retained in Google Cloud Platform buckets in the United States. PayPal and other global providers may also process information internationally. citeturn2search0turn2search8</p>
+        <p>Where a jurisdiction requires a lawful transfer mechanism, Vardin should use the mechanism applicable to the relevant transfer, such as an adequacy decision or appropriate contractual safeguards. Vardin does not claim that every international transfer is currently compliant in every jurisdiction.</p>
       </Section>
 
-      <Section number={9} title="Lawful Bases for EEA/UK Processing">
-        <p>Where the GDPR, UK GDPR, or a similar law applies, we may process personal information on one or more of these legal bases: performance of a contract or steps requested before entering a contract; compliance with a legal obligation; our legitimate interests, balanced against your rights; your consent; or another lawful basis permitted by applicable law.</p>
-        <p>Where consent is the legal basis, you may withdraw it as described in the relevant feature or by contacting us. Withdrawal does not affect processing that was lawful before withdrawal.</p>
+      <Section number={20} title="Data Retention">
+        <p><strong>Current Vardin retention position:</strong> the codebase does not implement one universal, automated deletion schedule by data type. Stored records can remain until the user deletes the account/data, an administrator removes them, or another application process removes them. Vardin should not represent that all scan history, uploaded files or provider logs are automatically deleted after a particular number of days unless that control is actually configured.</p>
+        <p>Current database records include scan histories, conversation analyses, image scans, phone lookups, local scam scans, Live Guard sessions, family alerts, lesson progress, community stories/reports, feedback and referral information. Live Guard session records contain transcripts and analysis metadata.</p>
+        <p>Third-party providers have their own retention periods. For example, Groq documents up to 30-day reliability/abuse retention when applicable; Google documents a default maximum of 55 days for Gemini API logs in the applicable logging system; PayPal describes retention that can extend for the duration of the relationship plus 10 years for certain personal information; and ElevenLabs documents default API history retention unless deletion or Zero Retention Mode applies. citeturn2search0turn0search1turn2search8turn3search0</p>
+        <p>Backups may retain deleted information for a limited period under a provider's backup cycle. Vardin's application code does not expose a backup-deletion control.</p>
       </Section>
 
-      <Section number={10} title="International Data Transfers">
-        <p>Vardin and its service providers may process information in countries other than the country where you live. Where applicable law requires safeguards for international transfers, we will use an appropriate lawful transfer mechanism, such as an adequacy decision, standard contractual clauses, or another legally recognized safeguard.</p>
+      <Section number={21} title="Data Security">
+        <p>Vardin uses platform authentication, entity-level access controls, service-role separation for selected backend operations, HTTPS/API transport to the external services inspected, and browser permission controls for microphone and location features. The application also uses access rules intended to limit records to their owner, guardian, protected member or administrators depending on the entity.</p>
+        <p>However, the code audit does not establish a formal security certification, penetration-test result, encryption-at-rest configuration, incident-response program, or comprehensive security-management system. Vardin therefore makes no certification or absolute-security claim.</p>
+        <p>If a security incident creates a legal notification obligation, Vardin will follow the requirements applicable to the incident and affected individuals.</p>
       </Section>
 
-      <Section number={11} title="Children and Family Features">
-        <p>The Services include family and educational features. Privacy obligations relating to children vary significantly by jurisdiction. We do not intend to collect personal information from children in circumstances where parental authorization is legally required unless the required authorization and safeguards are in place.</p>
-        <p>Parents or guardians who believe a child has provided personal information to Vardin without appropriate authorization should contact <a className="text-primary underline underline-offset-2 break-all" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a>. We will evaluate and respond in accordance with applicable law.</p>
-        <p>Family-protection features are designed around consent and account permissions. Adding another person to a protection feature does not itself create unlimited permission to access that person’s information. Users must have a lawful basis and appropriate authorization to submit or share another person’s information.</p>
+      <Section number={22} title="Privacy Rights">
+        <p>Depending on where you live, you may have rights to access, correct, delete, restrict, object to or otherwise control processing of personal information. Depending on applicable law, you may also have rights to portability, withdrawal of consent, appeal of a privacy-rights decision, and to opt out of certain sale/sharing or targeted-advertising activities.</p>
+        <p>EU/EEA and UK users may have GDPR/UK GDPR rights including access, rectification, erasure, restriction, portability and objection. California residents may have CCPA rights including access/know, deletion, correction, limitation of certain sensitive-information uses, and opt-out rights where the statutory requirements apply. citeturn1search2turn1search3</p>
+        <p>Israeli privacy law also applies to personal-information databases and includes obligations concerning purpose limitation, confidentiality and information security; Amendment 13 changed database-registration and notification rules, including special rules for large databases containing specially sensitive information. citeturn0search0turn0search3turn0search4</p>
       </Section>
 
-      <Section number={12} title="Security">
-        <p>We use reasonable administrative, technical, and organizational safeguards appropriate to the nature of the information we process. Depending on the system, safeguards may include encrypted transmission, authentication controls, access controls, logging, least-privilege practices, and secure service-provider configurations.</p>
-        <p>No internet service can guarantee absolute security. You are responsible for protecting your credentials and for using the Services on devices and networks you trust.</p>
+      <Section number={23} title="Access, Correction, Export, and Deletion Requests">
+        <p>To request access, correction, deletion, portability/export, restriction, objection or another privacy right, email <a className="text-primary underline underline-offset-2 break-all" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a>.</p>
+        <p>The current application has an account-deletion workflow but does not provide a self-service personal-data export tool. Vardin may need to manually respond to an access or export request and may need to verify identity before doing so.</p>
+        <p>Requests are subject to lawful exceptions. For example, information may need to be retained to comply with law, establish or defend legal claims, prevent fraud, maintain security, or satisfy a payment provider's legal obligations.</p>
       </Section>
 
-      <Section number={13} title="Third-Party Services and Links">
-        <p>The Services may link to or integrate with third-party services. Those providers operate under their own privacy policies and terms. Vardin is not responsible for privacy practices outside its control. Review third-party policies before providing information directly to those providers.</p>
+      <Section number={24} title="Account Deletion">
+        <p>Profile settings currently provide a “Delete Account &amp; Data” workflow. The backend deletion function attempts to delete user-owned records including scam analyses, image scans, phone lookups, Live Guard sessions, conversation analyses, lesson progress, feedback, community stories, story likes, local scam scans, scam reports and family-member records associated with the user. It also clears selected profile fields.</p>
+        <p><strong>Important implementation limitation:</strong> the current deletion function does not prove deletion of the underlying Vardin/Base44 authentication identity, uploaded files, every possible related family alert/referral record, administrator audit records, provider-side logs, or backups. Account deletion therefore should not currently be described as instant erasure from every system.</p>
+        <p>Vardin is expected to process a valid deletion request within the period required by applicable law, subject to verification and lawful exceptions. The operator should implement a complete deletion ledger and provider/file-storage deletion workflow before promising comprehensive erasure.</p>
       </Section>
 
-      <Section number={14} title="Changes to This Policy">
-        <p>We may update this Policy when our Services, data practices, or legal obligations change. We will update the effective date when the Policy changes. Where applicable law requires advance notice, consent, or another form of communication for a material change, we will provide it.</p>
+      <Section number={25} title="Cookies, Local Storage, and Analytics">
+        <p>Vardin uses local storage for essential application state such as authentication-session restoration, language, theme, accessibility, referrals, dismissed broadcasts, community preferences and local UI history. The sidebar component also writes a functional cookie that remembers its open/closed state.</p>
+        <p>The inspected Vardin source does not include a dedicated third-party behavioral advertising or analytics SDK. The Analytics page is an in-app dashboard built from Vardin scan records, not a third-party analytics service.</p>
+        <p>Base44 and external providers may use their own cookies, logs or technical identifiers when their services are involved. Review their policies for details about their independent processing.</p>
       </Section>
 
-      <Section number={15} title="Contact and Privacy Requests">
-        <p>Privacy questions, requests, complaints, and notices should be sent to:</p>
-        <div className="rounded-lg border border-border bg-muted/20 p-4 text-foreground">
+      <Section number={26} title="Children and Teens">
+        <p>Vardin contains Kid Mode, educational lessons, family protection and features that may be attractive to minors. The existence of these features does not mean that Vardin is automatically permitted to collect children's information in every jurisdiction.</p>
+        <p>In the United States, COPPA can treat a child's voice recording as personal information and can require verifiable parental consent for covered services, subject to the FTC's limited exception for voice collected only as a replacement for written words and retained briefly. Vardin's Call Guard is not limited to that narrow use: it transcribes and analyzes calls and stores transcript/analysis records. citeturn1search7turn1search8</p>
+        <p>Accordingly, the operator should obtain qualified children's-privacy counsel before directing the Service to children under 13 or otherwise relying on Kid Mode as a children's service. In the UK/EU, processing children's or special-category information can trigger additional requirements and, for high-risk processing, a data-protection impact assessment may be appropriate. citeturn0search5turn0search7</p>
+      </Section>
+
+      <Section number={27} title="Information About Other People and Non-Users">
+        <p>Vardin can process information belonging to people who are not Vardin users. Examples include the other participant in a recorded call, the sender of a suspicious message, a phone-number owner, a family member, a marketplace seller, or a person depicted in an uploaded image.</p>
+        <p>Vardin does not have a direct account relationship with every person whose information may appear in submitted content. Users must therefore avoid submitting unnecessary third-party information and must have the authority or lawful basis required to submit it.</p>
+        <p>Call recording and interception laws can apply differently depending on where the participants are located. Vardin does not determine whether a particular recording is lawful. Users are responsible for complying with applicable consent and communications laws before recording or uploading a call.</p>
+      </Section>
+
+      <Section number={28} title="Changes to This Policy">
+        <p>Vardin may update this Policy when its features, data practices, providers or legal obligations change. The Last Updated date will change when the Policy is replaced.</p>
+        <p>For material changes where notice, consent or another process is required by applicable law, Vardin will use the legally required method. Continued use of the Service is not intended to waive rights that cannot lawfully be waived.</p>
+      </Section>
+
+      <Section number={29} title="Contact Information">
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-5 text-foreground">
           <p className="font-semibold">Vardin — Privacy</p>
           <p className="mt-1 break-all">Email: <a className="text-primary underline underline-offset-2" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a></p>
         </div>
+        <p>Because the application's verified legal-entity details are not present in the codebase, this Policy intentionally does not invent a corporate address or jurisdiction.</p>
       </Section>
 
-      <div className="pt-8 text-xs leading-6 text-muted-foreground">
-        This Policy is written to provide a comprehensive public description of Vardin’s privacy practices. It is not a substitute for advice from a qualified attorney. If Vardin is marketed or made available in additional jurisdictions, its operator should confirm the applicable local requirements and update this Policy and the underlying product controls accordingly.
+      <Section number={30} title="Privacy Requests and Complaints">
+        <p>Send privacy requests or complaints to <a className="text-primary underline underline-offset-2 break-all" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a>. Please state the request, the account email where applicable, the jurisdiction you are making the request under, and enough information for Vardin to identify the relevant data without sending unnecessary sensitive information.</p>
+        <p>If you are not satisfied with Vardin's response, you may have the right to complain to the privacy or data-protection regulator in your country or region. For EU/EEA and UK users, the relevant supervisory authority can be identified through the applicable national or UK data-protection framework. citeturn1search2turn1search9</p>
+      </Section>
+
+      <div className="mt-7 rounded-xl border border-warning/30 bg-warning/5 p-4 sm:p-5 text-sm leading-6 text-foreground">
+        <p className="font-semibold">Implementation items requiring review</p>
+        <BulletList items={[
+          "Create and enforce a documented retention schedule for database records and uploaded files rather than relying mainly on account deletion.",
+          "Complete the deletion workflow for Base44 authentication identity, uploaded files, related FamilyAlert/Referral records, backups and provider-side data where deletion is available.",
+          "Verify Base44/Google Gemini logging and retention configuration; the application cannot establish every platform-level setting from source code alone.",
+          "Configure and document Deepgram's API training/data-use opt-out if Vardin intends to promise that call audio is not used for model improvement.",
+          "Determine and document the lawful basis and any special-category safeguards/DPIA requirements for Call Guard and family protection in each target jurisdiction.",
+          "Review children's/teen privacy controls before marketing or directing the product to children, including COPPA and UK/EU age-appropriate-design requirements.",
+          "Confirm Israeli database, information-security, transfer and sensitive-information obligations under the current Protection of Privacy Law and regulations.",
+          "Verify Google Gmail OAuth verification requirements because the application uses Gmail send access for guardian/family notifications.",
+          "Confirm the commercial/legal status and permitted use of every threat-intelligence provider used by production traffic, including VirusTotal and URLhaus."
+        ]} />
       </div>
     </div>
   );
