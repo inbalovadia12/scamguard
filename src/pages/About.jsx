@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { ShieldCheck, Eye, Users, Globe, AlertTriangle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
@@ -19,6 +20,9 @@ export default function About() {
             Vardin is an AI-powered scam detection and digital safety platform built to protect
             people from the growing threat of online fraud.
           </p>
+          <Link to="/dashboard" className="mt-5 inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors">
+            Back to Dashboard
+          </Link>
         </div>
 
         <div className="prose prose-lg max-w-none space-y-6 text-foreground/90 animate-slide-up" style={{ animationDelay: "100ms" }}>
