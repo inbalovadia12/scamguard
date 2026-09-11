@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Phone, Radio } from "lucide-react";
+import { Phone, Radio, AlertTriangle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import PhoneLookup from "@/pages/PhoneLookup";
 import LiveCallAnalyzer from "@/pages/LiveCallAnalyzer";
@@ -22,6 +22,18 @@ export default function PhoneGuard() {
         <p className="text-sm text-muted-foreground max-w-md">
           Check unknown numbers for scam reports, or get real-time AI protection during live calls and on-screen messages.
         </p>
+      </div>
+
+      <div className="rounded-2xl border border-warning/30 bg-warning/5 p-4 sm:p-5 animate-slide-up" role="note">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-warning mt-0.5 shrink-0" />
+          <div className="space-y-1.5">
+            <p className="text-sm font-semibold text-foreground">Call Guard privacy warning</p>
+            <p className="text-xs sm:text-sm leading-5 text-muted-foreground">
+              Call Guard is a cloud-based analysis feature. If you use live capture or upload a recording, audio is sent to Vardin's backend and to Groq for speech-to-text. A recording may contain another person's voice or other personal information. Only record or upload calls when you have the rights and consent required by applicable law, and avoid including information that is not needed for the analysis.
+            </p>
+          </div>
+        </div>
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="animate-slide-up" style={{ animationDelay: "50ms" }}>
