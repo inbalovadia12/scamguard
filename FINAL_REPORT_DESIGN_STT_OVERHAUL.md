@@ -197,7 +197,7 @@ Call sequence:
 
 ### Dependencies
 - `groq-sdk` (already configured)
-- `deepgram-sdk` (existing fallback)
+- Groq STT (sole speech-to-text provider)
 - `Deno.env` (GROQ_STT, legacy STT API key)
 
 ---
