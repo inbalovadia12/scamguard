@@ -457,7 +457,7 @@ curl -X POST http://localhost:8000/api/analyzeCallChunk \
 
 # Should return:
 # {
-#   "provider": "groq",  # NOT deepgram
+#   "provider": "groq"
 #   "segments": [
 #     {"speaker": "you", "text": "Hi"},
 #     {"speaker": "caller", "text": "This is the hospital..."}
