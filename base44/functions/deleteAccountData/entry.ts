@@ -25,6 +25,10 @@ export default async function(req: Request): Promise<Response> {
     await safeDelete(svc.entities.StoryLike, { created_by_id: userId });
     await safeDelete(svc.entities.LocalScamScan, { created_by_id: userId });
     await safeDelete(svc.entities.ScamReport, { created_by_id: userId });
+    await safeDelete(svc.entities.FamilyAlert, { created_by_id: userId });
+    await safeDelete(svc.entities.FamilyAlert, { guardian_id: userId });
+    await safeDelete(svc.entities.Referral, { referrer_id: userId });
+    await safeDelete(svc.entities.Referral, { referred_user_id: userId });
 
     // ProtectedSenior: delete where user is guardian or the protected senior
     await safeDelete(svc.entities.ProtectedSenior, { guardian_id: userId });
