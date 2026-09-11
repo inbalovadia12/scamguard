@@ -53,7 +53,7 @@ export default function DataCollection() {
 
       <section className="py-7 border-b border-border/60 space-y-4 text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-muted-foreground">
         <h2 className="text-lg sm:text-xl font-semibold text-foreground">AI and third parties</h2>
-        <p>Depending on the feature, submitted content may be sent to Base44-managed AI services, Google Gemini, Groq, VirusTotal, URLhaus, QR Server, ElevenLabs, PayPal or Gmail. The exact recipient depends on the feature used. Call Guard audio is sent to Groq for speech-to-text; Call Guard audio is not sent to Deepgram or ElevenLabs for transcription. See the full <Link className="text-primary underline underline-offset-2" to="/privacy">Privacy Policy</Link> for the current data-flow description.</p>
+        <p>Depending on the feature, submitted content may be sent to Base44-managed AI services, Google Gemini, Groq, VirusTotal, URLhaus, QR Server, ElevenLabs, PayPal or Gmail. The exact recipient depends on the feature used. Call Guard audio is sent to Groq for speech-to-text; Call Guard audio is not sent to ElevenLabs for transcription. See the full <Link className="text-primary underline underline-offset-2" to="/privacy">Privacy Policy</Link> for the current data-flow description.</p>
       </section>
 
       <section className="py-7 border-b border-border/60 space-y-4 text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-muted-foreground">
