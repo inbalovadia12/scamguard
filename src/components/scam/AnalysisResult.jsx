@@ -7,7 +7,6 @@ import ThreatExplanation from "@/components/scam/ThreatExplanation";
 import ResultActions from "@/components/scam/ResultActions";
 import CommunityIntel from "@/components/community/CommunityIntel";
 import AIDisclaimer from "@/components/AIDisclaimer";
-import { useKidMode } from "@/lib/KidModeContext";
 
 const MESSAGE_TYPE_TO_SCAM = {
   sms: "smishing",
@@ -95,7 +94,6 @@ function AnimatedNumber({ value }) {
 }
 
 export default function AnalysisResult({ analysis, showEducation = true, messageType, originalMessage }) {
-  const { kidMode } = useKidMode();
   const [speaking, setSpeaking] = useState(false);
   const [eduOpen, setEduOpen] = useState(false);
 
@@ -160,7 +158,7 @@ export default function AnalysisResult({ analysis, showEducation = true, message
       {/* Tactics */}
       {analysis.tactics_detected?.length > 0 && (
         <div className="space-y-3">
-          <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">{kidMode ? "Tricky things we noticed" : "Manipulation tactics detected"}</h3>
+          <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Manipulation tactics detected</h3>
           <div className="flex flex-wrap gap-2">
             {analysis.tactics_detected.map((tactic) => (
               <TacticTag key={tactic} tactic={tactic} />
@@ -172,7 +170,7 @@ export default function AnalysisResult({ analysis, showEducation = true, message
       {/* Next Steps */}
       {analysis.next_steps?.length > 0 && (
         <div className="space-y-3">
-          <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">{kidMode ? "What you should do" : "What to do next"}</h3>
+          <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">What to do next</h3>
           <div className="space-y-2">
             {analysis.next_steps.map((step, i) => {
               const Icon = stepIcons[step] || Flag;
@@ -193,7 +191,7 @@ export default function AnalysisResult({ analysis, showEducation = true, message
       <ResultActions analysis={analysis} analysisType="scam_analysis" messageType={messageType} originalMessage={originalMessage} />
 
       {/* Education section */}
-      {showEducation && !kidMode && (analysis.why_scammers_do_this || analysis.what_they_want || analysis.what_to_say) && (
+      {showEducation && (analysis.why_scammers_do_this || analysis.what_they_want || analysis.what_to_say) && (
         <div className="border border-border rounded-2xl overflow-hidden">
           <button
             onClick={() => setEduOpen(!eduOpen)}
@@ -235,20 +233,14 @@ export default function AnalysisResult({ analysis, showEducation = true, message
       )}
 
       {/* Community Intel */}
-      {!kidMode && messageType && MESSAGE_TYPE_TO_SCAM[messageType] && (
+      {messageType && MESSAGE_TYPE_TO_SCAM[messageType] && (
         <div className="border-t border-border/50 pt-4">
           <CommunityIntel scamTypes={[MESSAGE_TYPE_TO_SCAM[messageType]]} />
         </div>
       )}
 
       {/* Disclaimer */}
-      {kidMode ? (
-        <p className="text-xs text-muted-foreground text-center leading-relaxed">
-          We do our best to keep you safe, but always ask a grown-up if you're not sure!
-        </p>
-      ) : (
-        <AIDisclaimer compact />
-      )}
+      <AIDisclaimer compact />
     </div>
   );
 }

@@ -120,7 +120,6 @@ Deno.serve(async (req) => {
     const customInstructions = typeof options?.custom_instructions === 'string' ? options.custom_instructions.slice(0, 1000) : '';
     const language = options?.language || 'en';
     const clientDecodedContent = typeof options?.decoded_content === 'string' ? options.decoded_content.slice(0, 2000) : '';
-    const kidMode = !!options?.kid_mode;
 
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
@@ -308,10 +307,6 @@ Deno.serve(async (req) => {
     // === Build LLM prompt (only call if not obviously safe/dangerous) ===
     let prompt = 'You are Vardin, an expert scam and fraud detection AI.\n\n';
     prompt += 'IMPORTANT: Respond entirely in ' + languageName + '. All text must be in ' + languageName + '.\n\n';
-    if (kidMode) {
-      prompt += 'KID MODE: The user is a child. Use simple, easy-to-understand language. Be clear and direct. If it is a scam, say clearly "This is NOT safe!" and explain why in simple words a 10-year-old can understand.\n\n';
-    }
-
     if (vtReport) {
       prompt += 'VIRUSTOTAL: ' + vtReport.malicious + ' malicious, ' + vtReport.suspicious + ' suspicious, ' + vtReport.harmless + ' harmless, reputation: ' + vtReport.reputation + '\n\n';
     }

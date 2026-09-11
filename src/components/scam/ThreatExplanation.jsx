@@ -1,10 +1,8 @@
 import React from "react";
 import { AlertTriangle, Target, ShieldX, Sparkles, ShieldCheck } from "lucide-react";
-import { useKidMode } from "@/lib/KidModeContext";
 
 // Structured, labeled threat breakdown shown on scan results.
 export default function ThreatExplanation({ analysis }) {
-  const { kidMode } = useKidMode();
   const risk = analysis.risk_level || getRiskLevelFromScore(analysis.risk_score);
   const isLow = risk === "low";
   const isHigh = risk === "high";
@@ -12,29 +10,23 @@ export default function ThreatExplanation({ analysis }) {
   const sections = [
     {
       key: "why",
-      label: kidMode
-        ? (isLow ? "Why it looks okay" : isHigh ? "Why it looks risky" : "Why we're being careful")
-        : (isLow ? "Why this looks safe" : isHigh ? "Why this looks risky" : "Why we're cautious"),
+      label: isLow ? "Why this looks safe" : isHigh ? "Why this looks risky" : "Why we're cautious",
       icon: isLow ? ShieldCheck : AlertTriangle,
       value: analysis.explanation,
       color: isLow ? "text-success" : "text-warning",
     },
     {
       key: "wants",
-      label: kidMode
-        ? (isLow ? "What we found" : "What they may be after")
-        : (isLow ? "What we found" : isHigh ? "What they're trying to do" : "What this may be about"),
+      label: isLow ? "What we found" : isHigh ? "What they're trying to do" : "What this may be about",
       icon: Target,
       value: analysis.what_they_want,
       color: isHigh ? "text-destructive" : "text-primary",
     },
     {
       key: "avoid",
-      label: kidMode
-        ? (isLow ? "Good to know" : "What not to do")
-        : (isLow ? "Good to know" : "What to avoid"),
+      label: isLow ? "Good to know" : "What to avoid",
       icon: ShieldX,
-      value: avoidText(analysis, kidMode, isLow),
+      value: avoidText(analysis, isLow),
       color: "text-primary",
     },
   ].filter((s) => s.value);
@@ -46,7 +38,7 @@ export default function ThreatExplanation({ analysis }) {
       <div className="flex items-center gap-2">
         <Sparkles className="w-3.5 h-3.5 text-primary" />
         <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">
-          {kidMode ? "Here's what we found" : "Threat Breakdown"}
+          Threat Breakdown
         </h3>
       </div>
       <div className="grid sm:grid-cols-3 gap-3">
@@ -67,10 +59,9 @@ export default function ThreatExplanation({ analysis }) {
   );
 }
 
-function avoidText(analysis, kidMode, isLow) {
+function avoidText(analysis, isLow) {
   if (analysis.what_to_say) return analysis.what_to_say;
-  if (isLow) return kidMode ? "It looks okay, but ask a grown-up if anything still feels wrong." : "No major warning signs were found. Stay cautious with unexpected requests or links.";
-  if (kidMode) return "Don't reply, don't share your info, and tell a grown-up right away.";
+  if (isLow) return "No major warning signs were found. Stay cautious with unexpected requests or links.";
   return "Don't reply, don't share personal or payment details, and don't click any links.";
 }
 

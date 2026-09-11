@@ -4,12 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Users, Loader2, X, CheckCircle2, MessageCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { useKidMode } from "@/lib/KidModeContext";
 
 // Shows only when the current user is a protected member whose guardian enabled Ask Family.
 // analysisType: 'scam_analysis' | 'conversation' | 'image' | 'live_guard'
 export default function AskFamilyButton({ analysisId, analysisType = "scam_analysis", threatExcerpt, riskLevel = "medium", scamType = "other" }) {
-  const { kidMode } = useKidMode();
   const [senior, setSenior] = useState(null);
   const [checked, setChecked] = useState(false);
   const [open, setOpen] = useState(false);
@@ -63,7 +61,7 @@ export default function AskFamilyButton({ analysisId, analysisType = "scam_analy
     <>
       <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="gap-2">
         <MessageCircle className="w-4 h-4" />
-        {kidMode ? "Ask a Grown-up" : "Ask Family"}
+        Ask Family
       </Button>
 
       {open && (

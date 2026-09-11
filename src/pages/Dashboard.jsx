@@ -11,20 +11,13 @@ import { useI18n } from "@/lib/i18n";
 import { isWrappedSeason } from "@/lib/wrappedSeason";
 import StreakBadges from "@/components/gamification/StreakBadges";
 import Analytics from "@/pages/Analytics";
-import { useKidMode } from "@/lib/KidModeContext";
 import VardinCinematicExperience from "@/components/VardinCinematicExperience";
 
 export default function Dashboard() {
   const { t } = useI18n();
-  const { kidMode } = useKidMode();
   const [showFilm, setShowFilm] = useState(false);
 
-  const quickActions = kidMode ? [
-    { path: "/check", label: "Check a Message", desc: "Is it safe or a trick?", icon: Search, color: "from-primary to-primary/80" },
-    { path: "/lessons", label: "Learn & Play", desc: "Fun lessons about staying safe", icon: GraduationCap, color: "from-chart-2 to-chart-2/80" },
-    { path: "/live-guard", label: "Guard My Call", desc: "Get warned if a call is tricky", icon: Radio, color: "from-chart-3 to-chart-3/80" },
-    { path: "/agent", label: "Ask Vardin", desc: "Ask me anything!", icon: Bot, color: "from-chart-5 to-chart-5/80" },
-  ] : [
+  const quickActions = [
     { path: "/check", label: t("dash.check_message"), desc: t("dash.quick_check_desc"), icon: Search, color: "from-primary to-primary/80" },
     { path: "/check", label: t("dash.quick_scan_url"), desc: t("dash.quick_scan_desc"), icon: Link2, color: "from-chart-2 to-chart-2/80" },
     { path: "/agent", label: t("dash.quick_ask_ai"), desc: t("dash.quick_ask_desc"), icon: Bot, color: "from-chart-5 to-chart-5/80" },
@@ -82,12 +75,12 @@ export default function Dashboard() {
       {view === "overview" && (
       <div className="animate-slide-up">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">
-          {kidMode ? "Hey there, let's stay safe!" : t("dash.welcome")}<span className="text-muted-foreground font-normal"> 👋</span>
+          {t("dash.welcome")}<span className="text-muted-foreground font-normal"> 👋</span>
         </h1>
         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-          {kidMode ? "Check if messages are tricks, learn about scams, and stay safe online!" : t("dash.overview")}
+          {t("dash.overview")}
         </p>
-        {!kidMode && (
+        {(
           <div className="mt-3 flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
             <button onClick={() => setShowFilm(true)} className="text-[10px] font-medium tracking-[0.15em] text-primary transition hover:text-primary/70">
               SEE WHAT VARDIN DOES <span aria-hidden="true">→</span>
@@ -101,7 +94,7 @@ export default function Dashboard() {
       )}
 
       {/* Tab toggle */}
-      {!kidMode && (
+      {(
         <div className="flex gap-1 p-1 bg-card rounded-2xl border border-border/50 w-fit animate-slide-up">
           <button onClick={() => setView("overview")} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${view === "overview" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>Overview</button>
           <button onClick={() => setView("analytics")} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${view === "analytics" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>Analytics</button>
@@ -111,7 +104,7 @@ export default function Dashboard() {
       {view === "overview" ? (
       <>
       {/* Wrapped banner */}
-      {!kidMode && isWrappedSeason() && (
+      {isWrappedSeason() && (
         <Link to="/wrapped" className="block animate-slide-up">
           <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-violet-500 via-primary to-cyan-500 p-5 text-white shadow-lg shadow-primary/30 luxury-card-hover">
             <div className="flex items-center gap-4">
@@ -129,7 +122,7 @@ export default function Dashboard() {
       )}
 
       {/* Stat cards */}
-      {!kidMode && (
+      {(
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         <StatCard
           icon={Zap}
@@ -169,7 +162,7 @@ export default function Dashboard() {
       </div>
 
       {/* Recent activity + Tip */}
-      {!kidMode && (
+      {(
       <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 animate-slide-up anim-delay-3 min-w-0">
         <div className="lg:col-span-2 rounded-2xl border border-border/50 bg-card p-5 sm:p-6 min-w-0 overflow-hidden">
           <div className="flex items-center justify-between mb-4">

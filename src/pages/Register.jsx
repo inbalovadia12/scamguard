@@ -20,7 +20,6 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
-  const [kidMode, setKidMode] = useState(false);
   const [legalAccepted, setLegalAccepted] = useState(false);
   const navigate = useNavigate();
   const { checkUserAuth } = useAuth();
@@ -63,9 +62,6 @@ export default function Register() {
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
       }
-      try {
-        await base44.auth.updateMe({ kid_mode: kidMode });
-      } catch {}
       
       // Wait for auth context to update before redirecting
       await checkUserAuth();
@@ -260,18 +256,6 @@ export default function Register() {
               required
             />
           </div>
-        </div>
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
-          <input
-            type="checkbox"
-            id="kidMode"
-            checked={kidMode}
-            onChange={(e) => setKidMode(e.target.checked)}
-            className="w-4 h-4 rounded accent-primary"
-          />
-          <label htmlFor="kidMode" className="text-sm font-medium cursor-pointer">
-            🧒 Kid Mode — simpler language and kid-friendly scam protection
-          </label>
         </div>
         <label className="flex items-start gap-3 p-3 rounded-xl bg-warning/5 border border-warning/20 cursor-pointer">
           <input

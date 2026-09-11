@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import AskFamilyButton from "@/components/family/AskFamilyButton";
 import ReportScamDialog from "@/components/scam/ReportScamDialog";
-import { useKidMode } from "@/lib/KidModeContext";
 
 const MESSAGE_TYPE_TO_SCAM = {
   sms: "smishing",
@@ -26,7 +25,6 @@ const RISK_TO_REPORT_RISK = { low: "low", medium: "medium", high: "high" };
 
 // analysisType: "scam_analysis" | "conversation" | "image" | "live_guard"
 export default function ResultActions({ analysis, analysisType = "scam_analysis", messageType, originalMessage }) {
-  const { kidMode } = useKidMode();
   const [reportOpen, setReportOpen] = useState(false);
   const level = analysis.risk_level || "low";
   if (level !== "medium" && level !== "high") return null;
@@ -54,7 +52,7 @@ export default function ResultActions({ analysis, analysisType = "scam_analysis"
       />
       <Button variant="outline" size="sm" onClick={() => setReportOpen(true)} className="gap-2">
         <Flag className="w-4 h-4" />
-        {kidMode ? "Tell on this scam" : "Report Scam"}
+        Report Scam
       </Button>
       <ReportScamDialog
         open={reportOpen}

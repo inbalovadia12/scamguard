@@ -8,7 +8,6 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { LanguageProvider } from '@/lib/i18n';
-import { KidModeProvider } from '@/lib/KidModeContext';
 
 // Auth pages
 import Login from '@/pages/Login';
@@ -39,6 +38,8 @@ import Lessons from '@/pages/Lessons';
 import Privacy from '@/pages/Privacy';
 import DataCollection from '@/pages/DataCollection';
 import Terms from '@/pages/Terms';
+import Cookies from '@/pages/Cookies';
+import LegalNotice from '@/components/legal/LegalNotice';
 import About from '@/pages/About';
 import Contact from '@/pages/Contact';
 import Extension from '@/pages/Extension';
@@ -48,9 +49,6 @@ import PhoneLookup from '@/pages/PhoneLookup';
 import PhoneGuard from '@/pages/PhoneGuard';
 import ImageScanner from '@/pages/ImageScanner';
 import AINegotiator from '@/pages/AINegotiator';
-import KidScanner from '@/pages/KidScanner';
-import KidGames from '@/pages/KidGames';
-import KidLibrary from '@/pages/KidLibrary';
 import SpotTheScam from '@/pages/SpotTheScam';
 import ConversationAnalyzer from '@/pages/ConversationAnalyzer';
 import IncognitoSearch from '@/pages/IncognitoSearch';
@@ -138,6 +136,7 @@ const AuthenticatedApp = () => {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/data-collection" element={<DataCollection />} />
       <Route path="/terms" element={<Terms />} />
+      <Route path="/cookies" element={<Cookies />} />
 
       {/* Auth routes */}
       <Route path="/login" element={<Login />} />
@@ -169,9 +168,6 @@ const AuthenticatedApp = () => {
           <Route path="/scam-exposer" element={<AINegotiator />} />
           <Route path="/ai-negotiator" element={<Navigate to="/scam-exposer" replace />} />
           <Route path="/advanced-scanner" element={<Navigate to="/universal-scan" replace />} />
-          <Route path="/kid-scanner" element={<KidScanner />} />
-          <Route path="/kid-games" element={<KidGames />} />
-          <Route path="/kid-library" element={<KidLibrary />} />
           <Route path="/spot-the-scam" element={<SpotTheScam />} />
           <Route path="/conversation-analyzer" element={<ConversationAnalyzer />} />
           <Route path="/incognito-search" element={<IncognitoSearch />} />
@@ -203,9 +199,8 @@ function App() {
         <LanguageProvider>
         <Router>
           <ScrollToTop />
-          <KidModeProvider>
-            <AuthenticatedApp />
-          </KidModeProvider>
+          <AuthenticatedApp />
+          <LegalNotice />
         </Router>
         </LanguageProvider>
         <Toaster />

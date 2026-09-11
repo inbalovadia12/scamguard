@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut, MessageSquare, ChevronRight, GraduationCap, Puzzle, Radar, Phone, Image as ImageIcon,   MessageCircle, Sparkles, Scan, Siren, History,
-  Gamepad2, BookOpen, Bitcoin, Smartphone, ListPlus,
+  Bitcoin, Smartphone, ListPlus,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -12,8 +12,6 @@ import ThemeToggle from "@/components/ThemeToggle";
 import LanguageToggle from "@/components/LanguageToggle";
 import XPBar from "@/components/gamification/XPBar";
 import BroadcastBanner from "@/components/layout/BroadcastBanner";
-import AskParentButton from "@/components/kid/AskParentButton";
-import { useKidMode } from "@/lib/KidModeContext";
 
 const NAV_SECTIONS = [
   {
@@ -22,16 +20,15 @@ const NAV_SECTIONS = [
       { path: "/dashboard", labelKey: "nav.home", icon: ShieldCheck },
       { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
       { path: "/scam-exposer", labelKey: "nav.ai_negotiator", icon: MessageCircle },
-      { path: "/extension", labelKey: "nav.extension", icon: Puzzle, kidLabel: "Vardin Kid Guard" },
+      { path: "/extension", labelKey: "nav.extension", icon: Puzzle },
       { path: "/phone-lookup", labelKey: "nav.phone_guard", icon: Phone },
-      { path: "/emergency-response", labelKey: "nav.emergency_response", icon: Siren, kidLabel: "Get Help" },
+      { path: "/emergency-response", labelKey: "nav.emergency_response", icon: Siren },
     ],
   },
   {
     labelKey: "nav.scan",
     items: [
-      { path: "/universal-scan", labelKey: "nav.universal_scan", icon: Scan, kidLabel: "Everything Scanner" },
-      { path: "/kid-scanner", labelKey: "nav.kid_scanner", icon: Gamepad2, kidOnly: true },
+      { path: "/universal-scan", labelKey: "nav.universal_scan", icon: Scan },
       { path: "/check", labelKey: "nav.message_check", icon: Search },
       { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
       { path: "/crypto-scanner", label: "Crypto Scanner", icon: Bitcoin },
@@ -42,8 +39,6 @@ const NAV_SECTIONS = [
     labelKey: "nav.learn",
     items: [
       { path: "/lessons", labelKey: "nav.lessons", icon: GraduationCap },
-      { path: "/kid-games", labelKey: "nav.kid_games", icon: Gamepad2, kidOnly: true },
-      { path: "/kid-library", labelKey: "nav.kid_library", icon: BookOpen, kidOnly: true },
     ],
   },
   {
@@ -91,15 +86,11 @@ export default function AppLayout() {
 
   const location = useLocation();
   const { user } = useAuth();
-  const { kidMode } = useKidMode();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [alertBadge, setAlertBadge] = useState(0);
 
-  const KID_HIDDEN_PATHS = ["/scam-exposer", "/phone-lookup", "/call-guard", "/local-intel", "/local-dashboard", "/community", "/wrapped", "/feedback", "/projects", "/pricing"];
-  const visibleSections = kidMode
-    ? NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !KID_HIDDEN_PATHS.includes(i.path)) })).filter(s => s.items.length > 0)
-    : NAV_SECTIONS.map(s => ({ ...s, items: s.items.filter(i => !i.kidOnly) })).filter(s => s.items.length > 0);
-  const itemLabel = (item) => (kidMode && item.kidLabel) ? item.kidLabel : (item.label || t(item.labelKey));
+  const visibleSections = NAV_SECTIONS.filter((s) => s.items.length > 0);
+  const itemLabel = (item) => item.label || t(item.labelKey);
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
@@ -244,7 +235,7 @@ export default function AppLayout() {
 
         <div className="px-4 pb-4 pt-2 space-y-3">
           <XPBar />
-          {!kidMode && plan !== "premium" && plan !== "plus" && (
+          {plan !== "premium" && plan !== "plus" && (
             <Link
               to="/pricing"
               className="block rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 p-4 hover:border-primary/40 transition-all"
@@ -353,7 +344,7 @@ export default function AppLayout() {
                 </div>
                 <ChevronRight className="w-4 h-4 opacity-40" />
               </Link>
-              {!kidMode && plan !== "premium" && plan !== "plus" && (
+              {plan !== "premium" && plan !== "plus" && (
                 <Link
                   to="/pricing"
                   onClick={() => setMobileOpen(false)}
@@ -381,15 +372,9 @@ export default function AppLayout() {
       {/* Main Content */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-[100dvh] min-w-0 overflow-x-hidden">
         <BroadcastBanner />
-        <div className="kid-banner items-center gap-2 px-3 py-2 bg-primary/10 border-b border-primary/20 text-xs sm:text-sm font-medium text-primary min-w-0">
-          <span>🧒</span>
-          <span className="truncate">Kid Mode is on</span>
-        </div>
         <main className="flex-1 max-w-4xl mx-auto w-full min-w-0 px-4 sm:px-8 pt-20 pb-8 md:py-12" style={{ paddingTop: "max(5rem, calc(4rem + env(safe-area-inset-top)))", paddingBottom: "max(2rem, env(safe-area-inset-bottom))", paddingLeft: "max(1rem, env(safe-area-inset-left))", paddingRight: "max(1rem, env(safe-area-inset-right))" }}>
           <Outlet />
         </main>
-
-        {kidMode && <AskParentButton />}
 
         <footer className="border-t border-border/50 py-6 px-5 mt-auto" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
@@ -400,6 +385,7 @@ export default function AppLayout() {
               <Link to="/privacy" className="hover:text-foreground transition-colors">{t("footer.privacy")}</Link>
               <Link to="/data-collection" className="hover:text-foreground transition-colors">Data Collection</Link>
               <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+              <Link to="/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
               <Link to="/pricing" className="hover:text-foreground transition-colors">{t("footer.pricing")}</Link>
               <Link to="/admin" className="hover:text-muted-foreground text-xs opacity-40 hover:opacity-100 transition-opacity">{t("footer.admin")}</Link>
             </div>

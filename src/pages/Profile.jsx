@@ -13,7 +13,6 @@ import {
 import { Link } from "react-router-dom";
 import { getCreditStatus, PLAN_NAMES } from "@/lib/credits";
 import { useAuth } from "@/lib/AuthContext";
-import { useKidMode } from "@/lib/KidModeContext";
 import { toast } from "@/components/ui/use-toast";
 import CommunityDataToggle from "@/components/community/CommunityDataToggle";
 import CreditPacks from "@/components/CreditPacks";
@@ -21,7 +20,6 @@ import ReferralSection from "@/components/referral/ReferralSection";
 
 export default function Profile() {
   const { user, checkUserAuth } = useAuth();
-  const { kidMode, setKidMode } = useKidMode();
   const [credits, setCredits] = useState(null);
   const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -354,21 +352,6 @@ export default function Profile() {
             <p className="text-xs text-muted-foreground">Remove names, numbers & addresses before storing messages</p>
           </div>
           <Switch checked={privacyRedact} onCheckedChange={setPrivacyRedact} />
-        </div>
-      </Card>
-
-      {/* Kid Mode */}
-      <Card className="rounded-2xl border-border/50 p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-primary" />
-          <h2 className="font-semibold">Kid Mode</h2>
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">Enable Kid Mode</p>
-            <p className="text-xs text-muted-foreground">Simpler language, bigger text, and kid-focused scam protection for online services and phone calls</p>
-          </div>
-          <Switch checked={kidMode} onCheckedChange={setKidMode} />
         </div>
       </Card>
 

@@ -23,7 +23,6 @@ import ImageUpload from "@/components/scam/ImageUpload";
 import ConversationPanel from "@/components/scam/ConversationPanel";
 import PostScamResponsePanel from "@/components/scam/PostScamResponsePanel";
 import { Switch } from "@/components/ui/switch";
-import { useKidMode } from "@/lib/KidModeContext";
 
 const messageTypes = [
   { value: "sms", label: "SMS / Text", icon: MessageSquare },
@@ -55,7 +54,6 @@ const RESPONSE_SCHEMA = {
 };
 
 export default function Home() {
-  const { kidMode } = useKidMode();
   const [mode, setMode] = useState("message");
   const [messageText, setMessageText] = useState("");
   const [urlText, setUrlText] = useState("");
@@ -199,7 +197,7 @@ export default function Home() {
     <div className="max-w-2xl mx-auto">
       <ConsentBanner />
 
-      {credits && !result && !kidMode && (
+      {credits && !result && (
         <div className="flex items-center justify-between mb-4 sm:mb-6 px-4 py-2.5 bg-muted rounded-xl animate-fade-in">
           <span className="text-sm text-muted-foreground">
             {credits.isPaid ? "✦ " + (credits.plan === "premium" ? "Premium" : "Plus") + " plan" : "Starter plan"}
@@ -262,7 +260,7 @@ export default function Home() {
         </div>
       )}
 
-      {credits && !result && !kidMode && mode !== "conversation" && mode !== "bulk" && (
+      {credits && !result && mode !== "conversation" && mode !== "bulk" && (
         <div className={`flex items-center justify-between mb-4 sm:mb-6 px-4 py-3 rounded-xl border animate-fade-in ${incognito ? "bg-primary/5 border-primary/30" : "bg-card border-border/50"}`}>
           <div className="flex items-center gap-2.5 min-w-0">
             <EyeOff className={`w-4 h-4 flex-shrink-0 ${incognito ? "text-primary" : "text-muted-foreground"}`} />
@@ -293,9 +291,9 @@ export default function Home() {
             <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
               <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">{kidMode ? "Is It Safe? Let's Check!" : "Check Before You Click"}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Check Before You Click</h1>
             <p className="text-muted-foreground text-base sm:text-lg max-w-md mx-auto hidden sm:block">
-              {kidMode ? "Paste a message or link and I'll tell you if it's a trick!" : "Paste a message or link and get an instant scam risk assessment."}
+              Paste a message or link and get an instant scam risk assessment.
             </p>
           </div>
 
