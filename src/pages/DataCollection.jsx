@@ -47,12 +47,12 @@ export default function DataCollection() {
 
       <section className="py-7 border-b border-border/60 space-y-4 text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-muted-foreground">
         <h2 className="text-lg sm:text-xl font-semibold text-foreground">Call Guard</h2>
-        <p>Call Guard is not local-only. Microphone/system-audio chunks and uploaded call recordings are sent to Vardin's backend for transcription and analysis. The current backend uses Groq and may use Deepgram as a fallback. Vardin stores Live Guard transcript/analysis records, but the current application does not implement a complete automatic deletion schedule for uploaded audio files or every provider-side log.</p>
+        <p>Call Guard is not local-only. Microphone/system-audio chunks and uploaded call recordings are sent to Vardin's backend for transcription and analysis. The current backend uses Groq as its sole speech-to-text provider. Vardin stores Live Guard transcript/analysis records, but the current application does not implement a complete automatic deletion schedule for uploaded audio files or every provider-side log.</p>
       </section>
 
       <section className="py-7 border-b border-border/60 space-y-4 text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-muted-foreground">
         <h2 className="text-lg sm:text-xl font-semibold text-foreground">AI and third parties</h2>
-        <p>Depending on the feature, submitted content may be sent to Base44-managed AI services, Google Gemini, Groq, Deepgram, VirusTotal, URLhaus, QR Server, ElevenLabs, PayPal or Gmail. The exact recipient depends on the feature used. See the full <Link className="text-primary underline underline-offset-2" to="/privacy">Privacy Policy</Link> for the current data-flow description.</p>
+        <p>Depending on the feature, submitted content may be sent to Base44-managed AI services, Google Gemini, Groq, VirusTotal, URLhaus, QR Server, ElevenLabs, PayPal or Gmail. The exact recipient depends on the feature used. See the full <Link className="text-primary underline underline-offset-2" to="/privacy">Privacy Policy</Link> for the current data-flow description.</p>
       </section>
 
       <section className="py-7 border-b border-border/60 space-y-4 text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-muted-foreground">
