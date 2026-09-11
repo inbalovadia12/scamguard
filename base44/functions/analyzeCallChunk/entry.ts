@@ -8,7 +8,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
  * 2. Speaker Identification Layer - determines who is speaking
  * 3. Conversation Context Manager - maintains rolling context
  * 4. Scam Detector - analyzes speaker-aware transcript
- * 5. Deepgram Fallback - only if Groq fails
  *
  * KEY FIXES:
  * - 302 redirect: Download audio to binary, don't send URL
@@ -136,52 +135,6 @@ async function transcribeWithGroq(
   }
 
   return await response.json();
-}
-
-// ===== DEEPGRAM FALLBACK (ONLY IF GROQ FAILS) =====
-async function transcribeWithDeepgram(
-  audioBytes: Uint8Array,
-  mimeType: string,
-  language: string,
-  deepgramKey: string
-): Promise<any> {
-  // Upload audio to Deepgram
-  const form = new FormData();
-  const file = new File([audioBytes], 'audio.webm', { type: mimeType });
-  form.set('file', file);
-
-  const uploadResponse = await fetch('https://api.deepgram.com/v1/listen', {
-    method: 'POST',
-    headers: {
-      Authorization: `Token ${deepgramKey}`,
-    },
-    body: form,
-    signal: AbortSignal.timeout(8000),
-  });
-
-  if (!uploadResponse.ok) {
-    throw new Error(`Deepgram failed: ${uploadResponse.status}`);
-  }
-
-  const data = await uploadResponse.json();
-
-  // Convert Deepgram format to Groq-like format for compatibility
-  const words = data.results?.channels?.[0]?.alternatives?.[0]?.words || [];
-  const text = data.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
-
-  return {
-    text,
-    segments: words.map((w: any) => ({
-      id: 0,
-      seek: 0,
-      start: w.start,
-      end: w.end,
-      text: w.word,
-      avg_logprob: -0.5,
-      no_speech_prob: 0.1,
-      words: [w],
-    })),
-  };
 }
 
 // ===== SPEAKER IDENTIFICATION =====
@@ -417,7 +370,6 @@ Deno.serve(async (req) => {
 
     const startTime = Date.now();
     const groqKey = Deno.env.get('GROQ_STT');
-    const deepgramKey = Deno.env.get('DEEPGRAM_API_KEY');
 
     // ===== RETRIEVE AUDIO BYTES (FIX 302 REDIRECT) =====
     let audioBytes: Uint8Array;
@@ -431,9 +383,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: `Audio retrieval failed: ${e.message}` }, { status: 400 });
     }
 
-    // ===== TRANSCRIBE: GROQ PRIMARY =====
+    // ===== TRANSCRIBE: GROQ ONLY =====
     let transcriptData: any;
-    let provider = 'groq';
+    const provider = 'groq';
 
     if (!groqKey) {
       return Response.json({ error: 'Groq STT not configured' }, { status: 500 });
@@ -443,26 +395,7 @@ Deno.serve(async (req) => {
       transcriptData = await transcribeWithGroq(audioBytes, actualMimeType, language, groqKey);
     } catch (groqError) {
       console.error('Groq failed:', groqError.message);
-
-      // ===== DEEPGRAM FALLBACK (ONLY IF GROQ FAILS) =====
-      if (deepgramKey) {
-        console.log('Groq failed, trying Deepgram fallback...');
-        try {
-          transcriptData = await transcribeWithDeepgram(
-            audioBytes,
-            actualMimeType,
-            language,
-            deepgramKey
-          );
-          provider = 'deepgram';
-          console.log('Deepgram fallback succeeded');
-        } catch (deepgramError) {
-          console.error('Deepgram also failed:', deepgramError.message);
-          return Response.json({ error: 'Both Groq and Deepgram failed' }, { status: 500 });
-        }
-      } else {
-        return Response.json({ error: `Groq failed: ${groqError.message}` }, { status: 500 });
-      }
+      return Response.json({ error: `Groq failed: ${groqError.message}` }, { status: 500 });
     }
 
     const fullTranscript = transcriptData.text || '';
@@ -538,7 +471,7 @@ Deno.serve(async (req) => {
         : newAlerts.length === 1
           ? 'Caution: One indicator detected. Verify independently.'
           : '',
-      provider, // Which STT was used
+      provider,
       timing_ms: Date.now() - startTime,
     });
   } catch (error: any) {
