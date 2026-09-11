@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 const EFFECTIVE_DATE = "September 11, 2026";
 
@@ -36,7 +37,12 @@ export default function Privacy() {
       <header className="border-b border-border/60 pb-7 sm:pb-10">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Legal · Privacy</p>
         <h1 className="mt-3 text-[2rem] leading-tight sm:text-4xl font-bold tracking-tight text-foreground">Privacy Policy</h1>
-        <p className="mt-3 text-sm text-muted-foreground">Last Updated: {EFFECTIVE_DATE}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="mt-3 text-sm text-muted-foreground">Last Updated: {EFFECTIVE_DATE}</p>
+          <Link to="/dashboard" className="mt-3 inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors">
+            Back to Dashboard
+          </Link>
+        </div>
         <p className="mt-5 max-w-4xl text-sm sm:text-base leading-7 text-muted-foreground">
           This Privacy Policy describes the Vardin application and website as they are currently implemented. It explains what information Vardin receives, what Vardin stores, what Vardin sends to service providers, how automated analysis works, and the controls currently available to users.
         </p>
