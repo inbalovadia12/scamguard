@@ -24,7 +24,6 @@ const providerLinks = [
   ["Base44", "https://base44.com/privacy-policy"],
   ["Google Gemini API", "https://ai.google.dev/gemini-api/docs/logs-policy"],
   ["Groq", "https://groq.com/privacy-policy"],
-  ["Deepgram", "https://deepgram.com/terms"],
   ["ElevenLabs", "https://elevenlabs.io/docs/eleven-api/resources/zero-retention-mode"],
   ["PayPal", "https://www.paypal.com/us/legalhub/paypal/privacy-full?redirect=false"],
   ["Google Workspace / Gmail API", "https://developers.google.com/workspace/workspace-api-user-data-developer-policy"],
@@ -106,7 +105,7 @@ export default function Privacy() {
 
       <Section number={7} title="Call Guard, Audio, and Transcripts">
         <p><strong>Call Guard does capture audio.</strong> In microphone mode, the browser requests microphone access and records short audio chunks locally before sending them to Vardin's backend for analysis. In system-audio/phone-call modes, the browser uses display-media capture when supported. In upload mode, the user selects an existing audio recording and Vardin uploads it for analysis.</p>
-        <p>For uploaded recordings, the current application uploads the audio file through Base44's file-upload service and then sends the resulting file URL to the Vardin <code>analyzeCallChunk</code> function. The backend downloads the audio and sends the audio bytes to Groq for speech-to-text. If Groq fails and a Deepgram credential is configured, Vardin sends the audio to Deepgram as a fallback.</p>
+        <p>For uploaded recordings, the current application uploads the audio file through Base44's file-upload service and then sends the resulting file URL to the Vardin <code>analyzeCallChunk</code> function. The backend downloads the audio and sends the audio bytes to Groq for speech-to-text. Groq is the sole speech-to-text provider used by Call Guard.</p>
         <p>The current Vardin database does <strong>not</strong> contain a field for storing the original call-audio bytes. It does, however, store <code>LiveGuardSession</code> records containing transcripts/analysis segments, risk level, warnings, tactics, duration and segment count. Uploaded audio is also placed in platform file storage during processing, and the current code does not implement a Vardin-managed automatic deletion schedule for those uploaded files.</p>
         <p>Live audio is therefore not accurately described as “local only,” “never transmitted,” or “never stored.” Vardin transmits live audio to its backend and third-party speech-to-text providers as necessary to perform Call Guard, and uploaded recordings pass through platform file storage.</p>
       </Section>
@@ -172,7 +171,7 @@ export default function Privacy() {
         <p>Vardin shares information only as needed for the feature or purpose involved, subject to applicable law. Recipients can include:</p>
         <BulletList items={[
           "Base44 and its infrastructure providers for application hosting, authentication, database, file storage and platform operations.",
-          "AI and speech providers used for requested analysis, including Google Gemini, Groq and, for Call Guard fallback transcription, Deepgram.",
+          "AI and speech providers used for requested analysis, including Google Gemini and Groq.",
           "PayPal for subscriptions and credit purchases.",
           "Google/Gmail for configured guardian and family notification email delivery.",
           "VirusTotal and URLhaus for URL threat intelligence when the relevant scanner is used.",
@@ -194,7 +193,6 @@ export default function Privacy() {
 
       <Section number={18} title="AI Providers and Training/Retention Controls">
         <p><strong>Groq:</strong> Vardin sends Call Guard audio to Groq's transcription API and sends transcript segments/context to Groq's language model for speaker identification. Groq's current documentation states that inference customer data is not retained by default, while reliability/abuse logs can be retained for up to 30 days unless Zero Data Retention is enabled. Groq also states that customer inputs/outputs are not used for model training unless permission is explicitly granted. Vardin's current code does not itself configure Groq's Zero Data Retention setting. citeturn2search0turn2search1</p>
-        <p><strong>Deepgram:</strong> Vardin can send Call Guard audio to Deepgram if Groq transcription fails. Deepgram's current terms provide a per-request training opt-out mechanism for API customers, but the Vardin code inspected for this Policy does not set such an opt-out parameter. The operator should confirm the applicable Deepgram account/data-processing configuration before promising that Deepgram will never use submitted content for model improvement. citeturn2search10</p>
         <p><strong>Google Gemini / Base44 AI:</strong> Vardin uses Base44's Core InvokeLLM integration for many analyses and explicitly uses the Gemini 3 Flash model in several backend functions. Google states that for billed Gemini API projects, prompts and responses in developer logs are not used for product improvement by default; logged API data can be retained for up to 55 days, with configurable shorter windows, and data voluntarily added to datasets can have different retention and use rules. Vardin does not have source-level visibility into every Base44-managed logging setting, so the operator should verify the actual Base44/Google configuration. citeturn0search1</p>
         <p><strong>ElevenLabs:</strong> Vardin uses ElevenLabs only for generated speech in the inspected application code; it sends text and voice configuration, not a user call recording. ElevenLabs states that API logging is enabled by default and that Zero Retention Mode is an enterprise option; retained API generations can be deleted, with backups potentially retaining deleted data for up to 30 days. citeturn3search0turn3search1</p>
       </Section>
@@ -277,7 +275,7 @@ export default function Privacy() {
           "Create and enforce a documented retention schedule for database records and uploaded files rather than relying mainly on account deletion.",
           "Complete the deletion workflow for Base44 authentication identity, uploaded files, related FamilyAlert/Referral records, backups and provider-side data where deletion is available.",
           "Verify Base44/Google Gemini logging and retention configuration; the application cannot establish every platform-level setting from source code alone.",
-          "Configure and document Deepgram's API training/data-use opt-out if Vardin intends to promise that call audio is not used for model improvement.",
+          
           "Determine and document the lawful basis and any special-category safeguards/DPIA requirements for Call Guard and family protection in each target jurisdiction.",
           "Review children's/teen privacy controls before marketing or directing the product to children, including COPPA and UK/EU age-appropriate-design requirements.",
           "Confirm Israeli database, information-security, transfer and sensitive-information obligations under the current Protection of Privacy Law and regulations.",
