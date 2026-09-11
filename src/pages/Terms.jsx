@@ -181,7 +181,12 @@ export default function Terms() {
           <span className="text-sm font-semibold tracking-wide uppercase">Legal</span>
         </div>
         <h1 className="text-[2rem] leading-tight sm:text-4xl font-bold tracking-tight font-heading">Terms of Service</h1>
-        <p className="mt-3 text-sm text-muted-foreground">Last updated: September 2026</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="mt-3 text-sm text-muted-foreground">Last updated: September 2026</p>
+          <Link to="/dashboard" className="mt-3 inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors">
+            Back to Dashboard
+          </Link>
+        </div>
         <p className="mt-4 sm:mt-5 max-w-3xl text-[14px] sm:text-base leading-6 sm:leading-7 text-muted-foreground break-words">
           These Terms govern your use of Vardin and explain the rules, limitations, payment terms, AI limitations, and legal responsibilities that apply when you use the Service. Vardin is currently in beta and may change as it is tested and improved.
         </p>
