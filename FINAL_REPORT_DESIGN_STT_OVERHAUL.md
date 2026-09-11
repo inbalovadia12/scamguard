@@ -41,7 +41,7 @@ Result: Vardin now has a **professional, intentional design** and a **robust mul
 ```
 Provider order:
 1. Groq Whisper (PRIMARY) → All calls go here first
-2. Deepgram (FALLBACK) → Only if Groq fails
+2. legacy speech-to-text provider (FALLBACK) → Only if Groq fails
 3. Error → If both fail
 ```
 
@@ -190,7 +190,7 @@ Call sequence:
 
 1. **`retrieveAudioBytes()`** - Downloads audio from URL to binary (fixes 302)
 2. **`transcribeWithGroq()`** - Groq STT (primary)
-3. **`transcribeWithDeepgram()`** - Deepgram STT (fallback only)
+3. **`transcribeWithlegacy speech-to-text provider()`** - legacy speech-to-text provider STT (fallback only)
 4. **`identifySpeakers()`** - LLM-based speaker classification
 5. **`detectScamIndicators()`** - Combination-based scam detection
 6. **`getOrCreateConversationState()`** - Maintains session context
@@ -198,7 +198,7 @@ Call sequence:
 ### Dependencies
 - `groq-sdk` (already configured)
 - `deepgram-sdk` (existing fallback)
-- `Deno.env` (GROQ_STT, DEEPGRAM_API_KEY)
+- `Deno.env` (GROQ_STT, legacy STT API key)
 
 ---
 
@@ -328,7 +328,7 @@ Call sequence:
 - ✅ **Primary Provider:** Groq (llama-3.1-8b-instant + whisper-large-v3-turbo)
 - ✅ **302 Error:** Fixed (audio downloaded to binary, not URL)
 - ✅ **Speaker Identification:** Consistent classification of "you" vs "caller"
-- ✅ **Fallback:** Deepgram only if Groq fails
+- ✅ **Fallback:** legacy speech-to-text provider only if Groq fails
 - ✅ **Latency:** <3 seconds (actual: 2-4 seconds)
 - ✅ **Accuracy:** High transcription quality maintained
 - ✅ **Response Format:** Includes provider info + speaker labels
@@ -367,7 +367,7 @@ Expected Output:
 - ✅ Scam detection uses combinations (not keywords alone)
 - ✅ Duplicate alerts suppressed
 - ✅ Provider tracking in response
-- ✅ Deepgram as fallback only
+- ✅ legacy speech-to-text provider as fallback only
 - ⏳ Testing with real calls (user to do)
 - ⏳ Deployment to production (user to do)
 
@@ -427,7 +427,7 @@ Base44 Dashboard
 ```javascript
 // Backend logs
 - Groq success rate: 99%+
-- Deepgram fallback rate: <1%
+- legacy speech-to-text provider fallback rate: <1%
 - Average transcription latency: 2-4s
 - Speaker identification confidence: 80%+
 

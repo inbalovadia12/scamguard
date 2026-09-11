@@ -16,7 +16,7 @@
 - Multilingual
 ```
 
-**Deepgram** (Fallback only)
+**legacy speech-to-text provider** (Fallback only)
 ```
 - Used ONLY if Groq fails
 - Same audio format
@@ -193,7 +193,7 @@ Unknown = Can't determine (conservative)
 
 **Key Metrics:**
 ```
-Provider Success Rate:  Groq 99%+, Deepgram <1%
+Provider Success Rate:  Groq 99%+, legacy speech-to-text provider <1%
 Transcription Latency:  2-4 seconds
 Speaker Accuracy:       80%+ confidence
 Red Flag Precision:     >95% (few false positives)

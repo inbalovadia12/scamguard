@@ -3,7 +3,7 @@
 ## ✅ WHAT'S FIXED
 
 ### 1. Speaker Detection ✅
-- Deepgram → AssemblyAI migration
+- legacy speech-to-text provider → AssemblyAI migration
 - Native speaker diarization enabled
 - Fallback energy-based splitting (if diarization fails)
 - Debug info in response

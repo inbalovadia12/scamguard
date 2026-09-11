@@ -3,7 +3,7 @@
 ## ✅ PRE-FLIGHT CHECKLIST
 
 - [ ] ASSEMBLY_AI_API_KEY is in Base44 Secrets
-- [ ] Old DEEPGRAM_API_KEY is removed from Secrets
+- [ ] Old legacy STT API key is removed from Secrets
 - [ ] Code has been updated to use AssemblyAI
 
 ## 🚀 DEPLOYMENT (3 STEPS)

@@ -2,12 +2,12 @@
 
 ## WHAT CHANGED
 
-**From:** Deepgram (synchronous, ~1.5 seconds)  
+**From:** legacy speech-to-text provider (synchronous, ~1.5 seconds)  
 **To:** AssemblyAI (async polling, ~3-5 seconds initially, but better quality)
 
 ### Why AssemblyAI is Better for Calls
 
-| Feature | Deepgram | AssemblyAI |
+| Feature | legacy speech-to-text provider | AssemblyAI |
 |---------|----------|-----------|
 | Speaker Diarization | ✅ Good | ✅✅ Excellent |
 | Phone Quality | ✅ Good | ✅✅ Optimized for it |
@@ -127,7 +127,7 @@ Maintains speaker context in segments
 
 ## PERFORMANCE COMPARISON
 
-### Before (Deepgram)
+### Before (legacy speech-to-text provider)
 ```
 30-second call:
 - Transcribe: 1-1.5s
@@ -231,7 +231,7 @@ const results = await Promise.all([
 
 ### Before Publishing
 - [ ] ASSEMBLY_AI_API_KEY is set in Base44 Secrets
-- [ ] Old DEEPGRAM_API_KEY is removed
+- [ ] Old legacy STT API key is removed
 - [ ] Code deployed successfully
 
 ### After Publishing
@@ -265,7 +265,7 @@ const results = await Promise.all([
 
 ## FAQ
 
-**Q: Why is it slower than Deepgram?**
+**Q: Why is it slower than legacy speech-to-text provider?**
 A: AssemblyAI's async model gives better accuracy. 3-5 seconds vs 1-2 seconds is acceptable for real-time call analysis. The keyword fast-path handles obvious scams instantly.
 
 **Q: Can I use audio URLs to speed up?**

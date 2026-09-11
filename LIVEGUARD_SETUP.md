@@ -12,7 +12,7 @@
 ## What's Fixed Now ✅
 
 **Restored Architecture:**
-1. **Deepgram** (STT) - Transcribes audio to text, handles blurry/phone quality audio (1-1.5s)
+1. **legacy speech-to-text provider** (STT) - Transcribes audio to text, handles blurry/phone quality audio (1-1.5s)
 2. **Base44 Agent** (LLM) - Intelligent real-time scam detection on Vardin's exact tactics (1-2s)
 3. **Fast response** - Returns: speaker, red flags, risk level, coaching feedback (~2-3s total)
 
@@ -20,8 +20,8 @@
 
 ## Setup Requirements
 
-### 1. Deepgram API Key (You Already Have This)
-- **Status:** ✅ Already in secrets as `DEEPGRAM_API_KEY`
+### 1. legacy speech-to-text provider API Key (You Already Have This)
+- **Status:** ✅ Already in secrets as `legacy STT API key`
 - Handles blurry/phone quality audio
 - Returns confidence scores for audio quality detection
 
@@ -78,9 +78,9 @@ If victim is speaking, agent provides:
 
 | Metric | Before (Broken) | After (Fixed) |
 |--------|---|---|
-| **Architecture** | External Groq + Mistral | Base44 Agent + Deepgram |
+| **Architecture** | External Groq + Mistral | Base44 Agent + legacy speech-to-text provider |
 | **Speed** | 4-6 seconds | 2-3 seconds |
-| **Transcription** | Poor (32kbps) | Good (128kbps + Deepgram) |
+| **Transcription** | Poor (32kbps) | Good (128kbps + legacy speech-to-text provider) |
 | **Scam Detection** | None (transcript only) | Real-time, context-aware |
 | **Audio Quality** | Not detected | Yes (confidence scores) |
 | **Cost** | $$ (API usage) | Free (Base44 included) |
@@ -123,8 +123,8 @@ If victim is speaking, agent provides:
 - Verify you're authenticated
 - Try again (might be temporary)
 
-### "Deepgram STT not configured"
-- Verify `DEEPGRAM_API_KEY` is in Base44 Secrets
+### "legacy speech-to-text provider STT not configured"
+- Verify `legacy STT API key` is in Base44 Secrets
 - Check key is valid
 
 ### "No speaker detected"
@@ -157,7 +157,7 @@ Process multiple chunks simultaneously instead of sequentially
 **Effort:** Medium
 
 ### 3. Noise Preprocessing
-Denoise audio before sending to Deepgram
+Denoise audio before sending to legacy speech-to-text provider
 **Benefit:** Better transcription of blurry calls
 **Effort:** High (requires FFmpeg/sox)
 
@@ -177,14 +177,14 @@ Audio → Groq STT → Groq LLM → Transcript only (no analysis)
 
 **To (Fixed):**
 ```
-Audio → Deepgram STT → Base44 Agent → Full scam analysis + coaching
+Audio → legacy speech-to-text provider STT → Base44 Agent → Full scam analysis + coaching
 ```
 
 ---
 
 ## Instructions Summary
 
-✅ Deepgram API key is already configured  
+✅ legacy speech-to-text provider API key is already configured  
 ✅ Base44 Agent is built-in (no config needed)  
 ✅ Publish the `analyzeCallChunk` function  
 ✅ Test with a call recording  

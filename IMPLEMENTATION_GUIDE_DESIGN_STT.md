@@ -4,7 +4,7 @@
 
 ### Fixed Issues
 ✅ **302 Redirect Error** - Now downloads audio to binary instead of sending URLs
-✅ **Groq Primary** - Groq is called first, Deepgram only if Groq fails
+✅ **Groq Primary** - Groq is called first, legacy speech-to-text provider only if Groq fails
 ✅ **Speaker Detection** - Classifies segments as "you" vs "caller"
 ✅ **Conversation Context** - Maintains rolling state across chunks
 ✅ **Duplicate Alerts** - Suppresses repeat warnings
@@ -28,7 +28,7 @@ base44/functions/analyzeCallChunk/entry.ts (15,305 bytes)
 **Processing:**
 1. **Audio Retrieval** - Downloads audio from URL to binary (fixes 302 redirect)
 2. **Groq Transcription** - Sends binary to Groq Whisper
-3. **Fallback** - If Groq fails, tries Deepgram
+3. **Fallback** - If Groq fails, tries legacy speech-to-text provider
 4. **Speaker ID** - Classifies each segment as "you" or "caller"
 5. **Scam Detection** - Analyzes speaker-aware transcript
 6. **Duplicate Suppression** - Prevents repeat alerts
@@ -477,7 +477,7 @@ curl -X POST http://localhost:8000/api/analyzeCallChunk \
 - ✅ Speakers are consistently identified
 - ✅ Provider is returned in response
 - ✅ <3 second latency
-- ✅ Deepgram only used as fallback
+- ✅ legacy speech-to-text provider only used as fallback
 
 ### Design
 - ✅ No generic gradients/glassmorphism
@@ -509,7 +509,7 @@ curl -X POST http://localhost:8000/api/analyzeCallChunk \
 // Check backend logs - should see:
 // ✅ "Groq transcription succeeded"
 // ✅ Segments with "you" and "caller" labels
-// ❌ "Deepgram fallback" should be rare
+// ❌ "legacy speech-to-text provider fallback" should be rare
 
 // Frontend should show:
 // ✅ Clear "You" / "Caller" labels

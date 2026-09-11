@@ -15,7 +15,7 @@
 - Obvious scams detected instantly
 
 **Implementation Details:**
-- Deepgram now returns `speaker_labels=true&diarize=true`
+- legacy speech-to-text provider now returns `speaker_labels=true&diarize=true`
 - Fast keyword path (urgency, money, threats, personal info)
 - LLM timeout at 3 seconds (returns partial results vs hanging)
 - Parallel red flag detection

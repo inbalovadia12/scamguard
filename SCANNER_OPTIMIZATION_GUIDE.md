@@ -5,7 +5,7 @@
 ### analyzeCallChunk (LiveGuard)
 **Problem:** No speaker detection, slow LLM calls  
 **Solution Implemented:**
-- ✅ Speaker diarization via Deepgram `speaker_labels=true&diarize=true`
+- ✅ Speaker diarization via legacy speech-to-text provider `speaker_labels=true&diarize=true`
 - ✅ Keyword-based fast path (skip LLM for obvious scams)
 - ✅ LLM timeout protection (3 sec max, return partial results)
 - ✅ Multi-speaker detection
