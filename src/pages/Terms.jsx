@@ -21,7 +21,7 @@ If you use Vardin on behalf of an organization, you represent that you have auth
   },
   {
     title: "3. What Vardin Does — and What It Does Not Do",
-    body: `Vardin is a consumer safety and scam-awareness service. It may analyze messages, URLs, images, conversations, phone numbers, files, calls, screen content, or other information that you choose to submit or authorize the Service to process. Vardin may use automated systems, artificial intelligence, statistical methods, reputation information, and other signals to generate assessments, explanations, alerts, recommendations, or educational information.
+    body: `Vardin is a consumer safety and scam-awareness service. Vardin is currently in beta, so features may change, be limited, or be removed during testing. It may analyze messages, URLs, images, conversations, phone numbers, files, calls, screen content, or other information that you choose to submit or authorize the Service to process. Vardin may use automated systems, artificial intelligence, statistical methods, reputation information, and other signals to generate assessments, explanations, alerts, recommendations, or educational information.
 
 Vardin is not an emergency service, law-enforcement service, bank, insurer, credit-reporting agency, financial adviser, lawyer, medical provider, cybersecurity incident-response provider, or identity-theft recovery provider. The Service does not replace professional judgment or direct confirmation with the relevant institution.
 
@@ -62,10 +62,10 @@ Guardian features are communication and safety-assistance tools. They do not gua
 If you use Vardin to protect another person, you are responsible for using the feature lawfully and for providing any notices or obtaining any consent that applicable law requires.`
   },
   {
-    title: "8. Children and Minors",
-    body: `Vardin includes family-oriented and educational features. Those features do not mean that Vardin may lawfully collect personal information from every child without parental authorization. Where applicable law requires parental consent or another special authorization for a minor's use of the Service, the required parent or guardian must provide it.
+    title: "8. Age Suitability",
+    body: `Vardin is a general consumer scam-awareness service and does not currently offer a dedicated child or kid mode. The Service is not designed as a child-directed service.
 
-Parents and guardians are responsible for supervising minors' use of the Service and for ensuring that their use complies with applicable law. If you believe a child has provided personal information to Vardin in circumstances where consent was required but was not obtained, contact us at inbal5252@gmail.com so the matter can be reviewed.`
+If a person is below the age required to enter a binding agreement or use a particular feature under the law that applies to them, they should use Vardin only with the involvement or authorization required by that law. If the product later introduces child-directed features or intentionally targets children, Vardin should update these Terms, its Privacy Policy and its product safeguards before doing so.`
   },
   {
     title: "9. Acceptable Use",
@@ -183,7 +183,7 @@ export default function Terms() {
         <h1 className="text-[2rem] leading-tight sm:text-4xl font-bold tracking-tight font-heading">Terms of Service</h1>
         <p className="mt-3 text-sm text-muted-foreground">Last updated: September 2026</p>
         <p className="mt-4 sm:mt-5 max-w-3xl text-[14px] sm:text-base leading-6 sm:leading-7 text-muted-foreground break-words">
-          These Terms govern your use of Vardin and explain the rules, limitations, payment terms, AI limitations, and legal responsibilities that apply when you use the Service.
+          These Terms govern your use of Vardin and explain the rules, limitations, payment terms, AI limitations, and legal responsibilities that apply when you use the Service. Vardin is currently in beta and may change as it is tested and improved.
         </p>
       </header>
 
@@ -215,6 +215,9 @@ export default function Terms() {
           </Link>
           <Link to="/data-collection" className="text-primary hover:underline inline-flex items-center gap-1">
             Data Collection Notice <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+          <Link to="/cookies" className="text-primary hover:underline inline-flex items-center gap-1">
+            Cookie Policy <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
         <p className="mt-4 text-xs leading-5">

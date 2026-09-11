@@ -22,7 +22,7 @@ export default function DataCollection() {
         <h1 className="mt-3 text-[2rem] leading-tight sm:text-4xl font-bold tracking-tight">Data Collection Notice</h1>
         <p className="mt-3 text-sm text-muted-foreground">Last Updated: {EFFECTIVE_DATE}</p>
         <p className="mt-5 max-w-4xl text-sm sm:text-base leading-7 text-muted-foreground">
-          This is Vardin's concise notice of the principal categories of information processed by the current application. It supplements, and does not replace, the <Link className="text-primary underline underline-offset-2" to="/privacy">Privacy Policy</Link>.
+          This is Vardin's concise notice of the principal categories of information processed by the current application. Vardin is currently in beta, so features and data flows may change as the product is tested and improved. It supplements, and does not replace, the <Link className="text-primary underline underline-offset-2" to="/privacy">Privacy Policy</Link>.
         </p>
       </header>
 

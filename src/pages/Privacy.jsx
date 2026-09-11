@@ -54,13 +54,13 @@ export default function Privacy() {
             [11, "Messages & Media"], [12, "Family Protection"], [13, "Community Reports"], [14, "Uses"], [15, "Legal Bases"],
             [16, "Sharing"], [17, "Third Parties"], [18, "AI Providers"], [19, "International Transfers"], [20, "Retention"],
             [21, "Security"], [22, "Privacy Rights"], [23, "Access & Export"], [24, "Account Deletion"], [25, "Cookies"],
-            [26, "Children & Teens"], [27, "Non-Users"], [28, "Changes"], [29, "Contact"], [30, "Requests & Complaints"],
+            [26, "Age Suitability"], [27, "Non-Users"], [28, "Changes"], [29, "Contact"], [30, "Requests & Complaints"],
           ].map(([n, label]) => <a key={n} href={`#privacy-${n}`} className="rounded-lg px-2 py-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">{n}. {label}</a>)}
         </div>
       </nav>
 
       <Section number={1} title="Introduction">
-        <p>Vardin is an AI-assisted scam-awareness and consumer-safety service. This Policy applies to the Vardin website, web application, browser-extension functionality, scam scanners, phone-reputation features, Live Guard, family-protection features, educational features, subscriptions, credit purchases, and related services.</p>
+        <p>Vardin is an AI-assisted scam-awareness and consumer-safety service. It is currently in beta, so features and data flows may change as the product is tested and improved. This Policy applies to the Vardin website, web application, browser-extension functionality, scam scanners, phone-reputation features, Live Guard, family-protection features, educational features, subscriptions, credit purchases, and related services.</p>
         <p>Because users can submit communications and media belonging to other people, Vardin may process information about people who do not have Vardin accounts. The person submitting that information is responsible for having the authority required to do so.</p>
       </Section>
 
@@ -239,10 +239,10 @@ export default function Privacy() {
         <p>Base44 and external providers may use their own cookies, logs or technical identifiers when their services are involved. Review their policies for details about their independent processing.</p>
       </Section>
 
-      <Section number={26} title="Children and Teens">
-        <p>Vardin contains Kid Mode, educational lessons, family protection and features that may be attractive to minors. The existence of these features does not mean that Vardin is automatically permitted to collect children's information in every jurisdiction.</p>
-        <p>In the United States, COPPA can treat a child's voice recording as personal information and can require verifiable parental consent for covered services. Because Call Guard records, transcribes and analyzes calls rather than merely using voice as a short-lived replacement for typed input, Vardin does not rely on the narrow voice exception as a blanket basis for children's Call Guard processing.</p>
-        <p>The operator should obtain qualified children's-privacy counsel before directing the Service to children under 13 or otherwise relying on Kid Mode as a children's service. UK/EU children's-privacy, age-appropriate-design and high-risk-processing requirements may also apply depending on the users, processing and jurisdiction.</p>
+      <Section number={26} title="Age Suitability">
+        <p>Vardin is a general consumer scam-awareness service and does not currently offer a dedicated child or kid mode. The Service is not designed as a child-directed service.</p>
+        <p>If a person is below the age required to enter a binding agreement or use a particular feature under the law that applies to them, they should use Vardin only with the involvement or authorization required by that law.</p>
+        <p>Vardin does not knowingly market the Service as a children's service. If the product later introduces child-directed features or intentionally targets children, this Policy and the product's consent, age-assurance and data-protection controls should be updated before that launch.</p>
       </Section>
 
       <Section number={27} title="Information About Other People and Non-Users">
@@ -277,7 +277,6 @@ export default function Privacy() {
           "Verify Base44/Google Gemini logging and retention configuration; the application cannot establish every platform-level setting from source code alone.",
           
           "Determine and document the lawful basis and any special-category safeguards/DPIA requirements for Call Guard and family protection in each target jurisdiction.",
-          "Review children's/teen privacy controls before marketing or directing the product to children, including COPPA and UK/EU age-appropriate-design requirements.",
           "Confirm Israeli database, information-security, transfer and sensitive-information obligations under the current Protection of Privacy Law and regulations.",
           "Verify Google Gmail OAuth verification requirements because the application uses Gmail send access for guardian/family notifications.",
           "Confirm the commercial/legal status and permitted use of every threat-intelligence provider used by production traffic, including VirusTotal and URLhaus."
