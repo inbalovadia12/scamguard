@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Mail, MessageSquare, Send, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,9 @@ export default function Contact() {
           <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto">
             Have a question, suggestion, or scam to report? We'd love to hear from you.
           </p>
+          <Link to="/dashboard" className="mt-5 inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors">
+            Back to Dashboard
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 animate-slide-up" style={{ animationDelay: "100ms" }}>
