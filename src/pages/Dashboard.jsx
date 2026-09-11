@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Search, Link2, Bot, Users, Bell, BarChart3, ArrowRight, ShieldCheck,
-  TrendingUp, Loader2, Zap, Sparkles, Radio, GraduationCap, PhoneCall,
+  TrendingUp, Loader2, Zap, Sparkles, PhoneCall,
 } from "lucide-react";
 import { getCreditStatus, PLAN_NAMES } from "@/lib/credits";
 import { useI18n } from "@/lib/i18n";
