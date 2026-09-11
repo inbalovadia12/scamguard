@@ -62,10 +62,10 @@ Guardian features are communication and safety-assistance tools. They do not gua
 If you use Vardin to protect another person, you are responsible for using the feature lawfully and for providing any notices or obtaining any consent that applicable law requires.`
   },
   {
-    title: "8. Age Suitability",
-    body: `Vardin is a general consumer scam-awareness service and does not currently offer a child-directed mode. The Service is not designed as a child-directed service.
+    title: "8. Beta Service",
+    body: `Vardin is currently in beta. Features, providers, availability, storage behavior and other parts of the Service may change during testing and product development.
 
-If a person is below the age required to enter a binding agreement or use a particular feature under the law that applies to them, they should use Vardin only with the involvement or authorization required by that law. If the product later introduces child-directed features or intentionally targets children, Vardin should update these Terms, its Privacy Policy and its product safeguards before doing so.`
+Beta status does not change the responsibilities or privacy commitments stated in these Terms and the Privacy Policy. Material changes will be handled according to the notice requirements that apply.`
   },
   {
     title: "9. Acceptable Use",

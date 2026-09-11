@@ -54,7 +54,7 @@ export default function Privacy() {
             [11, "Messages & Media"], [12, "Family Protection"], [13, "Community Reports"], [14, "Uses"], [15, "Legal Bases"],
             [16, "Sharing"], [17, "Third Parties"], [18, "AI Providers"], [19, "International Transfers"], [20, "Retention"],
             [21, "Security"], [22, "Privacy Rights"], [23, "Access & Export"], [24, "Account Deletion"], [25, "Cookies"],
-            [26, "Age Suitability"], [27, "Non-Users"], [28, "Changes"], [29, "Contact"], [30, "Requests & Complaints"],
+            [26, "Beta Service"], [27, "Non-Users"], [28, "Changes"], [29, "Contact"], [30, "Requests & Complaints"],
           ].map(([n, label]) => <a key={n} href={`#privacy-${n}`} className="rounded-lg px-2 py-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">{n}. {label}</a>)}
         </div>
       </nav>
@@ -239,10 +239,9 @@ export default function Privacy() {
         <p>Base44 and external providers may use their own cookies, logs or technical identifiers when their services are involved. Review their policies for details about their independent processing.</p>
       </Section>
 
-      <Section number={26} title="Age Suitability">
-        <p>Vardin is a general consumer scam-awareness service and does not currently offer a child-directed mode. The Service is not designed as a child-directed service.</p>
-        <p>If a person is below the age required to enter a binding agreement or use a particular feature under the law that applies to them, they should use Vardin only with the involvement or authorization required by that law.</p>
-        <p>Vardin does not knowingly market the Service as a service for children. If the product later introduces child-directed features or intentionally targets children, this Policy and the product's consent, age-assurance and data-protection controls should be updated before that launch.</p>
+      <Section number={26} title="Beta Service">
+        <p>Vardin is currently in beta. Features, providers, storage behavior and other parts of the Service may change during testing and product development.</p>
+        <p>Beta status does not change the privacy commitments stated in this Policy. Vardin will update this Policy when material data-practice changes require an updated notice.</p>
       </Section>
 
       <Section number={27} title="Information About Other People and Non-Users">
