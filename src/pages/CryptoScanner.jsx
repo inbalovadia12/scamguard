@@ -69,6 +69,7 @@ export default function CryptoScanner() {
     setResult(null);
     try {
       let data;
+      let remainingCredits;
       if (mode === "link") {
         const response = await base44.functions.invoke("scanUrl", { url: text });
         if (response.data?.error) throw new Error(response.data.error);
@@ -82,6 +83,7 @@ export default function CryptoScanner() {
         });
         if (response.data?.error) throw new Error(response.data.error);
         data = response.data?.result || response.data;
+        remainingCredits = response.data?.credits_remaining;
       }
 
       await base44.entities.ScamAnalysis.create({
@@ -99,9 +101,9 @@ export default function CryptoScanner() {
         why_scammers_do_this: data.why_scammers_do_this,
       });
       setCredits((prev) => prev
-        ? { ...prev, remaining: typeof (data?.credits_remaining) === "number" ? data.credits_remaining : prev.remaining }
+        ? { ...prev, remaining: typeof remainingCredits === "number" ? remainingCredits : prev.remaining }
         : prev);
-      if (typeof data?.credits_remaining !== "number") setCredits(await getCreditStatus());
+      if (typeof remainingCredits !== "number") setCredits(await getCreditStatus());
       setResult(data);
     } catch (e) {
       toast({ title: "Crypto scan failed", description: e.message || "Try again.", variant: "destructive" });
