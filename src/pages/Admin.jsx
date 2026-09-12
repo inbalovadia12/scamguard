@@ -160,6 +160,19 @@ function UsersTab() {
       const currentBalance = Math.max(0, Number(target.admin_credit_balance) || 0);
       const newBalance = currentBalance + amount;
       await base44.entities.User.update(userId, { admin_credit_balance: newBalance });
+      try {
+        const admin = await base44.auth.me();
+        await base44.entities.CreditGrant.create({
+          user_id: userId,
+          amount,
+          admin_id: admin.id,
+          admin_email: admin.email || "",
+          created_date: new Date().toISOString(),
+          note: "Manual admin credit grant",
+        });
+      } catch (auditError) {
+        console.warn("Credit grant audit record could not be created", auditError);
+      }
       setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, admin_credit_balance: newBalance } : u));
       setGrantAmounts((prev) => ({ ...prev, [userId]: "" }));
       toast({ title: "Credits granted", description: `${amount} credits added to ${target?.full_name || target?.email || "user"}.` });
