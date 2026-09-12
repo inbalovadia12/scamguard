@@ -228,7 +228,7 @@ export default function AgentChat() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-12rem)] md:h-[calc(100vh-8rem)] flex overflow-hidden rounded-2xl border border-border/50 bg-background">
+    <div className="max-w-4xl mx-auto h-[calc(100dvh-7rem)] md:h-[calc(100dvh-9rem)] min-h-[520px] flex overflow-hidden rounded-2xl border border-border/50 bg-background">
       {/* Sidebar - desktop */}
       <div className="hidden md:flex">
         <ConversationSidebar
@@ -260,7 +260,7 @@ export default function AgentChat() {
 
       {/* Chat area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center justify-between flex-shrink-0 p-3 border-b border-border/50">
+        <div className="flex flex-wrap items-center justify-between gap-2 flex-shrink-0 p-3 border-b border-border/50">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
               <Menu className="w-5 h-5" />
@@ -274,7 +274,7 @@ export default function AgentChat() {
             </div>
           </div>
           {credits && (
-            <div className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full">
+            <div className="text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full max-w-full truncate">
               {credits.remaining} credits left{credits.adminCreditBalance > 0 ? ` · ${credits.adminCreditBalance} bonus` : ""}
             </div>
           )}
