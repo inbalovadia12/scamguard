@@ -220,10 +220,10 @@ export default function Family() {
       </div>
 
       <Tabs defaultValue="members" className="w-full">
-        <TabsList className="grid grid-cols-3 w-full mb-2">
-          <TabsTrigger value="members">Members</TabsTrigger>
-          <TabsTrigger value="guardian">Guardian Dashboard</TabsTrigger>
-          <TabsTrigger value="alerts" className="relative">
+        <TabsList className="grid grid-cols-1 sm:grid-cols-3 w-full h-auto mb-2">
+          <TabsTrigger value="members" className="min-h-10">Members</TabsTrigger>
+          <TabsTrigger value="guardian" className="min-h-10">Guardian Dashboard</TabsTrigger>
+          <TabsTrigger value="alerts" className="relative min-h-10">
             <Bell className="w-3.5 h-3.5" />
             Alerts
             {pendingAlerts > 0 && (
