@@ -243,7 +243,7 @@ function GoalStep({ selectedGoals, toggleGoal, onNext, onBack }) {
           );
         })}
       </div>
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" />Back</Button>
         <Button onClick={onNext} className="bg-gradient-to-r from-primary to-primary/80">Continue<ArrowRight className="w-4 h-4 ml-1" /></Button>
       </div>
@@ -264,7 +264,7 @@ function PreferencesStep({ alertPref, setAlertPref, notifyEmail, setNotifyEmail,
       <div className="space-y-4">
         <div className="p-4 rounded-xl border border-border/50 bg-card space-y-3">
           <div className="flex items-center gap-2"><Bell className="w-4 h-4 text-primary" /><span className="font-semibold text-sm">Alert Preferences</span></div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {[{ v: "all", l: "All alerts" }, { v: "high_risk_only", l: "High risk only" }, { v: "financial_only", l: "Financial only" }].map((opt) => (
               <button key={opt.v} onClick={() => setAlertPref(opt.v)}
                 className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${alertPref === opt.v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted"}`}>
@@ -275,7 +275,7 @@ function PreferencesStep({ alertPref, setAlertPref, notifyEmail, setNotifyEmail,
         </div>
         <div className="p-4 rounded-xl border border-border/50 bg-card space-y-3">
           <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-primary" /><span className="font-semibold text-sm">Notifications</span></div>
-          <button onClick={() => setNotifyEmail(!notifyEmail)} className="flex items-center justify-between w-full">
+          <button onClick={() => setNotifyEmail(!notifyEmail)} className="flex items-start justify-between gap-3 w-full text-left">
             <span className="text-sm text-muted-foreground">Email notifications for family alerts</span>
             <div className={`w-10 h-6 rounded-full transition-colors ${notifyEmail ? "bg-primary" : "bg-muted"}`}>
               <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${notifyEmail ? "translate-x-4" : "translate-x-0.5"} mt-0.5`} />
@@ -284,7 +284,7 @@ function PreferencesStep({ alertPref, setAlertPref, notifyEmail, setNotifyEmail,
         </div>
         <div className="p-4 rounded-xl border border-border/50 bg-card space-y-3">
           <div className="flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /><span className="font-semibold text-sm">Privacy Options</span></div>
-          <button onClick={() => setPrivacyAutoRedact(!privacyAutoRedact)} className="flex items-center justify-between w-full">
+          <button onClick={() => setPrivacyAutoRedact(!privacyAutoRedact)} className="flex items-start justify-between gap-3 w-full text-left"
             <span className="text-sm text-muted-foreground">Auto-redact phone numbers & wallets in stored messages</span>
             <div className={`w-10 h-6 rounded-full transition-colors ${privacyAutoRedact ? "bg-primary" : "bg-muted"}`}>
               <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${privacyAutoRedact ? "translate-x-4" : "translate-x-0.5"} mt-0.5`} />
@@ -292,7 +292,7 @@ function PreferencesStep({ alertPref, setAlertPref, notifyEmail, setNotifyEmail,
           </button>
         </div>
       </div>
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" />Back</Button>
         <Button onClick={onNext} className="bg-gradient-to-r from-primary to-primary/80">Continue<ArrowRight className="w-4 h-4 ml-1" /></Button>
       </div>
@@ -325,7 +325,7 @@ function InviteFamilyStep({ emails, setEmails, onNext, onBack, inviting }) {
         ))}
         <Button variant="outline" onClick={addEmail} className="w-full gap-2"><UserPlus className="w-4 h-4" />Add another</Button>
       </div>
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" />Back</Button>
         <Button onClick={onNext} disabled={inviting} className="bg-gradient-to-r from-primary to-primary/80">
           {inviting ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />Sending...</> : <>Continue<ArrowRight className="w-4 h-4 ml-1" /></>}
@@ -367,7 +367,7 @@ function ChoosePlanStep({ onComplete, onBack }) {
           </button>
         ))}
       </div>
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" />Back</Button>
         <Button variant="outline" onClick={onComplete}>Skip for now</Button>
       </div>
