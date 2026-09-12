@@ -74,7 +74,7 @@ export default function SpotTheScam() {
           <h1 className="text-2xl font-bold font-heading">Spot the Scam</h1>
           <p className="text-muted-foreground">Test your scam detection skills. Read each message and decide — is it a scam or safe?</p>
         </div>
-        <div className="grid grid-cols-3 gap-3 text-sm">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 text-sm">
           <div className="bg-card rounded-xl border border-border/50 p-3">
             <p className="font-bold text-lg">10</p>
             <p className="text-xs text-muted-foreground">Rounds</p>
@@ -140,18 +140,18 @@ export default function SpotTheScam() {
       </div>
 
       {answer === null ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Button
             onClick={() => handleAnswer(true)}
             variant="outline"
-            className="h-14 text-sm gap-2 rounded-2xl border-2 hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive"
+            className="h-12 sm:h-14 text-sm gap-2 rounded-2xl border-2 hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive"
           >
             <XCircle className="w-5 h-5" /> It's a Scam
           </Button>
           <Button
             onClick={() => handleAnswer(false)}
             variant="outline"
-            className="h-14 text-sm gap-2 rounded-2xl border-2 hover:border-success/40 hover:bg-success/5 hover:text-success"
+            className="h-12 sm:h-14 text-sm gap-2 rounded-2xl border-2 hover:border-success/40 hover:bg-success/5 hover:text-success"
           >
             <CheckCircle2 className="w-5 h-5" /> It's Safe
           </Button>
