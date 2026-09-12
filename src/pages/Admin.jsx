@@ -185,7 +185,7 @@ function UsersTab() {
   return (
     <div className="space-y-3">
       {users.map((user) => (
-        <div key={user.id} className="bg-card rounded-2xl border border-border/50 p-4 flex items-center justify-between gap-3">
+        <div key={user.id} className="bg-card rounded-2xl border border-border/50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-medium truncate">{user.full_name || "No name"}</p>
@@ -193,7 +193,7 @@ function UsersTab() {
             </div>
             <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+          <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end w-full sm:w-auto">
             <div className="flex items-center gap-1.5">
               <Input type="number" min="1" step="1" placeholder="Credits" value={grantAmounts[user.id] ?? ""}
                 onChange={(e) => setGrantAmounts((prev) => ({ ...prev, [user.id]: e.target.value }))}
@@ -571,11 +571,11 @@ export default function Admin() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+      <div className="flex items-start gap-3 min-w-0">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center flex-shrink-0">
           <ShieldCheck className="w-5 h-5 text-primary-foreground" />
         </div>
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight font-heading">Admin Panel</h1>
           <p className="text-sm text-muted-foreground">Manage feedback, users, and system overview.</p>
         </div>
