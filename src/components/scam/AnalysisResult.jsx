@@ -49,13 +49,11 @@ function AnimatedScoreBar({ score }) {
       <div className="relative h-3 bg-muted rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ease-out ${barColor}`}
-          style={{ transitionDuration: "1200ms" }}
-          style={{ width: `${animatedScore}%` }}
+          style={{ width: `${animatedScore}%`, transitionDuration: "1200ms" }}
         />
         <div
           className="absolute top-0 bottom-0 w-0.5 bg-foreground/20 transition-all ease-out"
-          style={{ transitionDuration: "1200ms" }}
-          style={{ left: `${animatedScore}%` }}
+          style={{ left: `${animatedScore}%`, transitionDuration: "1200ms" }}
         />
       </div>
       <div className="flex justify-between text-[10px] text-muted-foreground/60 font-medium px-0.5">
