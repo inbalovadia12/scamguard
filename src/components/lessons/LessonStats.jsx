@@ -1,7 +1,7 @@
 import React from "react";
 import { CheckCircle2, Flame, Star, TrendingUp } from "lucide-react";
 
-export default function LessonStats({ progress, xp, streak }) {
+export default function LessonStats({ progress, totalLessons, xp, streak }) {
   const completedCount = progress.filter((p) => p.status === "completed").length;
   const totalCount = progress.length;
   const avgScore = completedCount > 0
@@ -15,7 +15,7 @@ export default function LessonStats({ progress, xp, streak }) {
   const stats = [
     {
       label: "Completed",
-      value: `${completedCount}/${totalCount}`,
+      value: `${completedCount}/${totalLessons ?? totalCount}`,
       icon: CheckCircle2,
       color: "text-success",
       bg: "bg-success/10",

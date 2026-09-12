@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { GraduationCap, Loader2, Crown, Sparkles, Trophy, Phone, ChevronRight, Scan } from "lucide-react";
+import { GraduationCap, Loader2, Crown, Sparkles, Trophy, Phone, ChevronRight, Scan, Target, Flame, Star, LockKeyhole, Check, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import LockedFeature from "@/components/LockedFeature";
 import LessonCard from "@/components/lessons/LessonCard";
@@ -42,6 +42,9 @@ export default function Lessons() {
   const [activeLesson, setActiveLesson] = useState(null);
   const [activeCategory, setActiveCategory] = useState(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [dailyGoal, setDailyGoal] = useState(1);
+  const [dailyCompleted, setDailyCompleted] = useState(0);
 
   useEffect(() => {
     const init = async () => {
@@ -56,6 +59,17 @@ export default function Lessons() {
 
       setLoading(false);
     };
+    try {
+      const savedGoal = Number(localStorage.getItem("vardin_lesson_daily_goal"));
+      const savedDate = localStorage.getItem("vardin_lesson_goal_date");
+      const today = new Date().toISOString().slice(0, 10);
+      if (savedGoal >= 1 && savedGoal <= 5) setDailyGoal(savedGoal);
+      if (savedDate === today) setDailyCompleted(Number(localStorage.getItem("vardin_lesson_goal_completed") || 0));
+      else {
+        localStorage.setItem("vardin_lesson_goal_date", today);
+        localStorage.setItem("vardin_lesson_goal_completed", "0");
+      }
+    } catch {}
     init();
   }, []);
 
@@ -98,8 +112,15 @@ export default function Lessons() {
         setProgress([...progress, created]);
       }
 
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const nextDaily = dailyCompleted + 1;
+        localStorage.setItem("vardin_lesson_goal_date", today);
+        localStorage.setItem("vardin_lesson_goal_completed", String(nextDaily));
+        setDailyCompleted(nextDaily);
+      } catch {}
+
       if (existing) {
-        setProgress(progress.map((p) =>
           p.id === existing.id
             ? { ...p, status: "completed", score, xp_earned: xp, completed_date: new Date().toISOString() }
             : p
@@ -176,9 +197,49 @@ export default function Lessons() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Gamified progress dashboard */}
+      <div className="space-y-3 animate-slide-up anim-delay-1">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="bg-card rounded-2xl border border-border/50 p-3 sm:p-4 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-warning"><Flame className="w-4 h-4" /><span className="text-lg font-bold">{dailyCompleted}</span></div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Today</p>
+          </div>
+          <div className="bg-card rounded-2xl border border-border/50 p-3 sm:p-4 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-primary"><Star className="w-4 h-4" /><span className="text-lg font-bold">{totalXP}</span></div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">XP earned</p>
+          </div>
+          <div className="bg-card rounded-2xl border border-border/50 p-3 sm:p-4 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-success"><Check className="w-4 h-4" /><span className="text-lg font-bold">{completedCount}</span></div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Lessons done</p>
+          </div>
+        </div>
+        <div className="bg-card rounded-2xl border border-border/50 p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2 min-w-0"><Target className="w-4 h-4 text-primary flex-shrink-0" /><span className="font-semibold text-sm">Daily goal</span></div>
+            <span className="text-xs font-semibold text-primary whitespace-nowrap">{Math.min(dailyCompleted, dailyGoal)}/{dailyGoal} lessons</span>
+          </div>
+          <div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(100, (dailyCompleted / dailyGoal) * 100)}%` }} /></div>
+          <div className="flex items-center justify-between mt-2 gap-2">
+            <p className="text-xs text-muted-foreground">{dailyCompleted >= dailyGoal ? "Goal complete — great work!" : "One small lesson keeps your streak moving."}</p>
+            <select aria-label="Daily lesson goal" value={dailyGoal} onChange={(e) => { const v=Number(e.target.value); setDailyGoal(v); try { localStorage.setItem("vardin_lesson_daily_goal", String(v)); } catch {} }} className="text-xs bg-transparent border-0 text-muted-foreground focus:ring-0 cursor-pointer">
+              {[1,2,3,4,5].map(v => <option key={v} value={v}>{v}/day</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {firstIncomplete && (
+        <button onClick={() => handleStartLesson(firstIncomplete, firstIncomplete.category)} className="w-full text-left rounded-2xl p-4 sm:p-5 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 animate-slide-up anim-delay-1">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0"><Play className="w-6 h-6 fill-current" /></div>
+            <div className="min-w-0 flex-1"><p className="text-[11px] uppercase tracking-wider font-semibold text-white/75">Continue your path</p><h3 className="font-bold text-base sm:text-lg truncate mt-0.5">{firstIncomplete.title}</h3><p className="text-xs text-white/80 mt-0.5">{firstIncomplete.xp} XP · {firstIncomplete.category.name}</p></div>
+            <ChevronRight className="w-5 h-5 flex-shrink-0 text-white/80" />
+          </div>
+        </button>
+      )}
+
       <div className="animate-slide-up anim-delay-1">
-        <LessonStats progress={progress} xp={totalXP} streak={1} />
+        <LessonStats progress={progress} totalLessons={allLessons.length} xp={totalXP} streak={1} />
       </div>
 
       {/* Call Simulator Banner */}
@@ -224,7 +285,17 @@ export default function Lessons() {
 
       {/* Categories */}
       <div className="space-y-8">
-        {LESSON_CATEGORIES.map((category, catIdx) => (
+        <div className="-mx-1 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="flex gap-2 min-w-max px-1">
+            <button onClick={() => setSelectedCategory("all")} className={`px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${selectedCategory === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border/60 text-muted-foreground"}`}>All units</button>
+            {LESSON_CATEGORIES.map((category) => {
+              const done = category.lessons.filter(l => completedIds.has(l.id)).length;
+              return <button key={category.id} onClick={() => setSelectedCategory(category.id)} className={`px-3.5 py-2 rounded-full text-xs font-semibold border transition-colors ${selectedCategory === category.id ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border/60 text-muted-foreground"}`}>{category.name} <span className="opacity-70">{done}/{category.lessons.length}</span></button>;
+            })}
+          </div>
+        </div>
+
+        {filteredCategories.map((category, catIdx) => (
           <div key={category.id} className="space-y-3 animate-slide-up" style={{ animationDelay: `${(catIdx + 2) * 80}ms` }}>
             <div className="flex items-center gap-3">
               {category.logo && (

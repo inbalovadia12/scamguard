@@ -11,7 +11,7 @@ export default function LessonCard({ category, lesson, progress, isPremium, onSt
     <button
       onClick={() => !isLocked && onStart(lesson)}
       disabled={isLocked}
-      className={`w-full text-left p-4 rounded-2xl border transition-all duration-300 animate-slide-up ${
+      className={`w-full min-h-[72px] text-left p-4 rounded-2xl border transition-all duration-300 animate-slide-up ${
         isLocked
           ? "border-border/30 bg-muted/30 cursor-not-allowed opacity-60"
           : isCompleted
@@ -35,7 +35,7 @@ export default function LessonCard({ category, lesson, progress, isPremium, onSt
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm truncate">{lesson.title}</h3>
+          <h3 className="font-semibold text-sm leading-snug line-clamp-2">{lesson.title}</h3>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Award className="w-3 h-3" />
