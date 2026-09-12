@@ -97,7 +97,7 @@ export default function IncognitoSearch() {
         if (response.data?.error) throw new Error(response.data.error);
         setResult({ type: "message", data: response.data?.result || response.data });
       } else if (activeTab === "url") {
-        const response = await base44.functions.invoke("scanUrl", { url: urlInput.trim() });
+        const response = await base44.functions.invoke("scanUrl", { url: urlInput.trim(), private_scan: true });
         if (response.data?.error) throw new Error(response.data.error);
         setResult({ type: "url", data: response.data });
       } else if (activeTab === "phone") {
