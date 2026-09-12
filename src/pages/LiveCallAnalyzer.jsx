@@ -3,7 +3,7 @@ import { Radio, Phone, Monitor, Mic, Loader2, Crown, ShieldAlert, AlertTriangle,
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { getCreditStatus, CREDIT_COSTS } from "@/lib/credits";
+import { getCreditStatus } from "@/lib/credits";
 import TranscriptFeed from "@/components/call/TranscriptFeed";
 import WarningPanel from "@/components/call/WarningPanel";
 import RedFlagDisplay from "@/components/scam/RedFlagDisplay";
