@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
+import { getCreditStatus, CREDIT_COSTS } from "@/lib/credits";
 import { formatDistanceToNow } from "date-fns";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import PlanGate from "@/components/PlanGate";
@@ -101,8 +101,9 @@ Respond with:
 
 Respond entirely in ${langName}.`;
 
-      const analysis = await base44.integrations.Core.InvokeLLM({
-        prompt,
+      const response = await base44.functions.invoke("analyzeMessage", {
+        mode: "conversation",
+        text: transcript.trim(),
         response_json_schema: {
           type: "object",
           properties: {
@@ -118,6 +119,8 @@ Respond entirely in ${langName}.`;
           },
         },
       });
+      if (response.data?.error) throw new Error(response.data.error);
+      const analysis = response.data?.result || response.data;
 
       setResult(analysis);
 
@@ -139,8 +142,11 @@ Respond entirely in ${langName}.`;
       } catch {}
 
       try {
-        await incrementCreditUsage(CREDIT_COSTS.CONVERSATION_ANALYSIS);
-        setCreditStatus(await getCreditStatus());
+        if (typeof response.data?.credits_remaining === "number") {
+          setCreditStatus((prev) => prev ? { ...prev, remaining: response.data.credits_remaining } : prev);
+        } else {
+          setCreditStatus(await getCreditStatus());
+        }
       } catch {}
     } catch (e) {
       setError(e.message || "Analysis failed. Please try again.");
