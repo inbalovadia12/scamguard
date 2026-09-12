@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
 
 /**
  * Real-time screenshot scam detection - OPTIMIZED
@@ -25,6 +26,26 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { image_url, image_data, language, session_context } = body;
+    const creditCost = Number(body.credit_cost);
+    if (![3, 5, 8].includes(creditCost)) {
+      return Response.json({ error: 'Invalid screen analysis credit cost' }, { status: 400 });
+    }
+
+    const available = getAvailableCredits(user);
+    if (available.remaining < creditCost) {
+      return Response.json({
+        error: 'Insufficient credits',
+        credits_remaining: available.remaining,
+        credits_limit: getMonthlyCreditLimit(user),
+        credit_cost: creditCost,
+      }, { status: 402 });
+    }
+    const chargeCredits = async () => {
+      const usage = applyCreditUsage(user, creditCost);
+      if (!usage) throw new Error('Credit balance changed during screen analysis. Please try again.');
+      await base44.auth.updateMe(usage);
+      return getAvailableCredits({ ...user, ...usage }).remaining;
+    };
 
     if (!image_url && !image_data) {
       return Response.json({ error: 'Image URL or image data is required' }, { status: 400 });
@@ -121,6 +142,7 @@ Respond in ${languageName}.`;
       };
     }
 
+    const creditsRemaining = await chargeCredits();
     return Response.json({
       is_scam: analysis.is_scam ?? false,
       red_flags: analysis.red_flags || [],
@@ -128,6 +150,9 @@ Respond in ${languageName}.`;
       warnings: analysis.warnings || [],
       tactics_detected: analysis.tactics_detected || [],
       analysis: analysis.analysis || '',
+      credits_used: creditCost,
+      credits_remaining: creditsRemaining,
+      credits_limit: getMonthlyCreditLimit(user),
       timing_ms: Date.now() - startTime,
     });
   } catch (error: any) {
