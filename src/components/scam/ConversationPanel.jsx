@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getCreditStatus, CREDIT_COSTS } from "@/lib/credits";
+import { getCreditStatus } from "@/lib/credits";
 import { formatDistanceToNow } from "date-fns";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import PlanGate from "@/components/PlanGate";
