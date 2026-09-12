@@ -198,7 +198,7 @@ export default function Home() {
       <ConsentBanner />
 
       {credits && !result && (
-        <div className="flex items-center justify-between mb-4 sm:mb-6 px-4 py-2.5 bg-muted rounded-xl animate-fade-in">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 sm:mb-6 px-4 py-2.5 bg-muted rounded-xl animate-fade-in">
           <span className="text-sm text-muted-foreground">
             {credits.isPaid ? "✦ " + (credits.plan === "premium" ? "Premium" : "Plus") + " plan" : "Starter plan"}
           </span>
@@ -224,7 +224,7 @@ export default function Home() {
         </div>
       )}
 
-      {insufficientCredits && !result && !outOfCredits && mode !== "bulk" && (
+      {insufficientCredits && !credits?.lowCredit && !result && !outOfCredits && mode !== "bulk" && (
         <div className="mb-4 sm:mb-6 flex items-center gap-3 px-4 py-3 bg-warning/10 border border-warning/20 rounded-xl animate-fade-in">
           <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0" />
           <div className="flex-1 min-w-0">
