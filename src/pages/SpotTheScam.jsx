@@ -120,7 +120,7 @@ export default function SpotTheScam() {
   const q = questions[current];
   return (
     <div className="max-w-lg mx-auto space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm font-medium text-muted-foreground">Round {current + 1} of {questions.length}</span>
         <div className="flex items-center gap-3">
           {streak >= 2 && <span className="text-sm font-bold text-orange-500 flex items-center gap-1">🔥 {streak}</span>}
