@@ -143,7 +143,7 @@ export default function Pricing() {
           return (
             <div
               key={plan.id}
-              className={`relative flex flex-col rounded-2xl p-6 sm:p-7 border transition-all duration-300 animate-slide-up ${i === 1 ? "anim-delay-1" : i === 2 ? "anim-delay-2" : ""} ${
+              className={`relative flex flex-col rounded-2xl p-6 sm:p-7 border transition-all duration-300 animate-slide-up ${plan.highlighted ? "mt-3 md:mt-0" : ""} ${i === 1 ? "anim-delay-1" : i === 2 ? "anim-delay-2" : ""} ${
                 plan.highlighted
                   ? "border-primary bg-gradient-to-b from-primary/10 to-transparent shadow-lg shadow-primary/10"
                   : "border-border/50 bg-card hover:border-border hover:shadow-md"
