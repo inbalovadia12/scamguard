@@ -109,7 +109,7 @@ export default function Home() {
     const input = mode === "url" ? urlText.trim() : messageText.trim();
     if (!input && mode !== "url" && images.length === 0) return;
     const cost = mode === "url" ? CREDIT_COSTS.URL_SCAN : CREDIT_COSTS.MESSAGE;
-    if (!incognito && credits && credits.remaining < cost) return;
+    if (credits && credits.remaining < cost) return;
 
     // Check cache first (text-only, not in incognito)
     if (input && !incognito) {
@@ -137,11 +137,15 @@ export default function Home() {
       const response = await base44.functions.invoke("scanUrl", { url: effectiveInput });
       llmResult = response.data;
     } else {
-      llmResult = await base44.integrations.Core.InvokeLLM({
-        prompt: `Scam detection expert: analyze this ${messageType} message for scam risk.\nMessage: "${effectiveInput}"\n${fileUrls.length > 0 ? 'Attached screenshots are provided for additional context — analyze both the pasted text and any uploaded images.\n' : ''}Rules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics when applicable (e.g. Urgency, Authority Impersonation, Scarcity, Love Bombing, Payment Red Flags) and concrete next steps (e.g. Do not reply, Block sender, Report to carrier).\n\nRISK SCORE: Set risk_score as a whole number 0-100 that reflects the ACTUAL danger of this message. Low risk = 0-35, Medium risk = 36-70, High risk = 71-100. The score MUST match the risk_level. Do NOT default to 10 or any fixed number — vary it based on how many scam indicators are present and how severe they are.`,
+      const response = await base44.functions.invoke("analyzeMessage", {
+        mode: "message",
+        message_type: messageType,
+        text: effectiveInput,
+        file_urls: fileUrls,
         response_json_schema: RESPONSE_SCHEMA,
-        file_urls: fileUrls.length > 0 ? fileUrls : undefined,
       });
+      if (response.data?.error) throw new Error(response.data.error);
+      llmResult = response.data?.result || response.data;
     }
 
     if (!incognito) {
