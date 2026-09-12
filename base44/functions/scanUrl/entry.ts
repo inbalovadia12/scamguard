@@ -1,5 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { getUrlhausReport } from '../../shared/urlhaus.ts';
+import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+
+const CREDIT_COST = 7;
 
 function isPrivateIp(ip: string): boolean {
   if (ip === '::1' || ip === '::' || ip === '0.0.0.0') return true;
@@ -88,6 +91,23 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const available = getAvailableCredits(user);
+    if (available.remaining < CREDIT_COST) {
+      return Response.json({
+        error: 'Insufficient credits',
+        credits_remaining: available.remaining,
+        credits_limit: getMonthlyCreditLimit(user),
+        credit_cost: CREDIT_COST,
+      }, { status: 402 });
+    }
+
+    const chargeCredits = async () => {
+      const usage = applyCreditUsage(user, CREDIT_COST);
+      if (!usage) throw new Error('Credit balance changed during scan. Please try again.');
+      await base44.auth.updateMe(usage);
+      return getAvailableCredits({ ...user, ...usage }).remaining;
+    };
+
     const { url } = await req.json();
     if (!url) return Response.json({ error: 'URL is required' }, { status: 400 });
 
@@ -167,6 +187,7 @@ Deno.serve(async (req) => {
 
     // === EARLY EXIT: URLhaus malware ===
     if (urlhausReport?.listed) {
+      const creditsRemaining = await chargeCredits();
       return Response.json({
         risk_level: 'high',
         risk_score: 95,
@@ -178,12 +199,16 @@ Deno.serve(async (req) => {
         what_to_say: 'This is a confirmed malware distribution site.',
         marketplace_platform: marketplace || '',
         urlhaus: urlhausReport,
+        credits_used: CREDIT_COST,
+        credits_remaining: creditsRemaining,
+        credits_limit: getMonthlyCreditLimit(user),
         timing_ms: Date.now() - startTime,
       });
     }
 
     // === EARLY EXIT: VirusTotal high malicious count ===
     if (vtReport && vtReport.malicious >= 5) {
+      const creditsRemaining = await chargeCredits();
       return Response.json({
         risk_level: 'high',
         risk_score: 85,
@@ -195,6 +220,9 @@ Deno.serve(async (req) => {
         what_to_say: 'Multiple antivirus vendors flag this as dangerous.',
         marketplace_platform: marketplace || '',
         virustotal: vtReport,
+        credits_used: CREDIT_COST,
+        credits_remaining: creditsRemaining,
+        credits_limit: getMonthlyCreditLimit(user),
         timing_ms: Date.now() - startTime,
       });
     }
@@ -282,6 +310,10 @@ Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urge
       (result as any).virustotal = vtReport;
     }
 
+    const creditsRemaining = await chargeCredits();
+    (result as any).credits_used = CREDIT_COST;
+    (result as any).credits_remaining = creditsRemaining;
+    (result as any).credits_limit = getMonthlyCreditLimit(user);
     (result as any).timing_ms = Date.now() - startTime;
 
     return Response.json(result);
