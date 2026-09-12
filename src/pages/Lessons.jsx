@@ -121,6 +121,7 @@ export default function Lessons() {
       } catch {}
 
       if (existing) {
+        setProgress(progress.map((p) =>
           p.id === existing.id
             ? { ...p, status: "completed", score, xp_earned: xp, completed_date: new Date().toISOString() }
             : p
