@@ -217,7 +217,7 @@ export default function IncognitoSearch() {
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-heading">Incognito Search</h1>
         </div>
         <p className="text-sm text-muted-foreground max-w-md">
-          All scan types, same AI engines — nothing saved, no guardian alerts, no history.
+          All scan types, same AI engines — no scan history or guardian alerts.
         </p>
       </div>
 
@@ -226,7 +226,7 @@ export default function IncognitoSearch() {
         <ShieldCheck className="w-5 h-5 text-primary flex-shrink-0" />
         <div className="text-sm min-w-0">
           <p className="font-medium text-primary">Private mode active</p>
-          <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">Results stay on your screen only. Nothing is stored or shared with your guardian.</p>
+          <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">Results are not added to your Vardin scan history or sent to your guardian. Uploaded files and provider processing follow the retention rules described in Privacy.</p>
         </div>
       </div>
 
