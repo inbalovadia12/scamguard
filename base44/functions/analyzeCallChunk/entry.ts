@@ -1,4 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+
+const CREDIT_COST = 1;
 
 /**
  * LiveGuard - Groq Primary STT with Speaker Identification
@@ -354,6 +357,22 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Premium required' }, { status: 403 });
     }
 
+    const available = getAvailableCredits(user);
+    if (available.remaining < CREDIT_COST) {
+      return Response.json({
+        error: 'Insufficient credits',
+        credits_remaining: available.remaining,
+        credits_limit: getMonthlyCreditLimit(user),
+        credit_cost: CREDIT_COST,
+      }, { status: 402 });
+    }
+    const chargeCredits = async () => {
+      const usage = applyCreditUsage(user, CREDIT_COST);
+      if (!usage) throw new Error('Credit balance changed during call analysis. Please try again.');
+      await base44.auth.updateMe(usage);
+      return getAvailableCredits({ ...user, ...usage }).remaining;
+    };
+
     const body = await req.json();
     // Accept the canonical audio_input field plus the two fields already used by
     // the live recorder and upload flow. This keeps the API backwards compatible.
@@ -400,6 +419,7 @@ Deno.serve(async (req) => {
 
     const fullTranscript = transcriptData.text || '';
     if (!fullTranscript.trim()) {
+      const creditsRemaining = await chargeCredits();
       return Response.json({
         transcript: '',
         segments: [],
@@ -407,6 +427,9 @@ Deno.serve(async (req) => {
         risk_level: 'low',
         is_scam: false,
         provider,
+        credits_used: CREDIT_COST,
+        credits_remaining: creditsRemaining,
+        credits_limit: getMonthlyCreditLimit(user),
         timing_ms: Date.now() - startTime,
       });
     }
@@ -458,6 +481,7 @@ Deno.serve(async (req) => {
     const isScam = newAlerts.length >= 2;
     const riskLevel = isScam ? 'high' : newAlerts.length === 1 ? 'medium' : 'low';
 
+    const creditsRemaining = await chargeCredits();
     return Response.json({
       transcript: fullTranscript,
       segments: speakerSegments,
@@ -472,6 +496,9 @@ Deno.serve(async (req) => {
           ? 'Caution: One indicator detected. Verify independently.'
           : '',
       provider,
+      credits_used: CREDIT_COST,
+      credits_remaining: creditsRemaining,
+      credits_limit: getMonthlyCreditLimit(user),
       timing_ms: Date.now() - startTime,
     });
   } catch (error: any) {
