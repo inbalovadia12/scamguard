@@ -91,6 +91,23 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
+    let plan = user.subscription_plan || 'starter';
+    if (plan === 'free') plan = 'starter';
+    if (plan === 'elite') plan = 'premium';
+    let incognitoAllowed = false;
+    try {
+      const protectedMembers = await base44.entities.ProtectedSenior.filter({ senior_user_id: user.id });
+      incognitoAllowed = protectedMembers.some((member: any) => member.incognito_allowed === true);
+    } catch {}
+    const body = await req.json();
+    const privateScan = body.private_scan === true;
+    if (!privateScan && plan !== 'plus' && plan !== 'premium') {
+      return Response.json({ error: 'Paid plan required', upgrade_url: '/pricing' }, { status: 403 });
+    }
+    if (privateScan && !incognitoAllowed && plan !== 'plus' && plan !== 'premium') {
+      return Response.json({ error: 'Incognito Search requires Plus or Premium unless enabled by a guardian.' }, { status: 403 });
+    }
+
     const available = getAvailableCredits(user);
     if (available.remaining < CREDIT_COST) {
       return Response.json({
@@ -108,7 +125,7 @@ Deno.serve(async (req) => {
       return getAvailableCredits({ ...user, ...usage }).remaining;
     };
 
-    const { url } = await req.json();
+    const { url } = body;
     if (!url) return Response.json({ error: 'URL is required' }, { status: 400 });
 
     let targetUrl = url.trim();
