@@ -1,5 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
+import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+
+const CREDIT_COST = 5;
 
 function sanitizeSummary(raw: string): string {
   if (!raw) return 'No scam reports found for this number.';
@@ -80,6 +83,23 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
+
+    const available = getAvailableCredits(user);
+    if (available.remaining < CREDIT_COST) {
+      return Response.json({
+        error: 'Insufficient credits',
+        credits_remaining: available.remaining,
+        credits_limit: getMonthlyCreditLimit(user),
+        credit_cost: CREDIT_COST,
+      }, { status: 402 });
+    }
+
+    const chargeCredits = async () => {
+      const usage = applyCreditUsage(user, CREDIT_COST);
+      if (!usage) throw new Error('Credit balance changed during lookup. Please try again.');
+      await base44.auth.updateMe(usage);
+      return getAvailableCredits({ ...user, ...usage }).remaining;
+    };
 
     let plan = user.subscription_plan || 'starter';
     if (plan === 'free') plan = 'starter';
@@ -179,6 +199,7 @@ Deno.serve(async (req) => {
         const communityEvidence = await fetchCommunityEvidence();
         const redditEvidence = await fetchRedditEvidence();
         
+        const creditsRemaining = await chargeCredits();
         const result = {
           country: r.country || '',
           carrier: r.carrier || '',
@@ -206,6 +227,9 @@ Deno.serve(async (req) => {
           result,
           lookup: { id: r.id, phone_number: r.phone_number, cached: true },
           cached: true,
+          credits_used: CREDIT_COST,
+          credits_remaining: creditsRemaining,
+          credits_limit: getMonthlyCreditLimit(user),
         });
       }
     } catch {}
@@ -258,10 +282,14 @@ Deno.serve(async (req) => {
         console.error('PhoneLookup save failed', saveError);
       }
 
+      const creditsRemaining = await chargeCredits();
       return Response.json({
         result: fullResult,
         lookup: lookup ? { id: lookup.id, phone_number: displayFormat, cached: false } : { phone_number: displayFormat, cached: false },
         cached: false,
+        credits_used: CREDIT_COST,
+        credits_remaining: creditsRemaining,
+        credits_limit: getMonthlyCreditLimit(user),
       });
     }
 
@@ -396,10 +424,14 @@ Respond in ${languageName}.`;
       console.error('PhoneLookup save failed', saveError);
     }
 
+    const creditsRemaining = await chargeCredits();
     return Response.json({
       result: fullResult,
       lookup: lookup ? { id: lookup.id, phone_number: displayFormat, cached: false } : { phone_number: displayFormat, cached: false },
       cached: false,
+      credits_used: CREDIT_COST,
+      credits_remaining: creditsRemaining,
+      credits_limit: getMonthlyCreditLimit(user),
     });
   } catch (error) {
     console.error('lookupPhoneNumber error', error);
