@@ -172,7 +172,7 @@ export default function AdvancedScanner() {
       <LongLoadingScreen type="universal" /> :
       result ?
       <div className="space-y-6 animate-scale-in">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-bold font-heading">Scan Result</h2>
             <Button variant="outline" onClick={handleRescan}>New Scan</Button>
           </div>
