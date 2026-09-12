@@ -159,8 +159,13 @@ export default function Home() {
         ...llmResult,
       });
       if (input) cacheAnalysis(input, llmResult);
-      await incrementCreditUsage(cost);
-      setCredits(await getCreditStatus());
+      const remainingFromScan = llmResult?.credits_remaining;
+      setCredits((prev) => prev
+        ? { ...prev, remaining: typeof remainingFromScan === "number" ? remainingFromScan : prev.remaining }
+        : prev);
+      if (typeof remainingFromScan !== "number") {
+        setCredits(await getCreditStatus());
+      }
     }
       setResult(llmResult);
     } catch (error) {
