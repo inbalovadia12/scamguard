@@ -10,7 +10,7 @@ import {
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import CryptoScanResult from "@/components/scam/CryptoScanResult";
-import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
+import { getCreditStatus, CREDIT_COSTS } from "@/lib/credits";
 import { getSeniorLink } from "@/lib/guardianAlerts";
 import { redactMessage } from "@/lib/redact";
 import { useToast } from "@/components/ui/use-toast";
@@ -74,11 +74,14 @@ export default function CryptoScanner() {
         if (response.data?.error) throw new Error(response.data.error);
         data = response.data;
       } else {
-        // Keep crypto investment messages on the exact same Message Check AI path.
-        data = await base44.integrations.Core.InvokeLLM({
-          prompt: `Scam detection expert: analyze this crypto_investment message for scam risk.\nMessage: "${text}"\nRules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics when applicable (e.g. Urgency, Authority Impersonation, Scarcity, Love Bombing, Payment Red Flags) and concrete next steps (e.g. Do not reply, Block sender, Report to carrier).\n\nRISK SCORE: Set risk_score as a whole number 0-100 that reflects the ACTUAL danger of this message. Low risk = 0-35, Medium risk = 36-70, High risk = 71-100. The score MUST match the risk_level. Do NOT default to 10 or any fixed number — vary it based on how many scam indicators are present and how severe they are.`,
+        const response = await base44.functions.invoke("analyzeMessage", {
+          mode: "crypto_investment",
+          message_type: "crypto_investment",
+          text,
           response_json_schema: RESPONSE_SCHEMA,
         });
+        if (response.data?.error) throw new Error(response.data.error);
+        data = response.data?.result || response.data;
       }
 
       await base44.entities.ScamAnalysis.create({
@@ -95,8 +98,10 @@ export default function CryptoScanner() {
         what_they_want: data.what_they_want,
         why_scammers_do_this: data.why_scammers_do_this,
       });
-      await incrementCreditUsage(cost);
-      setCredits(await getCreditStatus());
+      setCredits((prev) => prev
+        ? { ...prev, remaining: typeof (data?.credits_remaining) === "number" ? data.credits_remaining : prev.remaining }
+        : prev);
+      if (typeof data?.credits_remaining !== "number") setCredits(await getCreditStatus());
       setResult(data);
     } catch (e) {
       toast({ title: "Crypto scan failed", description: e.message || "Try again.", variant: "destructive" });
