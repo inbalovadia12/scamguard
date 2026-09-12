@@ -109,7 +109,7 @@ export default function Home() {
     const input = mode === "url" ? urlText.trim() : messageText.trim();
     if (!input && mode !== "url" && images.length === 0) return;
     const cost = mode === "url" ? CREDIT_COSTS.URL_SCAN : CREDIT_COSTS.MESSAGE;
-    if (credits && credits.remaining < cost) return;
+    if (!credits || credits.remaining < cost) return;
 
     // Check cache first (text-only, not in incognito)
     if (input && !incognito) {
@@ -446,7 +446,7 @@ export default function Home() {
             {!(mode === "url" && urlLocked) && (
               <Button
                 onClick={handleAnalyze}
-                disabled={(mode === "url" ? !urlText.trim() : (!messageText.trim() && images.length === 0)) || analyzing || outOfCredits || insufficientCredits}
+                disabled={!credits || (mode === "url" ? !urlText.trim() : (!messageText.trim() && images.length === 0)) || analyzing || outOfCredits || insufficientCredits}
                 className="w-full h-11 sm:h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
                 size="lg"
               >
