@@ -276,7 +276,7 @@ export default function Home() {
             <div className="min-w-0">
               <p className="text-sm font-medium">Incognito Mode</p>
               <p className="text-xs text-muted-foreground truncate">
-                {incognito ? "Private — nothing saved, no alerts" : "Scan privately — nothing saved, no guardian alerts"}
+                {incognito ? "Private — no scan history or guardian alerts" : "Scan privately — no scan history or guardian alerts"}
               </p>
             </div>
           </div>
