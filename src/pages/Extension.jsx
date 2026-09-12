@@ -176,7 +176,7 @@ export default function Extension() {
       </div>
 
       {/* Features */}
-      <div className="grid grid-cols-2 gap-4 animate-slide-up" style={{ animationDelay: "200ms" }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-slide-up" style={{ animationDelay: "200ms" }}>
         {FEATURES.map((f) => (
           <div key={f.title} className="bg-card rounded-2xl border border-border/50 p-5">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
