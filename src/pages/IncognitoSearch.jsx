@@ -232,7 +232,7 @@ export default function IncognitoSearch() {
 
       {/* Scan Type Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-slide-up" style={{ animationDelay: "50ms" }}>
-        <TabsList className="grid grid-cols-5 w-full bg-card border border-border/50">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-5 w-full h-auto bg-card border border-border/50">
           <TabsTrigger value="message" className="gap-1 text-xs sm:text-sm"><MessageSquare className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Message</span></TabsTrigger>
           <TabsTrigger value="url" className="gap-1 text-xs sm:text-sm"><Globe className="w-3.5 h-3.5" /> <span className="hidden sm:inline">URL</span></TabsTrigger>
           <TabsTrigger value="image" className="gap-1 text-xs sm:text-sm"><ImageIcon className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Image</span></TabsTrigger>
