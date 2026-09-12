@@ -24,7 +24,6 @@ import Family from '@/pages/Family';
 import GuardianDashboard from '@/pages/GuardianDashboard';
 import Pricing from '@/pages/Pricing';
 import AgentChat from '@/pages/AgentChat';
-import UrlScanner from '@/pages/UrlScanner';
 import Landing from '@/pages/Landing';
 import Onboarding from '@/pages/Onboarding';
 import Analytics from '@/pages/Analytics';
@@ -151,7 +150,6 @@ const AuthenticatedApp = () => {
           <Route path="/check" element={<Home />} />
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/agent" element={<AgentChat />} />
-          <Route path="/url-scanner" element={<UrlScanner />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/alerts/:id" element={<AlertDetail />} />
           <Route path="/family" element={<Family />} />
