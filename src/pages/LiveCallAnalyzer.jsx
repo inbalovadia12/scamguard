@@ -800,7 +800,7 @@ export default function LiveCallAnalyzer() {
             </Button>
             {mode === "screen" && !isMobile && (
               <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   <span className="text-xs text-muted-foreground">Capture every:</span>
                   {SCREEN_INTERVAL_OPTIONS.map((opt) => (
                     <button
@@ -826,8 +826,8 @@ export default function LiveCallAnalyzer() {
             )}
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="relative">
                 <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
                 <div className="absolute inset-0 w-3 h-3 rounded-full bg-destructive animate-ping" />
@@ -856,7 +856,7 @@ export default function LiveCallAnalyzer() {
       {(transcript.length > 0 || isListening) && (
         <div className={`rounded-2xl border-2 ${cfg.border} ${cfg.bg} p-4 flex items-center gap-3 animate-slide-up`}>
           <RiskIcon className={`w-6 h-6 ${cfg.color}`} />
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <p className={`text-sm font-bold ${cfg.color}`}>{cfg.label}</p>
             <p className="text-xs text-muted-foreground">
               {transcript.length} segments • {warnings.length} warnings • {creditStatus?.remaining || 0} credits left
