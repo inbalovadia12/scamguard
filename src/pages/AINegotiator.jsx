@@ -184,8 +184,8 @@ export default function AINegotiator() {
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
             <Zap className="w-3.5 h-3.5" />
             <span>Costs {CREDIT_COST} credits</span>
             {credits && <span>· {credits.remaining} remaining</span>}
@@ -197,7 +197,7 @@ export default function AINegotiator() {
         </div>
 
         {credits && !canGenerate && situation.trim() && (
-          <div className="flex items-center justify-between gap-3 bg-destructive/5 border border-destructive/20 rounded-xl p-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-destructive/5 border border-destructive/20 rounded-xl p-3">
             <p className="text-xs text-destructive">Not enough credits. You need {CREDIT_COST} but have {credits.remaining}.</p>
             <Button size="sm" asChild>
               <Link to="/pricing">Upgrade</Link>
