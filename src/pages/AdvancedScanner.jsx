@@ -327,7 +327,7 @@ export default function AdvancedScanner() {
             {/* Scan button */}
             <Button
             onClick={handleScan}
-            disabled={!canScan() || scanning || outOfCredits || insufficientCredits}
+            disabled={!credits || !canScan() || scanning || outOfCredits || insufficientCredits}
             className="w-full h-11 sm:h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20"
             size="lg">
             
