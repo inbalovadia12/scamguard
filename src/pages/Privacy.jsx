@@ -192,7 +192,7 @@ export default function Privacy() {
       <Section number={17} title="Third-Party Providers">
         <p>The current code identifies the following external services or provider families as part of the data flows:</p>
         <div className="rounded-xl border border-border overflow-hidden bg-card">
-          {providerLinks.map(([name, url]) => <div key={name} className="flex items-center justify-between gap-4 border-b last:border-b-0 border-border px-4 py-3 text-sm"><span className="font-medium text-foreground">{name}</span><a className="text-primary underline underline-offset-2 break-all" href={url} target="_blank" rel="noreferrer">Provider documentation</a></div>)}
+          {providerLinks.map(([name, url]) => <div key={name} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 border-b last:border-b-0 border-border px-4 py-3 text-sm"><span className="font-medium text-foreground">{name}</span><a className="text-primary underline underline-offset-2 break-all" href={url} target="_blank" rel="noreferrer">Provider documentation</a></div>)}
         </div>
         <p>Provider terms and retention settings can change. This Policy describes Vardin's current code-level integrations, not a guarantee that a provider's practices will remain unchanged.</p>
       </Section>
