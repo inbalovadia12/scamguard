@@ -22,7 +22,7 @@ const RISK_CONFIG = {
 export default function IncognitoSearch() {
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
-  const [isChild, setIsChild] = useState(false);
+  const [isProtectedMember, setIsProtectedMember] = useState(false);
   const [activeTab, setActiveTab] = useState("message");
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
@@ -43,7 +43,7 @@ export default function IncognitoSearch() {
         const status = await getCreditStatus();
         const seniors = await base44.entities.ProtectedSenior.filter({ senior_user_id: user.id });
         if (seniors.length > 0) {
-          setIsChild(true);
+          setIsProtectedMember(true);
           setAllowed(seniors[0].incognito_allowed === true);
         } else {
           setAllowed(status.isPaid);
@@ -201,7 +201,7 @@ export default function IncognitoSearch() {
       <div className="max-w-2xl mx-auto">
         <div className="bg-card rounded-2xl border border-border/50 p-8 text-center space-y-4 animate-slide-up flex flex-col items-center">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-            {isChild ? <ShieldX className="w-8 h-8 text-primary" /> : <Crown className="w-8 h-8 text-primary" />}
+            {isProtectedMember ? <ShieldX className="w-8 h-8 text-primary" /> : <Crown className="w-8 h-8 text-primary" />}
           </div>
           <h1 className="text-xl font-bold font-heading">Incognito Search</h1>
           {isChild ? (
