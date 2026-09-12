@@ -66,41 +66,6 @@ export default function ConversationPanel() {
     setResult(null);
 
     try {
-      const lang = localStorage.getItem("vardin_language") || "en";
-      const langName = { en: "English", he: "Hebrew", es: "Spanish" }[lang] || "English";
-      const typeLabel = CONVERSATION_TYPES.find((t) => t.value === conversationType)?.label || "Unknown";
-
-      const prompt = `You are Vardin, an AI scam detection assistant. A user has pasted an entire chat conversation for analysis. Unlike single-message checks, you analyze the FULL conversation to detect patterns, escalation, and manipulation tactics that only emerge across multiple messages.
-
-Conversation type: ${typeLabel}
-
-TRANSCRIPT:
-"""
-${transcript.trim().slice(0, MAX_CHARS)}
-"""
-
-Analyze the entire conversation as a whole. Look for:
-- ESCALATION: Does the other party increase pressure, urgency, or emotional manipulation over time?
-- GROOMING: Trust-building phases followed by sudden requests for money, info, or favors
-- REPEATED REQUESTS: Multiple asks for money, gift cards, crypto, personal info, or remote access
-- INCONSISTENCIES: Contradictions in their story, identity, or claims
-- INFORMATION HARVESTING: Slowly collecting personal details across messages
-- ISOLATION: Attempts to separate the person from family, friends, or support networks
-- TOO GOOD TO BE TRUE: Unrealistic promises, guaranteed returns, sudden windfalls
-
-Respond with:
-- is_likely_scam: boolean — does this conversation show scam patterns?
-- overall_risk: "low", "medium", or "high"
-- risk_score: 0-100 (100 = definitely a scam, based on cumulative patterns)
-- patterns_detected: array of manipulation patterns detected (e.g., "Love bombing followed by financial request", "Gradual urgency escalation", "Isolation from family")
-- red_flag_messages: array of strings, each describing a specific suspicious message and WHY it's a red flag
-- escalation_summary: 2-3 sentences describing how the conversation progressed and escalated over time
-- what_they_want: what the scammer is ultimately trying to get from the victim
-- recommended_actions: 3-5 specific steps the user should take based on what happened
-- summary: 2-3 sentence overall assessment
-
-Respond entirely in ${langName}.`;
-
       const response = await base44.functions.invoke("analyzeMessage", {
         mode: "conversation",
         text: transcript.trim(),
