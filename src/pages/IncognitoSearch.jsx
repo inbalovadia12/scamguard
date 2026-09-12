@@ -204,10 +204,10 @@ export default function IncognitoSearch() {
             {isProtectedMember ? <ShieldX className="w-8 h-8 text-primary" /> : <Crown className="w-8 h-8 text-primary" />}
           </div>
           <h1 className="text-xl font-bold font-heading">Incognito Search</h1>
-          {isChild ? (
+          {isProtectedMember ? (
             <>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                Your guardian hasn't enabled Incognito Search for you yet. Ask them to enable it in Family settings.
+                Incognito Search is not enabled for your protected account yet. Ask your guardian to enable it in Family settings.
               </p>
               <Button asChild className="w-full max-w-xs">
                 <Link to="/dashboard">Back to Dashboard</Link>
