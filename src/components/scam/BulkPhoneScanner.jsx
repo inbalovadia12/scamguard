@@ -93,9 +93,6 @@ export default function BulkPhoneScanner({ credits: initialCredits, onCreditsCha
       return;
     }
 
-    await incrementCreditUsage(totalCost);
-    await updateCredits();
-
     setScanning(true);
     cancelRef.current = false;
     setCompletedCount(0);
@@ -138,6 +135,7 @@ export default function BulkPhoneScanner({ credits: initialCredits, onCreditsCha
 
     const workers = Array.from({ length: Math.min(MAX_CONCURRENCY, toScan.length) }, () => runWorker());
     await Promise.all(workers);
+    await updateCredits();
     setScanning(false);
   };
 
