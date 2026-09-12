@@ -152,18 +152,8 @@ export default function PhoneLookup() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* Header */}
       {/* Input */}
       <div className="rounded-3xl border border-border/50 bg-card p-5 sm:p-6 space-y-5 animate-slide-up" style={{ animationDelay: "50ms" }}>
-        <div className="flex items-start gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Phone className="w-5 h-5 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Phone Guard</h1>
-            <p className="text-sm text-muted-foreground mt-1">Check a phone number for scam, spam, and reputation signals.</p>
-          </div>
-        </div>
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
