@@ -6,7 +6,7 @@ import {
   Phone, Mail, Loader2, ShieldCheck, ShieldAlert, AlertTriangle, ListPlus,
   Plus, X, ChevronDown, ChevronUp, Download, Trash2,
 } from "lucide-react";
-import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS } from "@/lib/credits";
+import { getCreditStatus, CREDIT_COSTS } from "@/lib/credits";
 import PlanGate from "@/components/PlanGate";
 import { toast } from "@/components/ui/use-toast";
 
