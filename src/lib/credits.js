@@ -141,6 +141,9 @@ export async function getFamilyStatus() {
 }
 
 export async function incrementCreditUsage(amount = 1) {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error("Credit usage amount must be a positive whole number");
+  }
   const user = await base44.auth.me();
   const currentMonth = new Date().toISOString().slice(0, 7);
   const resetMonth = user.credits_reset_month;
