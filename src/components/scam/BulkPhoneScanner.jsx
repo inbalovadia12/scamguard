@@ -201,7 +201,7 @@ export default function BulkPhoneScanner({ credits: initialCredits, onCreditsCha
   const hasResults = doneCount > 0;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
+    <div className="max-w-3xl mx-auto space-y-5 pb-24">
       {/* Header */}
       <div className="text-center space-y-2 animate-slide-up">
         <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
@@ -375,7 +375,7 @@ export default function BulkPhoneScanner({ credits: initialCredits, onCreditsCha
 
         {/* Cost summary */}
         {filledBoxes.length > 0 && (
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <span className="text-muted-foreground">
               {filledBoxes.length} {filledBoxes.length === 1 ? "item" : "items"} × {costPerItem} credits
             </span>
