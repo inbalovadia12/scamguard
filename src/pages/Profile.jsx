@@ -168,12 +168,12 @@ export default function Profile() {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 min-w-0">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-xl font-bold text-primary-foreground shadow-md shadow-primary/20">
           {initials}
         </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight font-heading">{user.full_name || "Your Profile"}</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight font-heading break-words">{user.full_name || "Your Profile"}</h1>
           <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
             <Mail className="w-3.5 h-3.5" />
             {user.email}
