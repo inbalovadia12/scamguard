@@ -284,7 +284,7 @@ function PreferencesStep({ alertPref, setAlertPref, notifyEmail, setNotifyEmail,
         </div>
         <div className="p-4 rounded-xl border border-border/50 bg-card space-y-3">
           <div className="flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /><span className="font-semibold text-sm">Privacy Options</span></div>
-          <button onClick={() => setPrivacyAutoRedact(!privacyAutoRedact)} className="flex items-start justify-between gap-3 w-full text-left"
+          <button onClick={() => setPrivacyAutoRedact(!privacyAutoRedact)} className="flex items-start justify-between gap-3 w-full text-left">
             <span className="text-sm text-muted-foreground">Auto-redact phone numbers & wallets in stored messages</span>
             <div className={`w-10 h-6 rounded-full transition-colors ${privacyAutoRedact ? "bg-primary" : "bg-muted"}`}>
               <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${privacyAutoRedact ? "translate-x-4" : "translate-x-0.5"} mt-0.5`} />
