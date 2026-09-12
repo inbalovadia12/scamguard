@@ -107,11 +107,11 @@ export default function Dashboard() {
       {isWrappedSeason() && (
         <Link to="/wrapped" className="block animate-slide-up">
           <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-violet-500 via-primary to-cyan-500 p-5 text-white shadow-lg shadow-primary/30 luxury-card-hover">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-6 h-6" />
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="font-bold text-base">Your 2026 Wrapped is Ready!</p>
                 <p className="text-sm text-white/80">Available for one week only — see your year in scam protection</p>
               </div>
