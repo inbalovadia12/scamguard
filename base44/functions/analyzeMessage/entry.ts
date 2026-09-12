@@ -6,6 +6,10 @@ const CREDIT_COSTS: Record<string, number> = {
   crypto_investment: 3,
   bulk_message: 3,
   conversation: 5,
+  incognito_message: 3,
+  incognito_image: 8,
+  incognito_phone: 5,
+  incognito_conversation: 5,
 };
 
 const REQUIRED_PLANS: Record<string, "starter" | "plus"> = {
@@ -13,6 +17,10 @@ const REQUIRED_PLANS: Record<string, "starter" | "plus"> = {
   crypto_investment: "plus",
   bulk_message: "plus",
   conversation: "plus",
+  incognito_message: "plus",
+  incognito_image: "plus",
+  incognito_phone: "plus",
+  incognito_conversation: "plus",
 };
 
 const DEFAULT_SCHEMA = {
@@ -40,9 +48,18 @@ function planRank(plan: string) {
   return plan === "premium" ? 2 : plan === "plus" ? 1 : 0;
 }
 
-function buildPrompt(mode: string, text: string, messageType?: string) {
-  if (mode === "conversation") {
-    return `You are Vardin, an AI scam detection assistant. Analyze this entire conversation as a whole to detect patterns, escalation, grooming, repeated requests, inconsistencies, information harvesting, isolation, and unrealistic promises.\n\nConversation:\n"""\n${text.slice(0, 10000)}\n"""\n\nReturn a structured assessment with overall risk, risk score 0-100, patterns detected, suspicious messages and why they are suspicious, escalation summary, what the other party wants, recommended actions, and a concise summary. Never claim certainty when the evidence is ambiguous.`;
+function buildPrompt(mode: string, text: string, messageType?: string, language?: string) {
+  const languageName = ({ en: "English", he: "Hebrew", es: "Spanish" } as Record<string, string>)[language || "en"] || "English";
+  if (mode === "conversation" || mode === "incognito_conversation") {
+    return `You are Vardin, an AI scam detection assistant. Analyze this entire conversation as a whole to detect patterns, escalation, grooming, repeated requests, inconsistencies, information harvesting, isolation, and unrealistic promises.\n\nConversation:\n"""\n${text.slice(0, 10000)}\n"""\n\nReturn a structured assessment with overall risk, risk score 0-100, patterns detected, suspicious messages and why they are suspicious, escalation summary, what the other party wants, recommended actions, and a concise summary. Never claim certainty when the evidence is ambiguous. Respond in ${languageName}.`;
+  }
+
+  if (mode === "incognito_phone") {
+    return `You are a phone number reputation analyst. Research this phone number: ${text.slice(0, 100)}. Check scam reports, robocall/spam reports, and other high-signal public sources. Do not invent reports or URLs. Return country, carrier, reputation_score (0-100, 0=safe), risk_level, user_reports, scam_categories, summary, and sources. Respond in ${languageName}.`;
+  }
+
+  if (mode === "incognito_image") {
+    return `You are a reverse-image scam detection analyst. Analyze the uploaded image for scam indicators. Check whether it appears elsewhere online, including stock photos, social media, or scam reports. Only report verifiable findings. Return risk_level, risk_score, is_likely_scam_profile, explanation, similar_images_found, sources, and red_flags. Respond in ${languageName}.`;
   }
 
   if (mode === "crypto_investment") {
@@ -58,17 +75,25 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
 
-    const body = await req.json();
+      const body = await req.json();
     const mode = String(body.mode || "");
     const text = String(body.text || "").trim();
     const messageType = typeof body.message_type === "string" ? body.message_type : undefined;
+    const language = typeof body.language === "string" ? body.language : "en";
     const fileUrls = Array.isArray(body.file_urls) ? body.file_urls.filter((u) => typeof u === "string").slice(0, 2) : [];
 
     if (!CREDIT_COSTS[mode]) return Response.json({ error: "Invalid analysis mode" }, { status: 400 });
     if (!text) return Response.json({ error: "Message content is required" }, { status: 400 });
 
     const plan = normalizePlan(user.subscription_plan);
-    if (planRank(plan) < planRank(REQUIRED_PLANS[mode])) {
+    let incognitoAllowed = false;
+    if (mode.startsWith("incognito_")) {
+      try {
+        const protectedMembers = await base44.entities.ProtectedSenior.filter({ senior_user_id: user.id });
+        incognitoAllowed = protectedMembers.some((member: any) => member.incognito_allowed === true);
+      } catch {}
+    }
+    if (!incognitoAllowed && planRank(plan) < planRank(REQUIRED_PLANS[mode])) {
       return Response.json({ error: "Paid plan required", upgrade_url: "/pricing" }, { status: 403 });
     }
 
@@ -88,12 +113,12 @@ Deno.serve(async (req) => {
       : DEFAULT_SCHEMA;
 
     const llmOptions: any = {
-      prompt: buildPrompt(mode, text, messageType),
+      prompt: buildPrompt(mode, text, messageType, language),
       response_json_schema: responseSchema,
       model: "gemini_3_flash",
     };
     if (fileUrls.length > 0) llmOptions.file_urls = fileUrls;
-    if (mode === "crypto_investment" || mode === "conversation") llmOptions.add_context_from_internet = true;
+    if (["crypto_investment", "conversation", "incognito_conversation", "incognito_phone", "incognito_image"].includes(mode)) llmOptions.add_context_from_internet = true;
 
     const result = await base44.integrations.Core.InvokeLLM(llmOptions);
     const usage = applyCreditUsage(user, cost);
