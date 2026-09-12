@@ -1,4 +1,5 @@
 import { EXTRA_LESSONS, NEW_CATEGORIES } from './lessons-extra';
+import { GAMIFIED_CATEGORIES } from './lessons-gamified';
 
 export const LESSON_CATEGORIES = [
   {
@@ -1380,6 +1381,7 @@ LESSON_CATEGORIES.forEach((cat) => {
 
 // Append new categories
 LESSON_CATEGORIES.push(...NEW_CATEGORIES);
+LESSON_CATEGORIES.push(...GAMIFIED_CATEGORIES);
 
 export function getIcon(name) {
   const icons = {
