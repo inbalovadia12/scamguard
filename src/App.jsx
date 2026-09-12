@@ -44,7 +44,6 @@ import Contact from '@/pages/Contact';
 import Extension from '@/pages/Extension';
 import ScamFeed from '@/pages/ScamFeed';
 import LocalScamIntel from '@/pages/LocalScamIntel';
-import PhoneLookup from '@/pages/PhoneLookup';
 import PhoneGuard from '@/pages/PhoneGuard';
 import ImageScanner from '@/pages/ImageScanner';
 import AINegotiator from '@/pages/AINegotiator';

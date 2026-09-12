@@ -84,92 +84,64 @@ export default function IncognitoSearch() {
     setResult(null);
     try {
       const lang = localStorage.getItem("vardin_language") || "en";
-      const langName = { en: "English", he: "Hebrew", es: "Spanish" }[lang] || "English";
 
       if (activeTab === "message") {
-        const res = await base44.integrations.Core.InvokeLLM({
-          prompt: `You are Vardin, an AI scam detection assistant. Analyze this suspicious message for scam risk.\n\nMessage: "${messageText.trim()}"\n\nAnalyze for: urgency, money requests, personal info harvesting, impersonation, too good to be true, phishing links.\n\nProvide: risk_level (low/medium/high), risk_score (0-100), explanation (2-3 sentences), tactics_detected (array), next_steps (array), what_they_want (string).\n\nRespond in ${langName}.`,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              risk_level: { type: "string", enum: ["low", "medium", "high"] },
-              risk_score: { type: "number" },
-              explanation: { type: "string" },
-              tactics_detected: { type: "array", items: { type: "string" } },
-              next_steps: { type: "array", items: { type: "string" } },
-              what_they_want: { type: "string" },
-            },
-          },
+        const response = await base44.functions.invoke("analyzeMessage", {
+          mode: "incognito_message", text: messageText.trim(), language: lang,
+          response_json_schema: { type: "object", properties: {
+            risk_level: { type: "string", enum: ["low", "medium", "high"] }, risk_score: { type: "number" },
+            explanation: { type: "string" }, tactics_detected: { type: "array", items: { type: "string" } },
+            next_steps: { type: "array", items: { type: "string" } }, what_they_want: { type: "string" },
+          } },
         });
-        setResult({ type: "message", data: res });
+        if (response.data?.error) throw new Error(response.data.error);
+        setResult({ type: "message", data: response.data?.result || response.data });
       } else if (activeTab === "url") {
         const response = await base44.functions.invoke("scanUrl", { url: urlInput.trim() });
         if (response.data?.error) throw new Error(response.data.error);
         setResult({ type: "url", data: response.data });
       } else if (activeTab === "phone") {
-        const res = await base44.integrations.Core.InvokeLLM({
-          prompt: `You are a phone number reputation analyst. Research the phone number: ${phoneInput.trim()}\n\nCheck scam call databases, robocall reports, spam reports. Provide: country, carrier, reputation_score (0-100, 0=safe), risk_level (low/medium/high), user_reports (array of verified reports), scam_categories (array), summary (honest assessment), sources (array of URLs specifically about this number). If no reports found, set low risk and empty arrays.\n\nRespond in ${langName}.`,
-          add_context_from_internet: true,
-          model: "gemini_3_flash",
-          response_json_schema: {
-            type: "object",
-            properties: {
-              country: { type: "string" },
-              carrier: { type: "string" },
-              reputation_score: { type: "number" },
-              risk_level: { type: "string", enum: ["low", "medium", "high"] },
-              user_reports: { type: "array", items: { type: "string" } },
-              scam_categories: { type: "array", items: { type: "string" } },
-              summary: { type: "string" },
-              sources: { type: "array", items: { type: "string" } },
-            },
-          },
+        const response = await base44.functions.invoke("analyzeMessage", {
+          mode: "incognito_phone", text: phoneInput.trim(), language: lang,
+          response_json_schema: { type: "object", properties: {
+            country: { type: "string" }, carrier: { type: "string" }, reputation_score: { type: "number" },
+            risk_level: { type: "string", enum: ["low", "medium", "high"] },
+            user_reports: { type: "array", items: { type: "string" } }, scam_categories: { type: "array", items: { type: "string" } },
+            summary: { type: "string" }, sources: { type: "array", items: { type: "string" } },
+          } },
         });
-        setResult({ type: "phone", data: { ...res, phone_number: phoneInput.trim() } });
+        if (response.data?.error) throw new Error(response.data.error);
+        setResult({ type: "phone", data: { ...(response.data?.result || response.data), phone_number: phoneInput.trim() } });
       } else if (activeTab === "image") {
         let image_url = null;
         if (selectedFile) {
           const uploadRes = await base44.integrations.Core.UploadFile({ file: selectedFile });
           image_url = uploadRes.file_url;
         }
-        const res = await base44.integrations.Core.InvokeLLM({
-          prompt: `You are a reverse image scam detection analyst. Analyze the uploaded photo for scam indicators.\n\nCheck if this appears elsewhere online (stock photos, social media, scam reports). Identify red flags: stock photo indicators, AI generation, photos on multiple profiles.\n\nProvide: risk_level, risk_score (0-100), is_likely_scam_profile (boolean), explanation, similar_images_found (array), sources (array), red_flags (array).\n\nRespond in ${langName}.`,
-          add_context_from_internet: true,
-          model: "gemini_3_flash",
-          file_urls: [image_url],
-          response_json_schema: {
-            type: "object",
-            properties: {
-              risk_level: { type: "string", enum: ["low", "medium", "high"] },
-              risk_score: { type: "number" },
-              is_likely_scam_profile: { type: "boolean" },
-              explanation: { type: "string" },
-              similar_images_found: { type: "array", items: { type: "string" } },
-              sources: { type: "array", items: { type: "string" } },
-              red_flags: { type: "array", items: { type: "string" } },
-            },
-          },
+        const response = await base44.functions.invoke("analyzeMessage", {
+          mode: "incognito_image", text: "Analyze this uploaded image for scam indicators.", language: lang,
+          file_urls: image_url ? [image_url] : [],
+          response_json_schema: { type: "object", properties: {
+            risk_level: { type: "string", enum: ["low", "medium", "high"] }, risk_score: { type: "number" },
+            is_likely_scam_profile: { type: "boolean" }, explanation: { type: "string" },
+            similar_images_found: { type: "array", items: { type: "string" } }, sources: { type: "array", items: { type: "string" } },
+            red_flags: { type: "array", items: { type: "string" } },
+          } },
         });
-        setResult({ type: "image", data: res });
+        if (response.data?.error) throw new Error(response.data.error);
+        setResult({ type: "image", data: response.data?.result || response.data });
       } else if (activeTab === "conversation") {
-        const res = await base44.integrations.Core.InvokeLLM({
-          prompt: `You are Vardin, an AI scam detection assistant. Analyze this entire chat conversation for scam patterns over time.\n\nConversation:\n"""${conversationText.trim().slice(0, 10000)}"""\n\nLook for: escalation, grooming, repeated requests, inconsistencies, information harvesting, isolation tactics.\n\nProvide: is_likely_scam (boolean), overall_risk (low/medium/high), risk_score (0-100), patterns_detected (array), red_flag_messages (array of strings with explanations), escalation_summary (string), what_they_want (string), recommended_actions (array), summary (string).\n\nRespond in ${langName}.`,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              is_likely_scam: { type: "boolean" },
-              overall_risk: { type: "string", enum: ["low", "medium", "high"] },
-              risk_score: { type: "number" },
-              patterns_detected: { type: "array", items: { type: "string" } },
-              red_flag_messages: { type: "array", items: { type: "string" } },
-              escalation_summary: { type: "string" },
-              what_they_want: { type: "string" },
-              recommended_actions: { type: "array", items: { type: "string" } },
-              summary: { type: "string" },
-            },
-          },
+        const response = await base44.functions.invoke("analyzeMessage", {
+          mode: "incognito_conversation", text: conversationText.trim().slice(0, 10000), language: lang,
+          response_json_schema: { type: "object", properties: {
+            is_likely_scam: { type: "boolean" }, overall_risk: { type: "string", enum: ["low", "medium", "high"] },
+            risk_score: { type: "number" }, patterns_detected: { type: "array", items: { type: "string" } },
+            red_flag_messages: { type: "array", items: { type: "string" } }, escalation_summary: { type: "string" },
+            what_they_want: { type: "string" }, recommended_actions: { type: "array", items: { type: "string" } }, summary: { type: "string" },
+          } },
         });
-        setResult({ type: "conversation", data: res });
+        if (response.data?.error) throw new Error(response.data.error);
+        setResult({ type: "conversation", data: response.data?.result || response.data });
       }
     } catch (e) {
       setError(e.message || "Scan failed. Please try again.");
