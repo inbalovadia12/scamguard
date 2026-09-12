@@ -14,7 +14,7 @@ import TruncatedText from "@/components/TruncatedText";
 import AnalysisResult from "@/components/scam/AnalysisResult";
 import CommunityDataToggle from "@/components/community/CommunityDataToggle";
 import ConsentBanner from "@/components/family/ConsentBanner";
-import { getCreditStatus, incrementCreditUsage, CREDIT_COSTS, getCachedAnalysis, cacheAnalysis } from "@/lib/credits";
+import { getCreditStatus, CREDIT_COSTS, getCachedAnalysis, cacheAnalysis } from "@/lib/credits";
 import { redactMessage } from "@/lib/redact";
 import { getSeniorLink } from "@/lib/guardianAlerts";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
