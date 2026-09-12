@@ -214,7 +214,7 @@ export default function CryptoScanner() {
             ) : (
               <Button
                 onClick={handleAnalyze}
-                disabled={!input.trim() || analyzing}
+                disabled={!credits || !input.trim() || analyzing}
                 className="w-full h-11 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20 gap-2"
               >
                 <ShieldCheck className="w-4 h-4" /> Scan Crypto · {cost} credits
