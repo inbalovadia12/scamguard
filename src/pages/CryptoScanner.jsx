@@ -58,7 +58,7 @@ export default function CryptoScanner() {
 
   const handleAnalyze = async () => {
     const text = input.trim();
-    if (!text || (credits && credits.remaining < cost)) {
+    if (!text || !credits || credits.remaining < cost) {
       if (credits && credits.remaining < cost) {
         toast({ title: "Not enough credits", description: `This crypto scan uses ${cost} credits.`, variant: "destructive" });
       }
