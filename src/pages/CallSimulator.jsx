@@ -45,6 +45,11 @@ export default function CallSimulator() {
       }]);
       setPhase("calling");
     } catch (e) {
+      if (/subscription|credit/i.test(e.message || "")) {
+        setScenario(null);
+        setPhase("select");
+        return;
+      }
       setConversation([{
         speaker: "scammer",
         text: "Hello, is this the right number?",
@@ -136,7 +141,7 @@ export default function CallSimulator() {
     );
   }
 
-  if (!credits.isPremiumPlan && !credits.isPlusPlan) {
+  if (!credits.isPaid) {
     return (
       <LockedFeature
         title="Premium Call Simulator"
