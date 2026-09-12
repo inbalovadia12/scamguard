@@ -200,8 +200,8 @@ export default function Family() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight font-heading">My Family</h1>
           <p className="text-muted-foreground mt-1">
             {seniors.length} / {familyLimit === Infinity ? "∞" : familyLimit} members
