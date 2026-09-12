@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { GraduationCap, Loader2, Crown, Sparkles, Trophy, Phone, ChevronRight, Scan, Target, Flame, Star, LockKeyhole, Check, Play } from "lucide-react";
+import { GraduationCap, Loader2, Crown, Sparkles, Trophy, Phone, ChevronRight, Scan, Target, Flame, Star, Check, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import LockedFeature from "@/components/LockedFeature";
 import LessonCard from "@/components/lessons/LessonCard";
