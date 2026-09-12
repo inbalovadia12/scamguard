@@ -111,10 +111,13 @@ export default function BulkPhoneScanner({ credits: initialCredits, onCreditsCha
     };
 
     const scanMessage = async (text) => {
-      return await base44.integrations.Core.InvokeLLM({
-        prompt: `Scam detection expert: analyze this message for scam risk.\nMessage: "${text}"\nRules: never say "definitely a scam" (use "likely"); plain English; educational. Name manipulation tactics and concrete next steps.\nRISK SCORE: 0-100 whole number. Low 0-35, Medium 36-70, High 71-100. Must match risk_level.`,
+      const response = await base44.functions.invoke("analyzeMessage", {
+        mode: "bulk_message",
+        text,
         response_json_schema: MESSAGE_SCHEMA,
       });
+      if (response.data?.error) throw new Error(response.data.error);
+      return response.data?.result || response.data;
     };
 
     const runWorker = async () => {
