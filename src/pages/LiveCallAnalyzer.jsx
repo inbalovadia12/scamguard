@@ -3,7 +3,7 @@ import { Radio, Phone, Monitor, Mic, Loader2, Crown, ShieldAlert, AlertTriangle,
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { getCreditStatus, CREDIT_COSTS, incrementCreditUsage } from "@/lib/credits";
+import { getCreditStatus, CREDIT_COSTS } from "@/lib/credits";
 import TranscriptFeed from "@/components/call/TranscriptFeed";
 import WarningPanel from "@/components/call/WarningPanel";
 import RedFlagDisplay from "@/components/scam/RedFlagDisplay";
@@ -293,8 +293,11 @@ export default function LiveCallAnalyzer() {
         transcript: JSON.stringify((result.segments || []).map((s) => ({ text: s.text, risk_level: result.risk_level, speaker: s.speaker }))),
         segment_count: result.segments?.length || (result.transcript ? 1 : 0),
       }).catch(() => {});
-      await incrementCreditUsage(CREDIT_COSTS.CALL_CHUNK);
-      setCreditStatus(await getCreditStatus());
+      if (typeof result.credits_remaining === "number") {
+        setCreditStatus((prev) => prev ? { ...prev, remaining: result.credits_remaining } : prev);
+      } else {
+        setCreditStatus(await getCreditStatus());
+      }
     } catch (e) {
       setError(getCallGuardError(e, "Failed to analyze recording."));
     } finally {
@@ -385,10 +388,9 @@ export default function LiveCallAnalyzer() {
 
           populateResult(result);
 
-          incrementCreditUsage(CREDIT_COSTS.CALL_CHUNK)
-            .then(() => getCreditStatus())
-            .then(setCreditStatus)
-            .catch(() => {});
+          if (typeof result.credits_remaining === "number") {
+            setCreditStatus((prev) => prev ? { ...prev, remaining: result.credits_remaining } : prev);
+          }
         } catch (e) {
           setError(getCallGuardError(e, "Failed to analyze audio chunk."));
         } finally {
@@ -593,6 +595,7 @@ export default function LiveCallAnalyzer() {
           image_url: uploadRes.file_url,
           language: lang,
           session_context: recentContext,
+          credit_cost: screenInterval.credits,
         });
 
         if (response.data?.error) throw new Error(response.data.error);
@@ -624,8 +627,11 @@ export default function LiveCallAnalyzer() {
           });
         }
 
-        await incrementCreditUsage(screenInterval.credits);
-        setCreditStatus(await getCreditStatus());
+        if (typeof result.credits_remaining === "number") {
+          setCreditStatus((prev) => prev ? { ...prev, remaining: result.credits_remaining } : prev);
+        } else {
+          setCreditStatus(await getCreditStatus());
+        }
       } catch (e) {
         setError(e.message || "Failed to analyze screen capture.");
       } finally {
