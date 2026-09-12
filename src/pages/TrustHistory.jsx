@@ -172,7 +172,7 @@ export default function TrustHistory() {
           ) : (
             <p className="text-sm text-muted-foreground text-center py-10">No data</p>
           )}
-          <div className="flex justify-center gap-3 mt-2">
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-1.5 mt-2">
             {stats.riskData.map((d) => (
               <div key={d.name} className="flex items-center gap-1.5 text-xs">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.fill }} />
@@ -268,8 +268,8 @@ function Header() {
 
 function ViewToggle({ view, setView }) {
   return (
-    <div className="flex gap-1 p-1 bg-card rounded-2xl border border-border/50 w-fit animate-slide-up">
-      <button onClick={() => setView("mine")} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${view === "mine" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
+    <div className="flex w-full sm:w-fit gap-1 p-1 bg-card rounded-2xl border border-border/50 animate-slide-up">
+      <button onClick={() => setView("mine")} className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-sm font-medium transition-all ${view === "mine" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
         My Scans
       </button>
       <button onClick={() => setView("family")} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5 ${view === "family" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
