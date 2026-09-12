@@ -84,6 +84,9 @@ Deno.serve(async (req) => {
 
     if (!CREDIT_COSTS[mode]) return Response.json({ error: "Invalid analysis mode" }, { status: 400 });
     if (!text) return Response.json({ error: "Message content is required" }, { status: 400 });
+    if (mode === "incognito_image" && fileUrls.length === 0) {
+      return Response.json({ error: "Image is required" }, { status: 400 });
+    }
 
     const plan = normalizePlan(user.subscription_plan);
     let incognitoAllowed = false;
