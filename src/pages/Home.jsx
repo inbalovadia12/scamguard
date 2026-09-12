@@ -307,10 +307,10 @@ export default function Home() {
           </div>
 
           {/* Mode toggle */}
-          <div className="grid grid-cols-3 gap-2 p-1 bg-muted rounded-xl animate-slide-up anim-delay-1">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 p-1 bg-muted rounded-xl animate-slide-up anim-delay-1">
             <button
               onClick={() => setMode("message")}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 px-1 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                 mode === "message" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
               }`}
             >
@@ -319,7 +319,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setMode("url")}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 px-1 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                 mode === "url" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
               }`}
             >
@@ -329,7 +329,7 @@ export default function Home() {
             </button>
             <button
               onClick={() => setMode("conversation")}
-              className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 px-1 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                 mode === "conversation" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
               }`}
             >
@@ -365,7 +365,7 @@ export default function Home() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <label className="text-sm font-medium">Paste the message</label>
                     <div className="flex items-center gap-1.5">
                       {images.length > 0 && <span className="text-xs text-muted-foreground">{images.length}/2</span>}
@@ -492,7 +492,7 @@ export default function Home() {
         </div>
       ) : (
         <div className="space-y-6 animate-scale-in">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h1 className="text-2xl font-bold tracking-tight font-heading">Analysis Result</h1>
             <Button variant="outline" onClick={handleReset}>Check another</Button>
           </div>
