@@ -28,8 +28,14 @@ export default function Register() {
   // Capture a referral code from ?ref= so it can be attributed after login
   useEffect(() => {
     try {
-      const ref = new URLSearchParams(window.location.search).get("ref");
-      if (ref) localStorage.setItem("vardin_ref", ref);
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get("ref") || params.get("referral") || "";
+      const stored = localStorage.getItem("vardin_ref") || "";
+      const pending = ref || stored;
+      if (pending) {
+        localStorage.setItem("vardin_ref", pending);
+        setReferralCode(pending.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+      }
     } catch {}
   }, []);
 
@@ -105,6 +111,10 @@ export default function Register() {
       setError("Please review and accept the Terms of Service and AI limitations first.");
       return;
     }
+    try {
+      const code = referralCode.trim();
+      if (code) localStorage.setItem("vardin_ref", code);
+    } catch {}
     base44.auth.loginWithProvider("google", "/dashboard");
   };
 
@@ -113,6 +123,10 @@ export default function Register() {
       setError("Please review and accept the Terms of Service and AI limitations first.");
       return;
     }
+    try {
+      const code = referralCode.trim();
+      if (code) localStorage.setItem("vardin_ref", code);
+    } catch {}
     base44.auth.loginWithProvider("apple", "/dashboard");
   };
 
