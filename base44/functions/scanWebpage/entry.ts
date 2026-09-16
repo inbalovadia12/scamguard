@@ -1,8 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
-
-const PLAN_LIMITS = { starter: 30, plus: 350, premium: 500 };
+import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
 const ANSWER_TYPE_COSTS: Record<string, number> = {
   quick: 3, risk_score: 4, red_flags: 5, detailed: 8,
 };
@@ -131,20 +130,21 @@ Deno.serve(async (req) => {
     const answerTypeCost = ANSWER_TYPE_COSTS[answerType] || 8;
     const scanModifier = scanType === 'page' ? (SCAN_TYPE_MODIFIERS[scanMode] || 0) : (SCAN_TYPE_MODIFIERS[scanType] || 0);
     const creditCost = answerTypeCost + scanModifier;
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    let creditsUsed = user.credits_used || 0;
-    if (user.credits_reset_month !== currentMonth) creditsUsed = 0;
-    const creditLimit = (PLAN_LIMITS[plan] || PLAN_LIMITS.starter) + (user.referral_bonus_credits || 0);
-    const adminCreditBalance = Math.max(0, Number(user.admin_credit_balance) || 0);
-    const creditsRemaining = Math.max(0, creditLimit - creditsUsed + adminCreditBalance);
 
-    if (creditsRemaining < creditCost) {
+    const available = getAvailableCredits(user);
+    if (available.remaining < creditCost) {
       return Response.json({
         error: 'Insufficient credits',
-        credits_remaining: creditsRemaining, credits_limit: creditLimit, credit_cost: creditCost,
+        credits_remaining: available.remaining, credits_limit: getMonthlyCreditLimit(user), credit_cost: creditCost,
         upgrade_url: '/pricing',
       }, { status: 402 });
     }
+    const chargeCredits = async () => {
+      const usage = applyCreditUsage(user, creditCost);
+      if (!usage) throw new Error('Credit balance changed during analysis. Please try again.');
+      await base44.auth.updateMe(usage);
+      return getAvailableCredits({ ...user, ...usage }).remaining;
+    };
 
     if (scanType === 'page' && scanMode !== 'url') {
       const hasText = page_text && page_text.trim().length > 0;
@@ -221,10 +221,7 @@ Deno.serve(async (req) => {
 
     // === EARLY EXIT: If URLhaus says malware, return HIGH RISK immediately ===
     if (urlhausReport?.listed) {
-      const fromAdmin = Math.min(adminCreditBalance, creditCost);
-      const newCreditsUsed = creditsUsed + (creditCost - fromAdmin);
-      const newAdminCreditBalance = adminCreditBalance - fromAdmin;
-      await base44.auth.updateMe({ credits_used: newCreditsUsed, admin_credit_balance: newAdminCreditBalance, credits_reset_month: currentMonth });
+      const creditsRemaining = await chargeCredits();
 
       return Response.json({
         analysis: {
@@ -258,18 +255,15 @@ Deno.serve(async (req) => {
         destination_title: qrPageTitle,
         timestamp: new Date().toISOString(),
         credits_used: creditCost,
-        credits_remaining: Math.max(0, creditLimit - newCreditsUsed + newAdminCreditBalance),
-        credits_limit: creditLimit,
+        credits_remaining: creditsRemaining,
+        credits_limit: getMonthlyCreditLimit(user),
         timing_ms: Date.now() - startTime,
       });
     }
 
     // === EARLY EXIT: If VT shows high malicious count, return HIGH RISK immediately ===
     if (vtReport && vtReport.malicious >= 5) {
-      const fromAdmin = Math.min(adminCreditBalance, creditCost);
-      const newCreditsUsed = creditsUsed + (creditCost - fromAdmin);
-      const newAdminCreditBalance = adminCreditBalance - fromAdmin;
-      await base44.auth.updateMe({ credits_used: newCreditsUsed, admin_credit_balance: newAdminCreditBalance, credits_reset_month: currentMonth });
+      const creditsRemaining = await chargeCredits();
 
       return Response.json({
         analysis: {
@@ -302,8 +296,8 @@ Deno.serve(async (req) => {
         destination_title: qrPageTitle,
         timestamp: new Date().toISOString(),
         credits_used: creditCost,
-        credits_remaining: Math.max(0, creditLimit - newCreditsUsed + newAdminCreditBalance),
-        credits_limit: creditLimit,
+        credits_remaining: creditsRemaining,
+        credits_limit: getMonthlyCreditLimit(user),
         timing_ms: Date.now() - startTime,
       });
     }
@@ -452,10 +446,7 @@ Deno.serve(async (req) => {
       if (qrFinalUrl) (result as any).final_destination_url = qrFinalUrl;
     }
 
-    const fromAdmin = Math.min(adminCreditBalance, creditCost);
-      const newCreditsUsed = creditsUsed + (creditCost - fromAdmin);
-      const newAdminCreditBalance = adminCreditBalance - fromAdmin;
-    await base44.auth.updateMe({ credits_used: newCreditsUsed, admin_credit_balance: newAdminCreditBalance, credits_reset_month: currentMonth });
+    const creditsRemaining = await chargeCredits();
 
     return Response.json({
       analysis: result,
@@ -469,8 +460,8 @@ Deno.serve(async (req) => {
       destination_title: qrPageTitle,
       timestamp: new Date().toISOString(),
       credits_used: creditCost,
-      credits_remaining: Math.max(0, creditLimit - newCreditsUsed + newAdminCreditBalance),
-      credits_limit: creditLimit,
+      credits_remaining: creditsRemaining,
+      credits_limit: getMonthlyCreditLimit(user),
       timing_ms: Date.now() - startTime,
     });
   } catch (error: any) {

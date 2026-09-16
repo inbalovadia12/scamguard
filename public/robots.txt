@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://vardin.base44.app/sitemap.xml
+Sitemap: https://app.vardin.com/sitemap.xml
