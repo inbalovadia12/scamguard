@@ -6,13 +6,11 @@
 // breaks. We therefore trust the request origin when it is on our allowlist,
 // and fall back to the canonical public URL otherwise.
 
-export const CANONICAL_APP_URL = "https://app.vardin.com";
+export const CANONICAL_APP_URL = "https://vardin.base44.app";
 
 // Domains we consider "ours" for return-URL construction. Keep this in sync
 // with any custom domain connected to the app.
 const ALLOWED_ORIGINS = new Set<string>([
-  "https://app.vardin.com",
-  "https://vardin.app",
   "https://vardin.base44.app",
   "http://localhost:5173",
   "http://localhost:3000",
