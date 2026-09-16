@@ -566,7 +566,7 @@ export default function LiveCallAnalyzer() {
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.7));
         if (!blob) throw new Error("Failed to capture screen frame.");
         const imageFile = new File([blob], `screen-${Date.now()}.jpg`, { type: "image/jpeg" });
-        const uploadRes = await base44.integrations.Core.UploadFile({ file: imageFile });
+        const uploadRes = await base44.integrations.Core.UploadPublicFile({ file: imageFile });
 
         const lang = localStorage.getItem("vardin_language") || "en";
         const recentContext = transcriptRef.current.slice(-3).map((t) => `${t.speaker}: ${t.text}`).join(" ");
