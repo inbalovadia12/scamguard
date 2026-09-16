@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Siren, DollarSign, Lock, CreditCard, MousePointerClick, Monitor, IdCard,
   ChevronDown, Phone, AlertTriangle, CheckCircle2, ExternalLink, ShieldAlert,
-  Loader2, Sparkles, Wand2, RotateCcw, Eye, Clock, TrendingUp,
+  Loader2, Sparkles, Wand2, RotateCcw, Eye, Clock, TrendingUp, ShieldCheck, Globe,
 } from "lucide-react";
 
 const SCENARIOS = [
@@ -215,24 +215,24 @@ Respond with:
       {/* Header */}
       <div className="animate-slide-up">
         <div className="flex items-center gap-2.5 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-destructive to-destructive/80 flex items-center justify-center shadow-md shadow-destructive/20 flex-shrink-0">
-            <Siren className="w-5 h-5 text-destructive-foreground" />
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+            <Siren className="w-5 h-5 text-primary" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-heading">Emergency Response</h1>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-heading">Recovery Help</h1>
         </div>
         <p className="text-sm text-muted-foreground max-w-md">
-          Already sent money or shared your info? Don't panic — follow the exact recovery steps for your situation.
+          Already sent money or shared your info? Stay calm — follow the exact steps for your situation. The sooner you act, the more you can recover.
         </p>
       </div>
 
       <AIDisclaimer highStakes />
 
-      {/* Emergency Banner */}
-      <div className="flex items-start gap-3 p-3 sm:p-4 rounded-2xl bg-destructive/5 border border-destructive/20 animate-slide-up" style={{ animationDelay: "30ms" }}>
-        <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+      {/* Reassuring Banner */}
+      <div className="flex items-start gap-3 p-3 sm:p-4 rounded-2xl bg-primary/5 border border-primary/20 animate-slide-up" style={{ animationDelay: "30ms" }}>
+        <ShieldCheck className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
         <div className="text-sm min-w-0">
-          <p className="font-medium text-destructive">Act fast — the sooner you respond, the more you can recover.</p>
-          <p className="text-muted-foreground mt-0.5">Choose your situation below or describe it for a personalized plan.</p>
+          <p className="font-medium text-primary">You're not alone — and there's a clear path forward.</p>
+          <p className="text-muted-foreground mt-0.5">Pick your situation below for exact steps, or describe it for a personalized plan.</p>
         </div>
       </div>
 
@@ -534,6 +534,52 @@ Respond with:
           </div>
         </div>
       )}
+
+      {/* Quick Emergency Contacts */}
+      <div className="bg-card rounded-2xl border border-border/50 p-4 sm:p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Globe className="w-4 h-4 text-primary flex-shrink-0" />
+          <h3 className="text-sm font-semibold">Quick Fraud Contacts</h3>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-2.5">
+          <a href="https://reportfraud.ftc.gov" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-border/30">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <ExternalLink className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium">FTC ReportFraud (US)</p>
+              <p className="text-xs text-muted-foreground">reportfraud.ftc.gov</p>
+            </div>
+          </a>
+          <a href="https://www.actionfraud.police.uk" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-border/30">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <ExternalLink className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Action Fraud (UK)</p>
+              <p className="text-xs text-muted-foreground">actionfraud.police.uk</p>
+            </div>
+          </a>
+          <a href="https://www.cyber.gov.au/report" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-border/30">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <ExternalLink className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium">ReportCyber (AU)</p>
+              <p className="text-xs text-muted-foreground">cyber.gov.au</p>
+            </div>
+          </a>
+          <a href="https://www.europol.europa.eu/report-a-crime" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors border border-border/30">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <ExternalLink className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium">EU Fraud Report</p>
+              <p className="text-xs text-muted-foreground">europol.europa.eu</p>
+            </div>
+          </a>
+        </div>
+      </div>
 
       {/* General reminder */}
       <div className="flex items-start gap-3 p-3 sm:p-4 rounded-2xl bg-muted/30 border border-border/30 text-xs sm:text-sm text-muted-foreground">

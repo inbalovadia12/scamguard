@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Radio, Phone, Monitor, Mic, Loader2, Crown, ShieldAlert, AlertTriangle, ShieldCheck, Square, Activity, Eye, Info, Upload } from "lucide-react";
+import { Phone, Monitor, Mic, Loader2, Crown, AlertTriangle, ShieldCheck, Square, Activity, Info, Upload, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
@@ -11,25 +11,28 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { AssemblyAIStream } from "@/lib/assemblyaiStream";
 
 // === Live streaming architecture ===
-// Mic / system / phone-call audio is streamed in real time to AssemblyAI's
-// Streaming v3 WebSocket. A short-lived token (minted server-side) lets the
-// browser connect without exposing the API key. An AudioWorklet downsamples
-// the mic to 16 kHz PCM16 and forwards frames to the socket. AssemblyAI emits
-// partial transcripts (shown live) and finalized turns (sent to analyzeCallSegment
-// for scam analysis). Uploaded recordings still use the batch analyzeCallChunk.
+// Mic / system audio is streamed in real time to AssemblyAI's Streaming v3
+// WebSocket. A short-lived token (minted server-side) lets the browser connect
+// without exposing the API key. An AudioWorklet downsamples the mic to 16 kHz
+// PCM16 and forwards frames to the socket. AssemblyAI emits partial transcripts
+// (shown live) and finalized turns (sent to analyzeCallSegment for scam
+// analysis). Uploaded recordings still use the batch analyzeCallChunk.
+//
+// AssemblyAI streaming tokens expire after ~10 minutes. We surface this cap
+// upfront, show a live countdown, and handle the session-end gracefully so
+// the user can restart without seeing a scary error.
 
-const SCREEN_INTERVAL_OPTIONS = [
-  { label: "1 sec", ms: 1000, credits: 8 },
-  { label: "3 sec", ms: 3000, credits: 5 },
-  { label: "5 sec", ms: 5000, credits: 3 },
-];
+const SESSION_CAP_SECONDS = 600; // 10-minute provider limit
 const RISK_ORDER = { low: 0, medium: 1, high: 2 };
 
 const RISK_CONFIG = {
   low: { color: "text-success", bg: "bg-success/5", border: "border-success/20", icon: ShieldCheck, label: "Normal" },
   medium: { color: "text-warning", bg: "bg-warning/5", border: "border-warning/20", icon: AlertTriangle, label: "Caution" },
-  high: { color: "text-destructive", bg: "bg-destructive/5", border: "border-destructive/20", icon: ShieldAlert, label: "High Risk" },
+  high: { color: "text-destructive", bg: "bg-destructive/5", border: "border-destructive/20", icon: AlertTriangle, label: "High Risk" },
 };
+
+// Desktop VoIP apps whose audio can be captured via system-audio sharing.
+const SUPPORTED_VOIP_APPS = ["Zoom", "Microsoft Teams", "Skype", "WhatsApp Desktop", "Google Meet"];
 
 function getCallGuardError(error, fallback) {
   return error?.response?.data?.error || error?.data?.error || error?.message || fallback;
@@ -45,8 +48,6 @@ export default function LiveCallAnalyzer() {
     }
     return "system";
   });
-  const [screenInterval, setScreenInterval] = useState(SCREEN_INTERVAL_OPTIONS[2]);
-  const supportsDisplayMedia = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
 
   const [isListening, setIsListening] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -59,6 +60,7 @@ export default function LiveCallAnalyzer() {
   const [coaching, setCoaching] = useState([]);
   const [speakerDetectionNote, setSpeakerDetectionNote] = useState("");
   const [error, setError] = useState(null);
+  const [sessionEnded, setSessionEnded] = useState(false);
   const [creditStatus, setCreditStatus] = useState(null);
   const [checkingPlan, setCheckingPlan] = useState(true);
   const [callSeconds, setCallSeconds] = useState(0);
@@ -71,11 +73,8 @@ export default function LiveCallAnalyzer() {
   const audioContextRef = useRef(null);
   const workletNodeRef = useRef(null);
   const sourceNodeRef = useRef(null);
-  const screenIntervalRef = useRef(null);
-  const videoRef = useRef(null);
   const wakeLockRef = useRef(null);
   const userStoppedRef = useRef(false);
-  const isProcessingRef = useRef(false);
   const transcriptRef = useRef([]);
   const overallRiskRef = useRef("low");
   const reportedIndicatorsRef = useRef([]);
@@ -86,6 +85,15 @@ export default function LiveCallAnalyzer() {
     const interval = setInterval(() => setCallSeconds((s) => s + 1), 1000);
     return () => clearInterval(interval);
   }, [isListening]);
+
+  // Proactively end the session when the 10-minute provider cap is reached,
+  // so the user sees a clean "session ended" message instead of a socket error.
+  useEffect(() => {
+    if (isListening && callSeconds >= SESSION_CAP_SECONDS) {
+      setSessionEnded(true);
+      handleStop(true);
+    }
+  }, [isListening, callSeconds]);
 
   useEffect(() => {
     if (!isListening) return;
@@ -141,8 +149,6 @@ export default function LiveCallAnalyzer() {
     if (audioContextRef.current) { audioContextRef.current.close().catch(() => {}); audioContextRef.current = null; }
     if (mediaStreamRef.current) { mediaStreamRef.current.getTracks().forEach((t) => t.stop()); mediaStreamRef.current = null; }
     if (displayStreamRef.current) { displayStreamRef.current.getTracks().forEach((t) => t.stop()); displayStreamRef.current = null; }
-    if (screenIntervalRef.current) { clearInterval(screenIntervalRef.current); screenIntervalRef.current = null; }
-    if (videoRef.current) { videoRef.current.pause(); videoRef.current.srcObject = null; videoRef.current = null; }
   };
 
   const handleEditSegment = async (index, updates) => {
@@ -179,6 +185,7 @@ export default function LiveCallAnalyzer() {
     setSpeakerDetectionNote("");
     setCallSeconds(0);
     setPartialText("");
+    setSessionEnded(false);
     transcriptRef.current = [];
     overallRiskRef.current = "low";
     reportedIndicatorsRef.current = [];
@@ -255,19 +262,14 @@ export default function LiveCallAnalyzer() {
     resetState();
 
     try {
-      if (mode === "screen") {
-        await startScreenCapture();
-        return;
-      }
-
-      // mic, system, phone_call → live streaming
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("Your browser doesn't support audio capture.");
 
-      const isCallerOnly = mode === "system" || mode === "phone_call";
+      const isCallerOnly = mode === "system";
       let mediaStream;
       if (mode === "mic") {
         mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } else {
+        // system → desktop VoIP app audio via screen-share-with-audio
         const displayStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
         const audioTracks = displayStream.getAudioTracks();
         if (audioTracks.length === 0) {
@@ -317,14 +319,17 @@ export default function LiveCallAnalyzer() {
           setPartialText("");
           handleFinalTurn(text, isCallerOnly);
         },
-        onError: (e) => {
+        onError: () => {
           if (!userStoppedRef.current) setError("Live transcription connection error. Tap Start to resume.");
         },
         onClose: (code, reason) => {
           if (!userStoppedRef.current) {
             setIsListening(false);
             setIsRecording(false);
-            if (code && code !== 1000 && code !== 1001) {
+            // If we're near the 10-min cap, treat as a graceful session end.
+            if (callSeconds >= SESSION_CAP_SECONDS - 30) {
+              setSessionEnded(true);
+            } else if (code && code !== 1000 && code !== 1001) {
               setError(`Transcription disconnected (${code})${reason ? `: ${reason}` : ""}. Tap Start to resume.`);
             }
           }
@@ -345,11 +350,11 @@ export default function LiveCallAnalyzer() {
     }
   };
 
-  const handleStop = () => {
+  const handleStop = (fromCap = false) => {
     userStoppedRef.current = true;
 
     if (transcript.length > 0 || warnings.length > 0) {
-      const sessionType = mode === "mic" ? "microphone" : mode === "screen" ? "screen_view" : "system_audio";
+      const sessionType = mode === "mic" ? "microphone" : "system_audio";
       base44.entities.LiveGuardSession.create({
         session_type: sessionType,
         overall_risk: overallRisk,
@@ -367,6 +372,7 @@ export default function LiveCallAnalyzer() {
     setIsListening(false);
     setIsRecording(false);
     setAnalyzing(false);
+    if (fromCap) setSessionEnded(true);
   };
 
   const analyzeUploadedRecording = async (file) => {
@@ -443,81 +449,6 @@ export default function LiveCallAnalyzer() {
     }
   };
 
-  const startScreenCapture = async () => {
-    const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-    displayStreamRef.current = displayStream;
-
-    const video = document.createElement("video");
-    video.srcObject = displayStream;
-    video.muted = true;
-    video.autoplay = true;
-    videoRef.current = video;
-    await video.play();
-
-    displayStream.getVideoTracks()[0].onended = () => handleStop();
-
-    const captureFrame = async () => {
-      if (isProcessingRef.current) return;
-      if (!video.videoWidth || !video.videoHeight) return;
-      isProcessingRef.current = true;
-      setAnalyzing(true);
-
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0);
-
-        const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.7));
-        if (!blob) throw new Error("Failed to capture screen frame.");
-        const imageFile = new File([blob], `screen-${Date.now()}.jpg`, { type: "image/jpeg" });
-        const uploadRes = await base44.integrations.Core.UploadPublicFile({ file: imageFile });
-
-        const lang = localStorage.getItem("vardin_language") || "en";
-        const recentContext = transcriptRef.current.slice(-3).map((t) => `${t.speaker}: ${t.text}`).join(" ");
-
-        const response = await base44.functions.invoke("analyzeScreenCapture", {
-          image_url: uploadRes.file_url,
-          language: lang,
-          session_context: recentContext,
-          credit_cost: screenInterval.credits,
-        });
-
-        if (response.data?.error) throw new Error(response.data.error);
-        const result = response.data;
-
-        const newSeg = { text: result.analysis || "Screen analyzed", timestamp: new Date(), risk_level: result.risk_level };
-        setTranscript((prev) => [...prev, newSeg]);
-        transcriptRef.current = [...transcriptRef.current, newSeg];
-
-        if (result.warnings?.length) {
-          setWarnings((prev) => [...result.warnings.map((w) => ({ title: w, explanation: "", action: "", severity: "caution", timestamp: new Date(), level: result.risk_level })), ...prev]);
-        }
-        if (RISK_ORDER[result.risk_level] > RISK_ORDER[overallRiskRef.current]) {
-          overallRiskRef.current = result.risk_level;
-          setOverallRisk(result.risk_level);
-        }
-        if (result.tactics_detected?.length) setTactics((prev) => [...new Set([...prev, ...result.tactics_detected])]);
-        if (typeof result.credits_remaining === "number") {
-          setCreditStatus((prev) => (prev ? { ...prev, remaining: result.credits_remaining } : prev));
-        } else {
-          setCreditStatus(await getCreditStatus());
-        }
-      } catch (e) {
-        setError(e.message || "Failed to analyze screen capture.");
-      } finally {
-        isProcessingRef.current = false;
-        setAnalyzing(false);
-      }
-    };
-
-    captureFrame();
-    screenIntervalRef.current = setInterval(captureFrame, screenInterval.ms);
-    setIsListening(true);
-    requestWakeLock();
-  };
-
   if (checkingPlan) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -531,11 +462,11 @@ export default function LiveCallAnalyzer() {
       <div className="max-w-md mx-auto px-4">
         <div className="bg-card rounded-2xl border border-border/50 p-8 sm:p-10 text-center space-y-5 flex flex-col items-center">
           <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-            <Radio className="w-7 h-7 text-primary" />
+            <Phone className="w-7 h-7 text-primary" />
           </div>
           <h1 className="text-xl font-bold font-heading">Live Guard</h1>
           <p className="text-sm text-muted-foreground">
-            Real-time scam detection during calls, meetings, and on-screen messages. Get contextual warnings as indicators accumulate.
+            Real-time scam detection during calls and meetings. Get contextual warnings as indicators accumulate.
           </p>
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
             <Crown className="w-4 h-4" /> Premium Feature
@@ -550,38 +481,58 @@ export default function LiveCallAnalyzer() {
 
   const cfg = RISK_CONFIG[overallRisk];
   const RiskIcon = cfg.icon;
+  const supportsSystemAudio = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
+  const remainingSeconds = Math.max(0, SESSION_CAP_SECONDS - callSeconds);
+  const nearCap = remainingSeconds <= 60 && isListening;
 
   return (
     <div className="max-w-4xl mx-auto space-y-5 pb-16">
+      {/* 10-minute session cap notice */}
+      {!isListening && (
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/50">
+          <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            Live sessions auto-end after <strong>10 minutes</strong> (provider limit). Restart anytime to continue protecting a longer call. Each analyzed turn costs <strong>1 credit</strong>.
+          </p>
+        </div>
+      )}
+
+      {sessionEnded && (
+        <div className="flex items-start gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/20">
+          <Clock className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-primary">Session ended (10-minute limit reached)</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Your transcript and warnings are saved. Start a new session to continue.</p>
+          </div>
+          <Button size="sm" onClick={() => { setSessionEnded(false); handleStart(); }} className="flex-shrink-0">
+            Start New Session
+          </Button>
+        </div>
+      )}
+
       <div className="bg-card rounded-2xl border border-border/50 p-5 space-y-4">
         {!isListening ? (
           <div className="space-y-3">
             <p className="text-sm font-medium">Choose audio source:</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button onClick={() => setMode("mic")} className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${mode === "mic" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"}`}>
                 <Mic className={`w-6 h-6 ${mode === "mic" ? "text-primary" : "text-muted-foreground"}`} />
                 <span className="text-sm font-medium">Microphone</span>
-                <span className="text-xs text-muted-foreground">Speakerphone</span>
+                <span className="text-xs text-muted-foreground text-center">Speakerphone on a second device</span>
               </button>
-              <button onClick={() => !isMobile && setMode("system")} disabled={isMobile} className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${isMobile ? "opacity-40 cursor-not-allowed border-border/30" : mode === "system" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"}`}>
+              <button
+                onClick={() => !isMobile && supportsSystemAudio && setMode("system")}
+                disabled={isMobile || !supportsSystemAudio}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${isMobile || !supportsSystemAudio ? "opacity-40 cursor-not-allowed border-border/30" : mode === "system" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"}`}
+              >
                 <Monitor className={`w-6 h-6 ${mode === "system" && !isMobile ? "text-primary" : "text-muted-foreground"}`} />
                 <span className="text-sm font-medium">System Audio</span>
-                <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "Zoom, Teams, browser"}</span>
-              </button>
-              <button onClick={() => !isMobile && setMode("phone_call")} disabled={isMobile} className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${isMobile ? "opacity-40 cursor-not-allowed border-border/30" : mode === "phone_call" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"}`}>
-                <Phone className={`w-6 h-6 ${mode === "phone_call" && !isMobile ? "text-primary" : "text-muted-foreground"}`} />
-                <span className="text-sm font-medium">Phone Call</span>
-                <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "VoIP & device calls"}</span>
-              </button>
-              <button onClick={() => !isMobile && setMode("screen")} disabled={isMobile} className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${isMobile ? "opacity-40 cursor-not-allowed border-border/30" : mode === "screen" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"}`}>
-                <Eye className={`w-6 h-6 ${mode === "screen" && !isMobile ? "text-primary" : "text-muted-foreground"}`} />
-                <span className="text-sm font-medium">Screen View</span>
-                <span className="text-xs text-muted-foreground">{isMobile ? "Desktop only" : "SMS, WhatsApp, Email"}</span>
+                <span className="text-xs text-muted-foreground text-center">{isMobile ? "Desktop only" : "Zoom, Teams, Skype, WhatsApp"}</span>
               </button>
               <button onClick={() => setMode("upload")} className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${mode === "upload" ? "border-primary bg-primary/5" : "border-border/50 hover:bg-muted/30"}`}>
                 <Upload className={`w-6 h-6 ${mode === "upload" ? "text-primary" : "text-muted-foreground"}`} />
                 <span className="text-sm font-medium">Upload Recording</span>
-                <span className="text-xs text-muted-foreground">Recorded call audio</span>
+                <span className="text-xs text-muted-foreground text-center">Recorded call audio</span>
               </button>
             </div>
             <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) analyzeUploadedRecording(f); }} />
@@ -591,13 +542,21 @@ export default function LiveCallAnalyzer() {
                 <p className="text-xs text-muted-foreground">Put your call on <strong>speakerphone</strong> near the device. Live Guard streams audio in real time and analyzes each completed turn for scam indicators.</p>
               </div>
             )}
-            {(mode === "system" || mode === "phone_call") && (
-              supportsDisplayMedia ? (
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
-                  <Phone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-muted-foreground">
-                    {mode === "phone_call" ? "Start your call first (Zoom, Teams, Skype, or device call), then tap Start. Share your system audio when prompted." : 'Share a tab or your screen and check "Share audio" when prompted.'}
-                  </p>
+            {mode === "system" && (
+              supportsSystemAudio ? (
+                <div className="space-y-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
+                  <div className="flex items-start gap-2">
+                    <Monitor className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground">
+                      Works with desktop VoIP apps. Start your call first, then tap Start and <strong>share system audio</strong> when prompted.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pl-6">
+                    {SUPPORTED_VOIP_APPS.map((app) => (
+                      <span key={app} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{app}</span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6 pt-1">Cannot capture cellular phone calls — use Upload Recording or Microphone + speakerphone for those.</p>
                 </div>
               ) : (
                 <div className="flex items-start gap-2 p-3 rounded-xl bg-muted/30 border border-border/50">
@@ -622,20 +581,10 @@ export default function LiveCallAnalyzer() {
                 </details>
               </div>
             )}
-            <Button onClick={mode === "upload" ? () => fileInputRef.current?.click() : handleStart} className="w-full h-12" disabled={uploading || !creditStatus?.canAnalyze || ((mode === "system" || mode === "phone_call") && !supportsDisplayMedia)}>
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === "screen" ? <Eye className="w-4 h-4" /> : mode === "upload" ? <Upload className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
-              {uploading ? "Analyzing recording..." : mode === "screen" ? "Start Watching" : mode === "upload" ? "Choose Recording" : mode === "phone_call" ? "Start Call Guard" : "Start Listening"}
+            <Button onClick={mode === "upload" ? () => fileInputRef.current?.click() : handleStart} className="w-full h-12" disabled={uploading || !creditStatus?.canAnalyze || (mode === "system" && (!supportsSystemAudio || isMobile))}>
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === "upload" ? <Upload className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
+              {uploading ? "Analyzing recording..." : mode === "upload" ? "Choose Recording" : mode === "mic" ? "Start Listening" : "Start Call Guard"}
             </Button>
-            {mode === "screen" && !isMobile && (
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <span className="text-xs text-muted-foreground">Capture every:</span>
-                {SCREEN_INTERVAL_OPTIONS.map((opt) => (
-                  <button key={opt.label} onClick={() => setScreenInterval(opt)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${screenInterval.label === opt.label ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}>
-                    {opt.label} · {opt.credits} cr
-                  </button>
-                ))}
-              </div>
-            )}
             {!creditStatus?.canAnalyze && <p className="text-xs text-warning text-center">You're out of AI credits for this month.</p>}
           </div>
         ) : (
@@ -654,15 +603,22 @@ export default function LiveCallAnalyzer() {
                 )}
               </div>
               <div>
-                <p className="text-sm font-semibold">{mode === "screen" ? "Watching Screen" : mode === "phone_call" ? "Guarding Phone Call" : mode === "mic" ? "Listening via Microphone" : "Listening via System Audio"}</p>
+                <p className="text-sm font-semibold">{mode === "mic" ? "Listening via Microphone" : "Listening via System Audio"}</p>
                 <p className="text-xs text-muted-foreground">
                   {isRecording ? "Capturing speech..." : analyzing ? "Analyzing turn..." : "Waiting for speech..."} · {Math.floor(callSeconds / 60)}:{String(callSeconds % 60).padStart(2, "0")}
+                  <span className={nearCap ? " text-warning font-medium" : ""}> / 10:00</span>
                 </p>
               </div>
             </div>
-            <Button variant="destructive" onClick={handleStop} className="gap-2">
+            <Button variant="destructive" onClick={() => handleStop(false)} className="gap-2">
               <Square className="w-4 h-4" /> Stop
             </Button>
+          </div>
+        )}
+        {nearCap && (
+          <div className="flex items-center gap-2 text-sm text-warning">
+            <Clock className="w-4 h-4 flex-shrink-0" />
+            Session ends in {Math.ceil(remainingSeconds / 60)} min — start a new session to continue.
           </div>
         )}
         {error && (
@@ -702,7 +658,7 @@ export default function LiveCallAnalyzer() {
         </div>
       )}
 
-      {!isListening && transcript.length === 0 && (
+      {!isListening && transcript.length === 0 && !sessionEnded && (
         <div className="bg-card rounded-2xl border border-border/50 p-8 text-center">
           <Activity className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">Select an audio source to get real-time scam analysis with contextual risk assessment.</p>

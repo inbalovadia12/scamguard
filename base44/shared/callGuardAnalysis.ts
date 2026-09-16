@@ -65,14 +65,17 @@ ${reported}
 
 ANALYSIS RULES:
 1. An authority claim alone — someone identifying themselves as a hospital, bank, police, delivery company, school, etc. — is NOT a scam indicator. Legitimate organizations introduce themselves at the start of calls. Only flag authority when combined with urgency, payment requests, credential requests, threats, or pressure to bypass verification.
-2. Distinguish INDICATORS (possible scam signals) from confirmed scams. Never say "scam detected" or "scam confirmed" unless there are multiple strong indicators. Use cautious language: "potential", "may indicate", "consider verifying".
-3. Progressive risk model:
-   - "low": no meaningful indicators, or a single weak ambiguous signal (e.g., a benign authority introduction with no requests)
-   - "medium": one moderate indicator or two weak ones (e.g., authority claim + urgency, but no payment request yet)
-   - "high": multiple strong indicators or a clear scam pattern (e.g., authority + emergency + payment demand + credential request)
-4. Only report NEW indicators not in the already-reported list. If the conversation hasn't changed in a way that introduces new indicators, return empty new_indicators and keep the risk level steady.
-5. Each warning must have: a title (what was detected), an explanation (why it matters in context), and an action (what the user should do). Warnings should be informative, not alarmist. Severity "caution" for weak signals, "suspicious" for moderate, "high" for strong.
-6. If the conversation is normal (e.g., a hospital calling about an appointment, a bank calling about a transaction and offering to verify via official channels), return risk_level "low", empty indicators, empty warnings.
+2. KEYWORD-BASED FLAGS ARE FORBIDDEN. Words like "crypto", "reward", "invite", "verification", "promotion", "bonus", "gift", "prize", "investment", "account", "security", "verify", "confirm" are NOT scam indicators on their own. Legitimate businesses use these words constantly in normal communications. Only flag the underlying BEHAVIOR — an actual request for money, passwords, recovery phrases, remote access, or a demand to act secretly/urgently — not the vocabulary.
+3. LEGITIMATE BUSINESS CONTEXT IS NOT A SCAM. Financial promotions, investment-platform invitations, account-security notifications, promotional credit offers, and normal verification links (e.g., a bank sending a verification code to confirm your own login) are NOT scams. If a message/call has normal business context and does NOT request money, passwords, recovery phrases, remote access, or unusual secrecy, the risk is "low" and confidence must be reduced.
+4. Require MULTIPLE MEANINGFUL indicators or clear evidence of fraud before assigning a scam verdict. A single ambiguous signal is NOT enough. Look for combinations: urgency + payment demand, authority + threat + credential request, secrecy + remote access request, etc. The more indicators that co-occur, the higher the confidence.
+5. Distinguish INDICATORS (possible scam signals) from confirmed scams. Never say "scam detected" or "scam confirmed" unless there are multiple strong indicators. Use cautious language: "potential", "may indicate", "consider verifying".
+6. Progressive risk model:
+   - "low": no meaningful indicators, OR a single weak ambiguous signal with normal business context (e.g., a bank calling about a transaction and offering to verify via official channels, a company inviting you to an investment platform with no request for money/credentials)
+   - "medium": one moderate indicator or two weak ones (e.g., authority claim + urgency, but no payment request yet) — but NOT if the only "indicator" is a keyword with no request for action
+   - "high": multiple strong indicators or a clear scam pattern (e.g., authority + emergency + payment demand + credential request, or a demand for gift cards / crypto / remote access)
+7. Only report NEW indicators not in the already-reported list. If the conversation hasn't changed in a way that introduces new indicators, return empty new_indicators and keep the risk level steady.
+8. Each warning must have: a title (what was detected), an explanation (why it matters in context), and an action (what the user should do). Warnings should be informative, not alarmist. Severity "caution" for weak signals, "suspicious" for moderate, "high" for strong.
+9. If the conversation is normal (e.g., a hospital calling about an appointment, a bank confirming a transaction, a company promoting a legitimate investment product, a service sending a verification code for your own login), return risk_level "low", empty indicators, empty warnings.
 
 Return ONLY a JSON object:
 {
