@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
 
-const PLAN_LIMITS: Record<string, number> = { starter: 30, plus: 350, premium: 500 };
 const CREDIT_COST = 3;
 
 Deno.serve(async (req) => {
@@ -9,26 +9,23 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
-    // Credit check
-    let plan = user.subscription_plan || 'starter';
-    if (plan === 'free') plan = 'starter';
-    if (plan === 'elite') plan = 'premium';
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    let creditsUsed = user.credits_used || 0;
-    if (user.credits_reset_month !== currentMonth) creditsUsed = 0;
-    const creditLimit = (PLAN_LIMITS[plan] || PLAN_LIMITS.starter) + (user.referral_bonus_credits || 0);
-    const adminCreditBalance = Math.max(0, Number(user.admin_credit_balance) || 0);
-    const creditsRemaining = Math.max(0, creditLimit - creditsUsed + adminCreditBalance);
-
-    if (creditsRemaining < CREDIT_COST) {
+    // Credit check (shared server-side helper)
+    const available = getAvailableCredits(user);
+    if (available.remaining < CREDIT_COST) {
       return Response.json({
         error: 'Insufficient credits',
-        credits_remaining: creditsRemaining,
-        credits_limit: creditLimit,
+        credits_remaining: available.remaining,
+        credits_limit: getMonthlyCreditLimit(user),
         credit_cost: CREDIT_COST,
         upgrade_url: '/pricing',
       }, { status: 402 });
     }
+    const chargeCredits = async () => {
+      const usage = applyCreditUsage(user, CREDIT_COST);
+      if (!usage) throw new Error('Credit balance changed during analysis. Please try again.');
+      await base44.auth.updateMe(usage);
+      return getAvailableCredits({ ...user, ...usage }).remaining;
+    };
 
     const body = await req.json();
     const { situation, language, image_url } = body;
@@ -83,16 +80,14 @@ Respond entirely in ${languageName}.`;
 
     const result = await base44.integrations.Core.InvokeLLM(llmOptions);
 
-    // Deduct credits
-    const fromAdmin = Math.min(adminCreditBalance, CREDIT_COST);
-    const newCreditsUsed = creditsUsed + (CREDIT_COST - fromAdmin);
-    const newAdminCreditBalance = adminCreditBalance - fromAdmin;
-    await base44.auth.updateMe({ credits_used: newCreditsUsed, admin_credit_balance: newAdminCreditBalance, credits_reset_month: currentMonth });
+    // Deduct credits (shared server-side helper)
+    const creditsRemaining = await chargeCredits();
 
     return Response.json({
       questions: result.questions || [],
       credits_used: CREDIT_COST,
-      credits_remaining: Math.max(0, creditLimit - newCreditsUsed + newAdminCreditBalance),
+      credits_remaining: creditsRemaining,
+      credits_limit: getMonthlyCreditLimit(user),
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

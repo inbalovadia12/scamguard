@@ -319,7 +319,7 @@ export default function Extension() {
         </h2>
         <ol className="space-y-2 text-sm text-muted-foreground">
           <li className="flex gap-2"><span className="font-medium text-foreground">1.</span> Click the extension icon on any page</li>
-          <li className="flex gap-2"><span className="font-medium text-foreground">2.</span> If not logged in, click "Open Vardin Login" — it opens vardin.base44.app/login</li>
+          <li className="flex gap-2"><span className="font-medium text-foreground">2.</span> If not logged in, click "Open Vardin Login" — it opens app.vardin.com/login</li>
           <li className="flex gap-2"><span className="font-medium text-foreground">3.</span> After logging in, the extension auto-detects your session (no copy-paste needed)</li>
           <li className="flex gap-2"><span className="font-medium text-foreground">4.</span> Premium status is verified with the backend on every scan</li>
           <li className="flex gap-2"><span className="font-medium text-foreground">5.</span> If you log out of Vardin, the extension automatically detects it and prompts re-login</li>
