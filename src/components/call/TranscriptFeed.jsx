@@ -16,7 +16,7 @@ const SPEAKER_OPTIONS = [
   { value: "you", label: "You" },
 ];
 
-export default function TranscriptFeed({ segments, onEditSegment, isRecording, analyzing, mode }) {
+export default function TranscriptFeed({ segments, onEditSegment, isRecording, analyzing, mode, partialText }) {
   const scrollRef = useRef(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editText, setEditText] = useState("");
@@ -37,7 +37,7 @@ export default function TranscriptFeed({ segments, onEditSegment, isRecording, a
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [segments, isRecording, analyzing]);
+  }, [segments, isRecording, analyzing, partialText]);
 
   const showListening = (isRecording || analyzing) && mode !== "screen";
 
@@ -99,17 +99,27 @@ export default function TranscriptFeed({ segments, onEditSegment, isRecording, a
         )}
         {showListening && (
           <div className="flex flex-col items-start">
-            <div className="text-sm p-2.5 rounded-2xl bg-muted/20 rounded-bl-sm border border-border/30">
-              <div className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-full bg-muted/40 text-muted-foreground text-xs font-medium mb-1.5">
-                <Activity className="w-3 h-3" />
-                {isRecording ? "Listening..." : "Analyzing..."}
+            {partialText ? (
+              <div className="text-sm p-2.5 rounded-2xl max-w-[85%] bg-muted/30 rounded-bl-sm">
+                <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-muted/40 text-muted-foreground text-xs font-medium mb-1.5">
+                  <Activity className="w-3 h-3" />
+                  Speaking…
+                </div>
+                <p className="text-muted-foreground italic">{partialText}</p>
               </div>
-              <div className="flex items-center gap-1.5 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+            ) : (
+              <div className="text-sm p-2.5 rounded-2xl bg-muted/20 rounded-bl-sm border border-border/30">
+                <div className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-full bg-muted/40 text-muted-foreground text-xs font-medium mb-1.5">
+                  <Activity className="w-3 h-3" />
+                  {analyzing ? "Analyzing..." : "Listening..."}
+                </div>
+                <div className="flex items-center gap-1.5 py-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>

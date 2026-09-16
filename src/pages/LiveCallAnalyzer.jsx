@@ -8,17 +8,15 @@ import TranscriptFeed from "@/components/call/TranscriptFeed";
 import WarningPanel from "@/components/call/WarningPanel";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AssemblyAIStream } from "@/lib/assemblyaiStream";
 
-// === Utterance-based audio capture ===
-// Previous: 250ms silence + 1500ms max → every brief pause split a sentence
-// into multiple transcript messages.
-// Now: 700ms silence boundary + 12s max → complete utterances are sent as
-// single transcript entries. Natural mid-sentence pauses (breaths) don't
-// trigger a split; only a real conversational turn-end does.
-const SILENCE_THRESHOLD = 0.015;
-const SILENCE_DURATION_MS = 700;
-const MAX_UTTERANCE_MS = 12000;
-const MIN_SPEECH_FRAMES = 3; // ~300ms of voice before we consider it speech
+// === Live streaming architecture ===
+// Mic / system / phone-call audio is streamed in real time to AssemblyAI's
+// Streaming v3 WebSocket. A short-lived token (minted server-side) lets the
+// browser connect without exposing the API key. An AudioWorklet downsamples
+// the mic to 16 kHz PCM16 and forwards frames to the socket. AssemblyAI emits
+// partial transcripts (shown live) and finalized turns (sent to analyzeCallSegment
+// for scam analysis). Uploaded recordings still use the batch analyzeCallChunk.
 
 const SCREEN_INTERVAL_OPTIONS = [
   { label: "1 sec", ms: 1000, credits: 8 },
@@ -37,16 +35,6 @@ function getCallGuardError(error, fallback) {
   return error?.response?.data?.error || error?.data?.error || error?.message || fallback;
 }
 
-function getSupportedAudioMime() {
-  const types = ["audio/webm", "audio/mp4", "audio/ogg", "audio/aac"];
-  for (const type of types) {
-    try {
-      if (MediaRecorder.isTypeSupported(type)) return type;
-    } catch { /* not available */ }
-  }
-  return "";
-}
-
 export default function LiveCallAnalyzer() {
   const isMobile = useIsMobile();
   const [mode, setMode] = useState(() => {
@@ -61,8 +49,9 @@ export default function LiveCallAnalyzer() {
   const supportsDisplayMedia = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getDisplayMedia;
 
   const [isListening, setIsListening] = useState(false);
-  const [isRecording, setIsRecording] = useState(false); // currently capturing an utterance
-  const [analyzing, setAnalyzing] = useState(false); // waiting for transcription
+  const [isRecording, setIsRecording] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [partialText, setPartialText] = useState("");
   const [transcript, setTranscript] = useState([]);
   const [warnings, setWarnings] = useState([]);
   const [overallRisk, setOverallRisk] = useState("low");
@@ -76,22 +65,21 @@ export default function LiveCallAnalyzer() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  const recorderRef = useRef(null);
-  const streamRef = useRef(null);
+  const aiStreamRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const displayStreamRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const workletNodeRef = useRef(null);
+  const sourceNodeRef = useRef(null);
   const screenIntervalRef = useRef(null);
   const videoRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const vadIntervalRef = useRef(null);
   const wakeLockRef = useRef(null);
-  const utteranceStartRef = useRef(0);
   const userStoppedRef = useRef(false);
   const isProcessingRef = useRef(false);
   const transcriptRef = useRef([]);
   const overallRiskRef = useRef("low");
   const reportedIndicatorsRef = useRef([]);
   const lastSpeakerRef = useRef(null);
-  const hasSpeechInUtteranceRef = useRef(false);
 
   useEffect(() => {
     if (!isListening) return;
@@ -127,15 +115,35 @@ export default function LiveCallAnalyzer() {
   }, [isMobile]);
 
   useEffect(() => {
-    return () => {
-      if (recorderRef.current && recorderRef.current.state !== "inactive") recorderRef.current.stop();
-      if (vadIntervalRef.current) clearInterval(vadIntervalRef.current);
-      if (screenIntervalRef.current) clearInterval(screenIntervalRef.current);
-      if (wakeLockRef.current) wakeLockRef.current.release().catch(() => {});
-      if (audioContextRef.current) audioContextRef.current.close().catch(() => {});
-      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
-    };
+    return () => { stopAllStreams(); };
   }, []);
+
+  const requestWakeLock = async () => {
+    try {
+      if ("wakeLock" in navigator && !wakeLockRef.current) {
+        wakeLockRef.current = await navigator.wakeLock.request("screen");
+        wakeLockRef.current.addEventListener("release", () => { wakeLockRef.current = null; });
+      }
+    } catch { /* not supported */ }
+  };
+
+  const releaseWakeLock = () => {
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => {});
+      wakeLockRef.current = null;
+    }
+  };
+
+  const stopAllStreams = () => {
+    if (aiStreamRef.current) { aiStreamRef.current.terminate(); aiStreamRef.current = null; }
+    if (workletNodeRef.current) { try { workletNodeRef.current.disconnect(); } catch {} workletNodeRef.current = null; }
+    if (sourceNodeRef.current) { try { sourceNodeRef.current.disconnect(); } catch {} sourceNodeRef.current = null; }
+    if (audioContextRef.current) { audioContextRef.current.close().catch(() => {}); audioContextRef.current = null; }
+    if (mediaStreamRef.current) { mediaStreamRef.current.getTracks().forEach((t) => t.stop()); mediaStreamRef.current = null; }
+    if (displayStreamRef.current) { displayStreamRef.current.getTracks().forEach((t) => t.stop()); displayStreamRef.current = null; }
+    if (screenIntervalRef.current) { clearInterval(screenIntervalRef.current); screenIntervalRef.current = null; }
+    if (videoRef.current) { videoRef.current.pause(); videoRef.current.srcObject = null; videoRef.current = null; }
+  };
 
   const handleEditSegment = async (index, updates) => {
     setTranscript((prev) => {
@@ -157,132 +165,203 @@ export default function LiveCallAnalyzer() {
       });
       if (response.data?.error) throw new Error(response.data.error);
       const newFeedback = response.data?.feedback || "";
-      setTranscript((prev) => {
-        const next = [...prev];
-        next[index] = { ...next[index], feedback: newFeedback };
-        return next;
-      });
+      setTranscript((prev) => { const next = [...prev]; next[index] = { ...next[index], feedback: newFeedback }; return next; });
       transcriptRef.current[index].feedback = newFeedback;
     } catch { /* keep old feedback */ }
   };
 
-  const requestWakeLock = async () => {
-    try {
-      if ("wakeLock" in navigator && !wakeLockRef.current) {
-        wakeLockRef.current = await navigator.wakeLock.request("screen");
-        wakeLockRef.current.addEventListener("release", () => { wakeLockRef.current = null; });
-      }
-    } catch { /* not supported */ }
+  const resetState = () => {
+    setTranscript([]);
+    setWarnings([]);
+    setOverallRisk("low");
+    setTactics([]);
+    setCoaching([]);
+    setSpeakerDetectionNote("");
+    setCallSeconds(0);
+    setPartialText("");
+    transcriptRef.current = [];
+    overallRiskRef.current = "low";
+    reportedIndicatorsRef.current = [];
+    lastSpeakerRef.current = null;
+    userStoppedRef.current = false;
   };
 
-  const releaseWakeLock = () => {
-    if (wakeLockRef.current) {
-      wakeLockRef.current.release().catch(() => {});
-      wakeLockRef.current = null;
-    }
-  };
+  // Handle a finalized turn from AssemblyAI streaming: append it to the
+  // transcript and run the contextual scam analysis (1 credit per turn).
+  const handleFinalTurn = async (text, isCallerOnly) => {
+    const trimmed = (text || "").trim();
+    if (!trimmed) return;
+    const assignedSpeaker = isCallerOnly
+      ? "caller"
+      : (!lastSpeakerRef.current ? "caller" : (lastSpeakerRef.current === "caller" ? "you" : "caller"));
+    const newSeg = { text: trimmed, timestamp: new Date(), risk_level: "low", speaker: assignedSpeaker, feedback: "" };
+    setTranscript((prev) => [...prev, newSeg]);
+    transcriptRef.current = [...transcriptRef.current, newSeg];
+    lastSpeakerRef.current = assignedSpeaker;
 
-  // Send a complete utterance blob for transcription + contextual analysis.
-  const processUtterance = async (blob, blobMime) => {
-    if (isProcessingRef.current) return; // don't overlap
-    isProcessingRef.current = true;
     setAnalyzing(true);
-    setError(null);
-
     try {
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result.split(",")[1]);
-        reader.readAsDataURL(blob);
-      });
-
       const lang = localStorage.getItem("vardin_language") || "en";
-      const conversationContext = transcriptRef.current.slice(-10).map((t) => ({
-        speaker: t.speaker,
-        text: t.text,
-      }));
-
-      const response = await base44.functions.invoke("analyzeCallChunk", {
-        audio_input: base64,
-        audio_mime: blobMime,
-        language: lang,
-        audio_source: mode,
-        previous_speaker: lastSpeakerRef.current,
-        conversation_context: conversationContext,
+      const context = transcriptRef.current.slice(0, -1).slice(-10).map((t) => ({ speaker: t.speaker, text: t.text }));
+      const res = await base44.functions.invoke("analyzeCallSegment", {
+        text: trimmed,
+        speaker: assignedSpeaker,
+        conversation_context: context,
         reported_indicators: reportedIndicatorsRef.current,
+        language: lang,
       });
+      if (res.data?.error) throw new Error(res.data.error);
+      const r = res.data;
+      const segFeedback = assignedSpeaker === "you" ? (r.feedback || "") : "";
+      setTranscript((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = { ...next[next.length - 1], risk_level: r.risk_level, feedback: segFeedback };
+        return next;
+      });
+      const li = transcriptRef.current.length - 1;
+      transcriptRef.current[li].risk_level = r.risk_level;
+      transcriptRef.current[li].feedback = segFeedback;
 
-      if (response.data?.error) throw new Error(response.data.error);
-      const result = response.data;
-
-      // Add transcribed segments to the transcript
-      if (result.segments?.length) {
-        const newSegs = result.segments.map((seg) => ({
-          text: seg.text,
-          timestamp: new Date(),
-          risk_level: result.risk_level,
-          speaker: seg.speaker || "unknown",
-          feedback: seg.speaker === "you" ? (result.feedback || "") : "",
-        }));
-        setTranscript((prev) => [...prev, ...newSegs]);
-        transcriptRef.current = [...transcriptRef.current, ...newSegs];
-        lastSpeakerRef.current = result.segments[result.segments.length - 1].speaker;
-      } else if (result.transcript) {
-        const newSeg = {
-          text: result.transcript,
-          timestamp: new Date(),
-          risk_level: result.risk_level,
-          speaker: result.speaker || "caller",
-          feedback: result.feedback || "",
-        };
-        setTranscript((prev) => [...prev, newSeg]);
-        transcriptRef.current = [...transcriptRef.current, newSeg];
-      }
-
-      // Track reported indicators for deduplication
-      if (result.new_indicators?.length) {
-        const newTypes = result.new_indicators.map((i) => i.type);
+      if (r.new_indicators?.length) {
+        const newTypes = r.new_indicators.map((i) => i.type);
         reportedIndicatorsRef.current = [...new Set([...reportedIndicatorsRef.current, ...newTypes])];
         setTactics((prev) => [...new Set([...prev, ...newTypes])]);
       }
-
-      // Add warnings with the new structured format
-      if (result.warnings?.length) {
-        setWarnings((prev) => [
-          ...result.warnings.map((w) => ({
-            title: w.title,
-            explanation: w.explanation,
-            action: w.action,
-            severity: w.severity || "caution",
-            timestamp: new Date(),
-            level: result.risk_level,
-          })),
-          ...prev,
-        ]);
+      if (r.warnings?.length) {
+        setWarnings((prev) => [...r.warnings.map((w) => ({
+          title: w.title, explanation: w.explanation, action: w.action,
+          severity: w.severity || "caution", timestamp: new Date(), level: r.risk_level,
+        })), ...prev]);
       }
-
-      // Coaching feedback
-      if (result.feedback) {
-        setCoaching((prev) => [{ text: result.feedback, timestamp: new Date(), risk_level: result.risk_level }, ...prev]);
+      if (r.feedback) setCoaching((prev) => [{ text: r.feedback, timestamp: new Date(), risk_level: r.risk_level }, ...prev]);
+      if (RISK_ORDER[r.risk_level] > RISK_ORDER[overallRiskRef.current]) {
+        overallRiskRef.current = r.risk_level;
+        setOverallRisk(r.risk_level);
       }
-
-      if (result.speaker_detection_note) setSpeakerDetectionNote(result.speaker_detection_note);
-
-      // Update overall risk (monotonic — only goes up during a call)
-      if (RISK_ORDER[result.risk_level] > RISK_ORDER[overallRiskRef.current]) {
-        overallRiskRef.current = result.risk_level;
-        setOverallRisk(result.risk_level);
-      }
-
-      if (typeof result.credits_remaining === "number") {
-        setCreditStatus((prev) => (prev ? { ...prev, remaining: result.credits_remaining } : prev));
+      if (typeof r.credits_remaining === "number") {
+        setCreditStatus((prev) => (prev ? { ...prev, remaining: r.credits_remaining } : prev));
       }
     } catch (e) {
-      setError(getCallGuardError(e, "Failed to analyze audio."));
+      setError(getCallGuardError(e, "Analysis failed for that segment."));
     } finally {
-      isProcessingRef.current = false;
       setAnalyzing(false);
     }
+  };
+
+  const handleStart = async () => {
+    setError(null);
+    resetState();
+
+    try {
+      if (mode === "screen") {
+        await startScreenCapture();
+        return;
+      }
+
+      // mic, system, phone_call → live streaming
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Your browser doesn't support audio capture.");
+
+      const isCallerOnly = mode === "system" || mode === "phone_call";
+      let mediaStream;
+      if (mode === "mic") {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } else {
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+        const audioTracks = displayStream.getAudioTracks();
+        if (audioTracks.length === 0) {
+          displayStream.getTracks().forEach((t) => t.stop());
+          throw new Error('No audio captured. Check "Share audio" when prompted.');
+        }
+        mediaStream = new MediaStream(audioTracks);
+        displayStreamRef.current = displayStream;
+        displayStream.getVideoTracks()[0].onended = () => handleStop();
+      }
+      mediaStreamRef.current = mediaStream;
+
+      // Mint a short-lived streaming token (server-side, never exposes API key)
+      const tokenRes = await base44.functions.invoke("createCallGuardStreamToken", {});
+      if (tokenRes.data?.error) throw new Error(tokenRes.data.error);
+      const token = tokenRes.data?.token;
+      if (!token) throw new Error("Could not start live transcription session.");
+
+      // Audio pipeline: AudioWorklet downsamples to PCM16/16kHz
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioContextClass();
+      if (audioContext.state === "suspended") await audioContext.resume();
+      await audioContext.audioWorklet.addModule(new URL("../lib/pcmWorklet.js", import.meta.url));
+      const source = audioContext.createMediaStreamSource(mediaStream);
+      const workletNode = new AudioWorkletNode(audioContext, "pcm-processor");
+      source.connect(workletNode);
+      audioContextRef.current = audioContext;
+      sourceNodeRef.current = source;
+      workletNodeRef.current = workletNode;
+
+      // Streaming WebSocket — partials update the live line, finals trigger analysis
+      const streamInstance = new AssemblyAIStream({
+        token,
+        onOpen: () => {
+          setIsListening(true);
+          requestWakeLock();
+          setSpeakerDetectionNote(isCallerOnly
+            ? "Speaker: caller (captured from system audio)."
+            : "Speaker labels are estimated per turn. Tap any message to correct.");
+        },
+        onPartial: (text) => {
+          setPartialText(text);
+          setIsRecording(true);
+        },
+        onTurn: (text) => {
+          setIsRecording(false);
+          setPartialText("");
+          handleFinalTurn(text, isCallerOnly);
+        },
+        onError: () => {
+          if (!userStoppedRef.current) setError("Live transcription connection dropped. Tap Start to resume.");
+        },
+        onClose: () => {
+          if (!userStoppedRef.current) {
+            setIsListening(false);
+            setIsRecording(false);
+          }
+        },
+      });
+      aiStreamRef.current = streamInstance;
+      workletNode.port.onmessage = (e) => aiStreamRef.current?.sendAudio(e.data);
+      streamInstance.connect();
+    } catch (e) {
+      const name = e?.name || "";
+      const msg = e?.message || "Failed to start listening.";
+      if (mode === "mic" && (name === "NotReadableError" || name === "SecurityError" || /could not start|in use|not allowed|denied|permission/i.test(msg))) {
+        setError("Your phone keeps the mic for the call app, so the browser can't listen in during an active call. Put the call on speakerphone and use Microphone mode on a second device, or end the call and use Upload Recording.");
+      } else {
+        setError(msg);
+      }
+      stopAllStreams();
+    }
+  };
+
+  const handleStop = () => {
+    userStoppedRef.current = true;
+
+    if (transcript.length > 0 || warnings.length > 0) {
+      const sessionType = mode === "mic" ? "microphone" : mode === "screen" ? "screen_view" : "system_audio";
+      base44.entities.LiveGuardSession.create({
+        session_type: sessionType,
+        overall_risk: overallRisk,
+        tactics_detected: tactics,
+        warnings: warnings.map((w) => w.title || w.text || w),
+        transcript: JSON.stringify(transcript.map((t) => ({ text: t.text, risk_level: t.risk_level, speaker: t.speaker }))),
+        duration_seconds: callSeconds,
+        segment_count: transcript.length,
+      }).catch(() => {});
+    }
+
+    stopAllStreams();
+    releaseWakeLock();
+    setPartialText("");
+    setIsListening(false);
+    setIsRecording(false);
+    setAnalyzing(false);
   };
 
   const analyzeUploadedRecording = async (file) => {
@@ -334,11 +413,8 @@ export default function LiveCallAnalyzer() {
   const populateUploadResult = (result) => {
     if (result.segments?.length) {
       const newSegs = result.segments.map((seg) => ({
-        text: seg.text,
-        timestamp: new Date(),
-        risk_level: result.risk_level,
-        speaker: seg.speaker || "unknown",
-        feedback: "",
+        text: seg.text, timestamp: new Date(), risk_level: result.risk_level,
+        speaker: seg.speaker || "unknown", feedback: "",
       }));
       setTranscript(newSegs);
       transcriptRef.current = newSegs;
@@ -362,184 +438,9 @@ export default function LiveCallAnalyzer() {
     }
   };
 
-  const resetState = () => {
-    setTranscript([]);
-    setWarnings([]);
-    setOverallRisk("low");
-    setTactics([]);
-    setCoaching([]);
-    setSpeakerDetectionNote("");
-    setCallSeconds(0);
-    transcriptRef.current = [];
-    overallRiskRef.current = "low";
-    reportedIndicatorsRef.current = [];
-    lastSpeakerRef.current = null;
-    userStoppedRef.current = false;
-    hasSpeechInUtteranceRef.current = false;
-  };
-
-  const handleStart = async () => {
-    setError(null);
-    resetState();
-
-    try {
-      if (mode === "screen") {
-        await startScreenCapture();
-        return;
-      }
-
-      if (!navigator.mediaDevices?.getUserMedia) throw new Error("Your browser doesn't support audio capture.");
-      if (typeof MediaRecorder === "undefined") throw new Error("Your browser doesn't support audio recording.");
-
-      let stream;
-      if (mode === "mic") {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } else {
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
-        const audioTracks = displayStream.getAudioTracks();
-        if (audioTracks.length === 0) {
-          displayStream.getTracks().forEach((t) => t.stop());
-          throw new Error('No audio captured. Check "Share audio" when prompted.');
-        }
-        stream = new MediaStream(audioTracks);
-      }
-
-      streamRef.current = stream;
-      const audioMime = getSupportedAudioMime();
-      const recorder = new MediaRecorder(stream, audioMime ? { mimeType: audioMime, audioBitsPerSecond: 64000 } : { audioBitsPerSecond: 64000 });
-      recorderRef.current = recorder;
-
-      // Each recorder stop = one complete utterance. The blob is sent for
-      // batch transcription + contextual analysis. The recorder restarts
-      // immediately to capture the next utterance.
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0 && hasSpeechInUtteranceRef.current) {
-          const blobMime = e.data.type || audioMime || "audio/webm";
-          processUtterance(e.data, blobMime);
-        }
-        hasSpeechInUtteranceRef.current = false;
-      };
-
-      recorder.onstop = () => {
-        if (!userStoppedRef.current) {
-          try {
-            recorderRef.current.start();
-            utteranceStartRef.current = Date.now();
-            setIsRecording(false);
-          } catch {
-            stream.getTracks().forEach((t) => t.stop());
-            setIsListening(false);
-            setError("Recording could not continue. Tap Start to resume.");
-          }
-        } else {
-          stream.getTracks().forEach((t) => t.stop());
-          setIsListening(false);
-          setIsRecording(false);
-        }
-      };
-
-      recorder.start();
-      utteranceStartRef.current = Date.now();
-
-      // VAD: detect utterance boundaries using RMS energy analysis.
-      // A 700ms silence while previously speaking = utterance ended.
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      const audioContext = new AudioContextClass();
-      if (audioContext.state === "suspended") await audioContext.resume();
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 512;
-      source.connect(analyser);
-      audioContextRef.current = audioContext;
-      analyserRef.current = analyser;
-
-      let silenceStart = 0;
-      let isSpeaking = false;
-
-      const checkAudioLevel = () => {
-        if (userStoppedRef.current || !analyserRef.current) return;
-        const data = new Uint8Array(analyser.fftSize);
-        analyser.getByteTimeDomainData(data);
-        let sum = 0;
-        for (let i = 0; i < data.length; i++) {
-          const val = (data[i] - 128) / 128;
-          sum += val * val;
-        }
-        const rms = Math.sqrt(sum / data.length);
-        const now = Date.now();
-
-        if (rms > SILENCE_THRESHOLD) {
-          if (!isSpeaking) {
-            isSpeaking = true;
-            setIsRecording(true);
-          }
-          hasSpeechInUtteranceRef.current = true;
-          silenceStart = 0;
-        } else if (isSpeaking) {
-          if (!silenceStart) silenceStart = now;
-          if (now - silenceStart > SILENCE_DURATION_MS) {
-            // Utterance boundary: 700ms of silence after speech
-            isSpeaking = false;
-            setIsRecording(false);
-            if (recorderRef.current?.state === "recording") {
-              recorderRef.current.stop();
-            }
-          }
-        }
-
-        // Force-end very long utterances (12s) to avoid missing analysis
-        if (now - utteranceStartRef.current > MAX_UTTERANCE_MS && recorderRef.current?.state === "recording") {
-          recorderRef.current.stop();
-        }
-      };
-
-      // setInterval (not rAF) keeps VAD running when the tab loses focus
-      vadIntervalRef.current = setInterval(checkAudioLevel, 100);
-      setIsListening(true);
-      requestWakeLock();
-    } catch (e) {
-      const name = e?.name || "";
-      const msg = e?.message || "Failed to start listening.";
-      if (name === "NotReadableError" || name === "SecurityError" || /could not start|in use|not allowed|denied|permission/i.test(msg)) {
-        setError("Your phone keeps the mic for the call app, so the browser can't listen in during an active call. Put the call on speakerphone and use Microphone mode on a second device, or end the call and use Upload Recording.");
-      } else {
-        setError(msg);
-      }
-    }
-  };
-
-  const handleStop = () => {
-    userStoppedRef.current = true;
-
-    if (transcript.length > 0 || warnings.length > 0) {
-      const sessionType = mode === "mic" ? "microphone" : mode === "screen" ? "screen_view" : "system_audio";
-      base44.entities.LiveGuardSession.create({
-        session_type: sessionType,
-        overall_risk: overallRisk,
-        tactics_detected: tactics,
-        warnings: warnings.map((w) => w.title || w.text || w),
-        transcript: JSON.stringify(transcript.map((t) => ({ text: t.text, risk_level: t.risk_level, speaker: t.speaker }))),
-        duration_seconds: callSeconds,
-        segment_count: transcript.length,
-      }).catch(() => {});
-    }
-
-    if (vadIntervalRef.current) { clearInterval(vadIntervalRef.current); vadIntervalRef.current = null; }
-    releaseWakeLock();
-    if (audioContextRef.current) { audioContextRef.current.close().catch(() => {}); audioContextRef.current = null; analyserRef.current = null; }
-    if (recorderRef.current && recorderRef.current.state !== "inactive") recorderRef.current.stop();
-    else setIsListening(false);
-    if (screenIntervalRef.current) { clearInterval(screenIntervalRef.current); screenIntervalRef.current = null; }
-    if (videoRef.current) { videoRef.current.pause(); videoRef.current.srcObject = null; videoRef.current = null; }
-    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
-    setIsListening(false);
-    setIsRecording(false);
-    setAnalyzing(false);
-  };
-
   const startScreenCapture = async () => {
     const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-    streamRef.current = displayStream;
+    displayStreamRef.current = displayStream;
 
     const video = document.createElement("video");
     video.srcObject = displayStream;
@@ -609,6 +510,7 @@ export default function LiveCallAnalyzer() {
     captureFrame();
     screenIntervalRef.current = setInterval(captureFrame, screenInterval.ms);
     setIsListening(true);
+    requestWakeLock();
   };
 
   if (checkingPlan) {
@@ -681,7 +583,7 @@ export default function LiveCallAnalyzer() {
             {mode === "mic" && (
               <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
                 <Mic className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-muted-foreground">Put your call on <strong>speakerphone</strong> near the device. Live Guard detects utterance boundaries and analyzes complete conversational turns.</p>
+                <p className="text-xs text-muted-foreground">Put your call on <strong>speakerphone</strong> near the device. Live Guard streams audio in real time and analyzes each completed turn for scam indicators.</p>
               </div>
             )}
             {(mode === "system" || mode === "phone_call") && (
@@ -749,7 +651,7 @@ export default function LiveCallAnalyzer() {
               <div>
                 <p className="text-sm font-semibold">{mode === "screen" ? "Watching Screen" : mode === "phone_call" ? "Guarding Phone Call" : mode === "mic" ? "Listening via Microphone" : "Listening via System Audio"}</p>
                 <p className="text-xs text-muted-foreground">
-                  {isRecording ? "Capturing speech..." : analyzing ? "Analyzing utterance..." : "Waiting for speech..."} · {Math.floor(callSeconds / 60)}:{String(callSeconds % 60).padStart(2, "0")}
+                  {isRecording ? "Capturing speech..." : analyzing ? "Analyzing turn..." : "Waiting for speech..."} · {Math.floor(callSeconds / 60)}:{String(callSeconds % 60).padStart(2, "0")}
                 </p>
               </div>
             </div>
@@ -772,7 +674,7 @@ export default function LiveCallAnalyzer() {
           <div className="flex-1 min-w-0">
             <p className={`text-sm font-bold ${cfg.color}`}>{cfg.label}</p>
             <p className="text-xs text-muted-foreground">
-              {transcript.length} utterances · {warnings.length} warnings · {creditStatus?.remaining || 0} credits left
+              {transcript.length} turns · {warnings.length} warnings · {creditStatus?.remaining || 0} credits left
             </p>
             {speakerDetectionNote && <p className="text-xs text-muted-foreground mt-1">{speakerDetectionNote}</p>}
           </div>
@@ -790,7 +692,7 @@ export default function LiveCallAnalyzer() {
 
       {(transcript.length > 0 || warnings.length > 0 || isListening) && (
         <div className="grid sm:grid-cols-2 gap-4">
-          <TranscriptFeed segments={transcript} onEditSegment={handleEditSegment} isRecording={isRecording} analyzing={analyzing} mode={mode} />
+          <TranscriptFeed segments={transcript} onEditSegment={handleEditSegment} isRecording={isRecording} analyzing={analyzing} mode={mode} partialText={partialText} />
           <WarningPanel warnings={warnings} tactics={tactics} coaching={coaching} />
         </div>
       )}

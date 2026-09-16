@@ -4,6 +4,7 @@ import {
   buildAnalysisPrompt,
   computeWeightedRisk,
   mergeRiskLevels,
+  analyzeScamContext,
   type ConversationTurn,
   type ScamAnalysisResult,
 } from '../../shared/callGuardAnalysis.ts';
@@ -213,80 +214,7 @@ function assignSpeakers(
     });
 }
 
-// ===== CONTEXTUAL SCAM ANALYSIS (LLM) =====
-async function analyzeScamContext(
-  base44: any,
-  conversation: ConversationTurn[],
-  reportedIndicators: string[],
-  language: string
-): Promise<ScamAnalysisResult> {
-  const prompt = buildAnalysisPrompt(conversation, reportedIndicators, language);
-
-  try {
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          risk_level: { type: "string", enum: ["low", "medium", "high"] },
-          new_indicators: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                type: { type: "string" },
-                description: { type: "string" },
-                confidence: { type: "number" },
-              },
-            },
-          },
-          warnings: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                title: { type: "string" },
-                explanation: { type: "string" },
-                action: { type: "string" },
-                severity: { type: "string", enum: ["caution", "suspicious", "high"] },
-              },
-            },
-          },
-          feedback: { type: "string" },
-          summary: { type: "string" },
-        },
-        required: ["risk_level"],
-      },
-    });
-
-    // InvokeLLM with response_json_schema returns a parsed object
-    const data = typeof result === 'string' ? JSON.parse(result) : result;
-
-    const indicators = Array.isArray(data.new_indicators) ? data.new_indicators : [];
-    const weighted = computeWeightedRisk(indicators, reportedIndicators);
-    const llmLevel = data.risk_level || "low";
-    const merged = mergeRiskLevels(llmLevel, weighted);
-
-    return {
-      risk_level: merged as "low" | "medium" | "high",
-      new_indicators: indicators,
-      warnings: Array.isArray(data.warnings) ? data.warnings : [],
-      feedback: data.feedback || "",
-      summary: data.summary || "",
-    };
-  } catch (e) {
-    console.error("Scam analysis LLM error:", e?.message);
-    // Graceful degradation: return low risk if the LLM is unavailable.
-    // The transcript still reaches the user; only the analysis is deferred.
-    return {
-      risk_level: "low",
-      new_indicators: [],
-      warnings: [],
-      feedback: "",
-      summary: "Analysis temporarily unavailable.",
-    };
-  }
-}
+// Contextual scam analysis is shared — see analyzeScamContext in callGuardAnalysis.ts.
 
 // ===== MAIN HANDLER =====
 Deno.serve(async (req) => {

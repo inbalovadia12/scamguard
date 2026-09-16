@@ -142,3 +142,74 @@ export function mergeRiskLevels(
   const max = Math.max(a, b);
   return max === 2 ? "high" : max === 1 ? "medium" : "low";
 }
+
+// Run the contextual LLM scam analysis on a conversation. Shared by
+// analyzeCallChunk (uploaded recordings) and analyzeCallSegment (live
+// streaming), so the analysis logic is never copied between functions.
+export async function analyzeScamContext(
+  base44: any,
+  conversation: ConversationTurn[],
+  reportedIndicators: string[],
+  language: string
+): Promise<ScamAnalysisResult> {
+  const prompt = buildAnalysisPrompt(conversation, reportedIndicators, language);
+  try {
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt,
+      response_json_schema: {
+        type: "object",
+        properties: {
+          risk_level: { type: "string", enum: ["low", "medium", "high"] },
+          new_indicators: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                type: { type: "string" },
+                description: { type: "string" },
+                confidence: { type: "number" },
+              },
+            },
+          },
+          warnings: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                explanation: { type: "string" },
+                action: { type: "string" },
+                severity: { type: "string", enum: ["caution", "suspicious", "high"] },
+              },
+            },
+          },
+          feedback: { type: "string" },
+          summary: { type: "string" },
+        },
+        required: ["risk_level"],
+      },
+    });
+
+    const data = typeof result === "string" ? JSON.parse(result) : result;
+    const indicators = Array.isArray(data.new_indicators) ? data.new_indicators : [];
+    const weighted = computeWeightedRisk(indicators, reportedIndicators);
+    const merged = mergeRiskLevels(data.risk_level || "low", weighted);
+
+    return {
+      risk_level: merged as "low" | "medium" | "high",
+      new_indicators: indicators,
+      warnings: Array.isArray(data.warnings) ? data.warnings : [],
+      feedback: data.feedback || "",
+      summary: data.summary || "",
+    };
+  } catch (e) {
+    console.error("Scam analysis LLM error:", e?.message);
+    return {
+      risk_level: "low",
+      new_indicators: [],
+      warnings: [],
+      feedback: "",
+      summary: "Analysis temporarily unavailable.",
+    };
+  }
+}
