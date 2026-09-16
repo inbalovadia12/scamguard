@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
         credits_remaining: creditsRemaining,
         credits_limit: creditLimit,
         credit_cost: CREDIT_COST,
-        upgrade_url: 'https://vardin.base44.app/pricing',
+        upgrade_url: 'https://app.vardin.com/pricing',
       }, { status: 402 });
     }
 
