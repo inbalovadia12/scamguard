@@ -33,7 +33,6 @@ export class AssemblyAIStream {
       sample_rate: "16000",
       encoding: "pcm_s16le",
       format_turns: "true",
-      mode: this.mode,
     });
     const url = `wss://streaming.assemblyai.com/v3/ws?${params.toString()}`;
     this.ws = new WebSocket(url);

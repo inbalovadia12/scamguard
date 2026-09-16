@@ -315,13 +315,16 @@ export default function LiveCallAnalyzer() {
           setPartialText("");
           handleFinalTurn(text, isCallerOnly);
         },
-        onError: () => {
-          if (!userStoppedRef.current) setError("Live transcription connection dropped. Tap Start to resume.");
+        onError: (e) => {
+          if (!userStoppedRef.current) setError("Live transcription connection error. Tap Start to resume.");
         },
-        onClose: () => {
+        onClose: (code, reason) => {
           if (!userStoppedRef.current) {
             setIsListening(false);
             setIsRecording(false);
+            if (code && code !== 1000 && code !== 1001) {
+              setError(`Transcription disconnected (${code})${reason ? `: ${reason}` : ""}. Tap Start to resume.`);
+            }
           }
         },
       });
