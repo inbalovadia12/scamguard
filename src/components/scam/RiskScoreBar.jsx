@@ -19,8 +19,8 @@ export default function RiskScoreBar({ score, showLabel = true, className = "" }
       )}
       <div className="h-2.5 rounded-full bg-muted overflow-hidden relative">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-success via-warning to-destructive transition-all duration-500"
-          style={{ width: `${value}%` }}
+          className="absolute inset-0 h-full rounded-full bg-gradient-to-r from-success via-warning to-destructive transition-all duration-500"
+          style={{ clipPath: `inset(0 ${100 - value}% 0 0)` }}
         />
         <div
           className={`absolute top-0 bottom-0 w-1 rounded-full ${edgeColor} transition-all duration-500`}
