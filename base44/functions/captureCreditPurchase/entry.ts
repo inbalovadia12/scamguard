@@ -53,9 +53,16 @@ Deno.serve(async (req) => {
     });
 
     if (!captureRes.ok) {
-      // Mark our record failed so it isn't re-used.
+      // A concurrent capture may have already succeeded — re-check before
+      // marking failed so we never overwrite a captured record or double-grant.
       if (purchase) {
-        try { await base44.entities.CreditPurchase.update(purchase.id, { status: "failed" }); } catch {}
+        try {
+          const refetched = await base44.entities.CreditPurchase.filter({ paypal_order_id: orderId });
+          if (Array.isArray(refetched) && refetched[0] && refetched[0].status === "captured") {
+            return Response.json({ success: true, already_captured: true, credits_added: refetched[0].credits_to_grant });
+          }
+          await base44.entities.CreditPurchase.update(purchase.id, { status: "failed" });
+        } catch {}
       }
       return Response.json({ error: "Capture failed" }, { status: 502 });
     }
@@ -94,6 +101,18 @@ Deno.serve(async (req) => {
 
     const creditsToAdd = CREDIT_PACKS[packKey].credits;
 
+    // Race guard: a concurrent capture call may have already granted and marked
+    // this order. Re-read the purchase right before granting; if it is already
+    // captured, return the prior result instead of granting twice.
+    if (purchase) {
+      try {
+        const refetched = await base44.entities.CreditPurchase.filter({ paypal_order_id: orderId });
+        if (Array.isArray(refetched) && refetched[0] && refetched[0].status === "captured") {
+          return Response.json({ success: true, already_captured: true, credits_added: refetched[0].credits_to_grant });
+        }
+      } catch {}
+    }
+
     // Grant credits by reducing credits_used (floor at 0), respecting monthly reset.
     const currentMonth = new Date().toISOString().slice(0, 7);
     let creditsUsed = user.credits_used || 0;
@@ -105,15 +124,26 @@ Deno.serve(async (req) => {
       credits_reset_month: currentMonth,
     });
 
-    // Mark captured so a duplicate capture call is a no-op.
-    if (purchase) {
-      try {
+    // Mark captured so a duplicate capture call is a no-op. If no pending
+    // record existed, create one now so retries are idempotent.
+    try {
+      if (purchase) {
         await base44.entities.CreditPurchase.update(purchase.id, {
           status: "captured",
           captured_at: new Date().toISOString(),
         });
-      } catch {}
-    }
+      } else {
+        await base44.entities.CreditPurchase.create({
+          user_id: user.id,
+          paypal_order_id: orderId,
+          pack: packKey,
+          expected_amount: amount,
+          credits_to_grant: creditsToAdd,
+          status: "captured",
+          captured_at: new Date().toISOString(),
+        });
+      }
+    } catch {}
 
     return Response.json({
       success: true,
