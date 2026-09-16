@@ -25,6 +25,9 @@ function classify(title: string, summary: string): string {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
+    if (user.role !== 'admin') return Response.json({ error: 'Admin access required' }, { status: 403 });
 
     const research = await base44.integrations.Core.InvokeLLM({
       prompt: `Use web search to find publicly indexed pages from the Reddit subreddit r/ScamNumbers. Do NOT directly open, fetch, or call Reddit URLs or Reddit's API, because direct Reddit access may be denied. Use search-result snippets and other publicly indexed search information only. Find recent posts that contain phone numbers associated with scams or spam. Return ONLY real, verifiable matches where the phone number is explicitly present in the indexed search result and the Reddit post URL is provided by the search result. Do not invent phone numbers, reports, post URLs, authors, or dates. Prefer the newest 50 relevant posts. Extract every distinct phone number found in each relevant post. Respond in ${LANGUAGE}.`,
