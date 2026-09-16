@@ -30,7 +30,7 @@ export default function PhoneGuard() {
           <div className="space-y-1.5">
             <p className="text-sm font-semibold text-foreground">Call Guard privacy warning</p>
             <p className="text-xs sm:text-sm leading-5 text-muted-foreground">
-              Call Guard is a cloud-based analysis feature. If you use live capture or upload a recording, audio is sent to Vardin's backend and to Groq for speech-to-text. A recording may contain another person's voice or other personal information. Only record or upload calls when you have the rights and consent required by applicable law, and avoid including information that is not needed for the analysis.
+              Call Guard is a cloud-based analysis feature. If you use live capture or upload a recording, audio is sent to Vardin's backend and to AssemblyAI for speech-to-text. A recording may contain another person's voice or other personal information. Only record or upload calls when you have the rights and consent required by applicable law, and avoid including information that is not needed for the analysis.
             </p>
           </div>
         </div>
