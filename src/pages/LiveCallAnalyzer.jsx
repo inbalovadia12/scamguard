@@ -23,6 +23,7 @@ import { AssemblyAIStream } from "@/lib/assemblyaiStream";
 // the user can restart without seeing a scary error.
 
 const SESSION_CAP_SECONDS = 600; // 10-minute provider limit
+const MAX_RECORDING_SECONDS = 30 * 60; // 30-minute upload cap
 const RISK_ORDER = { low: 0, medium: 1, high: 2 };
 
 const RISK_CONFIG = {
@@ -65,6 +66,8 @@ export default function LiveCallAnalyzer() {
   const [checkingPlan, setCheckingPlan] = useState(true);
   const [callSeconds, setCallSeconds] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [fileDuration, setFileDuration] = useState(null);
+  const [fileTooLong, setFileTooLong] = useState(false);
   const fileInputRef = useRef(null);
 
   const aiStreamRef = useRef(null);
@@ -375,14 +378,54 @@ export default function LiveCallAnalyzer() {
     if (fromCap) setSessionEnded(true);
   };
 
-  const analyzeUploadedRecording = async (file) => {
+  const estimateFileDuration = (file) =>
+    new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const audio = new Audio();
+      audio.preload = "metadata";
+      audio.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve(isFinite(audio.duration) ? audio.duration : 0);
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(0);
+      };
+      audio.src = url;
+    });
+
+  const handleFileChange = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setError(null);
+    setFileTooLong(false);
+    setFileDuration(null);
+    if (!f.type.startsWith("audio/")) {
+      setError("Please choose an audio file (m4a, mp3, wav, etc.).");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    if (f.size > 25 * 1024 * 1024) {
+      setError("This recording is over 25 MB. Trim it or export a smaller file.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    const duration = await estimateFileDuration(f);
+    if (duration > MAX_RECORDING_SECONDS) {
+      setFileDuration(duration);
+      setFileTooLong(true);
+      setError(`This recording is ${Math.ceil(duration / 60)} minutes. The maximum is 30 minutes — please trim it and try again.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    analyzeUploadedRecording(f, duration);
+  };
+
+  const analyzeUploadedRecording = async (file, estimatedDuration = 0) => {
     setError(null);
     resetState();
     setUploading(true);
     try {
-      if (!file.type.startsWith("audio/")) throw new Error("Please choose an audio file (m4a, mp3, wav, etc.).");
-      if (file.size > 25 * 1024 * 1024) throw new Error("This recording is over 25 MB. Trim it or export a smaller file.");
-
       const uploadRes = await base44.integrations.Core.UploadPublicFile({ file });
       const lang = localStorage.getItem("vardin_language") || "en";
       const response = await base44.functions.invoke("analyzeCallChunk", {
@@ -535,7 +578,7 @@ export default function LiveCallAnalyzer() {
                 <span className="text-xs text-muted-foreground text-center">Recorded call audio</span>
               </button>
             </div>
-            <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) analyzeUploadedRecording(f); }} />
+            <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileChange} />
             {mode === "mic" && (
               <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
                 <Mic className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
@@ -569,8 +612,18 @@ export default function LiveCallAnalyzer() {
               <div className="space-y-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
                 <div className="flex items-start gap-2">
                   <Upload className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-muted-foreground"><strong>Upload a call recording.</strong> Vardin transcribes and analyzes the conversation. Use m4a, mp3, wav, or another audio file up to 25 MB.</p>
+                  <p className="text-xs text-muted-foreground"><strong>Upload a call recording.</strong> Vardin transcribes and analyzes the conversation. Use m4a, mp3, wav, or another audio file up to <strong>25 MB</strong> and <strong>30 minutes</strong> long.</p>
                 </div>
+                <div className="flex items-center gap-2 pl-6">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">1 credit / minute</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted/40 text-muted-foreground font-medium">Max 30 min</span>
+                </div>
+                {fileTooLong && fileDuration && (
+                  <div className="flex items-start gap-2 p-3 rounded-xl bg-destructive/5 border border-destructive/20">
+                    <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-destructive">This recording is {Math.ceil(fileDuration / 60)} minutes. The maximum is 30 minutes — please trim it and try again.</p>
+                  </div>
+                )}
                 <details className="text-xs text-muted-foreground">
                   <summary className="cursor-pointer font-medium text-foreground">How to record and upload a call</summary>
                   <div className="mt-2 space-y-2 leading-relaxed">

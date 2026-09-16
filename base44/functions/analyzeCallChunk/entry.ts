@@ -9,9 +9,11 @@ import {
   type ScamAnalysisResult,
 } from '../../shared/callGuardAnalysis.ts';
 
-// 1 credit per finalized utterance analysis — NOT per arbitrary audio chunk.
-// A 30-minute call produces roughly 60-100 utterances, not hundreds of chunks.
-const CREDIT_COST = 1;
+// Uploaded recordings are charged by duration: 1 credit per minute (rounded up,
+// minimum 1). Live streaming (analyzeCallSegment) stays at 1 credit per turn.
+const CREDIT_COST_PER_MINUTE = 1;
+const MIN_CREDIT_COST = 1;
+const MAX_RECORDING_SECONDS = 30 * 60; // 30-minute hard cap on uploads
 
 const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
 
@@ -84,7 +86,7 @@ async function transcribeWithAssemblyAI(
   audioUrl: string,
   language: string,
   apiKey: string
-): Promise<{ text: string; segments: { text: string; start: number; end: number }[] }> {
+): Promise<{ text: string; segments: { text: string; start: number; end: number }[]; audio_duration: number }> {
   // Build request — speaker_labels gives us utterances (segmented by speaker
   // with timestamps), which we feed to the audio-source-based speaker mapper.
   const requestBody: Record<string, any> = {
@@ -158,7 +160,7 @@ async function transcribeWithAssemblyAI(
               end: (u.end ?? u.start ?? 0) / 1000,
             }))
         : [];
-      return { text, segments };
+      return { text, segments, audio_duration: pollData.audio_duration || 0 };
     }
 
     if (pollData.status === 'error') {
@@ -232,21 +234,17 @@ Deno.serve(async (req) => {
     }
 
     const available = getAvailableCredits(user);
-    if (available.remaining < CREDIT_COST) {
+    // Pre-check the minimum cost so we don't waste a transcription call on a
+    // user with zero credits. The actual (duration-based) cost is checked
+    // after we know the recording length.
+    if (available.remaining < MIN_CREDIT_COST) {
       return Response.json({
         error: "Insufficient credits",
         credits_remaining: available.remaining,
         credits_limit: getMonthlyCreditLimit(user),
-        credit_cost: CREDIT_COST,
+        credit_cost: MIN_CREDIT_COST,
       }, { status: 402 });
     }
-
-    const chargeCredits = async () => {
-      const usage = applyCreditUsage(user, CREDIT_COST);
-      if (!usage) throw new Error("Credit balance changed during analysis. Please try again.");
-      await base44.auth.updateMe(usage);
-      return getAvailableCredits({ ...user, ...usage }).remaining;
-    };
 
     const body = await req.json();
     const audio_input = body.audio_input || body.audio_base64 || body.audio_url;
@@ -288,7 +286,7 @@ Deno.serve(async (req) => {
     }
 
     // ===== TRANSCRIBE (AssemblyAI, batch with diarization) =====
-    let transcriptData: { text: string; segments: { text: string; start: number; end: number }[] };
+    let transcriptData: { text: string; segments: { text: string; start: number; end: number }[]; audio_duration: number };
     try {
       transcriptData = await transcribeWithAssemblyAI(audioUrl, language, assemblyKey);
     } catch (sttError) {
@@ -300,6 +298,35 @@ Deno.serve(async (req) => {
     }
 
     const fullTranscript = transcriptData.text || "";
+    const audioDurationSeconds = transcriptData.audio_duration || 0;
+
+    // Enforce the 30-minute upload cap.
+    if (audioDurationSeconds > MAX_RECORDING_SECONDS) {
+      return Response.json({
+        error: `This recording is ${Math.ceil(audioDurationSeconds / 60)} minutes long. The maximum is 30 minutes — please trim the recording and try again.`,
+        audio_duration: audioDurationSeconds,
+        max_duration: MAX_RECORDING_SECONDS,
+      }, { status: 413 });
+    }
+
+    // Duration-based cost: 1 credit per minute, rounded up, minimum 1.
+    const creditCost = Math.max(MIN_CREDIT_COST, Math.ceil(audioDurationSeconds / 60));
+    if (available.remaining < creditCost) {
+      return Response.json({
+        error: "Insufficient credits",
+        credits_remaining: available.remaining,
+        credits_limit: getMonthlyCreditLimit(user),
+        credit_cost: creditCost,
+        audio_duration: audioDurationSeconds,
+      }, { status: 402 });
+    }
+
+    const chargeCredits = async () => {
+      const usage = applyCreditUsage(user, creditCost);
+      if (!usage) throw new Error("Credit balance changed during analysis. Please try again.");
+      await base44.auth.updateMe(usage);
+      return getAvailableCredits({ ...user, ...usage }).remaining;
+    };
 
     // Empty transcript (silence or noise) — no credit charged
     if (!fullTranscript.trim()) {
@@ -357,9 +384,10 @@ Deno.serve(async (req) => {
         audioSource === "system" || audioSource === "phone_call"
           ? "Speaker: caller (captured from system audio)."
           : "Speaker labels are estimated from speech gaps. Tap any message to correct.",
-      credits_used: CREDIT_COST,
+      credits_used: creditCost,
       credits_remaining: creditsRemaining,
       credits_limit: getMonthlyCreditLimit(user),
+      audio_duration: audioDurationSeconds,
       timing_ms: Date.now() - startTime,
     });
   } catch (error: any) {
