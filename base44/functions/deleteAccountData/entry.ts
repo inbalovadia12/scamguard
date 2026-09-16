@@ -30,6 +30,12 @@ export default async function(req: Request): Promise<Response> {
     await safeDelete(svc.entities.Referral, { referrer_id: userId });
     await safeDelete(svc.entities.Referral, { referred_user_id: userId });
 
+    // Credit purchases the user initiated
+    await safeDelete(svc.entities.CreditPurchase, { user_id: userId });
+    await safeDelete(svc.entities.CreditPurchase, { created_by_id: userId });
+    // Community phone reports the user submitted
+    await safeDelete(svc.entities.PhoneCommunityReport, { created_by_id: userId });
+
     // ProtectedSenior: delete where user is guardian or the protected senior
     await safeDelete(svc.entities.ProtectedSenior, { guardian_id: userId });
     await safeDelete(svc.entities.ProtectedSenior, { senior_user_id: userId });

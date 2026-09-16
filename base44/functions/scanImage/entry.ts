@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { isPrivateIp } from '../../shared/ssrf.ts';
 
 const PLAN_LIMITS: Record<string, number> = { starter: 30, plus: 350, premium: 500 };
 const CREDIT_COST = 8;
@@ -26,7 +27,7 @@ Deno.serve(async (req) => {
         credits_remaining: creditsRemaining,
         credits_limit: creditLimit,
         credit_cost: CREDIT_COST,
-        upgrade_url: 'https://vardin.base44.app/pricing',
+        upgrade_url: '/pricing',
       }, { status: 402 });
     }
 
@@ -35,6 +36,22 @@ Deno.serve(async (req) => {
 
     if (!image_url) {
       return Response.json({ error: 'Image is required' }, { status: 400 });
+    }
+
+    // SSRF guard: block private/internal hosts before handing the URL to the
+    // LLM provider. Data URLs (uploaded images) are always allowed.
+    if (/^https?:\/\//i.test(image_url)) {
+      try {
+        const parsed = new URL(image_url);
+        if (parsed.username || parsed.password) {
+          return Response.json({ error: 'Invalid image URL' }, { status: 400 });
+        }
+        if (isPrivateIp(parsed.hostname)) {
+          return Response.json({ error: 'Image URL must be a public address' }, { status: 400 });
+        }
+      } catch {
+        return Response.json({ error: 'Invalid image URL' }, { status: 400 });
+      }
     }
 
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };

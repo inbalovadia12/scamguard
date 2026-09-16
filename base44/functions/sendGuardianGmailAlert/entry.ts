@@ -6,6 +6,17 @@ const FINANCIAL_TYPES = ["bank_government", "marketplace", "crypto_investment", 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+
+    // This function is triggered by the GuardianGmailAlert workflow (service
+    // role, no user token) and must not be callable by arbitrary app users.
+    // If a user token IS present, require admin; allow anonymous service-role
+    // calls so the workflow can still fire.
+    let user = null;
+    try { user = await base44.auth.me(); } catch { /* service-role / workflow */ }
+    if (user && user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { analysis_id } = body;
 
@@ -14,7 +25,12 @@ Deno.serve(async (req) => {
     }
 
     // Fetch the ScamAnalysis record
-    const analysis = await base44.asServiceRole.entities.ScamAnalysis.get(analysis_id);
+    let analysis;
+    try {
+      analysis = await base44.asServiceRole.entities.ScamAnalysis.get(analysis_id);
+    } catch {
+      return Response.json({ error: 'Analysis not found' }, { status: 404 });
+    }
     if (!analysis) {
       return Response.json({ error: 'Analysis not found' }, { status: 404 });
     }
