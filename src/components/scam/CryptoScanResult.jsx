@@ -1,5 +1,6 @@
 import React from "react";
 import RiskBadge, { getRiskLevelFromScore } from "@/components/scam/RiskBadge";
+import RiskScoreBar from "@/components/scam/RiskScoreBar";
 import ThreatExplanation from "@/components/scam/ThreatExplanation";
 import ResultActions from "@/components/scam/ResultActions";
 import {
@@ -57,24 +58,13 @@ function AdaptiveBanner({ risk, score }) {
   const cfg = BANNER_CONFIG[risk] || BANNER_CONFIG.medium;
   const Icon = cfg.icon;
   const scoreNum = typeof score === "number" ? Math.round(score) : null;
-  const barColor = risk === "high" ? "bg-destructive" : risk === "medium" ? "bg-warning" : "bg-success";
   return (
     <div className="space-y-3">
       <div className={`flex items-start gap-2.5 p-4 rounded-2xl ${cfg.bg} border ${cfg.border}`}>
         <Icon className={`w-5 h-5 ${cfg.color} flex-shrink-0 mt-0.5`} />
         <p className={`text-sm font-medium ${cfg.color}`}>{cfg.text}</p>
       </div>
-      {scoreNum !== null && (
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground font-medium">Risk Score</span>
-            <span className={`font-bold ${cfg.color}`}>{scoreNum}/100</span>
-          </div>
-          <div className="h-2 rounded-full bg-muted overflow-hidden">
-            <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${scoreNum}%` }} />
-          </div>
-        </div>
-      )}
+      {scoreNum !== null && <RiskScoreBar score={scoreNum} />}
     </div>
   );
 }

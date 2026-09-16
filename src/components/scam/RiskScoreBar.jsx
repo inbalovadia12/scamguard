@@ -19,12 +19,8 @@ export default function RiskScoreBar({ score, showLabel = true, className = "" }
       )}
       <div className="h-2.5 rounded-full bg-muted overflow-hidden relative">
         <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{
-            width: `${value}%`,
-            backgroundImage:
-              "linear-gradient(to right, hsl(var(--success)), hsl(var(--warning)), hsl(var(--destructive)))",
-          }}
+          className="h-full rounded-full bg-gradient-to-r from-success via-warning to-destructive transition-all duration-500"
+          style={{ width: `${value}%` }}
         />
         <div
           className={`absolute top-0 bottom-0 w-1 rounded-full ${edgeColor} transition-all duration-500`}
