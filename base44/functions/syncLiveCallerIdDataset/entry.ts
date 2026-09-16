@@ -15,12 +15,12 @@ import { toBase64 } from "../../shared/protobuf.ts";
 export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
-    let user = null;
-    try { user = await base44.auth.me(); } catch {}
-    if (user && user.role !== "admin") {
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
+    if (user.role !== "admin") {
       return Response.json({ error: "Admin access required" }, { status: 403 });
     }
-    const triggeredBy = user ? "manual" : "auto";
+    const triggeredBy = "manual";
 
     const { entries, count } = await buildPirDataset(base44);
 
