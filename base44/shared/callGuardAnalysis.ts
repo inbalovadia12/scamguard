@@ -23,7 +23,10 @@ export interface ScamWarning {
   severity: "caution" | "suspicious" | "high";
 }
 
+export type Verdict = "SCAM" | "LIKELY SCAM" | "NOT A SCAM" | "UNCERTAIN";
+
 export interface ScamAnalysisResult {
+  verdict: Verdict;
   risk_level: "low" | "medium" | "high";
   new_indicators: ScamIndicator[];
   warnings: ScamWarning[];
@@ -55,7 +58,7 @@ export function buildAnalysisPrompt(
       ? reportedIndicators.join(", ")
       : "none";
 
-  return `You are a scam detection analyst monitoring a phone call in real time. Analyze the conversation and assess scam risk. Respond in ${languageName}.
+  return `You are a scam detection analyst monitoring a phone call in real time. Analyze the conversation and independently evaluate the evidence. You must choose EXACTLY ONE verdict for the conversation as it stands right now. Respond in ${languageName}.
 
 CONVERSATION SO FAR:
 ${transcript || "(just starting)"}
@@ -63,22 +66,30 @@ ${transcript || "(just starting)"}
 INDICATORS ALREADY REPORTED (do not report these again):
 ${reported}
 
-ANALYSIS RULES:
-1. An authority claim alone — someone identifying themselves as a hospital, bank, police, delivery company, school, etc. — is NOT a scam indicator. Legitimate organizations introduce themselves at the start of calls. Only flag authority when combined with urgency, payment requests, credential requests, threats, or pressure to bypass verification.
-2. KEYWORD-BASED FLAGS ARE FORBIDDEN. Words like "crypto", "reward", "invite", "verification", "promotion", "bonus", "gift", "prize", "investment", "account", "security", "verify", "confirm" are NOT scam indicators on their own. Legitimate businesses use these words constantly in normal communications. Only flag the underlying BEHAVIOR — an actual request for money, passwords, recovery phrases, remote access, or a demand to act secretly/urgently — not the vocabulary.
-3. LEGITIMATE BUSINESS CONTEXT IS NOT A SCAM. Financial promotions, investment-platform invitations, account-security notifications, promotional credit offers, and normal verification links (e.g., a bank sending a verification code to confirm your own login) are NOT scams. If a message/call has normal business context and does NOT request money, passwords, recovery phrases, remote access, or unusual secrecy, the risk is "low" and confidence must be reduced.
-4. Require MULTIPLE MEANINGFUL indicators or clear evidence of fraud before assigning a scam verdict. A single ambiguous signal is NOT enough. Look for combinations: urgency + payment demand, authority + threat + credential request, secrecy + remote access request, etc. The more indicators that co-occur, the higher the confidence.
-5. Distinguish INDICATORS (possible scam signals) from confirmed scams. Never say "scam detected" or "scam confirmed" unless there are multiple strong indicators. Use cautious language: "potential", "may indicate", "consider verifying".
-6. Progressive risk model:
-   - "low": no meaningful indicators, OR a single weak ambiguous signal with normal business context (e.g., a bank calling about a transaction and offering to verify via official channels, a company inviting you to an investment platform with no request for money/credentials)
-   - "medium": one moderate indicator or two weak ones (e.g., authority claim + urgency, but no payment request yet) — but NOT if the only "indicator" is a keyword with no request for action
-   - "high": multiple strong indicators or a clear scam pattern (e.g., authority + emergency + payment demand + credential request, or a demand for gift cards / crypto / remote access)
-7. Only report NEW indicators not in the already-reported list. If the conversation hasn't changed in a way that introduces new indicators, return empty new_indicators and keep the risk level steady.
-8. Each warning must have: a title (what was detected), an explanation (why it matters in context), and an action (what the user should do). Warnings should be informative, not alarmist. Severity "caution" for weak signals, "suspicious" for moderate, "high" for strong.
-9. If the conversation is normal (e.g., a hospital calling about an appointment, a bank confirming a transaction, a company promoting a legitimate investment product, a service sending a verification code for your own login), return risk_level "low", empty indicators, empty warnings.
+VERDICT SYSTEM — choose EXACTLY ONE:
+- "NOT A SCAM": No meaningful evidence of fraud. This includes normal calls that mention money, crypto, promotions, invitations, verification, rewards, account security, or contain links — as long as they do NOT request payment-to-receive-money, recovery phrases/passwords, impersonate someone, make deceptive claims, use suspicious URLs, promise unrealistic guarantees, or apply strong pressure tactics.
+- "UNCERTAIN": Mixed or ambiguous signals; not enough evidence to call it a scam but something is off and worth verifying independently.
+- "LIKELY SCAM": One or more concrete scam indicators are present (e.g., payment-to-receive-money, recovery phrase/password request, impersonation, suspicious URL, unrealistic guarantee, strong pressure) but not fully confirmed.
+- "SCAM": Multiple strong, concrete scam indicators are clearly present (e.g., authority impersonation + emergency + payment demand + credential request, a wallet-drainer link, a send-to-claim giveaway, a demand for gift cards / crypto / remote access).
+
+CRITICAL — DO NOT BIAS TOWARD DETECTING SCAMS:
+- You are allowed and expected to return "NOT A SCAM" when the evidence supports that conclusion. Most calls are not scams.
+- A call asking the user to sign up, verify an account, confirm a transaction, or mentioning money is NOT automatically a scam.
+- An authority claim alone — someone identifying as a hospital, bank, police, delivery company, school — is NOT a scam indicator. Legitimate organizations introduce themselves. Only flag authority when combined with urgency + payment/credential requests, threats, or pressure to bypass verification.
+- KEYWORD-BASED FLAGS ARE FORBIDDEN. Words like "crypto", "reward", "invite", "verification", "promotion", "bonus", "gift", "prize", "investment", "account", "security", "verify", "confirm" are NOT scam indicators on their own. Only flag the underlying BEHAVIOR — an actual request for money, passwords, recovery phrases, remote access, or a demand to act secretly/urgently.
+- Legitimate business context (financial promotions, investment-platform invitations, account-security notifications, promotional credit offers, normal verification codes for the user's own login) is NOT a scam when it does not request money, passwords, recovery phrases, remote access, or secrecy.
+
+EVIDENCE RULES:
+1. Require concrete indicators for SCAM/LIKELY SCAM: requests for payment to receive money, recovery phrases/passwords, impersonation, deceptive claims, suspicious URLs, unrealistic guarantees, or strong pressure tactics. A single ambiguous signal is NOT enough — look for combinations.
+2. Distinguish INDICATORS (possible signals) from confirmed scams. Use cautious language: "potential", "may indicate", "consider verifying". Never say "scam confirmed" unless multiple strong indicators are present.
+3. Only report NEW indicators not in the already-reported list. If no new indicators, return empty new_indicators and keep the verdict steady.
+4. Each warning must have: a title, an explanation (why it matters in context), and an action (what to do). Informative, not alarmist. Severity "caution" for weak signals, "suspicious" for moderate, "high" for strong.
+5. Map verdict to risk_level consistently: NOT A SCAM → "low", UNCERTAIN → "low" (or "medium" if borderline), LIKELY SCAM → "medium", SCAM → "high".
+6. If the conversation is normal (a hospital calling about an appointment, a bank confirming a transaction, a company promoting a legitimate product, a service sending a verification code for your own login), return verdict "NOT A SCAM", empty indicators, empty warnings.
 
 Return ONLY a JSON object:
 {
+  "verdict": "SCAM" | "LIKELY SCAM" | "NOT A SCAM" | "UNCERTAIN",
   "risk_level": "low" | "medium" | "high",
   "new_indicators": [{"type": "string", "description": "string", "confidence": 0.0-1.0}],
   "warnings": [{"title": "string", "explanation": "string", "action": "string", "severity": "caution"|"suspicious"|"high"}],
@@ -162,6 +173,7 @@ export async function analyzeScamContext(
       response_json_schema: {
         type: "object",
         properties: {
+          verdict: { type: "string", enum: ["SCAM", "LIKELY SCAM", "NOT A SCAM", "UNCERTAIN"] },
           risk_level: { type: "string", enum: ["low", "medium", "high"] },
           new_indicators: {
             type: "array",
@@ -198,7 +210,12 @@ export async function analyzeScamContext(
     const weighted = computeWeightedRisk(indicators, reportedIndicators);
     const merged = mergeRiskLevels(data.risk_level || "low", weighted);
 
+    const verdict = (["SCAM", "LIKELY SCAM", "NOT A SCAM", "UNCERTAIN"].includes(data.verdict)
+      ? data.verdict
+      : (merged === "high" ? "LIKELY SCAM" : merged === "medium" ? "UNCERTAIN" : "NOT A SCAM")) as Verdict;
+
     return {
+      verdict,
       risk_level: merged as "low" | "medium" | "high",
       new_indicators: indicators,
       warnings: Array.isArray(data.warnings) ? data.warnings : [],
@@ -208,6 +225,7 @@ export async function analyzeScamContext(
   } catch (e) {
     console.error("Scam analysis LLM error:", e?.message);
     return {
+      verdict: "NOT A SCAM",
       risk_level: "low",
       new_indicators: [],
       warnings: [],

@@ -372,6 +372,7 @@ Deno.serve(async (req) => {
     return Response.json({
       transcript: fullTranscript,
       segments: speakerSegments,
+      verdict: analysis.verdict,
       risk_level: analysis.risk_level,
       warnings: analysis.warnings,
       new_indicators: analysis.new_indicators,

@@ -81,6 +81,7 @@ Deno.serve(async (req) => {
     const creditsRemaining = await chargeCredits();
 
     return Response.json({
+      verdict: analysis.verdict,
       risk_level: analysis.risk_level,
       warnings: analysis.warnings,
       new_indicators: analysis.new_indicators,
