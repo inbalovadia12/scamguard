@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { getUrlhausReport } from '../../shared/urlhaus.ts';
+import { safeFetchText } from '../../shared/ssrf.ts';
 
 const PLAN_LIMITS = { starter: 30, plus: 350, premium: 500 };
 const ANSWER_TYPE_COSTS: Record<string, number> = {
@@ -37,23 +38,26 @@ async function decodeQrServerSide(imageDataUrl: string): Promise<string> {
 }
 
 async function followRedirects(url: string): Promise<{ finalUrl: string; pageTitle: string | null; contentType: string | null }> {
+  // Uses the shared SSRF-safe fetch: validates every redirect destination
+  // against private/internal IPs (DNS-pinning), caps response size, and
+  // applies a timeout. Prevents the QR redirect path from acting as an SSRF
+  // proxy.
   try {
-    const response = await fetch(url, {
-      redirect: 'follow',
-      signal: AbortSignal.timeout(6000), // Reduced from 8000
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VardinScanner/1.0)' },
+    const result = await safeFetchText(url, {
+      timeoutMs: 6000,
+      maxBytes: 1024 * 1024,
+      maxRedirects: 4,
     });
-    const finalUrl = response.url || url;
-    const contentType = response.headers.get('content-type') || null;
+    if (!result.ok) {
+      return { finalUrl: url, pageTitle: null, contentType: null };
+    }
+    const contentType = result.contentType;
     let pageTitle: string | null = null;
     if (contentType && contentType.includes('text/html')) {
-      try {
-        const html = await response.text();
-        const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-        if (titleMatch) pageTitle = titleMatch[1].trim();
-      } catch {}
+      const titleMatch = result.text.match(/<title[^>]*>([^<]*)<\/title>/i);
+      if (titleMatch) pageTitle = titleMatch[1].trim();
     }
-    return { finalUrl, pageTitle, contentType };
+    return { finalUrl: result.finalUrl, pageTitle, contentType };
   } catch {
     return { finalUrl: url, pageTitle: null, contentType: null };
   }
@@ -107,7 +111,7 @@ Deno.serve(async (req) => {
     if (plan === 'free') plan = 'starter';
     if (plan === 'elite') plan = 'premium';
     if (plan !== 'premium' && plan !== 'plus') {
-      return Response.json({ error: 'Premium subscription required', upgrade_url: 'https://vardin.base44.app/pricing' }, { status: 403 });
+      return Response.json({ error: 'Premium subscription required', upgrade_url: '/pricing' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -138,7 +142,7 @@ Deno.serve(async (req) => {
       return Response.json({
         error: 'Insufficient credits',
         credits_remaining: creditsRemaining, credits_limit: creditLimit, credit_cost: creditCost,
-        upgrade_url: 'https://vardin.base44.app/pricing',
+        upgrade_url: '/pricing',
       }, { status: 402 });
     }
 

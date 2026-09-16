@@ -1,37 +1,14 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-
-const PAYPAL_API_BASE = "https://api-m.paypal.com";
-
-const PAYPAL_CLIENT_ID = Deno.env.get("PAYPAL_CLIENT_ID");
-const PAYPAL_CLIENT_SECRET = Deno.env.get("PAYPAL_CLIENT_SECRET");
-const PAYPAL_WEBHOOK_ID = Deno.env.get("PAYPAL_WEBHOOK_ID");
+import { getPaypalAccessToken, getPaypalWebhookId, PAYPAL_API } from "../../shared/paypalClient.ts";
 
 // Permanent monthly credit bonus awarded to a referrer when their referral
 // first activates a paid plan. Additive to the referrer's monthly credit limit.
 const REFERRAL_BONUS_CREDITS = 30;
 
-async function getPayPalAccessToken() {
-  const auth = btoa(`${PAYPAL_CLIENT_ID}:${PAYPAL_CLIENT_SECRET}`);
-  const response = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Basic ${auth}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: "grant_type=client_credentials",
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get PayPal access token: ${response.status} ${errorText}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
-
-async function verifyWebhookSignature(headers, body) {
-  const accessToken = await getPayPalAccessToken();
+async function verifyWebhookSignature(headers: Headers, body: any): Promise<boolean> {
+  const accessToken = await getPaypalAccessToken();
+  const webhookId = getPaypalWebhookId();
+  if (!webhookId) return false;
 
   const verificationPayload = {
     auth_algo: headers.get("paypal-auth-algo"),
@@ -39,32 +16,22 @@ async function verifyWebhookSignature(headers, body) {
     transmission_id: headers.get("paypal-transmission-id"),
     transmission_sig: headers.get("paypal-transmission-sig"),
     transmission_time: headers.get("paypal-transmission-time"),
-    webhook_id: PAYPAL_WEBHOOK_ID,
+    webhook_id: webhookId,
     webhook_event: body,
   };
 
-  const response = await fetch(
-    `${PAYPAL_API_BASE}/v1/notifications/verify-webhook-signature`,
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(verificationPayload),
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`PayPal verification request failed: ${response.status} ${errorText}`);
-  }
-
+  const response = await fetch(`${PAYPAL_API}/v1/notifications/verify-webhook-signature`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(verificationPayload),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) return false;
   const result = await response.json();
   return result.verification_status === "SUCCESS";
 }
 
-function parseCustomId(event) {
+function parseCustomId(event: any) {
   const resource = event.resource || {};
   const raw = resource.custom_id || resource.subscriber?.custom_id || "";
   if (!raw) return { userId: null, members: null };
@@ -76,69 +43,78 @@ function parseCustomId(event) {
   return { userId: raw, members: null };
 }
 
-async function determinePlanKey(accessToken, event) {
+async function determinePlanKey(accessToken: string, event: any): Promise<string> {
   const resource = event.resource || {};
   const subId = resource.id || resource.billing_agreement_id || resource.subscription_id;
-
   if (!subId) return "premium";
-
   try {
-    const subRes = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${subId}`, {
+    const subRes = await fetch(`${PAYPAL_API}/v1/billing/subscriptions/${subId}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!subRes.ok) return "premium";
     const sub = await subRes.json();
     const planId = sub.plan_id;
     if (!planId) return "premium";
-
-    const planRes = await fetch(`${PAYPAL_API_BASE}/v1/billing/plans/${planId}`, {
+    const planRes = await fetch(`${PAYPAL_API}/v1/billing/plans/${planId}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!planRes.ok) return "premium";
     const plan = await planRes.json();
     const planName = plan.name || "";
-
     if (planName.includes("Premium")) return "premium";
     if (planName.includes("Plus")) return "plus";
     return "premium";
-  } catch (e) {
-    console.log("Error determining plan:", e.message);
+  } catch {
     return "premium";
   }
 }
 
-async function processEvent(base44, event) {
-  const { userId, members } = parseCustomId(event);
-  if (!userId) {
-    console.log(`No user ID found in event ${event.id}`);
-    return;
+async function isEventProcessed(base44: any, eventId: string): Promise<boolean> {
+  try {
+    const existing = await base44.asServiceRole.entities.ProcessedPaypalEvent.filter({ event_id: eventId });
+    return Array.isArray(existing) && existing.length > 0;
+  } catch {
+    return false;
   }
+}
+
+async function markEventProcessed(base44: any, eventId: string, eventType: string, resourceId: string) {
+  try {
+    await base44.asServiceRole.entities.ProcessedPaypalEvent.create({
+      event_id: eventId,
+      event_type: eventType,
+      resource_id: resourceId || "",
+      processed_at: new Date().toISOString(),
+    });
+  } catch { /* best-effort; dedup is best-effort */ }
+}
+
+async function processEvent(base44: any, event: any) {
+  const { userId, members } = parseCustomId(event);
+  if (!userId) return;
 
   const eventType = event.event_type;
-  console.log(`Processing event: ${eventType} for user: ${userId}`);
-
-  const accessToken = await getPayPalAccessToken();
+  const accessToken = await getPaypalAccessToken();
+  const resourceId = event.resource?.id || event.resource?.subscription_id || "";
 
   switch (eventType) {
     case "BILLING.SUBSCRIPTION.ACTIVATED":
     case "BILLING.SUBSCRIPTION.UPDATED":
     case "PAYMENT.SALE.COMPLETED": {
       const planKey = await determinePlanKey(accessToken, event);
-      const update = {
+      const update: any = {
         subscription_plan: planKey,
         subscription_status: "active",
         credits_used: 0,
         credits_reset_month: new Date().toISOString().slice(0, 7),
       };
-      // Only set the paid member count for subscriptions created under the new
-      // family pricing model (custom_id encodes "userId::members"). Legacy
-      // subscribers (plain "userId") keep their prior limit via the fallback.
+      // Persist the PayPal subscription id so managePaypalSubscription can act
+      // on the real subscription the user owns.
+      if (resourceId) update.paypal_subscription_id = resourceId;
       if (members != null) update.family_members_paid = members;
       await base44.asServiceRole.entities.User.update(userId, update);
-      console.log(`User ${userId} upgraded to ${planKey} (event: ${eventType})`);
 
-      // Referral credit bonus: when a referred user first activates a paid plan,
-      // award the referrer a permanent monthly credit bonus (once per referral).
+      // Referral credit bonus (once per referral).
       if (eventType === "BILLING.SUBSCRIPTION.ACTIVATED" && (planKey === "plus" || planKey === "premium")) {
         try {
           const payer = await base44.asServiceRole.entities.User.get(userId);
@@ -147,8 +123,6 @@ async function processEvent(base44, event) {
             if (referrer && referrer.id !== userId) {
               const newBonus = (referrer.referral_bonus_credits || 0) + REFERRAL_BONUS_CREDITS;
               await base44.asServiceRole.entities.User.update(referrer.id, { referral_bonus_credits: newBonus });
-              console.log(`Referral bonus awarded: ${referrer.id} +${REFERRAL_BONUS_CREDITS} (referral: ${userId})`);
-              // Record the referral so the referrer can track it
               try {
                 const existing = await base44.asServiceRole.entities.Referral.filter({ referred_user_id: userId, status: "pending" });
                 if (existing.length > 0) {
@@ -156,16 +130,14 @@ async function processEvent(base44, event) {
                 } else {
                   await base44.asServiceRole.entities.Referral.create({ referrer_id: referrer.id, referred_user_id: userId, referred_email: payer.email || "", referred_name: payer.full_name || "", status: "awarded", bonus_credits: REFERRAL_BONUS_CREDITS, plan: planKey, awarded_date: new Date().toISOString() });
                 }
-              } catch (e) { console.log("Referral record error:", e.message); }
+              } catch { /* referral record best-effort */ }
             }
             await base44.asServiceRole.entities.User.update(userId, { referral_awarded: true });
           }
-        } catch (e) {
-          console.log("Referral award error:", e.message);
-        }
+        } catch { /* referral award best-effort */ }
       }
 
-      // Family perk propagation: extend the paid plan to joined family members
+      // Family perk propagation: extend paid plan to joined family members.
       if (planKey === "plus" || planKey === "premium") {
         try {
           const seniors = await base44.asServiceRole.entities.ProtectedSenior.filter({ guardian_id: userId });
@@ -174,7 +146,6 @@ async function processEvent(base44, event) {
               try {
                 const seniorUser = await base44.asServiceRole.entities.User.get(s.senior_user_id);
                 const sp = seniorUser?.subscription_plan || "starter";
-                // Only upgrade seniors still on starter — never override their own paid plan
                 if (sp === "starter" || sp === "free") {
                   await base44.asServiceRole.entities.User.update(s.senior_user_id, { subscription_plan: planKey, subscription_status: "active" });
                 }
@@ -184,16 +155,13 @@ async function processEvent(base44, event) {
               try { await base44.asServiceRole.entities.ProtectedSenior.update(s.id, { guardian_plan: planKey }); } catch {}
             }
           }
-        } catch (e) { console.log("Family perk propagation error:", e.message); }
+        } catch {}
       }
       break;
     }
 
     case "BILLING.SUBSCRIPTION.CANCELLED":
-      await base44.asServiceRole.entities.User.update(userId, {
-        subscription_status: "canceled",
-      });
-      console.log(`User ${userId} subscription cancelled`);
+      await base44.asServiceRole.entities.User.update(userId, { subscription_status: "canceled" });
       break;
 
     case "BILLING.SUBSCRIPTION.EXPIRED":
@@ -204,7 +172,6 @@ async function processEvent(base44, event) {
         subscription_status: "inactive",
         family_members_paid: 1,
       });
-      // Revoke inherited perks from family members who were on the guardian's plan
       try {
         const seniors = await base44.asServiceRole.entities.ProtectedSenior.filter({ guardian_id: userId });
         for (const s of seniors) {
@@ -218,28 +185,24 @@ async function processEvent(base44, event) {
           }
           try { await base44.asServiceRole.entities.ProtectedSenior.update(s.id, { guardian_plan: "starter" }); } catch {}
         }
-      } catch (e) { console.log("Family perk revocation error:", e.message); }
-      console.log(`User ${userId} downgraded to starter (event: ${eventType})`);
+      } catch {}
       break;
 
     default:
-      console.log(`Unhandled event type: ${eventType}`);
+      break;
   }
 }
 
 Deno.serve(async (req) => {
   try {
-    if (req.method !== "POST") {
-      return Response.json({ error: "Method not allowed" }, { status: 405 });
-    }
+    if (req.method !== "POST") return new Response(null, { status: 405 });
 
-    // Fail closed if PayPal credentials are not configured
-    if (!PAYPAL_CLIENT_ID || !PAYPAL_CLIENT_SECRET || !PAYPAL_WEBHOOK_ID) {
-      console.error("PayPal credentials not configured — webhook rejected");
+    // Fail closed if PayPal credentials/webhook id are not configured.
+    if (!getPaypalWebhookId()) {
+      console.error("PayPal webhook id not configured — webhook rejected");
       return new Response(null, { status: 200 });
     }
 
-    // Require all PayPal signature headers before attempting verification
     const requiredHeaders = [
       "paypal-auth-algo",
       "paypal-cert-url",
@@ -262,11 +225,26 @@ Deno.serve(async (req) => {
       return new Response(null, { status: 200 });
     }
 
+    const eventId = body?.id;
+    if (!eventId) {
+      return new Response(null, { status: 200 });
+    }
+
     const base44 = createClientFromRequest(req);
+
+    // Idempotency: skip if we have already processed this event id.
+    if (await isEventProcessed(base44, eventId)) {
+      return new Response(null, { status: 200 });
+    }
+
     await processEvent(base44, body);
 
+    // Record the event AFTER processing so a crash mid-process still allows a
+    // retry from PayPal to re-run. (At-least-once with side-effect guards.)
+    await markEventProcessed(base44, eventId, body.event_type, body.resource?.id || "");
+
     return new Response(null, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("PayPal webhook error:", error.message);
     return new Response(null, { status: 200 });
   }

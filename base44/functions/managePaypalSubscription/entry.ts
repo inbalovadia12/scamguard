@@ -1,24 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
-import { secrets } from "base44:runtime";
+import { getPaypalAccessToken, PAYPAL_API } from "../../shared/paypalClient.ts";
 
-const PAYPAL_API_BASE = "https://api-m.paypal.com";
-
-async function getAccessToken() {
-  const clientId = secrets.get("PAYPAL_CLIENT_ID");
-  const clientSecret = secrets.get("PAYPAL_CLIENT_SECRET");
-  if (!clientId || !clientSecret) throw new Error("PayPal credentials not configured");
-  const auth = btoa(`${clientId}:${clientSecret}`);
-  const res = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
-    method: "POST",
-    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
-    body: "grant_type=client_credentials",
-  });
-  if (!res.ok) throw new Error(`PayPal token error: ${res.status}`);
-  const data = await res.json();
-  return data.access_token;
-}
-
-export default async function(req: Request): Promise<Response> {
+Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -30,32 +13,36 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    const subscriptionId = user.subscription_id || user.paypal_subscription_id;
+    // Subscription id is read ONLY from trusted server-side user data. Never
+    // accept a client-supplied subscription id.
+    const subscriptionId = user.paypal_subscription_id || user.subscription_id;
+    if (!subscriptionId) {
+      return Response.json({ error: 'No active subscription found' }, { status: 404 });
+    }
+
+    const accessToken = await getPaypalAccessToken();
+    const endpoint = action === "reactivate" ? "activate" : "cancel";
+    const res = await fetch(`${PAYPAL_API}/v1/billing/subscriptions/${subscriptionId}/${endpoint}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: action === "cancel" ? JSON.stringify({ reason: "User requested cancellation" }) : "{}",
+    });
+
+    // 422 = already in that state; 404 = unknown sub. Both are acceptable.
     let nextBilling = null;
+    if (!res.ok && res.status !== 422 && res.status !== 404) {
+      return Response.json({ error: `PayPal ${action} failed` }, { status: 502 });
+    }
 
-    if (subscriptionId) {
-      const accessToken = await getAccessToken();
-      const endpoint = action === "reactivate" ? "activate" : "cancel";
-      const res = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}/${endpoint}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-        body: action === "cancel" ? JSON.stringify({ reason: "User requested cancellation" }) : "{}",
-      });
-      // 422 = already in that state; 404 = unknown sub; both are acceptable here
-      if (!res.ok && res.status !== 422 && res.status !== 404) {
-        const txt = await res.text();
-        return Response.json({ error: `PayPal ${action} failed: ${res.status} ${txt}` }, { status: 502 });
-      }
-
-      if (action === "cancel") {
-        const detailsRes = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (detailsRes.ok) {
-          const details = await detailsRes.json();
-          nextBilling = details.billing_info?.next_billing_time || null;
-        }
-      }
+    // Fetch current status from PayPal to synchronize local state.
+    const detailsRes = await fetch(`${PAYPAL_API}/v1/billing/subscriptions/${subscriptionId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    let paypalStatus: string | null = null;
+    if (detailsRes.ok) {
+      const details = await detailsRes.json();
+      paypalStatus = details.status || null;
+      nextBilling = details.billing_info?.next_billing_time || null;
     }
 
     try {
@@ -74,8 +61,13 @@ export default async function(req: Request): Promise<Response> {
       }
     } catch { /* profile update is best-effort */ }
 
-    return Response.json({ success: true, action, next_billing: nextBilling });
-  } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({
+      success: true,
+      action,
+      next_billing: nextBilling,
+      paypal_status: paypalStatus,
+    });
+  } catch (error: any) {
+    return Response.json({ error: "Subscription update failed" }, { status: 500 });
   }
-}
+});

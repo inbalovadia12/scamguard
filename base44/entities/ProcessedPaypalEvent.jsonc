@@ -1,0 +1,49 @@
+{
+  "name": "ProcessedPaypalEvent",
+  "type": "object",
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "PayPal webhook event id (used for idempotent processing)"
+    },
+    "event_type": {
+      "type": "string",
+      "description": "PayPal event type, e.g. BILLING.SUBSCRIPTION.ACTIVATED"
+    },
+    "resource_id": {
+      "type": "string",
+      "description": "PayPal resource id (subscription/order id) the event refers to"
+    },
+    "processed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the event was first processed"
+    }
+  },
+  "required": [
+    "event_id",
+    "event_type"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

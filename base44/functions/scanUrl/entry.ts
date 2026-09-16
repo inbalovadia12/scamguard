@@ -1,9 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+import { safeFetchText } from '../../shared/ssrf.ts';
 
 const CREDIT_COST = 7;
 
+// Kept for backward compatibility with any internal callers; the hardened
+// validation now lives in shared/ssrf.ts.
 function isPrivateIp(ip: string): boolean {
   if (ip === '::1' || ip === '::' || ip === '0.0.0.0') return true;
   if (ip.startsWith('127.')) return true;
@@ -147,52 +150,21 @@ Deno.serve(async (req) => {
     const urlhausPromise = getUrlhausReport(targetUrl);
 
     try {
-      let currentUrl = targetUrl;
-      const maxRedirects = 3;
-
-      for (let i = 0; i <= maxRedirects; i++) {
-        const validation = await validateUrlSafe(currentUrl);
-        if (!validation.ok) {
-          fetchError = validation.error || 'URL validation failed';
-          break;
+      const result = await safeFetchText(targetUrl, {
+        timeoutMs: 6000,
+        maxBytes: 2 * 1024 * 1024,
+        maxRedirects: 3,
+      });
+      if (result.ok) {
+        httpStatus = result.status;
+        finalUrl = result.finalUrl;
+        redirectCount = result.redirectCount;
+        websiteContent = extractContent(result.text, marketplace);
+        if (websiteContent.length > 6000) {
+          websiteContent = websiteContent.substring(0, 6000) + '...[truncated]';
         }
-
-        let fetchUrl = currentUrl;
-        const fetchHeaders: Record<string, string> = {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        };
-        if (validation.resolvedIp && validation.hostname) {
-          const pinned = new URL(currentUrl);
-          pinned.hostname = validation.resolvedIp;
-          fetchUrl = pinned.href;
-          fetchHeaders['Host'] = validation.hostname;
-        }
-
-        const response = await fetch(fetchUrl, {
-          headers: fetchHeaders,
-          redirect: 'manual',
-          signal: AbortSignal.timeout(6000),
-        });
-
-        if (response.status >= 300 && response.status < 400) {
-          const location = response.headers.get('location');
-          if (!location) break;
-          currentUrl = new URL(location, currentUrl).href;
-          redirectCount++;
-          continue;
-        }
-
-        if (response && !fetchError) {
-          httpStatus = response.status;
-          finalUrl = currentUrl;
-          const html = await response.text();
-          websiteContent = extractContent(html, marketplace);
-          if (websiteContent.length > 6000) {
-            websiteContent = websiteContent.substring(0, 6000) + '...[truncated]';
-          }
-        }
-        break;
+      } else {
+        fetchError = result.error || 'URL validation failed';
       }
     } catch (e) {
       fetchError = e.message;
