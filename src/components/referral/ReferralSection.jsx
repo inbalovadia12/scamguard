@@ -12,7 +12,7 @@ export default function ReferralSection({ user }) {
   const [referralCode, setReferralCode] = useState(user.referral_code || "");
 
   const referralLink = referralCode
-    ? `${window.location.origin}/referral?code=${encodeURIComponent(referralCode)}`
+    ? `${window.location.origin}/register?ref=${encodeURIComponent(referralCode)}`
     : `${window.location.origin}/register`;
   const bonusCredits = user.referral_bonus_credits || 0;
 

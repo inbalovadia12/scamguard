@@ -52,6 +52,7 @@ import ConversationAnalyzer from '@/pages/ConversationAnalyzer';
 import IncognitoSearch from '@/pages/IncognitoSearch';
 import Wrapped from '@/pages/Wrapped';
 import Community from '@/pages/Community';
+import Referral from '@/pages/Referral';
 import CallSimulator from '@/pages/CallSimulator';
 import CryptoScanner from '@/pages/CryptoScanner';
 import MobileApp from '@/pages/MobileApp';
@@ -180,6 +181,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin" element={<Admin />} />
           <Route path="/wrapped" element={<Wrapped />} />
           <Route path="/community" element={<Community />} />
+          <Route path="/referral" element={<Referral />} />
 
         </Route>
         <Route path="/onboarding" element={<Onboarding />} />
