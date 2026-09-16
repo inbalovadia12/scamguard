@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { getCreditStatus, CREDIT_COSTS } from "@/lib/credits";
 import PlanGate from "@/components/PlanGate";
+import RiskScoreBar from "@/components/scam/RiskScoreBar";
 import { toast } from "@/components/ui/use-toast";
 
 const MAX_ITEMS = 20;
@@ -298,12 +299,12 @@ export default function BulkPhoneScanner({ credits: initialCredits, onCreditsCha
                       onClick={() => setExpandedId(isExpanded ? null : box.id)}
                       className="w-full flex items-center justify-between gap-2 text-left"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
                         <span className={`text-sm font-semibold ${risk.color}`}>{risk.label}</span>
-                        <span className="text-xs text-muted-foreground">Score: {score}/100</span>
                       </div>
                       {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                     </button>
+                    <RiskScoreBar score={score} showLabel />
                     {isExpanded && (
                       <div className="space-y-2 pt-2 border-t border-border/30">
                         {bulkType === "phone" ? (

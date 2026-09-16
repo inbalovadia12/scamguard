@@ -61,7 +61,7 @@ export default function Privacy() {
             [11, "Messages & Media"], [12, "Family Protection"], [13, "Community Reports"], [14, "Uses"], [15, "Legal Bases"],
             [16, "Sharing"], [17, "Third Parties"], [18, "AI Providers"], [19, "International Transfers"], [20, "Retention"],
             [21, "Security"], [22, "Privacy Rights"], [23, "Access & Export"], [24, "Account Deletion"], [25, "Cookies"],
-            [26, "Beta Service"], [27, "Non-Users"], [28, "Changes"], [29, "Contact"], [30, "Requests & Complaints"],
+            [26, "Beta Service"], [27, "Non-Users"], [28, "Payments"], [29, "Changes"], [30, "Contact"], [31, "Requests & Complaints"],
           ].map(([n, label]) => <a key={n} href={`#privacy-${n}`} className="rounded-lg px-2 py-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">{n}. {label}</a>)}
         </div>
       </nav>
@@ -258,12 +258,19 @@ export default function Privacy() {
         <p>Call recording and interception laws can apply differently depending on where the participants are located. Vardin does not determine whether a particular recording is lawful. Users are responsible for complying with applicable consent and communications laws before recording or uploading a call.</p>
       </Section>
 
-      <Section number={28} title="Changes to This Policy">
+      <Section number={28} title="Payments and Billing">
+        <p>Vardin offers paid subscriptions and credit purchases. Payment processing for subscriptions and credit packs is handled by PayPal. When you purchase a subscription or credits, Vardin sends the order and payment details to PayPal to complete the transaction.</p>
+        <p>Vardin's application code does not request or store your full payment-card number. PayPal processes the payment and returns a confirmation of the transaction outcome to Vardin so the Service can apply the plan or credits to your account. PayPal may collect and process billing and payment information under its own terms and privacy policy.</p>
+        <p>Subscription billing recurs on the cadence of the plan you select until you cancel. You can manage or cancel your subscription from within Vardin or through your PayPal account. Refunds, where applicable, are subject to Vardin's refund terms and PayPal's dispute and refund policies.</p>
+        <p>For details on how PayPal collects, uses, stores and shares your payment information, review the <a className="text-primary underline underline-offset-2" href="https://www.paypal.com/us/legalhub/paypal/privacy-full?redirect=false" target="_blank" rel="noreferrer">PayPal Privacy Policy</a> and the <a className="text-primary underline underline-offset-2" href="https://www.paypal.com/us/webapps/mpp/ua/useragreement-full" target="_blank" rel="noreferrer">PayPal User Agreement</a>.</p>
+      </Section>
+
+      <Section number={29} title="Changes to This Policy">
         <p>Vardin may update this Policy when its features, data practices, providers or legal obligations change. The Last Updated date will change when the Policy is replaced.</p>
         <p>For material changes where notice, consent or another process is required by applicable law, Vardin will use the legally required method. Continued use of the Service is not intended to waive rights that cannot lawfully be waived.</p>
       </Section>
 
-      <Section number={29} title="Contact Information">
+      <Section number={30} title="Contact Information">
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5 text-foreground">
           <p className="font-semibold">Vardin — Privacy</p>
           <p className="mt-1 break-all">Email: <a className="text-primary underline underline-offset-2" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a></p>
@@ -271,7 +278,7 @@ export default function Privacy() {
         <p>Because the application's verified legal-entity details are not present in the codebase, this Policy intentionally does not invent a corporate address or jurisdiction.</p>
       </Section>
 
-      <Section number={30} title="Privacy Requests and Complaints">
+      <Section number={31} title="Privacy Requests and Complaints">
         <p>Send privacy requests or complaints to <a className="text-primary underline underline-offset-2 break-all" href="mailto:inbal5252@gmail.com">inbal5252@gmail.com</a>. Please state the request, the account email where applicable, the jurisdiction you are making the request under, and enough information for Vardin to identify the relevant data without sending unnecessary sensitive information.</p>
         <p>If you are not satisfied with Vardin's response, you may have the right to complain to the privacy or data-protection regulator in your country or region. For EU/EEA and UK users, this generally means the supervisory authority with jurisdiction over the relevant processing or your place of residence, subject to the applicable rules.</p>
       </Section>
