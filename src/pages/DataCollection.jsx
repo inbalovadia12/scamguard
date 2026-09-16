@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-const EFFECTIVE_DATE = "September 11, 2026";
+const EFFECTIVE_DATE = "September 16, 2026";
 
 const rows = [
   ["Account", "Email, name, plan/status, settings, onboarding and preferences", "Authentication, account operation, subscriptions and requested features"],
@@ -52,13 +52,13 @@ export default function DataCollection() {
 
       <section className="py-7 border-b border-border/60 space-y-4 text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-muted-foreground">
         <h2 className="text-lg sm:text-xl font-semibold text-foreground">Call Guard</h2>
-        <p>Call Guard is not local-only. Microphone/system-audio chunks and uploaded call recordings are sent to Vardin's backend for transcription and analysis. The current backend uses Groq as its sole speech-to-text provider, and Groq also classifies transcript segments for speaker labeling. Groq states that inference customer data is not retained by default, but inputs/outputs may be temporarily retained for reliability or abuse monitoring for up to 30 days unless Zero Data Retention is enabled. Vardin does not claim that production Groq ZDR is enabled unless that account setting has been separately verified.</p>
+        <p>Call Guard is not local-only. Microphone/system-audio chunks and uploaded call recordings are sent to Vardin's backend for transcription and analysis. The current backend uses AssemblyAI as its sole speech-to-text provider, and AssemblyAI also provides speaker diarization for speaker labeling. AssemblyAI's retention of submitted audio and transcript data is governed by its privacy policy and account settings, which Vardin does not control from the application code. See the <a className="text-primary underline underline-offset-2" href="https://www.assemblyai.com/legal/privacy-policy" target="_blank" rel="noreferrer">AssemblyAI Privacy Policy</a>. Groq is used only as a language model for in-call feedback, not for speech-to-text.</p>
         <p>Vardin stores Live Guard transcript/analysis records. Uploaded audio passes through Base44-managed file handling, and the current application does not implement a Vardin-controlled automatic deletion schedule for those uploaded files or for every provider-side log.</p>
       </section>
 
       <section className="py-7 border-b border-border/60 space-y-4 text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-muted-foreground">
         <h2 className="text-lg sm:text-xl font-semibold text-foreground">AI and third parties</h2>
-        <p>Depending on the feature, submitted content may be sent to Base44-managed AI services, Google Gemini, Groq, VirusTotal, URLhaus, QR Server, ElevenLabs, PayPal or Gmail. The exact recipient depends on the feature used. Call Guard audio is sent to Groq for speech-to-text; Call Guard audio is not sent to ElevenLabs for transcription. See the full <Link className="text-primary underline underline-offset-2" to="/privacy">Privacy Policy</Link> for the current data-flow description.</p>
+        <p>Depending on the feature, submitted content may be sent to Base44-managed AI services, Google Gemini, AssemblyAI, Groq, VirusTotal, URLhaus, QR Server, ElevenLabs, PayPal or Gmail. The exact recipient depends on the feature used. Call Guard audio is sent to AssemblyAI for speech-to-text and speaker diarization; Call Guard audio is not sent to Groq or ElevenLabs for transcription. See the full <Link className="text-primary underline underline-offset-2" to="/privacy">Privacy Policy</Link> for the current data-flow description.</p>
       </section>
 
       <section className="py-7 border-b border-border/60 space-y-4 text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-muted-foreground">
