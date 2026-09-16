@@ -12,13 +12,15 @@ import {
 // A 30-minute call produces roughly 60-100 utterances, not hundreds of chunks.
 const CREDIT_COST = 1;
 
+const ASSEMBLYAI_BASE = "https://api.assemblyai.com/v2";
+
 // ===== AUDIO RETRIEVAL =====
-// Handles base64 (data URL or raw), and HTTP URLs (downloads to binary to
-// avoid 302 redirect issues with the STT provider).
+// Decodes base64 (data URL or raw) into bytes for upload to AssemblyAI.
+// Public URLs are passed directly to AssemblyAI without downloading.
 async function retrieveAudioBytes(
   input: string,
   mimeType?: string
-): Promise<{ bytes: Uint8Array; mimeType: string }> {
+): Promise<{ bytes: Uint8Array; mimeType: string } | null> {
   // Case 1: Data URL
   if (input.startsWith('data:')) {
     const match = input.match(/data:([^;]+);base64,(.+)/);
@@ -43,51 +45,126 @@ async function retrieveAudioBytes(
     } catch { /* fall through */ }
   }
 
-  // Case 3: URL — download to binary
+  // Case 3: URL — caller passes directly to AssemblyAI, no download needed
   if (input.startsWith('http://') || input.startsWith('https://')) {
-    try {
-      const response = await fetch(input, { signal: AbortSignal.timeout(8000) });
-      if (!response.ok) throw new Error(`download failed: ${response.status}`);
-      const blob = await response.blob();
-      const bytes = new Uint8Array(await blob.arrayBuffer());
-      return { bytes, mimeType: blob.type || mimeType || 'audio/webm' };
-    } catch (e) {
-      throw new Error(`Audio download failed: ${e.message}`);
-    }
+    return null;
   }
 
   throw new Error('Invalid audio input: must be base64 or URL');
 }
 
-// ===== GROQ WHISPER STT (batch transcription) =====
-async function transcribeWithGroq(
+// ===== ASSEMBLYAI UPLOAD =====
+// Uploads raw audio bytes to AssemblyAI's storage and returns a playable URL.
+async function uploadToAssemblyAI(
   audioBytes: Uint8Array,
-  mimeType: string,
-  language: string,
-  groqKey: string
-): Promise<any> {
-  const form = new FormData();
-  form.set('model', 'whisper-large-v3-turbo');
-  form.set('language', language);
-  form.set('response_format', 'verbose_json');
-  form.set('timestamp_granularities[]', 'segment');
-
-  const file = new File([audioBytes], 'audio.webm', { type: mimeType });
-  form.set('file', file);
-
-  const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+  apiKey: string
+): Promise<string> {
+  const response = await fetch(`${ASSEMBLYAI_BASE}/upload`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${groqKey}` },
-    body: form,
-    signal: AbortSignal.timeout(15000),
+    headers: { authorization: apiKey },
+    body: audioBytes,
+    signal: AbortSignal.timeout(20000),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Groq STT ${response.status}: ${errorText.slice(0, 200)}`);
+    throw new Error(`AssemblyAI upload ${response.status}: ${errorText.slice(0, 200)}`);
   }
 
-  return await response.json();
+  const data = await response.json();
+  if (!data.upload_url) throw new Error('AssemblyAI upload returned no URL');
+  return data.upload_url as string;
+}
+
+// ===== ASSEMBLYAI TRANSCRIPTION (batch, with speaker diarization) =====
+// Submits a transcription request and polls until complete.
+// Returns normalized segments (text + start/end in seconds) from utterances.
+async function transcribeWithAssemblyAI(
+  audioUrl: string,
+  language: string,
+  apiKey: string
+): Promise<{ text: string; segments: { text: string; start: number; end: number }[] }> {
+  // Build request — speaker_labels gives us utterances (segmented by speaker
+  // with timestamps), which we feed to the audio-source-based speaker mapper.
+  const requestBody: Record<string, any> = {
+    audio_url: audioUrl,
+    speaker_labels: true,
+  };
+
+  // Use explicit language_code for supported languages (more reliable on short
+  // clips); fall back to auto-detection for the rest.
+  const SUPPORTED_LANG_CODES = new Set([
+    'en', 'en_uk', 'en_au', 'es', 'fr', 'de', 'it', 'pt', 'pt_br', 'pt_pt',
+    'nl', 'hi', 'ja', 'zh', 'fi', 'ko', 'pl', 'ru', 'tr', 'uk', 'vi', 'sv',
+    'cs', 'el', 'ms', 'id', 'fil', 'az', 'hr', 'kk', 'no', 'sk', 'sl', 'so',
+    'sr', 'ta', 'te', 'th', 'lt', 'lv', 'ro',
+  ]);
+  const langLower = (language || '').toLowerCase();
+  if (SUPPORTED_LANG_CODES.has(langLower)) {
+    requestBody.language_code = langLower;
+  } else {
+    requestBody.language_detection = true;
+  }
+
+  // Submit
+  const submitRes = await fetch(`${ASSEMBLYAI_BASE}/transcript`, {
+    method: 'POST',
+    headers: {
+      authorization: apiKey,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!submitRes.ok) {
+    const errorText = await submitRes.text();
+    throw new Error(`AssemblyAI submit ${submitRes.status}: ${errorText.slice(0, 200)}`);
+  }
+
+  const submitData = await submitRes.json();
+  const transcriptId = submitData.id;
+  if (!transcriptId) throw new Error('AssemblyAI returned no transcript id');
+
+  // Poll until complete (max ~60s for short utterances)
+  const MAX_POLLS = 30;
+  for (let i = 0; i < MAX_POLLS; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const pollRes = await fetch(`${ASSEMBLYAI_BASE}/transcript/${transcriptId}`, {
+      headers: { authorization: apiKey },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!pollRes.ok) {
+      const errorText = await pollRes.text();
+      throw new Error(`AssemblyAI poll ${pollRes.status}: ${errorText.slice(0, 200)}`);
+    }
+
+    const pollData = await pollRes.json();
+
+    if (pollData.status === 'completed') {
+      const text = pollData.text || '';
+      // utterances carry speaker labels + ms timestamps; convert to seconds
+      const segments = Array.isArray(pollData.utterances)
+        ? pollData.utterances
+            .filter((u: any) => u?.text?.trim())
+            .map((u: any) => ({
+              text: u.text.trim(),
+              start: (u.start ?? 0) / 1000,
+              end: (u.end ?? u.start ?? 0) / 1000,
+            }))
+        : [];
+      return { text, segments };
+    }
+
+    if (pollData.status === 'error') {
+      throw new Error(pollData.error || 'AssemblyAI transcription failed');
+    }
+    // status "queued" | "processing" → keep polling
+  }
+
+  throw new Error('AssemblyAI transcription timed out');
 }
 
 // ===== SPEAKER ASSIGNMENT =====
@@ -260,31 +337,35 @@ Deno.serve(async (req) => {
       return Response.json({ error: "audio_input required" }, { status: 400 });
     }
 
-    const groqKey = Deno.env.get("GROQ_STT");
-    if (!groqKey) {
+    const assemblyKey = Deno.env.get("ASSEMBLYAI_API_KEY");
+    if (!assemblyKey) {
       return Response.json({ error: "STT not configured" }, { status: 500 });
     }
 
-    // ===== RETRIEVE AUDIO =====
-    let audioBytes: Uint8Array;
-    let actualMimeType: string;
+    // ===== RESOLVE AUDIO URL =====
+    // Public URLs go straight to AssemblyAI; base64 is uploaded first.
+    let audioUrl: string;
     try {
-      const audioData = await retrieveAudioBytes(audio_input, audio_mime);
-      audioBytes = audioData.bytes;
-      actualMimeType = audioData.mimeType;
+      const decoded = await retrieveAudioBytes(audio_input, audio_mime);
+      if (decoded) {
+        audioUrl = await uploadToAssemblyAI(decoded.bytes, assemblyKey);
+      } else {
+        // audio_input is already a public URL
+        audioUrl = audio_input;
+      }
     } catch (e) {
-      return Response.json({ error: `Audio retrieval failed: ${e.message}` }, { status: 400 });
+      return Response.json({ error: `Audio preparation failed: ${e.message}` }, { status: 400 });
     }
 
-    // ===== TRANSCRIBE (batch) =====
-    let transcriptData: any;
+    // ===== TRANSCRIBE (AssemblyAI, batch with diarization) =====
+    let transcriptData: { text: string; segments: { text: string; start: number; end: number }[] };
     try {
-      transcriptData = await transcribeWithGroq(audioBytes, actualMimeType, language, groqKey);
-    } catch (groqError) {
-      console.error("Groq STT error:", groqError.message);
+      transcriptData = await transcribeWithAssemblyAI(audioUrl, language, assemblyKey);
+    } catch (sttError) {
+      console.error("AssemblyAI STT error:", sttError.message);
       return Response.json({
-        error: `Transcription failed: ${groqError.message}`,
-        provider: "groq",
+        error: `Transcription failed: ${sttError.message}`,
+        provider: "assemblyai",
       }, { status: 502 });
     }
 
@@ -300,7 +381,7 @@ Deno.serve(async (req) => {
         tactics_detected: [],
         new_indicators: [],
         feedback: "",
-        provider: "groq",
+        provider: "assemblyai",
         credits_used: 0,
         credits_remaining: available.remaining,
         credits_limit: getMonthlyCreditLimit(user),
@@ -341,7 +422,7 @@ Deno.serve(async (req) => {
       red_flags: analysis.new_indicators.map((i) => i.description),
       feedback: analysis.feedback,
       summary: analysis.summary,
-      provider: "groq",
+      provider: "assemblyai",
       speaker_detection_note:
         audioSource === "system" || audioSource === "phone_call"
           ? "Speaker: caller (captured from system audio)."
