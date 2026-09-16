@@ -126,16 +126,6 @@ export default function ReferralSection({ user }) {
     </Card>
   );
 }
-          {copied ? (
-            <><Check className="w-3.5 h-3.5" /> Copied</>
-          ) : (
-            <><Copy className="w-3.5 h-3.5" /> Copy</>
-          )}
-        </Button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
         <div className="rounded-xl bg-primary/5 border border-primary/15 p-3 text-center">
           <Sparkles className="w-4 h-4 text-primary mx-auto mb-1" />
           <div className="text-lg font-bold text-primary">+{bonusCredits}</div>
