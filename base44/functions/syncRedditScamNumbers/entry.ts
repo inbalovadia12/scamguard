@@ -25,6 +25,10 @@ function classify(title: string, summary: string): string {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+
+    // Privileged service-role writes — never allow anonymous execution.
+    // Scheduled workflows invoke this with admin auth, so strict admin here
+    // secures the public HTTP endpoint without blocking the workflow.
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
     if (user.role !== 'admin') return Response.json({ error: 'Admin access required' }, { status: 403 });

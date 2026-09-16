@@ -15,11 +15,11 @@ import { toBase64 } from "../../shared/protobuf.ts";
 export default async function (req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
+    // Strict admin auth — the public HTTP endpoint must never be anonymous.
+    // Scheduled workflows invoke this with admin auth, so this does not block them.
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
-    if (user.role !== "admin") {
-      return Response.json({ error: "Admin access required" }, { status: 403 });
-    }
+    if (user.role !== "admin") return Response.json({ error: "Admin access required" }, { status: 403 });
     const triggeredBy = "manual";
 
     const { entries, count } = await buildPirDataset(base44);

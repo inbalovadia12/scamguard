@@ -1,5 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+import { isPrivateIp } from '../../shared/ssrf.ts';
+
+// Server-authoritative cost for screen-capture analysis. The client never
+// controls pricing — body.credit_cost is ignored.
+const SCREEN_CAPTURE_COST = 5;
+const MAX_IMAGE_DATA_BYTES = 5 * 1024 * 1024; // 5 MB cap on inline image payloads
 
 /**
  * Real-time screenshot scam detection - OPTIMIZED
@@ -27,15 +33,37 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { image_url, image_data, language, session_context } = body;
 
-    // Server-authoritative pricing. The client may select an analysis mode,
-    // but it can never choose the number of credits charged.
-    const analysisMode = typeof body.analysis_mode === 'string' ? body.analysis_mode : 'standard';
-    const SCREEN_ANALYSIS_COSTS: Record<string, number> = {
-      quick: 3,
-      standard: 5,
-      detailed: 8,
-    };
-    const creditCost = SCREEN_ANALYSIS_COSTS[analysisMode] ?? SCREEN_ANALYSIS_COSTS.standard;
+    // Server-authoritative cost — ignore any client-supplied credit_cost.
+    const creditCost = SCREEN_CAPTURE_COST;
+
+    // Validate image inputs and block abusive/oversized payloads before any
+    // credit check or provider call.
+    if (!image_url && !image_data) {
+      return Response.json({ error: 'Image URL or image data is required' }, { status: 400 });
+    }
+    if (image_url) {
+      if (typeof image_url !== 'string' || image_url.length > 4096) {
+        return Response.json({ error: 'Invalid image URL' }, { status: 400 });
+      }
+      if (/^https?:\/\//i.test(image_url)) {
+        try {
+          const parsed = new URL(image_url);
+          if (parsed.username || parsed.password) {
+            return Response.json({ error: 'Invalid image URL' }, { status: 400 });
+          }
+          if (isPrivateIp(parsed.hostname)) {
+            return Response.json({ error: 'Image URL must be a public address' }, { status: 400 });
+          }
+        } catch {
+          return Response.json({ error: 'Invalid image URL' }, { status: 400 });
+        }
+      }
+    }
+    if (image_data) {
+      if (typeof image_data !== 'string' || image_data.length > MAX_IMAGE_DATA_BYTES) {
+        return Response.json({ error: 'Image data is too large (max 5 MB)' }, { status: 413 });
+      }
+    }
 
     const available = getAvailableCredits(user);
     if (available.remaining < creditCost) {
@@ -52,10 +80,6 @@ Deno.serve(async (req) => {
       await base44.auth.updateMe(usage);
       return getAvailableCredits({ ...user, ...usage }).remaining;
     };
-
-    if (!image_url && !image_data) {
-      return Response.json({ error: 'Image URL or image data is required' }, { status: 400 });
-    }
 
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';

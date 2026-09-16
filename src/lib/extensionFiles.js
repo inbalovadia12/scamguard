@@ -17,7 +17,7 @@ export const EXTENSION_FILES = {
   },
   "content_scripts": [
     {
-      "matches": ["https://vardin.base44.app/*"],
+      "matches": ["https://app.vardin.com/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     },
@@ -44,14 +44,14 @@ export const EXTENSION_FILES = {
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://vardin.base44.app;"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://app.vardin.com;"
   }
 }
 `,
   'background.js': String.raw`// Vardin Extension - Background Service Worker v2.0
 // Handles: auth token storage, language sync, auto-scan, badge, message routing
 
-var APP_BASE = 'https://vardin.base44.app';
+var APP_BASE = 'https://app.vardin.com';
 var currentLang = 'en';
 
 function isValidSender(sender) {
@@ -578,5 +578,5 @@ SECURITY
 - VirusTotal API key kept on backend only
 
 SUPPORT
-Visit https://vardin.base44.app for help and resources.
+Visit https://app.vardin.com for help and resources.
 `;
