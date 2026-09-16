@@ -17,7 +17,7 @@ export const EXTENSION_FILES = {
   },
   "content_scripts": [
     {
-      "matches": ["https://app.vardin.com/*"],
+      "matches": ["https://app.vardin.com/*", "https://vardin.base44.app/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     },
@@ -44,7 +44,7 @@ export const EXTENSION_FILES = {
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://app.vardin.com;"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://app.vardin.com https://vardin.base44.app;"
   }
 }
 `,
