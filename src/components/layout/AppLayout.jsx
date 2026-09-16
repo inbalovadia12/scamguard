@@ -130,34 +130,21 @@ export default function AppLayout() {
     };
   }, []);
 
-  // Apply a pending referral code (from ?ref=) to the user's account once
+  // Apply a pending referral code after authentication. This uses the
+  // server-side claim function so users can only claim a real referral code,
+  // cannot claim themselves, and the referrer is stored by User ID.
   useEffect(() => {
     if (!user) return;
     const ref = localStorage.getItem("vardin_ref");
-    if (!ref) return;
-    if (user.referred_by || ref === user.id) {
-      try { localStorage.removeItem("vardin_ref"); } catch {}
-      return;
-    }
-    base44.auth.updateMe({ referred_by: ref })
-      .then(async () => {
-        try {
-          const existing = await base44.entities.Referral.filter({ referred_user_id: user.id });
-          if (existing.length === 0) {
-            await base44.entities.Referral.create({
-              referrer_id: ref,
-              referred_user_id: user.id,
-              referred_email: user.email || "",
-              referred_name: user.full_name || "",
-              status: "pending",
-              bonus_credits: 0,
-            });
-          }
-        } catch {}
-        try { localStorage.removeItem("vardin_ref"); } catch {}
+    if (!ref || user.referred_by) return;
+    base44.functions.invoke("claimReferralCode", { code: ref })
+      .then((response) => {
+        if (response?.data?.status === "applied" || response?.data?.status === "already_claimed") {
+          try { localStorage.removeItem("vardin_ref"); } catch {}
+        }
       })
       .catch(() => {});
-  }, [user]);
+  }, [user?.id, user?.referred_by]);
 
   // Inherit a paid plan from a guardian if this user is a protected senior
   useEffect(() => {
