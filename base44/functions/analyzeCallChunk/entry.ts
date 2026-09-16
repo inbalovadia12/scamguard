@@ -126,10 +126,12 @@ async function transcribeWithAssemblyAI(
   const transcriptId = submitData.id;
   if (!transcriptId) throw new Error('AssemblyAI returned no transcript id');
 
-  // Poll until complete (max ~60s for short utterances)
-  const MAX_POLLS = 30;
+  // Poll until complete. Short live utterances often finish in under a second,
+  // so poll fast at first (250ms, then every 600ms) instead of waiting 2s per
+  // check. Keep a generous total budget (~48s) for longer uploaded recordings.
+  const MAX_POLLS = 80;
   for (let i = 0; i < MAX_POLLS; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, i === 0 ? 250 : 600));
 
     const pollRes = await fetch(`${ASSEMBLYAI_BASE}/transcript/${transcriptId}`, {
       headers: { authorization: apiKey },
