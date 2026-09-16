@@ -17,7 +17,7 @@ export const EXTENSION_FILES = {
   },
   "content_scripts": [
     {
-      "matches": ["https://app.vardin.com/*"],
+      "matches": ["https://app.vardin.com/*", "https://vardin.base44.app/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     },
@@ -44,7 +44,7 @@ export const EXTENSION_FILES = {
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://app.vardin.com;"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://app.vardin.com https://vardin.base44.app;"
   }
 }
 `,
@@ -186,7 +186,7 @@ chrome.runtime.onInstalled.addListener(function() {
   console.log('Vardin Scam Scanner v2.0 installed.');
 });
 `,
-  'content.js': String.raw`// Vardin Extension - Content Script (runs on vardin.base44.app only)
+  'content.js': String.raw`// Vardin Extension - Content Script (runs on app.vardin.com only)
 // Extracts auth token and language preference, relays to background
 
 var TOKEN_KEY = 'base44_access_token';
@@ -543,7 +543,7 @@ INSTALLATION
 USAGE
 1. Navigate to any webpage you want to check
 2. Click the Vardin extension icon
-3. If not logged in, click "Open Vardin Login" and log in at vardin.base44.app
+3. If not logged in, click "Open Vardin Login" and log in at app.vardin.com
 4. The extension auto-detects your login — no copy-paste needed
 5. Choose your scan type and result type
 6. Click "Scan" to get an instant AI-powered scam analysis
