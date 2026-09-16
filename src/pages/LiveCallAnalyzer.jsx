@@ -212,7 +212,9 @@ export default function LiveCallAnalyzer() {
       });
       if (res.data?.error) throw new Error(res.data.error);
       const r = res.data;
-      const segFeedback = assignedSpeaker === "you" ? (r.feedback || "") : "";
+      // Show coaching feedback inline for ALL speakers — the LLM's feedback
+      // is advice TO the user about the conversation, not about who spoke.
+      const segFeedback = r.feedback || "";
       setTranscript((prev) => {
         const next = [...prev];
         next[next.length - 1] = { ...next[next.length - 1], risk_level: r.risk_level, feedback: segFeedback };
