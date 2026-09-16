@@ -26,10 +26,16 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { image_url, image_data, language, session_context } = body;
-    const creditCost = Number(body.credit_cost);
-    if (![3, 5, 8].includes(creditCost)) {
-      return Response.json({ error: 'Invalid screen analysis credit cost' }, { status: 400 });
-    }
+
+    // Server-authoritative pricing. The client may select an analysis mode,
+    // but it can never choose the number of credits charged.
+    const analysisMode = typeof body.analysis_mode === 'string' ? body.analysis_mode : 'standard';
+    const SCREEN_ANALYSIS_COSTS: Record<string, number> = {
+      quick: 3,
+      standard: 5,
+      detailed: 8,
+    };
+    const creditCost = SCREEN_ANALYSIS_COSTS[analysisMode] ?? SCREEN_ANALYSIS_COSTS.standard;
 
     const available = getAvailableCredits(user);
     if (available.remaining < creditCost) {
