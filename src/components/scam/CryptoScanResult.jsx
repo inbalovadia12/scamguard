@@ -29,6 +29,56 @@ function CryptoChip({ icon: Icon, label, value, tone }) {
   );
 }
 
+const BANNER_CONFIG = {
+  low: {
+    icon: ShieldCheck,
+    text: "No significant scam indicators found. Still verify the source independently before transacting.",
+    color: "text-success",
+    bg: "bg-success/10",
+    border: "border-success/20",
+  },
+  medium: {
+    icon: AlertTriangle,
+    text: "Some cautionary signals detected. Verify carefully before sending funds or connecting a wallet.",
+    color: "text-warning",
+    bg: "bg-warning/10",
+    border: "border-warning/30",
+  },
+  high: {
+    icon: ShieldAlert,
+    text: "Strong scam indicators detected — do not send funds or connect your wallet.",
+    color: "text-destructive",
+    bg: "bg-destructive/10",
+    border: "border-destructive/30",
+  },
+};
+
+function AdaptiveBanner({ risk, score }) {
+  const cfg = BANNER_CONFIG[risk] || BANNER_CONFIG.medium;
+  const Icon = cfg.icon;
+  const scoreNum = typeof score === "number" ? Math.round(score) : null;
+  const barColor = risk === "high" ? "bg-destructive" : risk === "medium" ? "bg-warning" : "bg-success";
+  return (
+    <div className="space-y-3">
+      <div className={`flex items-start gap-2.5 p-4 rounded-2xl ${cfg.bg} border ${cfg.border}`}>
+        <Icon className={`w-5 h-5 ${cfg.color} flex-shrink-0 mt-0.5`} />
+        <p className={`text-sm font-medium ${cfg.color}`}>{cfg.text}</p>
+      </div>
+      {scoreNum !== null && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground font-medium">Risk Score</span>
+            <span className={`font-bold ${cfg.color}`}>{scoreNum}/100</span>
+          </div>
+          <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${scoreNum}%` }} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CryptoScanResult({ result, mode }) {
   const risk = result.risk_level || getRiskLevelFromScore(result.risk_score);
 
@@ -50,12 +100,7 @@ export default function CryptoScanResult({ result, mode }) {
         </div>
       )}
 
-      {result.is_likely_scam && (
-        <div className="flex items-center gap-2.5 p-4 rounded-2xl bg-destructive/10 border border-destructive/30">
-          <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
-          <p className="text-sm font-medium text-destructive">This is very likely a scam — do not send funds or connect your wallet.</p>
-        </div>
-      )}
+      <AdaptiveBanner risk={risk} score={result.risk_score} />
 
       <ThreatExplanation analysis={result} />
 
