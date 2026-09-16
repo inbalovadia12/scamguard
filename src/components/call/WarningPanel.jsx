@@ -1,17 +1,17 @@
 import React from "react";
-import { AlertTriangle, Zap, ThumbsUp, Lightbulb, MessageCircle } from "lucide-react";
+import { AlertTriangle, ThumbsUp, Lightbulb, MessageCircle, ShieldAlert, Info } from "lucide-react";
 import { getFeedbackSentiment } from "./feedbackUtils";
 
-const LEVEL_COLORS = {
-  low: "bg-success/10 text-success border-success/30",
-  medium: "bg-warning/10 text-warning border-warning/30",
-  high: "bg-destructive/10 text-destructive border-destructive/30",
+const SEVERITY_STYLES = {
+  caution: { icon: Info, color: "text-muted-foreground", border: "border-border/50", bg: "bg-muted/20" },
+  suspicious: { icon: AlertTriangle, color: "text-warning", border: "border-warning/20", bg: "bg-warning/5" },
+  high: { icon: ShieldAlert, color: "text-destructive", border: "border-destructive/20", bg: "bg-destructive/5" },
 };
 
 const COACHING_STYLES = {
   positive: { icon: ThumbsUp, color: "text-success", border: "border-success/20", bg: "bg-success/5" },
   warning: { icon: AlertTriangle, color: "text-destructive", border: "border-destructive/20", bg: "bg-destructive/5" },
-  neutral: { icon: Lightbulb, color: "text-muted-foreground", border: "border-border/50", bg: "bg-muted/30" },
+  neutral: { icon: Lightbulb, color: "text-muted-foreground", border: "border-border/50", bg: "bg-muted/20" },
 };
 
 export default function WarningPanel({ warnings, tactics, coaching }) {
@@ -19,10 +19,10 @@ export default function WarningPanel({ warnings, tactics, coaching }) {
     <div className="bg-card rounded-2xl border border-border/50 p-4 flex flex-col h-[340px] sm:h-[400px]">
       <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border/50">
         <AlertTriangle className="w-4 h-4 text-muted-foreground" />
-        <h3 className="text-sm font-semibold">Warnings & Coaching</h3>
+        <h3 className="text-sm font-semibold">Risk Assessment</h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+      <div className="flex-1 overflow-y-auto space-y-3 pr-1">
         {coaching?.length > 0 && (
           <div className="space-y-2">
             {coaching.map((c, i) => {
@@ -30,14 +30,11 @@ export default function WarningPanel({ warnings, tactics, coaching }) {
               const style = COACHING_STYLES[sentiment];
               const Icon = style.icon;
               return (
-                <div key={i} className={`text-sm p-2.5 rounded-lg border ${style.bg} ${style.border}`}>
-                  <div className="flex items-start gap-1.5">
-                    <Icon className={`w-3.5 h-3.5 ${style.color} flex-shrink-0 mt-0.5`} />
-                    <p className={`${style.color} font-medium`}>{c.text}</p>
+                <div key={i} className={`text-sm p-3 rounded-xl border ${style.bg} ${style.border}`}>
+                  <div className="flex items-start gap-2">
+                    <Icon className={`w-4 h-4 ${style.color} flex-shrink-0 mt-0.5`} />
+                    <p className={`${style.color} font-medium leading-relaxed`}>{c.text}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(c.timestamp).toLocaleTimeString()}
-                  </p>
                 </div>
               );
             })}
@@ -47,9 +44,8 @@ export default function WarningPanel({ warnings, tactics, coaching }) {
         {tactics.length > 0 && (
           <div className="flex flex-wrap gap-1.5 py-1">
             {tactics.map((t, i) => (
-              <span key={i} className="text-xs px-2 py-1 rounded-full bg-destructive/10 text-destructive font-medium flex items-center gap-1">
-                <Zap className="w-3 h-3" />
-                {t}
+              <span key={i} className="text-xs px-2 py-1 rounded-full bg-muted/40 text-muted-foreground font-medium">
+                {t.replace(/_/g, " ")}
               </span>
             ))}
           </div>
@@ -57,23 +53,31 @@ export default function WarningPanel({ warnings, tactics, coaching }) {
 
         {warnings.length === 0 && (!coaching || coaching.length === 0) ? (
           <div className="text-center py-8">
-            <MessageCircle className="w-8 h-8 text-success/40 mx-auto mb-2" />
+            <MessageCircle className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">
-              No warning signals detected yet. This does not establish that the conversation is safe.
+              No notable risk indicators yet. This doesn't guarantee the conversation is safe, but nothing suspicious has been detected so far.
             </p>
           </div>
         ) : (
-          warnings.map((w, i) => (
-            <div
-              key={i}
-              className={`text-sm p-2.5 rounded-lg border ${LEVEL_COLORS[w.level] || LEVEL_COLORS.low}`}
-            >
-              <p className="font-medium">{w.text}</p>
-              <p className="text-xs opacity-60 mt-1">
-                {new Date(w.timestamp).toLocaleTimeString()}
-              </p>
-            </div>
-          ))
+          warnings.map((w, i) => {
+            const severity = w.severity || "caution";
+            const style = SEVERITY_STYLES[severity] || SEVERITY_STYLES.caution;
+            const Icon = style.icon;
+            return (
+              <div key={i} className={`p-3 rounded-xl border ${style.bg} ${style.border} space-y-1.5`}>
+                <div className="flex items-start gap-2">
+                  <Icon className={`w-4 h-4 ${style.color} flex-shrink-0 mt-0.5`} />
+                  <p className={`text-sm font-semibold ${style.color}`}>{w.title || w.text}</p>
+                </div>
+                {w.explanation && <p className="text-sm text-muted-foreground leading-relaxed pl-6">{w.explanation}</p>}
+                {w.action && (
+                  <p className="text-xs text-foreground/80 leading-relaxed pl-6">
+                    <span className="font-medium">What to do: </span>{w.action}
+                  </p>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
     </div>

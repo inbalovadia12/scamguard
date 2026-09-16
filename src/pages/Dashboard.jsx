@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Search, Link2, Bot, Users, Bell, BarChart3, ArrowRight, ShieldCheck,
-  TrendingUp, Loader2, Zap, Sparkles, PhoneCall,
+  TrendingUp, Loader2, Zap, PhoneCall,
 } from "lucide-react";
 import { getCreditStatus, PLAN_NAMES } from "@/lib/credits";
 import { useI18n } from "@/lib/i18n";
@@ -18,11 +18,11 @@ export default function Dashboard() {
   const [showFilm, setShowFilm] = useState(false);
 
   const quickActions = [
-    { path: "/check", label: t("dash.check_message"), desc: t("dash.quick_check_desc"), icon: Search, color: "from-primary to-primary/80" },
-    { path: "/check", label: t("dash.quick_scan_url"), desc: t("dash.quick_scan_desc"), icon: Link2, color: "from-chart-2 to-chart-2/80" },
-    { path: "/agent", label: t("dash.quick_ask_ai"), desc: t("dash.quick_ask_desc"), icon: Bot, color: "from-chart-5 to-chart-5/80" },
-    { path: "/family", label: t("dash.quick_family"), desc: t("dash.quick_family_desc"), icon: Users, color: "from-chart-3 to-chart-3/80" },
-    { path: "/phone-lookup?tab=live&mode=upload", label: "Analyze Past Call", desc: "Check a recording before calling back", icon: PhoneCall, color: "from-chart-4 to-chart-4/80" },
+    { path: "/check", label: t("dash.check_message"), desc: t("dash.quick_check_desc"), icon: Search, color: "bg-primary/10 text-primary" },
+    { path: "/check", label: t("dash.quick_scan_url"), desc: t("dash.quick_scan_desc"), icon: Link2, color: "bg-chart-2/10 text-chart-2" },
+    { path: "/agent", label: t("dash.quick_ask_ai"), desc: t("dash.quick_ask_desc"), icon: Bot, color: "bg-chart-5/10 text-chart-5" },
+    { path: "/family", label: t("dash.quick_family"), desc: t("dash.quick_family_desc"), icon: Users, color: "bg-chart-3/10 text-chart-3" },
+    { path: "/phone-lookup?tab=live&mode=upload", label: "Analyze Past Call", desc: "Check a recording before calling back", icon: PhoneCall, color: "bg-chart-4/10 text-chart-4" },
   ];
   const [view, setView] = useState("overview");
   const [credits, setCredits] = useState(null);
@@ -75,7 +75,7 @@ export default function Dashboard() {
       {view === "overview" && (
       <div className="animate-slide-up">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">
-          {t("dash.welcome")}<span className="text-muted-foreground font-normal"> 👋</span>
+          {t("dash.welcome")}
         </h1>
         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
           {t("dash.overview")}
@@ -106,10 +106,10 @@ export default function Dashboard() {
       {/* Wrapped banner */}
       {isWrappedSeason() && (
         <Link to="/wrapped" className="block animate-slide-up">
-          <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-violet-500 via-primary to-cyan-500 p-5 text-white shadow-lg shadow-primary/30 luxury-card-hover">
+          <div className="relative rounded-2xl overflow-hidden bg-primary p-5 text-primary-foreground">
             <div className="flex flex-wrap items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-xl bg-primary-foreground/15 flex items-center justify-center flex-shrink-0">
+                <PhoneCall className="w-6 h-6" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-base">Your 2026 Wrapped is Ready!</p>
@@ -149,8 +149,8 @@ export default function Dashboard() {
             to={action.path}
             className="group flex items-center gap-4 p-4 sm:p-5 rounded-2xl border border-border/50 bg-card hover:border-primary/40 hover:shadow-md transition-all"
           >
-            <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center flex-shrink-0 shadow-sm`}>
-              <action.icon className="w-5 h-5 text-white" />
+            <div className={`w-11 h-11 rounded-xl ${action.color} flex items-center justify-center flex-shrink-0`}>
+              <action.icon className="w-5 h-5" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm">{action.label}</div>
@@ -174,7 +174,7 @@ export default function Dashboard() {
               <ShieldCheck className="w-8 h-8 text-muted-foreground/40 mx-auto" />
               <p className="text-sm text-muted-foreground">{t("dash.no_checks")}</p>
               <Link to="/check">
-                <Button size="sm" className="mt-2 gap-2 bg-gradient-to-r from-primary to-primary/80">
+                <Button size="sm" className="mt-2 gap-2">
                   <Search className="w-3.5 h-3.5" />
                   {t("dash.check_message")}
                 </Button>

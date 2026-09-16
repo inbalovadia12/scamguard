@@ -1,58 +1,25 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+import {
+  buildAnalysisPrompt,
+  computeWeightedRisk,
+  mergeRiskLevels,
+  type ConversationTurn,
+  type ScamAnalysisResult,
+} from '../../shared/callGuardAnalysis.ts';
 
+// 1 credit per finalized utterance analysis — NOT per arbitrary audio chunk.
+// A 30-minute call produces roughly 60-100 utterances, not hundreds of chunks.
 const CREDIT_COST = 1;
 
-/**
- * LiveGuard - Groq Primary STT with Speaker Identification
- *
- * ARCHITECTURE:
- * 1. Groq Whisper (primary STT) - transcribes audio chunks
- * 2. Speaker Identification Layer - determines who is speaking
- * 3. Conversation Context Manager - maintains rolling context
- * 4. Scam Detector - analyzes speaker-aware transcript
- *
- * KEY FIXES:
- * - 302 redirect: Download audio to binary, don't send URL
- * - Speaker tracking: Use Groq LLM to identify speakers consistently
- * - Context: Maintain conversation state across chunks
- * - Alerts: Suppress duplicate warnings for same behavior
- */
-
-interface SpeakerSegment {
-  speaker: 'caller' | 'you' | 'unknown';
-  text: string;
-  confidence: number;
-  timestamp?: number;
-}
-
-interface ConversationState {
-  segments: SpeakerSegment[];
-  lastSpeaker?: 'caller' | 'you';
-  flags: Map<string, number>; // Track which alerts we've shown
-  context: string; // Summary for LLM
-}
-
-// In-memory conversation state (per user session)
-const conversationStates = new Map<string, ConversationState>();
-
-function getOrCreateConversationState(userId: string): ConversationState {
-  if (!conversationStates.has(userId)) {
-    conversationStates.set(userId, {
-      segments: [],
-      flags: new Map(),
-      context: '',
-    });
-  }
-  return conversationStates.get(userId)!;
-}
-
-// ===== AUDIO RETRIEVAL (FIX 302 REDIRECT) =====
+// ===== AUDIO RETRIEVAL =====
+// Handles base64 (data URL or raw), and HTTP URLs (downloads to binary to
+// avoid 302 redirect issues with the STT provider).
 async function retrieveAudioBytes(
   input: string,
   mimeType?: string
 ): Promise<{ bytes: Uint8Array; mimeType: string }> {
-  // Case 1: Base64 encoded audio
+  // Case 1: Data URL
   if (input.startsWith('data:')) {
     const match = input.match(/data:([^;]+);base64,(.+)/);
     if (match) {
@@ -60,46 +27,30 @@ async function retrieveAudioBytes(
       const base64 = match[2];
       const binaryString = atob(base64);
       const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
+      for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
       return { bytes, mimeType: mime };
     }
   }
 
-  // Case 2: Raw base64 (the live browser path sends audio_base64 without a data: prefix)
-  // Decode directly so the endpoint accepts both raw base64 and data URLs.
+  // Case 2: Raw base64 (live browser path)
   if (/^[A-Za-z0-9+/\s]+=*$/.test(input) && input.length > 100) {
     try {
       const normalized = input.replace(/\s/g, '');
       const binaryString = atob(normalized);
       const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
+      for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
       return { bytes, mimeType: mimeType || 'audio/webm' };
-    } catch {
-      // Fall through to URL/invalid-input handling.
-    }
+    } catch { /* fall through */ }
   }
 
-  // Case 3: URL - download to binary (THIS FIXES 302 REDIRECT)
+  // Case 3: URL — download to binary
   if (input.startsWith('http://') || input.startsWith('https://')) {
     try {
-      const response = await fetch(input, {
-        signal: AbortSignal.timeout(8000),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to download audio: ${response.status}`);
-      }
-
+      const response = await fetch(input, { signal: AbortSignal.timeout(8000) });
+      if (!response.ok) throw new Error(`download failed: ${response.status}`);
       const blob = await response.blob();
-      const buffer = await blob.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      const mime = blob.type || mimeType || 'audio/webm';
-
-      return { bytes, mimeType: mime };
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      return { bytes, mimeType: blob.type || mimeType || 'audio/webm' };
     } catch (e) {
       throw new Error(`Audio download failed: ${e.message}`);
     }
@@ -108,7 +59,7 @@ async function retrieveAudioBytes(
   throw new Error('Invalid audio input: must be base64 or URL');
 }
 
-// ===== GROQ STT (PRIMARY PROVIDER) =====
+// ===== GROQ WHISPER STT (batch transcription) =====
 async function transcribeWithGroq(
   audioBytes: Uint8Array,
   mimeType: string,
@@ -121,7 +72,6 @@ async function transcribeWithGroq(
   form.set('response_format', 'verbose_json');
   form.set('timestamp_granularities[]', 'segment');
 
-  // Send binary data directly (NOT a URL)
   const file = new File([audioBytes], 'audio.webm', { type: mimeType });
   form.set('file', file);
 
@@ -129,271 +79,195 @@ async function transcribeWithGroq(
     method: 'POST',
     headers: { Authorization: `Bearer ${groqKey}` },
     body: form,
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Groq failed: ${response.status} - ${errorText.slice(0, 200)}`);
+    throw new Error(`Groq STT ${response.status}: ${errorText.slice(0, 200)}`);
   }
 
   return await response.json();
 }
 
-// ===== SPEAKER IDENTIFICATION =====
-async function identifySpeakers(
+// ===== SPEAKER ASSIGNMENT =====
+// Speaker is determined by the AUDIO SOURCE, not by text-guessing:
+// - "system" / "phone_call": the captured audio is the caller's side only.
+//   All segments = "caller".
+// - "mic" / "upload": mixed audio (speakerphone). Use alternation based on
+//   segment timestamp gaps — a gap > 1.2s likely indicates a turn change.
+//   This is a best-effort heuristic; the user can correct labels in the UI.
+function assignSpeakers(
   segments: any[],
-  conversationState: ConversationState,
-  groqKey: string
-): Promise<SpeakerSegment[]> {
-  const segmentTexts = segments
-    .filter((s: any) => s?.text?.trim())
-    .map((s: any, i) => `[${i}] "${s.text.trim()}"`)
-    .join('\n');
+  audioSource: string,
+  previousSpeaker: string | null
+): { speaker: string; text: string; timestamp?: number }[] {
+  const isCallerOnly = audioSource === 'system' || audioSource === 'phone_call';
 
-  const contextSummary = conversationState.segments
-    .slice(-5) // Last 5 segments
-    .map((s) => `${s.speaker}: ${s.text.slice(0, 50)}`)
-    .join('\n');
-
-  try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${groqKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        messages: [
-          {
-            role: 'system',
-            content: `You identify phone call speakers. Rules:
-            
-"you" = person holding phone:
-  - Short responses: "yes", "okay", "I see", "hello"
-  - Questions: "who is this", "what?"
-  - Sounds uncertain/responsive
-  
-"caller" = other person:
-  - Longer statements
-  - Makes claims: "This is the hospital"
-  - Makes requests: "Give me", "Send", "Pay"
-  - Sounds authoritative
-  - Talks more than "you"
-
-Return ONLY a JSON array of speaker IDs matching segment count.
-Example: ["you","caller","caller","you"]
-
-MAINTAIN CONSISTENCY: If "you" speaks first, keep that pattern.`,
-          },
-          {
-            role: 'user',
-            content: `Previous context:
-${contextSummary || 'None'}
-
-New segments to classify (${segments.filter((s: any) => s?.text?.trim()).length} total):
-${segmentTexts}
-
-Return JSON array:`,
-          },
-        ],
-        temperature: 0,
-        max_tokens: 200,
-      }),
-      signal: AbortSignal.timeout(2000),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || '';
-      const jsonMatch = content.match(/\[[\s\S]*?\]/);
-
-      if (jsonMatch) {
-        try {
-          const roles = JSON.parse(jsonMatch[0]);
-          if (Array.isArray(roles)) {
-            return segments
-              .filter((s: any) => s?.text?.trim())
-              .map((s: any, i) => ({
-                speaker: roles[i] === 'caller' || roles[i] === 'you' ? roles[i] : 'unknown',
-                text: s.text.trim(),
-                confidence: 0.85,
-                timestamp: s.start,
-              }));
-          }
-        } catch {
-          // JSON parse failed, use fallback
-        }
-      }
-    }
-  } catch {
-    // LLM timeout, use heuristic
+  if (isCallerOnly) {
+    return segments
+      .filter((s) => s?.text?.trim())
+      .map((s) => ({
+        speaker: "caller",
+        text: s.text.trim(),
+        timestamp: s.start,
+      }));
   }
 
-  // FALLBACK: Heuristic identification
+  // Mixed-audio mode: alternation based on gaps between segments
+  let currentSpeaker = previousSpeaker === "caller" ? "you" : "caller";
+  let prevEnd = 0;
   return segments
-    .filter((s: any) => s?.text?.trim())
-    .map((s: any) => {
-      const text = s.text.toLowerCase();
-      const len = s.text.length;
-
-      let speaker: 'caller' | 'you' | 'unknown' = 'unknown';
-      if (len < 20 || text.match(/^(yes|okay|ok|what|who|hello|hi|sure|i see|uh huh)$/)) {
-        speaker = 'you';
-      } else if (
-        text.includes('this is') ||
-        text.includes('we need') ||
-        text.includes('give') ||
-        text.includes('pay') ||
-        text.includes('send') ||
-        len > 50
-      ) {
-        speaker = 'caller';
+    .filter((s) => s?.text?.trim())
+    .map((s) => {
+      const start = s.start ?? prevEnd;
+      // If there's a gap > 1.2s, a turn likely changed
+      if (start - prevEnd > 1.2) {
+        currentSpeaker = currentSpeaker === "caller" ? "you" : "caller";
       }
-
+      prevEnd = s.end ?? start + 1;
       return {
-        speaker,
+        speaker: currentSpeaker,
         text: s.text.trim(),
-        confidence: speaker === 'unknown' ? 0.4 : 0.85,
-        timestamp: s.start,
+        timestamp: start,
       };
     });
 }
 
-// ===== SCAM DETECTION (SPEAKER-AWARE) =====
-function detectScamIndicators(segments: SpeakerSegment[]): Array<{
-  flag: string;
-  speaker: string;
-  confidence: number;
-}> {
-  const alerts: Array<{ flag: string; speaker: string; confidence: number }> = [];
+// ===== CONTEXTUAL SCAM ANALYSIS (LLM) =====
+async function analyzeScamContext(
+  base44: any,
+  conversation: ConversationTurn[],
+  reportedIndicators: string[],
+  language: string
+): Promise<ScamAnalysisResult> {
+  const prompt = buildAnalysisPrompt(conversation, reportedIndicators, language);
 
-  // Analyze by speaker
-  const callerSegments = segments.filter((s) => s.speaker === 'caller');
-  const youSegments = segments.filter((s) => s.speaker === 'you');
-
-  const callerText = callerSegments.map((s) => s.text.toLowerCase()).join(' ');
-  const youText = youSegments.map((s) => s.text.toLowerCase()).join(' ');
-
-  // MONEY REQUEST from CALLER
-  const moneyKeywords = [
-    'credit card',
-    'debit card',
-    'wire transfer',
-    'send money',
-    'gift card',
-    'payment',
-    'fee',
-  ];
-  if (moneyKeywords.some((kw) => callerText.includes(kw))) {
-    alerts.push({
-      flag: 'money_request',
-      speaker: 'caller',
-      confidence: 0.9,
+  try {
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt,
+      response_json_schema: {
+        type: "object",
+        properties: {
+          risk_level: { type: "string", enum: ["low", "medium", "high"] },
+          new_indicators: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                type: { type: "string" },
+                description: { type: "string" },
+                confidence: { type: "number" },
+              },
+            },
+          },
+          warnings: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                explanation: { type: "string" },
+                action: { type: "string" },
+                severity: { type: "string", enum: ["caution", "suspicious", "high"] },
+              },
+            },
+          },
+          feedback: { type: "string" },
+          summary: { type: "string" },
+        },
+        required: ["risk_level"],
+      },
     });
-  }
 
-  // THREAT from CALLER
-  const threatKeywords = ['die', 'death', 'arrest', 'jail', 'freeze', 'lawsuit'];
-  if (threatKeywords.some((kw) => callerText.includes(kw))) {
-    alerts.push({
-      flag: 'threat',
-      speaker: 'caller',
-      confidence: 0.9,
-    });
-  }
+    // InvokeLLM with response_json_schema returns a parsed object
+    const data = typeof result === 'string' ? JSON.parse(result) : result;
 
-  // URGENCY from CALLER
-  const urgencyKeywords = ['immediately', 'right now', 'now', 'hurry', 'asap'];
-  if (urgencyKeywords.some((kw) => callerText.includes(kw))) {
-    alerts.push({
-      flag: 'urgency',
-      speaker: 'caller',
-      confidence: 0.85,
-    });
-  }
+    const indicators = Array.isArray(data.new_indicators) ? data.new_indicators : [];
+    const weighted = computeWeightedRisk(indicators, reportedIndicators);
+    const llmLevel = data.risk_level || "low";
+    const merged = mergeRiskLevels(llmLevel, weighted);
 
-  // PERSONAL INFO REQUEST from CALLER
-  const personalKeywords = [
-    'social security',
-    'ssn',
-    'password',
-    'account number',
-    'card number',
-  ];
-  if (personalKeywords.some((kw) => callerText.includes(kw))) {
-    alerts.push({
-      flag: 'personal_info_request',
-      speaker: 'caller',
-      confidence: 0.95,
-    });
+    return {
+      risk_level: merged as "low" | "medium" | "high",
+      new_indicators: indicators,
+      warnings: Array.isArray(data.warnings) ? data.warnings : [],
+      feedback: data.feedback || "",
+      summary: data.summary || "",
+    };
+  } catch (e) {
+    console.error("Scam analysis LLM error:", e?.message);
+    // Graceful degradation: return low risk if the LLM is unavailable.
+    // The transcript still reaches the user; only the analysis is deferred.
+    return {
+      risk_level: "low",
+      new_indicators: [],
+      warnings: [],
+      feedback: "",
+      summary: "Analysis temporarily unavailable.",
+    };
   }
-
-  // AUTHORITY CLAIM from CALLER
-  const authorityKeywords = ['hospital', 'police', 'fbi', 'irs', 'bank', 'microsoft'];
-  if (authorityKeywords.some((kw) => callerText.includes(kw))) {
-    alerts.push({
-      flag: 'authority_claim',
-      speaker: 'caller',
-      confidence: 0.8,
-    });
-  }
-
-  return alerts;
 }
 
 // ===== MAIN HANDLER =====
 Deno.serve(async (req) => {
+  const startTime = Date.now();
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Auth required' }, { status: 401 });
+    if (!user) return Response.json({ error: "Auth required" }, { status: 401 });
 
-    let plan = user.subscription_plan || 'starter';
-    if (plan === 'free') plan = 'starter';
-    if (plan === 'elite') plan = 'premium';
-    if (plan !== 'premium') {
-      return Response.json({ error: 'Premium required' }, { status: 403 });
+    let plan = user.subscription_plan || "starter";
+    if (plan === "free") plan = "starter";
+    if (plan === "elite") plan = "premium";
+    if (plan !== "premium") {
+      return Response.json({ error: "Premium required" }, { status: 403 });
     }
 
     const available = getAvailableCredits(user);
     if (available.remaining < CREDIT_COST) {
       return Response.json({
-        error: 'Insufficient credits',
+        error: "Insufficient credits",
         credits_remaining: available.remaining,
         credits_limit: getMonthlyCreditLimit(user),
         credit_cost: CREDIT_COST,
       }, { status: 402 });
     }
+
     const chargeCredits = async () => {
       const usage = applyCreditUsage(user, CREDIT_COST);
-      if (!usage) throw new Error('Credit balance changed during call analysis. Please try again.');
+      if (!usage) throw new Error("Credit balance changed during analysis. Please try again.");
       await base44.auth.updateMe(usage);
       return getAvailableCredits({ ...user, ...usage }).remaining;
     };
 
     const body = await req.json();
-    // Accept the canonical audio_input field plus the two fields already used by
-    // the live recorder and upload flow. This keeps the API backwards compatible.
     const audio_input = body.audio_input || body.audio_base64 || body.audio_url;
-    const audio_mime = body.audio_mime || body.audio_mime_type || 'audio/webm';
-    const language = body.language || 'en';
+    const audio_mime = body.audio_mime || body.audio_mime_type || "audio/webm";
+    const language = body.language || "en";
+    const audioSource = body.audio_source || "mic"; // "system" | "phone_call" | "mic" | "upload"
+    const previousSpeaker = body.previous_speaker || null;
+    // The client sends the full conversation context (list of {speaker, text})
+    // and the list of indicator types already reported, for deduplication.
+    const conversationContext: ConversationTurn[] = Array.isArray(body.conversation_context)
+      ? body.conversation_context
+      : [];
+    const reportedIndicators: string[] = Array.isArray(body.reported_indicators)
+      ? body.reported_indicators
+      : [];
 
     if (!audio_input) {
-      return Response.json({
-        error: 'audio_input required',
-        hint: 'Send audio_input, audio_base64, or audio_url.'
-      }, { status: 400 });
+      return Response.json({ error: "audio_input required" }, { status: 400 });
     }
 
-    const startTime = Date.now();
-    const groqKey = Deno.env.get('GROQ_STT');
+    const groqKey = Deno.env.get("GROQ_STT");
+    if (!groqKey) {
+      return Response.json({ error: "STT not configured" }, { status: 500 });
+    }
 
-    // ===== RETRIEVE AUDIO BYTES (FIX 302 REDIRECT) =====
+    // ===== RETRIEVE AUDIO =====
     let audioBytes: Uint8Array;
     let actualMimeType: string;
-
     try {
       const audioData = await retrieveAudioBytes(audio_input, audio_mime);
       audioBytes = audioData.bytes;
@@ -402,107 +276,83 @@ Deno.serve(async (req) => {
       return Response.json({ error: `Audio retrieval failed: ${e.message}` }, { status: 400 });
     }
 
-    // ===== TRANSCRIBE: GROQ ONLY =====
+    // ===== TRANSCRIBE (batch) =====
     let transcriptData: any;
-    const provider = 'groq';
-
-    if (!groqKey) {
-      return Response.json({ error: 'Groq STT not configured' }, { status: 500 });
-    }
-
     try {
       transcriptData = await transcribeWithGroq(audioBytes, actualMimeType, language, groqKey);
     } catch (groqError) {
-      console.error('Groq failed:', groqError.message);
-      return Response.json({ error: `Groq failed: ${groqError.message}` }, { status: 500 });
+      console.error("Groq STT error:", groqError.message);
+      return Response.json({
+        error: `Transcription failed: ${groqError.message}`,
+        provider: "groq",
+      }, { status: 502 });
     }
 
-    const fullTranscript = transcriptData.text || '';
+    const fullTranscript = transcriptData.text || "";
+
+    // Empty transcript (silence or noise) — no credit charged
     if (!fullTranscript.trim()) {
-      const creditsRemaining = await chargeCredits();
       return Response.json({
-        transcript: '',
+        transcript: "",
         segments: [],
-        red_flags: [],
-        risk_level: 'low',
-        is_scam: false,
-        provider,
-        credits_used: CREDIT_COST,
-        credits_remaining: creditsRemaining,
+        risk_level: "low",
+        warnings: [],
+        tactics_detected: [],
+        new_indicators: [],
+        feedback: "",
+        provider: "groq",
+        credits_used: 0,
+        credits_remaining: available.remaining,
         credits_limit: getMonthlyCreditLimit(user),
         timing_ms: Date.now() - startTime,
       });
     }
 
-    // ===== IDENTIFY SPEAKERS =====
-    const segments = (transcriptData.segments || []).filter((s: any) => s?.text?.trim());
-    const conversationState = getOrCreateConversationState(user.id);
-    const speakerSegments = await identifySpeakers(segments, conversationState, groqKey);
+    // ===== ASSIGN SPEAKERS (audio-source based, not text-guessing) =====
+    const rawSegments = (transcriptData.segments || []).filter((s: any) => s?.text?.trim());
+    const speakerSegments = assignSpeakers(rawSegments, audioSource, previousSpeaker);
 
-    // ===== DETECT SCAM INDICATORS =====
-    const alerts = detectScamIndicators(speakerSegments);
+    // ===== BUILD CONVERSATION FOR ANALYSIS =====
+    const fullConversation: ConversationTurn[] = [
+      ...conversationContext,
+      ...speakerSegments.map((s) => ({
+        speaker: s.speaker as "caller" | "you" | "unknown",
+        text: s.text,
+      })),
+    ];
 
-    // ===== SUPPRESS DUPLICATE ALERTS =====
-    const newAlerts = alerts.filter((alert) => {
-      const key = `${alert.flag}`;
-      const lastCount = conversationState.flags.get(key) || 0;
-
-      if (lastCount === 0) {
-        // First time seeing this alert - show it
-        conversationState.flags.set(key, 1);
-        return true;
-      } else if (alert.confidence > 0.9 && lastCount < 2) {
-        // High confidence alert - show up to 2 times
-        conversationState.flags.set(key, lastCount + 1);
-        return true;
-      }
-
-      // Suppress duplicate
-      return false;
-    });
-
-    // ===== UPDATE CONVERSATION STATE =====
-    conversationState.segments.push(...speakerSegments);
-    conversationState.context = fullTranscript.slice(-500); // Keep rolling context
-
-    // ===== GENERATE RESPONSE =====
-    const redFlags = newAlerts.map((a) => `${a.flag} (from ${a.speaker})`);
-    const tacticsDetected = newAlerts.map((a) => a.flag);
-    const warnings = newAlerts.map((a) => {
-      const labels: Record<string, string> = {
-        money_request: 'Caller requested money or payment information.',
-        threat: 'Caller used a threat or consequence to pressure you.',
-        urgency: 'Caller used urgency or pressure to make you act immediately.',
-        personal_info_request: 'Caller requested sensitive personal or account information.',
-        authority_claim: 'Caller claimed to represent an organization or authority.',
-      };
-      return labels[a.flag] || `Suspicious behavior detected: ${a.flag}.`;
-    });
-    const isScam = newAlerts.length >= 2;
-    const riskLevel = isScam ? 'high' : newAlerts.length === 1 ? 'medium' : 'low';
+    // ===== CONTEXTUAL SCAM ANALYSIS (LLM) =====
+    const analysis = await analyzeScamContext(
+      base44,
+      fullConversation,
+      reportedIndicators,
+      language
+    );
 
     const creditsRemaining = await chargeCredits();
+
     return Response.json({
       transcript: fullTranscript,
       segments: speakerSegments,
-      red_flags: redFlags,
-      warnings,
-      tactics_detected: tacticsDetected,
-      risk_level: riskLevel,
-      is_scam: isScam,
-      feedback: isScam
-        ? 'STOP — Multiple scam indicators. Hang up and contact the organization directly.'
-        : newAlerts.length === 1
-          ? 'Caution: One indicator detected. Verify independently.'
-          : '',
-      provider,
+      risk_level: analysis.risk_level,
+      warnings: analysis.warnings,
+      new_indicators: analysis.new_indicators,
+      tactics_detected: analysis.new_indicators.map((i) => i.type),
+      red_flags: analysis.new_indicators.map((i) => i.description),
+      feedback: analysis.feedback,
+      summary: analysis.summary,
+      provider: "groq",
+      speaker_detection_note:
+        audioSource === "system" || audioSource === "phone_call"
+          ? "Speaker: caller (captured from system audio)."
+          : "Speaker labels are estimated from speech gaps. Tap any message to correct.",
       credits_used: CREDIT_COST,
       credits_remaining: creditsRemaining,
       credits_limit: getMonthlyCreditLimit(user),
       timing_ms: Date.now() - startTime,
     });
   } catch (error: any) {
-    console.error('analyzeCallChunk error:', error?.message);
-    return Response.json({ error: error?.message || 'Failed' }, { status: 500 });
+    console.error("analyzeCallChunk error:", error?.message);
+    return Response.json({ error: error?.message || "Failed" }, { status: 500 });
   }
 });

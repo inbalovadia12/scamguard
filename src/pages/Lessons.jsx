@@ -84,6 +84,11 @@ export default function Lessons() {
   );
 
   const completedCount = progress.filter((p) => p.status === "completed").length;
+  const completedIds = new Set(progress.filter((p) => p.status === "completed").map((p) => p.lesson_id));
+  const firstIncomplete = allLessons.find((l) => !completedIds.has(l.id));
+  const filteredCategories = selectedCategory === "all"
+    ? LESSON_CATEGORIES
+    : LESSON_CATEGORIES.filter((c) => c.id === selectedCategory);
 
   const handleStartLesson = (lesson, category) => {
     setActiveLesson(lesson);
