@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       `• And more!`,
       ``,
       `View your Wrapped:`,
-      `https://app.vardin.com/wrapped`,
+      `https://vardin.base44.app/wrapped`,
       ``,
       `Available for one week only — don't miss it!`,
       ``,

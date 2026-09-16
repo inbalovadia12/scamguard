@@ -17,7 +17,7 @@ export const EXTENSION_FILES = {
   },
   "content_scripts": [
     {
-      "matches": ["https://app.vardin.com/*", "https://vardin.base44.app/*"],
+      "matches": ["https://vardin.base44.app/*", "https://vardin.base44.app/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     },
@@ -44,14 +44,14 @@ export const EXTENSION_FILES = {
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://app.vardin.com https://vardin.base44.app;"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://vardin.base44.app https://vardin.base44.app;"
   }
 }
 `,
   'background.js': String.raw`// Vardin Extension - Background Service Worker v2.0
 // Handles: auth token storage, language sync, auto-scan, badge, message routing
 
-var APP_BASE = 'https://app.vardin.com';
+var APP_BASE = 'https://vardin.base44.app';
 var currentLang = 'en';
 
 function isValidSender(sender) {
@@ -186,7 +186,7 @@ chrome.runtime.onInstalled.addListener(function() {
   console.log('Vardin Scam Scanner v2.0 installed.');
 });
 `,
-  'content.js': String.raw`// Vardin Extension - Content Script (runs on app.vardin.com only)
+  'content.js': String.raw`// Vardin Extension - Content Script (runs on vardin.base44.app only)
 // Extracts auth token and language preference, relays to background
 
 var TOKEN_KEY = 'base44_access_token';
@@ -543,7 +543,7 @@ INSTALLATION
 USAGE
 1. Navigate to any webpage you want to check
 2. Click the Vardin extension icon
-3. If not logged in, click "Open Vardin Login" and log in at app.vardin.com
+3. If not logged in, click "Open Vardin Login" and log in at vardin.base44.app
 4. The extension auto-detects your login — no copy-paste needed
 5. Choose your scan type and result type
 6. Click "Scan" to get an instant AI-powered scam analysis
@@ -578,5 +578,5 @@ SECURITY
 - VirusTotal API key kept on backend only
 
 SUPPORT
-Visit https://app.vardin.com for help and resources.
+Visit https://vardin.base44.app for help and resources.
 `;

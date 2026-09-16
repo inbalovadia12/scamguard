@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       `${steps || '  No specific steps available.'}`,
       ``,
       `View full details in your Guardian Alerts:`,
-      `https://app.vardin.com/alerts`,
+      `https://vardin.base44.app/alerts`,
       ``,
       `Stay safe,`,
       `The Vardin Team`,

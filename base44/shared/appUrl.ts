@@ -1,7 +1,7 @@
 // Canonical production URL + safe return-URL helper.
 //
 // The app is published at vardin.base44.app and may also be served from a
-// custom domain (e.g. app.vardin.com). PayPal return/cancel URLs must point to
+// custom domain (e.g. vardin.base44.app). PayPal return/cancel URLs must point to
 // a domain the user is actually on, otherwise the post-approval redirect
 // breaks. We therefore trust the request origin when it is on our allowlist,
 // and fall back to the canonical public URL otherwise.

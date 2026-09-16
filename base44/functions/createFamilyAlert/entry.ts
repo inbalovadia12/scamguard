@@ -68,7 +68,7 @@ export default async function(req: Request): Promise<Response> {
           member_note ? `Their note: ${member_note}` : '',
           ``,
           `Review and respond in Vardin:`,
-          `https://app.vardin.com/alerts`,
+          `https://vardin.base44.app/alerts`,
           ``,
           `Stay safe,`,
           `The Vardin Team`,

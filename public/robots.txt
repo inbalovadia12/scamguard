@@ -31,4 +31,4 @@ Disallow: /advanced-scanner
 Disallow: /emergency-response
 Disallow: /trust-history
 Disallow: /pricing
-Sitemap: https://app.vardin.com/sitemap.xml
+Sitemap: https://vardin.base44.app/sitemap.xml

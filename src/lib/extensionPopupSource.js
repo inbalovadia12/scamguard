@@ -133,7 +133,7 @@ export const POPUP_HTML = String.raw`<!DOCTYPE html>
 export const POPUP_JS = String.raw`// Vardin Extension - Popup Script v2.0
 // Handles: auth, premium gating, all scan types, file upload, i18n, results
 
-var APP_BASE = 'https://app.vardin.com';
+var APP_BASE = 'https://vardin.base44.app';
 var LOGIN_URL = APP_BASE + '/login';
 var PRICING_URL = APP_BASE + '/pricing';
 
