@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, Gift } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -21,6 +21,7 @@ export default function Register() {
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
   const navigate = useNavigate();
   const { checkUserAuth } = useAuth();
 
@@ -61,6 +62,16 @@ export default function Register() {
       const result = await base44.auth.verifyOtp({ email, otpCode });
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
+      }
+
+      const pendingReferral = referralCode.trim() || localStorage.getItem("vardin_ref") || "";
+      if (pendingReferral) {
+        try {
+          await base44.functions.invoke("claimReferralCode", { code: pendingReferral });
+          localStorage.removeItem("vardin_ref");
+        } catch (referralError) {
+          console.warn("Referral could not be applied after verification:", referralError);
+        }
       }
       
       // Wait for auth context to update before redirecting
@@ -240,6 +251,23 @@ export default function Register() {
               required
             />
           </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="referral-code">Referral code <span className="text-muted-foreground font-normal">(optional)</span></Label>
+          <div className="relative">
+            <Gift className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              id="referral-code"
+              type="text"
+              autoComplete="off"
+              placeholder="VARDINXXXXXXX"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+              className="pl-10 h-12 font-mono tracking-wider"
+              maxLength={13}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">Enter a friend's code so the referral is linked to your account.</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="confirm">Confirm Password</Label>
