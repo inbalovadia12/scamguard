@@ -170,7 +170,11 @@ Deno.serve(async (req) => {
     let qrFinalUrl = '';
     let qrPageTitle = '';
 
-    const isUrlScan = scanType === 'url' || (scanType === 'page' && scanMode === 'url') || (page_url && scanType !== 'file');
+    // VirusTotal + URLhaus only matter for URL-based scans. Running them for
+    // screenshot / email / chat / marketplace / page-screenshot scans wastes time,
+    // can trigger false "malware" early-exits that ignore the actual content, and
+    // risks timing out the whole scan (charging credits for nothing).
+    const isUrlScan = scanType === 'url' || (scanType === 'page' && scanMode === 'url');
 
     // Start all parallel tasks
     const parallelTasks: Promise<any>[] = [];
@@ -210,12 +214,15 @@ Deno.serve(async (req) => {
         qrFinalUrl = redirectResult.finalUrl;
         qrPageTitle = redirectResult.pageTitle;
 
-        // Get VT report for final URL if not already done
-        if (!vtReport && qrFinalUrl !== qrDecodedContent) {
-          vtReport = await getVirusTotalReport(qrFinalUrl);
-        } else if (!vtReport) {
-          vtReport = await getVirusTotalReport(qrDecodedContent);
-        }
+        // Check the QR's actual destination (NOT the tab the user is on) against
+        // both VirusTotal and URLhaus, in parallel.
+        const qrTargetUrl = qrFinalUrl || qrDecodedContent;
+        const [qrVt, qrUrlhaus] = await Promise.all([
+          getVirusTotalReport(qrTargetUrl),
+          getUrlhausReport(qrTargetUrl),
+        ]);
+        if (qrVt) vtReport = qrVt;
+        if (qrUrlhaus) urlhausReport = qrUrlhaus;
       }
     }
 
