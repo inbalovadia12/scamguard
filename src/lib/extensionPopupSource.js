@@ -28,6 +28,9 @@ export const POPUP_HTML = String.raw`<!DOCTYPE html>
           <span class="toggle-slider"></span>
         </label>
         <span id="plan-badge" class="badge hidden"></span>
+        <button id="logout-btn" class="icon-btn hidden" data-i18n-title="logout" aria-label="Log out">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+        </button>
       </div>
     </header>
 
@@ -49,10 +52,10 @@ export const POPUP_HTML = String.raw`<!DOCTYPE html>
     </div>
 
     <div id="upgrade-view" class="view hidden">
-      <div class="icon-wrap crown">
+      <div class="icon-wrap locked">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/>
-          <path d="M5 21h14"/>
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
       </div>
       <h2 data-i18n="premium_title">Premium Required</h2>
@@ -161,9 +164,10 @@ var I18N = {
     connect_title: 'Connect Your Account',
     connect_desc: 'Log in to Vardin on your browser to start scanning.',
     open_login: 'Open Vardin Login',
-    premium_title: 'Premium Required',
+    premium_title: 'Locked',
     premium_desc: 'The Vardin Chrome extension requires a Premium subscription.',
-    upgrade_premium: 'Upgrade to Premium',
+    upgrade_premium: 'Upgrade Now',
+    logout: 'Log out',
     scan_type: 'Scan Type',
     type_page: 'Page Analysis', type_url: 'URL Reputation', type_screenshot: 'Screenshot',
     type_qr: 'QR Code', type_email: 'Email', type_chat: 'Chat / SMS',
@@ -209,9 +213,10 @@ var I18N = {
     connect_title: 'חבר את החשבון שלך',
     connect_desc: 'התחבר ל-Vardin בדפדפן שלך כדי להתחיל לסרוק.',
     open_login: 'פתח התחברות Vardin',
-    premium_title: 'נדרש Premium',
+    premium_title: 'נעול',
     premium_desc: 'תוסף Chrome של Vardin דורש מנוי Premium.',
-    upgrade_premium: 'שדרג ל-Premium',
+    upgrade_premium: 'שדרג עכשיו',
+    logout: 'התנתק',
     scan_type: 'סוג סריקה',
     type_page: 'ניתוח דף', type_url: 'מוניטין כתובת', type_screenshot: 'צילום מסך',
     type_qr: 'קוד QR', type_email: 'אימייל', type_chat: 'צ\'אט / SMS',
@@ -257,9 +262,10 @@ var I18N = {
     connect_title: 'Conecta tu cuenta',
     connect_desc: 'Inicia sesión en Vardin en tu navegador para empezar a escanear.',
     open_login: 'Abrir inicio de sesión Vardin',
-    premium_title: 'Se requiere Premium',
+    premium_title: 'Bloqueado',
     premium_desc: 'La extensión de Chrome de Vardin requiere una suscripción Premium.',
-    upgrade_premium: 'Actualizar a Premium',
+    upgrade_premium: 'Mejorar ahora',
+    logout: 'Cerrar sesión',
     scan_type: 'Tipo de escaneo',
     type_page: 'Análisis de página', type_url: 'Reputación de URL', type_screenshot: 'Captura de pantalla',
     type_qr: 'Código QR', type_email: 'Correo', type_chat: 'Chat / SMS',
@@ -337,6 +343,10 @@ function applyTranslations() {
     var key = el.getAttribute('data-i18n-placeholder');
     el.placeholder = t(key);
   });
+  document.querySelectorAll('[data-i18n-title]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n-title');
+    el.title = t(key);
+  });
   var btnText = document.getElementById('scan-btn-text');
   if (btnText && !btnText.dataset.scanning) {
     btnText.textContent = t('scan_btn');
@@ -378,6 +388,8 @@ function showView(name) {
     var el = document.getElementById(views[i] + '-view');
     if (el) el.classList.toggle('hidden', views[i] !== name);
   }
+  var logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.classList.toggle('hidden', name !== 'scan');
 }
 
 function getStoredAuth() {
@@ -837,6 +849,21 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('scan-type').addEventListener('change', onScanTypeChange);
   document.getElementById('scan-mode').addEventListener('change', updateCreditDisplay);
   document.getElementById('lang-select').addEventListener('change', function(e) { setLang(e.target.value); });
+
+  // Log out: clear extension auth and return to login view
+  var logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function() {
+      chrome.runtime.sendMessage({ type: 'AUTH_LOGOUT' });
+      authToken = null;
+      appId = null;
+      creditsRemaining = null;
+      creditsLimit = null;
+      var badge = document.getElementById('plan-badge');
+      if (badge) badge.classList.add('hidden');
+      showView('login');
+    });
+  }
 
   // Auto-scan toggle
   var autoToggle = document.getElementById('auto-scan-toggle');

@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     let plan = user.subscription_plan || 'starter';
     if (plan === 'free') plan = 'starter';
     if (plan === 'elite') plan = 'premium';
-    const premium = plan === 'premium' || plan === 'plus';
+    const premium = plan === 'premium';
 
     // Calculate remaining credits
     const currentMonth = new Date().toISOString().slice(0, 7);

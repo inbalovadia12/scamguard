@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
 
     // === Premium verification: checked server-side ===
     const plan = user.subscription_plan || 'starter';
-    if (plan !== 'premium' && plan !== 'plus') {
+    if (plan !== 'premium') {
       return Response.json({ error: 'Premium subscription required' }, { status: 403 });
     }
 

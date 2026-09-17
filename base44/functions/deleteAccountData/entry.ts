@@ -33,6 +33,8 @@ export default async function(req: Request): Promise<Response> {
     // Credit purchases the user initiated
     await safeDelete(svc.entities.CreditPurchase, { user_id: userId });
     await safeDelete(svc.entities.CreditPurchase, { created_by_id: userId });
+    // Admin-granted credits to this user (audit records)
+    await safeDelete(svc.entities.CreditGrant, { user_id: userId });
     // Community phone reports the user submitted
     await safeDelete(svc.entities.PhoneCommunityReport, { created_by_id: userId });
 
@@ -40,13 +42,19 @@ export default async function(req: Request): Promise<Response> {
     await safeDelete(svc.entities.ProtectedSenior, { guardian_id: userId });
     await safeDelete(svc.entities.ProtectedSenior, { senior_user_id: userId });
 
-    // Clear user profile data
+    // Clear user profile data and revoke entitlements
     try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
       await base44.auth.updateMe({
         full_name: '',
         credits_used: 0,
+        credits_reset_month: currentMonth,
+        admin_credit_balance: 0,
+        referral_bonus_credits: 0,
+        subscription_plan: 'starter',
+        subscription_status: 'cancelled',
         alert_preference: 'all',
-        notify_email: true,
+        notify_email: false,
         privacy_auto_redact: true,
       });
     } catch (e) { /* best effort */ }
