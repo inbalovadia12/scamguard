@@ -179,6 +179,23 @@ export default function LiveCallAnalyzer() {
     } catch { /* keep old feedback */ }
   };
 
+  // Double-click the transcript box to swap the speaker labels of the last few
+  // turns (you <-> caller). Keeps the transcript text and feedback unchanged.
+  const handleSwapLastSpeakers = () => {
+    const prev = transcriptRef.current;
+    if (prev.length === 0) return;
+    const n = Math.min(4, prev.length);
+    const start = prev.length - n;
+    const next = prev.map((t, i) => {
+      if (i < start) return t;
+      const s = t.speaker;
+      return { ...t, speaker: s === "you" ? "caller" : s === "caller" ? "you" : s };
+    });
+    transcriptRef.current = next;
+    setTranscript(next);
+    lastSpeakerRef.current = next[next.length - 1].speaker;
+  };
+
   const resetState = () => {
     setTranscript([]);
     setWarnings([]);
@@ -203,7 +220,7 @@ export default function LiveCallAnalyzer() {
     if (!trimmed) return;
     const assignedSpeaker = isCallerOnly
       ? "caller"
-      : (!lastSpeakerRef.current ? "caller" : (lastSpeakerRef.current === "caller" ? "you" : "caller"));
+      : (!lastSpeakerRef.current ? "you" : (lastSpeakerRef.current === "you" ? "caller" : "you"));
     const newSeg = { text: trimmed, timestamp: new Date(), risk_level: "low", speaker: assignedSpeaker, feedback: "" };
     setTranscript((prev) => [...prev, newSeg]);
     transcriptRef.current = [...transcriptRef.current, newSeg];
@@ -706,7 +723,7 @@ export default function LiveCallAnalyzer() {
 
       {(transcript.length > 0 || warnings.length > 0 || isListening) && (
         <div className="grid sm:grid-cols-2 gap-4">
-          <TranscriptFeed segments={transcript} onEditSegment={handleEditSegment} isRecording={isRecording} analyzing={analyzing} mode={mode} partialText={partialText} />
+          <TranscriptFeed segments={transcript} onEditSegment={handleEditSegment} onSwapLastSpeakers={handleSwapLastSpeakers} isRecording={isRecording} analyzing={analyzing} mode={mode} partialText={partialText} />
           <WarningPanel warnings={warnings} tactics={tactics} coaching={coaching} />
         </div>
       )}

@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2, Gift } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, Gift, AlertTriangle } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleIcon from "@/components/GoogleIcon";
@@ -198,6 +198,12 @@ export default function Register() {
         </>
       }
     >
+      <div className="mb-6 flex items-start gap-3 p-3 rounded-xl bg-warning/5 border border-warning/20">
+        <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Vardin is in <strong>beta</strong>. Features may change or be limited, and AI scam-detection results can be inaccurate or incomplete. Always independently verify important information — do not rely solely on Vardin for high-stakes decisions.
+        </p>
+      </div>
       <div className="space-y-3 mb-6">
         <Button
           variant="outline"

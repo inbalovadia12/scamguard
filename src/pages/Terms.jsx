@@ -198,7 +198,7 @@ export default function Terms() {
           <div>
             <h2 className="font-semibold">Please read before using Vardin</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              Vardin is a scam-detection and safety-assistance service. Its automated results can be wrong and must not be treated as guarantees or as professional advice. You remain responsible for independently verifying important information before acting on it.
+              Vardin is a scam-detection and safety-assistance service, currently in beta. Features may change, be limited, or be removed during testing. Its automated results can be wrong and must not be treated as guarantees or as professional advice. You remain responsible for independently verifying important information before acting on it.
             </p>
           </div>
         </div>
