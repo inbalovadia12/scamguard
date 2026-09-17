@@ -4,7 +4,9 @@
 
 import { secrets } from "base44:runtime";
 
-const PAYPAL_API_BASE = "https://api-m.paypal.com";
+const PAYPAL_API_BASE = readSecret("PAYPAL_ENV") === "sandbox"
+  ? "https://api-m.sandbox.paypal.com"
+  : "https://api-m.paypal.com";
 
 function readSecret(name: string): string | undefined {
   // Prefer the platform secrets API; fall back to env. Both are server-side
