@@ -135,7 +135,7 @@ var APP_BASE = 'https://vardin.base44.app';
 var LOGIN_URL = APP_BASE + '/login';
 var PRICING_URL = APP_BASE + '/pricing';
 
-var ANSWER_TYPE_COSTS = { quick: 3, risk_score: 4, red_flags: 5, detailed: 8 };
+var ANSWER_TYPE_COSTS = { quick: 2, risk_score: 3, red_flags: 5, detailed: 8 };
 var SCAN_TYPE_MODIFIERS = { text: 0, screenshot: 2, both: 2, url: 2, qr: 2, email: 0, chat: 0, marketplace: 0, file: 4 };
 
 var MAX_FILE_SIZE = 10 * 1024 * 1024;

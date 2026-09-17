@@ -3,7 +3,9 @@ import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
 import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
 const ANSWER_TYPE_COSTS: Record<string, number> = {
-  quick: 3, risk_score: 4, red_flags: 5, detailed: 8,
+  // Logical + monetizable: quick is the cheap gateway, detailed is the flagship
+  // upsell (4x quick). More value always costs more credits.
+  quick: 2, risk_score: 3, red_flags: 5, detailed: 8,
 };
 const SCAN_TYPE_MODIFIERS: Record<string, number> = {
   text: 0, screenshot: 2, both: 2, url: 2,
