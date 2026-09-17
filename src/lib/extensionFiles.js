@@ -17,7 +17,7 @@ export const EXTENSION_FILES = {
   },
   "content_scripts": [
     {
-      "matches": ["https://vardin.base44.app/*", "https://vardin.base44.app/*"],
+      "matches": ["https://vardin.base44.app/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     },
@@ -44,7 +44,7 @@ export const EXTENSION_FILES = {
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://vardin.base44.app https://vardin.base44.app;"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://vardin.base44.app;"
   }
 }
 `,
@@ -108,7 +108,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
 });
 
 // === Auto-scan on page navigation ===
-var scanTimeout = null;
+var scanTimeouts = {};
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
   if (changeInfo.status !== 'complete') return;
@@ -121,8 +121,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     // Clear previous badge
     chrome.action.setBadgeText({ text: '', tabId: tabId });
 
-    if (scanTimeout) clearTimeout(scanTimeout);
-    scanTimeout = setTimeout(function() {
+    if (scanTimeouts[tabId]) clearTimeout(scanTimeouts[tabId]);
+    scanTimeouts[tabId] = setTimeout(function() {
       autoScanUrl(tabId, tab.url, result.authToken, result.appId);
     }, 3000);
   });
@@ -180,6 +180,7 @@ async function autoScanUrl(tabId, url, token, appId) {
 chrome.tabs.onRemoved.addListener(function(tabId) {
   var key = 'risk_' + tabId;
   chrome.storage.local.remove(key);
+  if (scanTimeouts[tabId]) { clearTimeout(scanTimeouts[tabId]); delete scanTimeouts[tabId]; }
 });
 
 chrome.runtime.onInstalled.addListener(function() {
@@ -309,9 +310,12 @@ setInterval(function() {
   // Check forms after a short delay (let page settle)
   setTimeout(checkForms, 2000);
 
-  // Also check on DOM mutations (dynamic forms)
+  // Also check on DOM mutations (dynamic forms) — debounced so heavy
+  // sites with frequent DOM changes don't thrash querySelectorAll.
+  var formDebounce = null;
   var formObserver = new MutationObserver(function() {
-    checkForms();
+    if (formDebounce) clearTimeout(formDebounce);
+    formDebounce = setTimeout(checkForms, 500);
   });
   formObserver.observe(document.body, { childList: true, subtree: true });
 
