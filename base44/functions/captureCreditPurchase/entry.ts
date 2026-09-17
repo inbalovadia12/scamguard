@@ -113,15 +113,12 @@ Deno.serve(async (req) => {
       } catch {}
     }
 
-    // Grant credits by reducing credits_used (floor at 0), respecting monthly reset.
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    let creditsUsed = user.credits_used || 0;
-    if (user.credits_reset_month !== currentMonth) creditsUsed = 0;
-    creditsUsed = Math.max(0, creditsUsed - creditsToAdd);
-
+    // Grant purchased credits to the carry-over admin balance so they persist
+    // across monthly resets instead of vanishing at month end. This bucket is
+    // consumed first by applyCreditUsage and never auto-resets.
+    const adminBalance = Math.max(0, Number(user.admin_credit_balance) || 0);
     await base44.auth.updateMe({
-      credits_used: creditsUsed,
-      credits_reset_month: currentMonth,
+      admin_credit_balance: adminBalance + creditsToAdd,
     });
 
     // Mark captured so a duplicate capture call is a no-op. If no pending
@@ -148,7 +145,7 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       credits_added: creditsToAdd,
-      credits_used: creditsUsed,
+      admin_credit_balance: adminBalance + creditsToAdd,
     });
   } catch (error: any) {
     console.error("captureCreditPurchase error:", error.message);
