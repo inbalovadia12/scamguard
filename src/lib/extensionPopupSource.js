@@ -67,7 +67,7 @@ export const POPUP_HTML = String.raw`<!DOCTYPE html>
       <div class="field">
         <label data-i18n="scan_type">Scan Type</label>
         <select id="scan-type">
-          <option value="page" data-i18n="type_page">Page Analysis</option>
+          <option value="page" data-i18n="type_page">Page Summary</option>
           <option value="url" data-i18n="type_url">URL Reputation</option>
           <option value="screenshot" data-i18n="type_screenshot">Screenshot</option>
           <option value="qr" data-i18n="type_qr">QR Code</option>
@@ -78,13 +78,8 @@ export const POPUP_HTML = String.raw`<!DOCTYPE html>
         </select>
       </div>
 
-      <div id="page-mode-field" class="field">
-        <label data-i18n="scan_mode">Scan Mode</label>
-        <select id="scan-mode">
-          <option value="text" data-i18n="mode_text">Page Text</option>
-          <option value="screenshot" data-i18n="mode_screenshot">Screenshot</option>
-          <option value="both" data-i18n="mode_both">Text + Screenshot</option>
-        </select>
+      <div id="page-prompt-field" class="field hidden">
+        <p class="page-prompt" data-i18n="page_summary_desc">Capture a screenshot of the page and Vardin will summarize what it is and check it for scams.</p>
       </div>
 
       <div id="text-input-field" class="field hidden">
@@ -169,9 +164,11 @@ var I18N = {
     upgrade_premium: 'Upgrade Now',
     logout: 'Log out',
     scan_type: 'Scan Type',
-    type_page: 'Page Analysis', type_url: 'URL Reputation', type_screenshot: 'Screenshot',
+    type_page: 'Page Summary', type_url: 'URL Reputation', type_screenshot: 'Screenshot',
     type_qr: 'QR Code', type_email: 'Email', type_chat: 'Chat / SMS',
     type_marketplace: 'Marketplace', type_file: 'File',
+    page_summary_label: 'What this page is', scam_evaluation: 'Scam Evaluation',
+    page_summary_desc: 'Capture a screenshot of the page and Vardin will summarize what it is and check it for scams.',
     scan_mode: 'Scan Mode', mode_text: 'Page Text', mode_screenshot: 'Screenshot', mode_both: 'Text + Screenshot',
     content_label: 'Content',
     content_placeholder_email: 'Paste the email content here...',
@@ -218,9 +215,11 @@ var I18N = {
     upgrade_premium: 'שדרג עכשיו',
     logout: 'התנתק',
     scan_type: 'סוג סריקה',
-    type_page: 'ניתוח דף', type_url: 'מוניטין כתובת', type_screenshot: 'צילום מסך',
+    type_page: 'סיכום דף', type_url: 'מוניטין כתובת', type_screenshot: 'צילום מסך',
     type_qr: 'קוד QR', type_email: 'אימייל', type_chat: 'צ\'אט / SMS',
     type_marketplace: 'שוק', type_file: 'קובץ',
+    page_summary_label: 'מהו הדף', scam_evaluation: 'הערכת הונאה',
+    page_summary_desc: 'צלם צילום מסך של הדף ו-Vardin יסכם מה הדף ויבדוק אותו להונאות.',
     scan_mode: 'מצב סריקה', mode_text: 'טקסט הדף', mode_screenshot: 'צילום מסך', mode_both: 'טקסט + צילום',
     content_label: 'תוכן',
     content_placeholder_email: 'הדבק את תוכן האימייל כאן...',
@@ -267,9 +266,11 @@ var I18N = {
     upgrade_premium: 'Mejorar ahora',
     logout: 'Cerrar sesión',
     scan_type: 'Tipo de escaneo',
-    type_page: 'Análisis de página', type_url: 'Reputación de URL', type_screenshot: 'Captura de pantalla',
+    type_page: 'Resumen de página', type_url: 'Reputación de URL', type_screenshot: 'Captura de pantalla',
     type_qr: 'Código QR', type_email: 'Correo', type_chat: 'Chat / SMS',
     type_marketplace: 'Marketplace', type_file: 'Archivo',
+    page_summary_label: 'Qué es esta página', scam_evaluation: 'Evaluación de estafa',
+    page_summary_desc: 'Captura una captura de la página y Vardin resumirá qué es y la comprobará en busca de estafas.',
     scan_mode: 'Modo de escaneo', mode_text: 'Texto de la página', mode_screenshot: 'Captura de pantalla', mode_both: 'Texto + Captura',
     content_label: 'Contenido',
     content_placeholder_email: 'Pega el contenido del correo aquí...',
@@ -421,8 +422,7 @@ function getCreditCost() {
   var base = ANSWER_TYPE_COSTS[answerType] || 8;
   var modifier = 0;
   if (scanType === 'page') {
-    var scanMode = document.getElementById('scan-mode').value;
-    modifier = SCAN_TYPE_MODIFIERS[scanMode] || 0;
+    modifier = SCAN_TYPE_MODIFIERS['screenshot'] || 0;
   } else {
     modifier = SCAN_TYPE_MODIFIERS[scanType] || 0;
   }
@@ -441,15 +441,16 @@ function updateCreditDisplay() {
 
 function onScanTypeChange() {
   var scanType = document.getElementById('scan-type').value;
-  document.getElementById('page-mode-field').classList.toggle('hidden', scanType !== 'page');
   var showText = scanType === 'email' || scanType === 'chat' || scanType === 'marketplace';
   document.getElementById('text-input-field').classList.toggle('hidden', !showText);
   if (showText) {
     document.getElementById('content-input').placeholder = t('content_placeholder_' + scanType);
   }
-  var showUpload = scanType === 'qr' || scanType === 'file' || scanType === 'screenshot';
+  var showUpload = scanType === 'qr' || scanType === 'file' || scanType === 'screenshot' || scanType === 'page';
   document.getElementById('upload-field').classList.toggle('hidden', !showUpload);
-  document.getElementById('capture-field').classList.toggle('hidden', scanType !== 'screenshot' && scanType !== 'qr');
+  document.getElementById('capture-field').classList.toggle('hidden', scanType !== 'screenshot' && scanType !== 'qr' && scanType !== 'page');
+  var promptEl = document.getElementById('page-prompt-field');
+  if (promptEl) promptEl.classList.toggle('hidden', scanType !== 'page');
   var fileInput = document.getElementById('file-input');
   if (scanType === 'file') {
     fileInput.accept = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.jpg,.jpeg,.png,.webp,.heic';
@@ -546,25 +547,17 @@ async function scanPage() {
     }
 
     if (scanType === 'page') {
-      var scanMode = document.getElementById('scan-mode').value;
-      if (scanMode === 'text' || scanMode === 'both') {
-        try {
-          var results = await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            func: function() { return document.body ? document.body.innerText.slice(0, 10000) : ''; }
-          });
-          pageText = (results && results[0] && results[0].result) || '';
-        } catch (textErr) {
-          if (scanMode === 'text') throw new Error(t('err_no_text'));
-        }
-      }
-      if (scanMode === 'screenshot' || scanMode === 'both') {
+      // Page Summary: screenshot-based. Use an uploaded image if present, else capture the visible tab.
+      if (uploadedFileData) {
+        screenshotDataUrl = uploadedFileData;
+      } else {
         try {
           screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 60 });
         } catch (shotErr) {
-          if (scanMode === 'screenshot') throw new Error(t('err_no_screenshot'));
+          throw new Error(t('err_no_screenshot'));
         }
       }
+      if (!screenshotDataUrl) throw new Error(t('err_no_screenshot'));
     } else if (scanType === 'email' || scanType === 'chat' || scanType === 'marketplace') {
       pageText = document.getElementById('content-input').value.trim();
       if (!pageText) throw new Error(t('err_no_content'));
@@ -605,7 +598,7 @@ async function scanPage() {
         page_url: pageUrl,
         options: {
           scan_type: scanType,
-          scan_mode: scanType === 'page' ? document.getElementById('scan-mode').value : scanType,
+          scan_mode: scanType === 'page' ? 'screenshot' : scanType,
           answer_type: answerType,
           custom_focus: customFocus,
           language: currentLang,
@@ -653,6 +646,15 @@ function displayResults(data, answerType) {
   var a = data.analysis || {};
   var mode = data.answer_type || answerType;
   var html = '';
+
+  // Page Summary card (shown at the top for page scans)
+  if (a.page_summary) {
+    html += '<div class="result-card summary-card">';
+    html += '<p class="card-title">' + t('page_summary_label') + '</p>';
+    html += '<p class="section-text">' + escapeHtml(a.page_summary) + '</p>';
+    html += '</div>';
+    html += '<p class="section-divider-title">' + t('scam_evaluation') + '</p>';
+  }
 
   // VirusTotal badge
   if (data.virustotal) {
@@ -847,7 +849,6 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('upgrade-btn').addEventListener('click', function() { chrome.tabs.create({ url: PRICING_URL }); });
   document.getElementById('scan-btn').addEventListener('click', scanPage);
   document.getElementById('scan-type').addEventListener('change', onScanTypeChange);
-  document.getElementById('scan-mode').addEventListener('change', updateCreditDisplay);
   document.getElementById('lang-select').addEventListener('change', function(e) { setLang(e.target.value); });
 
   // Log out: clear extension auth and return to login view

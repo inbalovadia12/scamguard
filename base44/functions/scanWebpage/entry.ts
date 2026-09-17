@@ -315,10 +315,13 @@ Deno.serve(async (req) => {
 
     prompt += 'Page URL: ' + (page_url || 'unknown') + '\n\n';
 
-    if (scanType === 'page' || scanType === 'url') {
+    if (scanType === 'page') {
       if (scanMode === 'text' || scanMode === 'both') {
         prompt += 'Page Content:\n' + (page_text || '').slice(0, 8000) + '\n\n';
       }
+      prompt += 'First, set page_summary to a plain-English description of what this page is and what it asks the user to do. Then evaluate whether it is a scam.\n';
+      prompt += 'Analyze for: phishing, fake login, payment risks, urgency tactics, fake forms, social engineering.\n';
+    } else if (scanType === 'url') {
       prompt += 'Analyze for: phishing, fake login, payment risks, urgency tactics, fake forms, social engineering.\n';
     } else if (scanType === 'email') {
       prompt += 'Email content:\n' + (page_text || '').slice(0, 8000) + '\n\nAnalyze for: sender spoofing, fake invoices, suspicious links, urgency tactics.\n';
@@ -362,6 +365,7 @@ Deno.serve(async (req) => {
         responseSchema = {
           type: 'object',
           properties: {
+            page_summary: { type: 'string', description: 'Plain-English description of what this page is and what it asks the user to do' },
             risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
             risk_score: { type: 'number', description: '0-100' },
             confidence: { type: 'number', description: '0-100' },
@@ -396,7 +400,7 @@ Deno.serve(async (req) => {
           const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
           const file = new File([bytes], 'screenshot.jpg', { type: 'image/jpeg' });
-          const uploadResult = await base44.integrations.Core.UploadFile({ file });
+          const uploadResult = await base44.integrations.Core.UploadPublicFile({ file });
           if (uploadResult?.file_url) {
             llmOptions.file_urls = [uploadResult.file_url];
           }
@@ -412,7 +416,7 @@ Deno.serve(async (req) => {
           const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
           const file = new File([bytes], file_name || 'file', { type: 'application/octet-stream' });
-          const uploadResult = await base44.integrations.Core.UploadFile({ file });
+          const uploadResult = await base44.integrations.Core.UploadPublicFile({ file });
           if (uploadResult?.file_url) {
             llmOptions.file_urls = [uploadResult.file_url];
           }
