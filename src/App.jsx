@@ -60,7 +60,6 @@ const Referral = lazy(() => import('@/pages/Referral'));
 const CallSimulator = lazy(() => import('@/pages/CallSimulator'));
 const CryptoScanner = lazy(() => import('@/pages/CryptoScanner'));
 const MobileApp = lazy(() => import('@/pages/MobileApp'));
-const BulkScanner = lazy(() => import('@/pages/BulkScanner'));
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
@@ -171,7 +170,6 @@ const AuthenticatedApp = () => {
           <Route path="/live-guard" element={<Navigate to="/phone-lookup?tab=live" replace />} />
           <Route path="/call-simulator" element={<CallSimulator />} />
           <Route path="/crypto-scanner" element={<CryptoScanner />} />
-          <Route path="/bulk-scanner" element={<BulkScanner />} />
           <Route path="/mobile-app" element={<MobileApp />} />
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/scam-exposer" element={<AINegotiator />} />
