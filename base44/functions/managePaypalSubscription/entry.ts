@@ -28,10 +28,24 @@ Deno.serve(async (req) => {
       body: action === "cancel" ? JSON.stringify({ reason: "User requested cancellation" }) : "{}",
     });
 
-    // 422 = already in that state; 404 = unknown sub. Both are acceptable.
     let nextBilling = null;
-    if (!res.ok && res.status !== 422 && res.status !== 404) {
-      return Response.json({ error: `PayPal ${action} failed` }, { status: 502 });
+    if (action === "cancel") {
+      // Cancel is idempotent: 422 (already cancelled) / 404 (unknown) are fine.
+      if (!res.ok && res.status !== 422 && res.status !== 404) {
+        return Response.json({ error: `PayPal ${action} failed` }, { status: 502 });
+      }
+    } else {
+      // Reactivate must actually return the subscription to ACTIVE. PayPal only
+      // reactivates SUSPENDED subscriptions — a CANCELLED one returns 422 and
+      // cannot be restored. Never report success in that case; the user would
+      // still lose the plan at period end. Surface honestly so the UI can guide
+      // them to resubscribe.
+      if (!res.ok) {
+        return Response.json(
+          { error: "This plan can no longer be reactivated. Resubscribe from the Pricing page to keep your plan after this period." },
+          { status: 409 },
+        );
+      }
     }
 
     // Fetch current status from PayPal to synchronize local state.
@@ -43,6 +57,15 @@ Deno.serve(async (req) => {
       const details = await detailsRes.json();
       paypalStatus = details.status || null;
       nextBilling = details.billing_info?.next_billing_time || null;
+    }
+
+    // For reactivate, require PayPal to confirm ACTIVE before clearing the
+    // local cancel flag.
+    if (action === "reactivate" && paypalStatus && paypalStatus !== "ACTIVE") {
+      return Response.json(
+        { error: "Reactivation did not complete. Resubscribe from the Pricing page to continue your plan." },
+        { status: 409 },
+      );
     }
 
     try {

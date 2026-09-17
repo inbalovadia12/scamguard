@@ -105,6 +105,7 @@ export default function Profile() {
     try {
       const res = await base44.functions.invoke("managePaypalSubscription", { action: "cancel" });
       const data = res.data || {};
+      if (data.error) throw new Error(data.error);
       setCanceling(true);
       setRenewalDate(data.next_billing || renewalDate);
       setShowCancelConfirm(false);
@@ -120,7 +121,9 @@ export default function Profile() {
   const handleReactivatePlan = async () => {
     setCancelling(true);
     try {
-      await base44.functions.invoke("managePaypalSubscription", { action: "reactivate" });
+      const res = await base44.functions.invoke("managePaypalSubscription", { action: "reactivate" });
+      const data = res.data || {};
+      if (data.error) throw new Error(data.error);
       setCanceling(false);
       setRenewalDate(null);
       await checkUserAuth();
