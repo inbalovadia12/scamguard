@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -6,6 +7,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { LanguageProvider } from '@/lib/i18n';
 
@@ -15,52 +17,59 @@ import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
 
-// App pages
-import Dashboard from '@/pages/Dashboard';
-import Home from '@/pages/Home';
-import Alerts from '@/pages/Alerts';
-import AlertDetail from '@/pages/AlertDetail';
-import Family from '@/pages/Family';
-import GuardianDashboard from '@/pages/GuardianDashboard';
-import Pricing from '@/pages/Pricing';
-import AgentChat from '@/pages/AgentChat';
+// App pages (lazy-loaded to keep the initial bundle small for public beta).
+// Landing, LegalNotice and AppLayout stay eager so the marketing page, legal
+// toast and the app shell render without a Suspense flash.
 import Landing from '@/pages/Landing';
-import Onboarding from '@/pages/Onboarding';
-import Analytics from '@/pages/Analytics';
-import AdvancedScanner from '@/pages/AdvancedScanner';
-import EmergencyResponse from '@/pages/EmergencyResponse';
-import TrustHistory from '@/pages/TrustHistory';
-import Feedback from '@/pages/Feedback';
-import Profile from '@/pages/Profile';
-import Admin from '@/pages/Admin';
-import Lessons from '@/pages/Lessons';
-import Privacy from '@/pages/Privacy';
-import DataCollection from '@/pages/DataCollection';
-import Terms from '@/pages/Terms';
-import Cookies from '@/pages/Cookies';
 import LegalNotice from '@/components/legal/LegalNotice';
-import About from '@/pages/About';
-import Contact from '@/pages/Contact';
-import Extension from '@/pages/Extension';
-import ScamFeed from '@/pages/ScamFeed';
-import LocalScamIntel from '@/pages/LocalScamIntel';
-import PhoneGuard from '@/pages/PhoneGuard';
-import ImageScanner from '@/pages/ImageScanner';
-import AINegotiator from '@/pages/AINegotiator';
-import SpotTheScam from '@/pages/SpotTheScam';
-import ConversationAnalyzer from '@/pages/ConversationAnalyzer';
-import IncognitoSearch from '@/pages/IncognitoSearch';
-import Wrapped from '@/pages/Wrapped';
-import Community from '@/pages/Community';
-import Referral from '@/pages/Referral';
-import CallSimulator from '@/pages/CallSimulator';
-import CryptoScanner from '@/pages/CryptoScanner';
-import MobileApp from '@/pages/MobileApp';
-import BulkScanner from '@/pages/BulkScanner';
-
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const Home = lazy(() => import('@/pages/Home'));
+const Alerts = lazy(() => import('@/pages/Alerts'));
+const AlertDetail = lazy(() => import('@/pages/AlertDetail'));
+const Family = lazy(() => import('@/pages/Family'));
+const GuardianDashboard = lazy(() => import('@/pages/GuardianDashboard'));
+const Pricing = lazy(() => import('@/pages/Pricing'));
+const AgentChat = lazy(() => import('@/pages/AgentChat'));
+const Onboarding = lazy(() => import('@/pages/Onboarding'));
+const Analytics = lazy(() => import('@/pages/Analytics'));
+const AdvancedScanner = lazy(() => import('@/pages/AdvancedScanner'));
+const EmergencyResponse = lazy(() => import('@/pages/EmergencyResponse'));
+const TrustHistory = lazy(() => import('@/pages/TrustHistory'));
+const Feedback = lazy(() => import('@/pages/Feedback'));
+const Profile = lazy(() => import('@/pages/Profile'));
+const Admin = lazy(() => import('@/pages/Admin'));
+const Lessons = lazy(() => import('@/pages/Lessons'));
+const Privacy = lazy(() => import('@/pages/Privacy'));
+const DataCollection = lazy(() => import('@/pages/DataCollection'));
+const Terms = lazy(() => import('@/pages/Terms'));
+const Cookies = lazy(() => import('@/pages/Cookies'));
+const About = lazy(() => import('@/pages/About'));
+const Contact = lazy(() => import('@/pages/Contact'));
+const Extension = lazy(() => import('@/pages/Extension'));
+const ScamFeed = lazy(() => import('@/pages/ScamFeed'));
+const LocalScamIntel = lazy(() => import('@/pages/LocalScamIntel'));
+const PhoneGuard = lazy(() => import('@/pages/PhoneGuard'));
+const ImageScanner = lazy(() => import('@/pages/ImageScanner'));
+const AINegotiator = lazy(() => import('@/pages/AINegotiator'));
+const SpotTheScam = lazy(() => import('@/pages/SpotTheScam'));
+const ConversationAnalyzer = lazy(() => import('@/pages/ConversationAnalyzer'));
+const IncognitoSearch = lazy(() => import('@/pages/IncognitoSearch'));
+const Wrapped = lazy(() => import('@/pages/Wrapped'));
+const Community = lazy(() => import('@/pages/Community'));
+const Referral = lazy(() => import('@/pages/Referral'));
+const CallSimulator = lazy(() => import('@/pages/CallSimulator'));
+const CryptoScanner = lazy(() => import('@/pages/CryptoScanner'));
+const MobileApp = lazy(() => import('@/pages/MobileApp'));
+const BulkScanner = lazy(() => import('@/pages/BulkScanner'));
 
 // Layout
 import AppLayout from '@/components/layout/AppLayout';
+
+const RouteLoader = () => (
+  <div className="fixed inset-0 flex items-center justify-center bg-background">
+    <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
+  </div>
+);
 
 const RootEntry = () => {
   const { isLoadingAuth, isAuthenticated, authChecked } = useAuth();
@@ -124,6 +133,8 @@ const AuthenticatedApp = () => {
   }
 
   return (
+    <ErrorBoundary>
+    <Suspense fallback={<RouteLoader />}>
     <Routes>
       {/* Root entry: returning users -> dashboard; first-time/signed-out users -> original landing. */}
       <Route path="/" element={<RootEntry />} />
@@ -188,6 +199,8 @@ const AuthenticatedApp = () => {
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </Suspense>
+    </ErrorBoundary>
   );
 };
 
