@@ -420,23 +420,23 @@ Deno.serve(async (req) => {
       } catch (_e) {}
     }
 
-    // LLM timeout at 1.5 seconds
+    // LLM timeout at 45 seconds (LLM calls need adequate time to return a real verdict)
     const llmPromise = base44.integrations.Core.InvokeLLM(llmOptions);
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('LLM timeout')), 1500)
+      setTimeout(() => reject(new Error('LLM timeout')), 45000)
     );
 
     let result;
     try {
       result = await Promise.race([llmPromise, timeoutPromise]);
     } catch (e) {
-      // LLM timeout - return basic analysis
+      // LLM timed out - return an UNCERTAIN result, never a false "safe"
       result = {
-        risk_level: vtReport?.malicious ? 'medium' : 'low',
-        risk_score: vtReport?.malicious ? 55 : 25,
-        confidence: 60,
+        risk_level: vtReport?.malicious ? 'high' : 'medium',
+        risk_score: vtReport?.malicious ? 80 : 50,
+        confidence: 35,
         is_scam: !!vtReport?.malicious,
-        explanation: 'LLM analysis timeout. Check VirusTotal/URLhaus reports above.',
+        explanation: 'AI analysis could not complete in time. Treat this result as uncertain — review the VirusTotal / URLhaus reports above before trusting this page.',
       };
     }
 

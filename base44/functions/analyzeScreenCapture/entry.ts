@@ -11,7 +11,7 @@ const MAX_IMAGE_DATA_BYTES = 5 * 1024 * 1024; // 5 MB cap on inline image payloa
  * Real-time screenshot scam detection - OPTIMIZED
  * 
  * OPTIMIZATIONS:
- * - LLM timeout: 1.5 seconds (partial results > hanging)
+ * - LLM timeout: 45 seconds (partial results > hanging)
  * - Pre-screening for obvious phishing indicators
  * - Timing info in response
  * - Fast fallback if LLM times out
@@ -142,7 +142,7 @@ Respond in ${languageName}.`;
 
       const llmPromise = base44.integrations.Core.InvokeLLM(llmOptions);
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('timeout')), 1500)
+        setTimeout(() => reject(new Error('timeout')), 45000)
       );
 
       analysis = await Promise.race([llmPromise, timeoutPromise]);
