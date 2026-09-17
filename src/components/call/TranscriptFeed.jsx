@@ -18,6 +18,7 @@ const SPEAKER_OPTIONS = [
 
 export default function TranscriptFeed({ segments, onEditSegment, onSwapLastSpeakers, isRecording, analyzing, mode, partialText }) {
   const scrollRef = useRef(null);
+  const editTimerRef = useRef(null);
   const [editingIndex, setEditingIndex] = useState(null);
   const [editText, setEditText] = useState("");
   const [editSpeaker, setEditSpeaker] = useState("unknown");
@@ -35,6 +36,21 @@ export default function TranscriptFeed({ segments, onEditSegment, onSwapLastSpea
     setEditingIndex(null);
   };
 
+  // Disambiguate single vs double click: a single click on a message opens the
+  // editor (after a short delay); a double click anywhere in the box cancels
+  // the pending edit and swaps the last speakers instead.
+  const handleTextClick = (i) => {
+    if (editTimerRef.current) clearTimeout(editTimerRef.current);
+    editTimerRef.current = setTimeout(() => {
+      editTimerRef.current = null;
+      startEdit(i);
+    }, 250);
+  };
+  const handleBoxDoubleClick = () => {
+    if (editTimerRef.current) { clearTimeout(editTimerRef.current); editTimerRef.current = null; }
+    onSwapLastSpeakers?.();
+  };
+
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [segments, isRecording, analyzing, partialText]);
@@ -48,7 +64,7 @@ export default function TranscriptFeed({ segments, onEditSegment, onSwapLastSpea
         <h3 className="text-sm font-semibold">Live Transcript</h3>
         <span className="text-xs text-muted-foreground ml-auto">Tap to edit · Double-click to swap speakers</span>
       </div>
-      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-2.5 pr-1" onDoubleClick={() => onSwapLastSpeakers?.()}>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-2.5 pr-1" onDoubleClick={handleBoxDoubleClick}>
         {segments.length === 0 && !showListening ? (
           <p className="text-sm text-muted-foreground text-center py-8">Waiting for speech...</p>
         ) : (
@@ -77,14 +93,14 @@ export default function TranscriptFeed({ segments, onEditSegment, onSwapLastSpea
             const fbStyle = sentiment === "positive" ? { icon: ThumbsUp, color: "text-success" } : sentiment === "warning" ? { icon: AlertTriangle, color: "text-destructive" } : { icon: Lightbulb, color: "text-muted-foreground" };
             const FeedbackIcon = fbStyle.icon;
             return (
-              <div key={i} className={`flex flex-col ${isYou ? "items-end" : "items-start"}`} onDoubleClick={(e) => e.stopPropagation()}>
+              <div key={i} className={`flex flex-col ${isYou ? "items-end" : "items-start"}`}>
                 <div className={`text-sm p-2.5 rounded-2xl max-w-[85%] ${isYou ? "bg-primary/5 rounded-br-sm" : isHighRisk ? "bg-destructive/5 rounded-bl-sm border border-destructive/20" : "bg-muted/30 rounded-bl-sm"}`}>
                   <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${cfg.bg} ${isHighRisk && !isYou ? "text-destructive" : cfg.color} text-xs font-medium mb-1.5`}>
                     <SpeakerIcon className="w-3 h-3" />
                     {cfg.label}
                     <Pencil className="w-2.5 h-2.5 ml-0.5 opacity-40" />
                   </div>
-                  <p className="text-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => startEdit(i)}>{seg.text}</p>
+                  <p className="text-foreground cursor-pointer hover:text-primary transition-colors" onClick={() => handleTextClick(i)}>{seg.text}</p>
                   {seg.feedback && (
                     <div className={`mt-2 flex items-start gap-1.5 p-2 rounded-lg ${isYou ? "bg-primary/5" : "bg-muted/40"}`}>
                       <FeedbackIcon className={`w-3.5 h-3.5 ${fbStyle.color} flex-shrink-0 mt-0.5`} />
@@ -98,7 +114,7 @@ export default function TranscriptFeed({ segments, onEditSegment, onSwapLastSpea
           })
         )}
         {showListening && (
-          <div className="flex flex-col items-start" onDoubleClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-col items-start">
             {partialText ? (
               <div className="text-sm p-2.5 rounded-2xl max-w-[85%] bg-muted/30 rounded-bl-sm">
                 <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-muted/40 text-muted-foreground text-xs font-medium mb-1.5">

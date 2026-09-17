@@ -24,6 +24,30 @@ export class AssemblyAIStream {
     this.onClose = onClose;
     this.ws = null;
     this.terminated = false;
+    this.keepAliveTimer = null;
+  }
+
+  startKeepAlive() {
+    this.stopKeepAlive();
+    // AssemblyAI closes idle sessions (close code 3006) after a period with no
+    // audio/messages. During silence the mic can stop delivering frames, so we
+    // send a KeepAlive control frame every few seconds to hold the session open.
+    this.keepAliveTimer = setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        try {
+          this.ws.send(JSON.stringify({ type: "KeepAlive" }));
+        } catch {
+          /* ignore */
+        }
+      }
+    }, 4000);
+  }
+
+  stopKeepAlive() {
+    if (this.keepAliveTimer) {
+      clearInterval(this.keepAliveTimer);
+      this.keepAliveTimer = null;
+    }
   }
 
   connect() {
@@ -38,7 +62,10 @@ export class AssemblyAIStream {
     this.ws = new WebSocket(url);
     this.ws.binaryType = "arraybuffer";
 
-    this.ws.onopen = () => this.onOpen?.();
+    this.ws.onopen = () => {
+      this.startKeepAlive();
+      this.onOpen?.();
+    };
 
     this.ws.onmessage = (e) => {
       if (typeof e.data !== "string") return;
@@ -59,6 +86,7 @@ export class AssemblyAIStream {
     this.ws.onerror = (e) => this.onError?.(e);
 
     this.ws.onclose = (e) => {
+      this.stopKeepAlive();
       if (!this.terminated) this.onClose?.(e?.code, e?.reason);
     };
   }
@@ -82,6 +110,7 @@ export class AssemblyAIStream {
 
   terminate() {
     this.terminated = true;
+    this.stopKeepAlive();
     const ws = this.ws;
     this.ws = null;
     if (ws && ws.readyState === WebSocket.OPEN) {
