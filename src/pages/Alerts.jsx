@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Bell, Loader2, MessageCircle } from "lucide-react";
+import { Bell, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
 import AlertCard from "@/components/alerts/AlertCard";
 import FamilyAlertCard from "@/components/family/FamilyAlertCard";
 
@@ -9,18 +9,21 @@ export default function Alerts() {
   const [analyses, setAnalyses] = useState([]);
   const [seniors, setSeniors] = useState([]);
   const [familyAlerts, setFamilyAlerts] = useState([]);
+  const [protectedBy, setProtectedBy] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("all");
 
   useEffect(() => {
     const load = async () => {
       const user = await base44.auth.me();
-      const [seniorData, analysisData, familyData] = await Promise.all([
+      const [seniorData, analysisData, familyData, protectedByData] = await Promise.all([
         base44.entities.ProtectedSenior.filter({ guardian_id: user.id }),
         base44.entities.ScamAnalysis.list("-created_date", 50),
         base44.entities.FamilyAlert.list("-created_date", 100),
+        base44.entities.ProtectedSenior.filter({ senior_user_id: user.id }),
       ]);
       setSeniors(seniorData);
+      setProtectedBy(protectedByData);
 
       const seniorUserIds = seniorData.map((s) => s.senior_user_id).filter(Boolean);
       const relevant = analysisData.filter(
@@ -62,6 +65,20 @@ export default function Alerts() {
         <h1 className="text-2xl font-bold tracking-tight font-heading">Alerts</h1>
         <p className="text-muted-foreground mt-1">Your scan alerts and your guardian's responses.</p>
       </div>
+
+      {protectedBy.length > 0 && (
+        <div className="rounded-2xl border border-success/30 bg-success/5 p-4 flex items-start gap-3 animate-fade-in">
+          <ShieldCheck className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-foreground">
+              You're protected by {protectedBy.map((s) => s.guardian_name || "your family member").join(", ")}
+            </p>
+            <p className="text-muted-foreground mt-0.5">
+              You share their Vardin plan benefits. Your scans are shared with your guardian so they can help keep you safe.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-1 p-1 bg-card rounded-2xl border border-border/50 w-fit">
         <button

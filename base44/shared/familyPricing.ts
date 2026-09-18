@@ -16,3 +16,30 @@ export function computeFamilyTotal(plan: string, totalMembers: number) {
   const totalAnnual = p.baseAnnual + additional * FAMILY_PRICING.addonAnnual;
   return { members, additional, totalAnnual };
 }
+
+// Normalize plan aliases to the canonical three plans.
+export function normalizePlan(plan: string | undefined | null): string {
+  if (plan === 'free' || !plan) return 'starter';
+  if (plan === 'elite') return 'premium';
+  return plan;
+}
+
+// Legacy fallback limits for existing subscribers who subscribed before the
+// current pricing model (no family_members_paid recorded on their account).
+export const LEGACY_FAMILY_LIMITS: Record<string, number> = {
+  starter: 1,
+  plus: 5,
+  premium: Infinity,
+};
+
+// Resolve the member limit for a user from the backend. Uses their admin-set
+// family_members_paid if present; otherwise falls back to legacy limits.
+export function resolveFamilyLimitBackend(plan: string, user: any): number {
+  const paid = user?.family_members_paid;
+  if (paid != null && !Number.isNaN(paid)) return paid;
+  return LEGACY_FAMILY_LIMITS[plan] ?? FAMILY_PRICING.plans[plan]?.includedMembers ?? 1;
+}
+
+export function planDisplayName(plan: string): string {
+  return ({ starter: 'Starter', plus: 'Plus', premium: 'Premium' } as Record<string, string>)[plan] || 'Starter';
+}

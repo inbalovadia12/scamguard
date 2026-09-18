@@ -5,64 +5,46 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, UserPlus, Mail } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
 export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
   const [alertPref, setAlertPref] = useState("all");
   const [saving, setSaving] = useState(false);
 
+  const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+
   const handleSave = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !emailValid) return;
     setSaving(true);
     try {
-      const user = await base44.auth.me();
-      await base44.entities.ProtectedSenior.create({
+      const res = await base44.functions.invoke("addFamilyMember", {
         name: name.trim(),
-        email: email.trim() || undefined,
-        phone: phone.trim() || undefined,
-        guardian_id: user.id,
-        guardian_email: user.email,
-        guardian_name: user.full_name,
-        consent_given: false,
+        email: email.trim(),
         alert_preference: alertPref,
       });
+      const data = res?.data || res;
+      if (data?.error) throw new Error(data.error);
 
-      // Send platform invite if an address was provided
-      if (email.trim()) {
-        try {
-          await base44.users.inviteUser(email.trim(), "user");
-          await base44.integrations.Core.SendEmail({
-            to: email.trim(),
-            subject: `${user.full_name || "Someone"} invited you to join Vardin`,
-            body: `Hi ${name.trim()},\n\n${user.full_name || "Your family member"} has added you to their Vardin family protection circle. Vardin is an AI-powered scam detection tool that helps you know what's real before you click.\n\nYou've been invited to join Vardin. Check your email for the invitation to create your account.\n\nStay safe,\nThe Vardin Team`,
-          });
-        } catch (inviteErr) {
-          // If invite fails (e.g. already invited), still send the email
-          try {
-            await base44.integrations.Core.SendEmail({
-              to: email.trim(),
-              subject: `${user.full_name || "Someone"} invited you to join Vardin`,
-              body: `Hi ${name.trim()},\n\n${user.full_name || "Your family member"} has added you to their Vardin family protection circle. Vardin is an AI-powered scam detection tool that helps you know what's real before you click.\n\nTo accept this invitation and start protecting each other from scams, create your free Vardin account at ${window.location.origin}/register\n\nStay safe,\nThe Vardin Team`,
-            });
-          } catch (emailErr) {
-            console.error("Failed to send invite:", emailErr);
-          }
-        }
-      }
-
-      toast({ title: "Added!", description: email.trim() ? `${name.trim()} has been added and an invite was sent.` : `${name.trim()} has been added to your family.` });
+      toast({
+        title: "Added!",
+        description: `${name.trim()} has been added and an invite with a join link was sent to ${email.trim()}.`,
+      });
       setName("");
       setEmail("");
-      setPhone("");
       setAlertPref("all");
       onOpenChange(false);
       if (onAdded) await onAdded();
     } catch (err) {
-      toast({ title: "Something went wrong", description: err.message || "Could not add family member.", variant: "destructive" });
+      const msg = err?.message || "Could not add family member.";
+      const isLimit = /limit/i.test(msg);
+      toast({
+        title: isLimit ? "Family member limit reached" : "Something went wrong",
+        description: isLimit ? `${msg} Upgrade your plan or ask an admin to raise your member limit.` : msg,
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -77,7 +59,7 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
             Add a Loved One
           </DialogTitle>
           <DialogDescription>
-            Add a family member you'd like to help protect from scams. They'll need to give their consent before monitoring begins.
+            Add a family member you'd like to help protect from scams. We'll email them a link to join Vardin and share your plan benefits.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-2">
@@ -86,14 +68,19 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Mom, Dad, Grandma Rose" className="h-11" />
           </div>
           <div className="space-y-2">
-            <Label>Email (optional)</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their email address" className="h-11" />
-            <p className="text-xs text-muted-foreground">We'll send them an invite to connect their account.</p>
-          </div>
-          <div className="space-y-2">
-            <Label>Phone (optional)</Label>
-            <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g., +1 555 123 4567" className="h-11" />
-            <p className="text-xs text-muted-foreground">Used for quick call & text actions from alerts.</p>
+            <Label>Email <span className="text-destructive">*</span></Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Their email address"
+                className="h-11 pl-9"
+                required
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Required. We'll send them an invite with a link to join your family and share your plan benefits.</p>
           </div>
           <div className="space-y-2">
             <Label>Alert me for</Label>
@@ -106,7 +93,7 @@ export default function AddSeniorDialog({ open, onOpenChange, onAdded }) {
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleSave} disabled={!name.trim() || saving} className="w-full h-11 bg-gradient-to-r from-primary to-primary/80">
+          <Button onClick={handleSave} disabled={!name.trim() || !emailValid || saving} className="w-full h-11 bg-gradient-to-r from-primary to-primary/80">
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             Add to My Family
           </Button>

@@ -133,11 +133,23 @@ function UsersTab() {
   const [loading, setLoading] = useState(true);
   const [grantAmounts, setGrantAmounts] = useState({});
   const [granting, setGranting] = useState({});
+  const [planSelects, setPlanSelects] = useState({});
+  const [eligibleAmounts, setEligibleAmounts] = useState({});
+  const [savingPlan, setSavingPlan] = useState({});
 
   const load = async () => {
     try {
       const data = await base44.entities.User.list();
       setUsers(data);
+      // Initialize local plan / eligible-member controls from current user state.
+      const plans = {};
+      const eligible = {};
+      data.forEach((u) => {
+        plans[u.id] = u.subscription_plan || "starter";
+        eligible[u.id] = u.family_members_paid != null ? u.family_members_paid : "";
+      });
+      setPlanSelects(plans);
+      setEligibleAmounts(eligible);
     } catch (e) {
       toast({ title: "Error loading users", description: e.message, variant: "destructive" });
     } finally {
@@ -183,14 +195,35 @@ function UsersTab() {
     }
   };
 
-  const changePlan = async (userId, plan) => {
+  // Route plan + eligible-members updates through the backend so the limit is
+  // enforced server-side and family_members_paid is the authoritative value.
+  const savePlan = async (userId) => {
+    const plan = planSelects[userId] || "starter";
+    const eligible = eligibleAmounts[userId];
+    setSavingPlan((prev) => ({ ...prev, [userId]: true }));
     try {
-      await base44.entities.User.update(userId, { subscription_plan: plan });
+      const res = await base44.functions.invoke("adminUpdateUserPlan", {
+        user_id: userId,
+        plan,
+        eligible_members: eligible === "" ? null : Number(eligible),
+      });
+      const data = res?.data || res;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: "Plan updated",
+        description: `${targetName(userId)} set to ${plan}${eligible ? ` · ${eligible} eligible family members` : ""}.`,
+      });
       load();
-      toast({ title: "Plan updated", description: `User set to ${plan}` });
     } catch (e) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: "Could not update plan", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingPlan((prev) => ({ ...prev, [userId]: false }));
     }
+  };
+
+  const targetName = (userId) => {
+    const u = users.find((x) => x.id === userId);
+    return u?.full_name || u?.email || "User";
   };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -198,93 +231,67 @@ function UsersTab() {
   return (
     <div className="space-y-3">
       {users.map((user) => (
-        <div key={user.id} className="bg-card rounded-2xl border border-border/50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="font-medium truncate">{user.full_name || "No name"}</p>
-              {user.role === "admin" && <Badge variant="secondary" className="text-xs">Admin</Badge>}
+        <div key={user.id} className="bg-card rounded-2xl border border-border/50 p-4 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="font-medium truncate">{user.full_name || "No name"}</p>
+                {user.role === "admin" && <Badge variant="secondary" className="text-xs">Admin</Badge>}
+              </div>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
             </div>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
+            <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end w-full sm:w-auto">
+              <div className="flex items-center gap-1.5">
+                <Input type="number" min="1" step="1" placeholder="Credits" value={grantAmounts[user.id] ?? ""}
+                  onChange={(e) => setGrantAmounts((prev) => ({ ...prev, [user.id]: e.target.value }))}
+                  className="w-24 h-8 text-xs" aria-label={`Credits to grant to ${user.full_name || user.email}`} />
+                <Button size="sm" variant="outline" onClick={() => grantCredits(user.id)} disabled={granting[user.id]} className="gap-1">
+                  {granting[user.id] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />} Give
+                </Button>
+              </div>
+              <Badge variant="secondary" className="text-xs">+{user.admin_credit_balance || 0} bonus</Badge>
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end w-full sm:w-auto">
-            <div className="flex items-center gap-1.5">
-              <Input type="number" min="1" step="1" placeholder="Credits" value={grantAmounts[user.id] ?? ""}
-                onChange={(e) => setGrantAmounts((prev) => ({ ...prev, [user.id]: e.target.value }))}
-                className="w-24 h-8 text-xs" aria-label={`Credits to grant to ${user.full_name || user.email}`} />
-              <Button size="sm" variant="outline" onClick={() => grantCredits(user.id)} disabled={granting[user.id]} className="gap-1">
-                {granting[user.id] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />} Give
-              </Button>
+
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 pt-3 border-t border-border/30">
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
+              <label className="text-xs text-muted-foreground font-medium">Plan</label>
+              <select
+                value={planSelects[user.id] || "starter"}
+                onChange={(e) => setPlanSelects((prev) => ({ ...prev, [user.id]: e.target.value }))}
+                className="text-sm border border-border rounded-md px-3 py-2 bg-background"
+              >
+                <option value="starter">Starter</option>
+                <option value="plus">Plus</option>
+                <option value="premium">Premium</option>
+              </select>
             </div>
-            <Badge variant="secondary" className="text-xs">+{user.admin_credit_balance || 0} bonus</Badge>
-            {user.subscription_plan && (
-              <Badge variant="outline" className="capitalize">{user.subscription_plan}</Badge>
-            )}
-            <select
-              value={user.subscription_plan || "starter"}
-              onChange={(e) => changePlan(user.id, e.target.value)}
-              className="text-xs border border-border rounded-md px-2 py-1 bg-background"
+            <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
+              <label className="text-xs text-muted-foreground font-medium">Eligible family members</label>
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                placeholder="Plan default"
+                value={eligibleAmounts[user.id] ?? ""}
+                onChange={(e) => setEligibleAmounts((prev) => ({ ...prev, [user.id]: e.target.value }))}
+                className="h-9"
+                aria-label={`Eligible family members for ${user.full_name || user.email}`}
+              />
+              <p className="text-[10px] text-muted-foreground">Max people they can add to their family. Leave blank to use the plan default.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => savePlan(user.id)}
+              disabled={savingPlan[user.id]}
+              className="gap-1.5 sm:self-end"
             >
-              <option value="starter">Starter</option>
-              <option value="plus">Plus</option>
-              <option value="premium">Premium</option>
-            </select>
+              {savingPlan[user.id] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+              Save
+            </Button>
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-function AnalysesTab() {
-  const [analyses, setAnalyses] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    base44.entities.ScamAnalysis.list("-created_date", 100)
-      .then(setAnalyses)
-      .catch((e) => toast({ title: "Error", description: e.message, variant: "destructive" }))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
-
-  const stats = {
-    high: analyses.filter((a) => a.risk_level === "high").length,
-    medium: analyses.filter((a) => a.risk_level === "medium").length,
-    low: analyses.filter((a) => a.risk_level === "low").length,
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-destructive/10 text-destructive rounded-xl p-3 text-center">
-          <div className="text-xl font-bold">{stats.high}</div>
-          <div className="text-xs">High Risk</div>
-        </div>
-        <div className="bg-warning/10 text-warning rounded-xl p-3 text-center">
-          <div className="text-xl font-bold">{stats.medium}</div>
-          <div className="text-xs">Medium Risk</div>
-        </div>
-        <div className="bg-success/10 text-success rounded-xl p-3 text-center">
-          <div className="text-xl font-bold">{stats.low}</div>
-          <div className="text-xs">Low Risk</div>
-        </div>
-      </div>
-      <div className="space-y-2">
-        {analyses.map((a) => (
-          <div key={a.id} className="bg-card rounded-xl border border-border/50 p-4">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                a.risk_level === "high" ? "bg-destructive/10 text-destructive" :
-                a.risk_level === "medium" ? "bg-warning/10 text-warning" :
-                "bg-success/10 text-success"
-              }`}>{a.risk_level}</span>
-              <span className="text-xs text-muted-foreground">{new Date(a.created_date).toLocaleDateString()}</span>
-            </div>
-            <p className="text-sm line-clamp-2 text-muted-foreground">{a.message_text}</p>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -439,20 +446,18 @@ function BroadcastsTab() {
 }
 
 function OverviewTab() {
-  const [stats, setStats] = useState({ feedback: 0, users: 0, analyses: 0, seniors: 0, pendingFeedback: 0 });
+  const [stats, setStats] = useState({ feedback: 0, users: 0, seniors: 0, pendingFeedback: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       base44.entities.Feedback.list("-created_date", 100),
       base44.entities.User.list(),
-      base44.entities.ScamAnalysis.list("-created_date", 100),
       base44.entities.ProtectedSenior.list(),
-    ]).then(([fb, users, analyses, seniors]) => {
+    ]).then(([fb, users, seniors]) => {
       setStats({
         feedback: fb.length,
         users: users.length,
-        analyses: analyses.length,
         seniors: seniors.length,
         pendingFeedback: fb.filter((f) => f.status === "new").length,
       });
@@ -466,7 +471,6 @@ function OverviewTab() {
       <StatCard icon={MessageSquare} label="Total Feedback" value={stats.feedback} color="bg-primary/10 text-primary" />
       <StatCard icon={AlertTriangle} label="Pending Feedback" value={stats.pendingFeedback} color="bg-warning/10 text-warning" />
       <StatCard icon={Users} label="Total Users" value={stats.users} color="bg-chart-5/10 text-chart-5" />
-      <StatCard icon={ShieldCheck} label="Scam Analyses" value={stats.analyses} color="bg-destructive/10 text-destructive" />
       <StatCard icon={Crown} label="Protected Seniors" value={stats.seniors} color="bg-success/10 text-success" />
       <StatCard icon={Activity} label="Active Users" value={stats.users} color="bg-chart-2/10 text-chart-2" />
     </div>
@@ -590,7 +594,7 @@ export default function Admin() {
         </div>
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight font-heading">Admin Panel</h1>
-          <p className="text-sm text-muted-foreground">Manage feedback, users, and system overview.</p>
+          <p className="text-sm text-muted-foreground">Manage feedback, users, plans, and system overview.</p>
         </div>
       </div>
 
@@ -599,7 +603,6 @@ export default function Admin() {
           <TabsTrigger value="overview" className="gap-1.5"><TrendingUp className="w-4 h-4" />Overview</TabsTrigger>
           <TabsTrigger value="feedback" className="gap-1.5"><MessageSquare className="w-4 h-4" />Feedback</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" />Users</TabsTrigger>
-          <TabsTrigger value="analyses" className="gap-1.5"><ShieldCheck className="w-4 h-4" />Analyses</TabsTrigger>
           <TabsTrigger value="seniors" className="gap-1.5"><Crown className="w-4 h-4" />Seniors</TabsTrigger>
           <TabsTrigger value="broadcasts" className="gap-1.5"><Megaphone className="w-4 h-4" />Broadcasts</TabsTrigger>
           <TabsTrigger value="caller-id" className="gap-1.5"><PhoneCall className="w-4 h-4" />Caller ID</TabsTrigger>
@@ -608,7 +611,6 @@ export default function Admin() {
         <TabsContent value="overview" className="mt-4"><OverviewTab /></TabsContent>
         <TabsContent value="feedback" className="mt-4"><FeedbackTab /></TabsContent>
         <TabsContent value="users" className="mt-4"><UsersTab /></TabsContent>
-        <TabsContent value="analyses" className="mt-4"><AnalysesTab /></TabsContent>
         <TabsContent value="seniors" className="mt-4"><SeniorsTab /></TabsContent>
         <TabsContent value="broadcasts" className="mt-4"><BroadcastsTab /></TabsContent>
         <TabsContent value="caller-id" className="mt-4"><CallerIdTab /></TabsContent>

@@ -45,6 +45,10 @@
       "default": 0,
       "description": "One-time credits granted manually by an admin; consumed before monthly plan credits"
     },
+    "family_members_paid": {
+      "type": "number",
+      "description": "Admin-set number of family members this user is allowed to add to their family. When set, overrides the plan default. Protected seniors who join inherit this user's plan benefits."
+    },
     "onboarding_completed": {
       "type": "boolean",
       "default": false,

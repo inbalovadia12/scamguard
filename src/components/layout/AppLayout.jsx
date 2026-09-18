@@ -84,7 +84,7 @@ export default function AppLayout() {
   }, []);
 
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, checkUserAuth } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [alertBadge, setAlertBadge] = useState(0);
 
@@ -145,21 +145,26 @@ export default function AppLayout() {
       .catch(() => {});
   }, [user?.id, user?.referred_by]);
 
-  // Inherit a paid plan from a guardian if this user is a protected senior
+  // Link this user to any family invitations that match their email. The backend
+  // sets consent, links their account to the ProtectedSenior record, and upgrades
+  // their plan to the guardian's plan (service-role, admin-only field) so they
+  // inherit all the benefits. Runs once after login; idempotent.
   useEffect(() => {
     if (!user?.email) return;
-    const myPlan = user.subscription_plan || "starter";
-    if (myPlan === "plus" || myPlan === "premium") return;
+    let cancelled = false;
     (async () => {
       try {
-        const seniors = await base44.entities.ProtectedSenior.filter({ email: user.email });
-        const guardianPlan = seniors.find((s) => s.guardian_plan === "plus" || s.guardian_plan === "premium")?.guardian_plan;
-        if (guardianPlan) {
-          await base44.auth.updateMe({ subscription_plan: guardianPlan, subscription_status: "active" });
+        const res = await base44.functions.invoke("linkFamilyMember", {});
+        const data = res?.data || res;
+        if (cancelled || data?.error) return;
+        if (data?.linked && data?.upgraded_to) {
+          // Refresh the user in context so the plan badge and limits reflect the upgrade.
+          checkUserAuth?.();
         }
       } catch {}
     })();
-  }, [user]);
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const handleLogout = () => {
     try { localStorage.removeItem("vardin_remembered_session"); } catch {}
