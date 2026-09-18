@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
       threatIntelChecked = true;
     }
     vtReport = threatIntel.virustotal;
-    const urlhausReport = threatIntel.urlhaus;
+    let urlhausReport: any = threatIntel.urlhaus;
 
     // === EARLY EXIT: URLhaus malware ===
     if (urlhausReport?.listed) {
