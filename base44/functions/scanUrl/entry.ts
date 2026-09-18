@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import { getUrlhausReport } from '../../shared/urlhaus.ts';
+import { getThreatIntel, shouldCheckThreatIntel, hasKnownThreat, canonicalizeUrl } from '../../shared/urlThreatIntel.ts';
 import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
 
