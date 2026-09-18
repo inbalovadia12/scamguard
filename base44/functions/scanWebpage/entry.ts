@@ -401,8 +401,30 @@ Deno.serve(async (req) => {
         risk_score: vtReport?.malicious ? 80 : 50,
         confidence: 35,
         is_scam: !!vtReport?.malicious,
-        explanation: 'AI analysis could not complete in time. Treat this result as uncertain — review the VirusTotal / URLhaus reports above before trusting this page.',
+        explanation: threatIntelChecked
+          ? 'AI analysis could not complete in time. Treat this result as uncertain — review the threat-intelligence results above.'
+          : 'AI analysis could not complete in time. Treat this result as uncertain and verify the URL through an official channel.',
       };
+    }
+
+    // AI-first escalation: a URL that initially skipped threat-intel gets a
+    // reputation lookup only when Gemini sees meaningful risk.
+    if (!threatIntelChecked && isUrlScan && threatIntelUrl && (result?.risk_level === 'high' || Number(result?.risk_score || 0) >= 65)) {
+      threatIntel = await getThreatIntel(base44, canonicalizeUrl(threatIntelUrl));
+      threatIntelChecked = true;
+      vtReport = threatIntel.virustotal;
+      urlhausReport = threatIntel.urlhaus;
+
+      if (hasKnownThreat(threatIntel)) {
+        result.risk_level = 'high';
+        result.risk_score = urlhausReport?.listed ? 95 : 85;
+        result.is_scam = true;
+        result.explanation = urlhausReport?.listed
+          ? `URLhaus: Active malware distribution site. ${urlhausReport.threat || 'malware'}.`
+          : `VirusTotal: ${vtReport?.malicious || 0}/${vtReport?.total_engines || 0} security vendors flag malware/phishing.`;
+        result.tactics_detected = [urlhausReport?.listed ? 'Malware distribution' : 'Malware / Phishing Detection'];
+        result.sources_checked = urlhausReport?.listed ? ['URLhaus'] : ['VirusTotal'];
+      }
     }
 
     // === Override QR decoded content with verified value ===
@@ -427,6 +449,8 @@ Deno.serve(async (req) => {
       credits_used: creditCost,
       credits_remaining: creditsRemaining,
       credits_limit: getMonthlyCreditLimit(user),
+      threat_intel_checked: threatIntelChecked,
+      threat_intel_cached: threatIntelChecked ? !!threatIntel.cached : false,
       timing_ms: Date.now() - startTime,
     });
   } catch (error: any) {
