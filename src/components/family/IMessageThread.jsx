@@ -178,7 +178,7 @@ export default function IMessageThread({ memberId, threadId, contactName, contac
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="iMessage"
+            placeholder="Message"
             rows={1}
             maxLength={2000}
             className="flex-1 resize-none rounded-full border border-border bg-background px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-primary/30 max-h-32"
