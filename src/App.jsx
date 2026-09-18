@@ -27,6 +27,7 @@ const Home = lazy(() => import('@/pages/Home'));
 const Alerts = lazy(() => import('@/pages/Alerts'));
 const AlertDetail = lazy(() => import('@/pages/AlertDetail'));
 const Family = lazy(() => import('@/pages/Family'));
+const FamilyChat = lazy(() => import('@/pages/FamilyChat'));
 const GuardianDashboard = lazy(() => import('@/pages/GuardianDashboard'));
 const Pricing = lazy(() => import('@/pages/Pricing'));
 const AgentChat = lazy(() => import('@/pages/AgentChat'));
@@ -162,6 +163,7 @@ const AuthenticatedApp = () => {
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/alerts/:id" element={<AlertDetail />} />
           <Route path="/family" element={<Family />} />
+          <Route path="/family-chat" element={<FamilyChat />} />
           <Route path="/guardian-dashboard" element={<GuardianDashboard />} />
           <Route path="/scam-feed" element={<ScamFeed />} />
           <Route path="/phone-lookup" element={<PhoneGuard />} />

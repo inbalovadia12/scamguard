@@ -45,6 +45,7 @@ const NAV_SECTIONS = [
     items: [
       { path: "/alerts", labelKey: "nav.alerts", icon: Bell },
       { path: "/family", labelKey: "nav.family", icon: Users },
+      { path: "/family-chat", label: "Family Chat", icon: MessageCircle },
     ],
   },
   {
