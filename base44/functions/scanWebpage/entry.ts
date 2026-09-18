@@ -132,42 +132,22 @@ Deno.serve(async (req) => {
     let vtReport = null;
     let urlhausReport = null;
     let qrDecodedContent = '';
+    let vtReport: any = null;
+    let urlhausReport: any = null;
+    let threatIntel: any = { virustotal: null, urlhaus: null, cached: false };
+    let threatIntelChecked = false;
+    let qrDecodedContent = '';
     let qrFinalUrl = '';
     let qrPageTitle = '';
 
-    // VirusTotal + URLhaus only matter for URL-based scans. Running them for
-    // screenshot / email / chat / marketplace / page-screenshot scans wastes time,
-    // can trigger false "malware" early-exits that ignore the actual content, and
-    // risks timing out the whole scan (charging credits for nothing).
-    const isUrlScan = scanType === 'url' || (scanType === 'page' && scanMode === 'url');
-
-    // Start all parallel tasks
-    const parallelTasks: Promise<any>[] = [];
-
-    if (isUrlScan && page_url) {
-      parallelTasks.push(
-        getVirusTotalReport(page_url).then(r => { vtReport = r; }),
-        getUrlhausReport(page_url).then(r => { urlhausReport = r; })
-      );
-    }
-
+    // Decode QR without calling paid threat-intel until its destination is known.
     if (scanType === 'qr') {
       if (clientDecodedContent) {
         qrDecodedContent = clientDecodedContent;
       } else if (screenshot_data_url) {
-        parallelTasks.push(
-          decodeQrServerSide(screenshot_data_url).then(r => { qrDecodedContent = r; })
-        );
+        qrDecodedContent = await decodeQrServerSide(screenshot_data_url);
       }
-    }
 
-    // Wait for all parallel tasks
-    if (parallelTasks.length > 0) {
-      await Promise.all(parallelTasks);
-    }
-
-    // === QR: Handle redirects after decode ===
-    if (scanType === 'qr') {
       if (!qrDecodedContent) {
         return Response.json({
           error: 'Could not decode this QR code. Please try a clearer or higher-resolution image.',
@@ -178,17 +158,30 @@ Deno.serve(async (req) => {
         const redirectResult = await followRedirects(qrDecodedContent);
         qrFinalUrl = redirectResult.finalUrl;
         qrPageTitle = redirectResult.pageTitle;
-
-        // Check the QR's actual destination (NOT the tab the user is on) against
-        // both VirusTotal and URLhaus, in parallel.
-        const qrTargetUrl = qrFinalUrl || qrDecodedContent;
-        const [qrVt, qrUrlhaus] = await Promise.all([
-          getVirusTotalReport(qrTargetUrl),
-          getUrlhausReport(qrTargetUrl),
-        ]);
-        if (qrVt) vtReport = qrVt;
-        if (qrUrlhaus) urlhausReport = qrUrlhaus;
       }
+    }
+
+    // Conditional threat-intel pass. QR destinations are always checked;
+    // ordinary URL scans are checked only when local signals justify it.
+    const isUrlScan = scanType === 'url' || (scanType === 'page' && scanMode === 'url');
+    const threatIntelUrl = scanType === 'qr'
+      ? (qrFinalUrl || qrDecodedContent)
+      : isUrlScan
+        ? (page_url || '')
+        : '';
+    const threatIntelContent = scanType === 'qr'
+      ? ((qrPageTitle || '') + ' ' + qrDecodedContent)
+      : (page_text || '');
+
+    if (
+      threatIntelUrl &&
+      /^https?:\/\//i.test(threatIntelUrl) &&
+      (scanType === 'qr' || shouldCheckThreatIntel(threatIntelUrl, threatIntelUrl, threatIntelContent))
+    ) {
+      threatIntel = await getThreatIntel(base44, canonicalizeUrl(threatIntelUrl));
+      threatIntelChecked = true;
+      vtReport = threatIntel.virustotal;
+      urlhausReport = threatIntel.urlhaus;
     }
 
     // === EARLY EXIT: If URLhaus says malware, return HIGH RISK immediately ===
