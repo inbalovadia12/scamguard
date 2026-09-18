@@ -49,30 +49,31 @@ export default async function(req: Request): Promise<Response> {
       status: 'pending_guardian',
     });
 
-    // Notify the guardian by email when high risk or notifications enabled
-    const shouldEmail = risk_level === 'high' || settings.guardian_notifications;
-    if (shouldEmail && senior.guardian_email) {
+    // Always notify the guardian by email — the member explicitly asked for help,
+    // so the guardian should see what was asked even if they miss the in-app badge.
+    if (senior.guardian_email) {
       try {
         const { accessToken } = await base44.asServiceRole.connectors.getConnection('gmail');
         const senderEmail = await getGmailSenderEmail(accessToken);
         const riskLabel = (risk_level || 'medium').toUpperCase();
+        const typeLabel = (analysis_type || 'scan').replace(/_/g, ' ');
         const subject = `Vardin Ask Family: ${senior.name || 'A family member'} needs help with a ${riskLabel} risk alert`;
         const bodyText = [
           `Hi ${senior.guardian_name || 'there'},`,
           ``,
-          `${senior.name || 'Your family member'} used "Ask Family" on a scan flagged ${riskLabel} risk.`,
+          `${senior.name || 'Your family member'} used "Ask Family" on a ${typeLabel} flagged ${riskLabel} risk.`,
           ``,
           `What they checked:`,
           (threat_excerpt || '(no excerpt provided)'),
           ``,
-          member_note ? `Their note: ${member_note}` : '',
+          member_note ? `Their note: ${member_note}` : '(They did not add a note.)',
           ``,
           `Review and respond in Vardin:`,
           `https://vardin.base44.app/alerts`,
           ``,
           `Stay safe,`,
           `The Vardin Team`,
-        ].filter(Boolean).join('\n');
+        ].join('\n');
 
         const mimeMessage = buildMimeMessage(senderEmail, senior.guardian_name || '', senior.guardian_email, subject, bodyText);
         await sendGmail(accessToken, mimeMessage);

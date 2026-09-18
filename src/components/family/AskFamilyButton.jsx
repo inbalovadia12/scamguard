@@ -59,9 +59,9 @@ export default function AskFamilyButton({ analysisId, analysisType = "scam_analy
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="gap-2">
-        <MessageCircle className="w-4 h-4" />
-        Ask Family
+      <Button onClick={() => setOpen(true)} className="gap-2 h-12 px-5 text-base font-semibold shadow-sm">
+        <MessageCircle className="w-5 h-5" />
+        Ask Family for Help
       </Button>
 
       {open && (

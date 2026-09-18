@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Bell, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
 import AlertCard from "@/components/alerts/AlertCard";
 import FamilyAlertCard from "@/components/family/FamilyAlertCard";
+import AskFamilyButton from "@/components/family/AskFamilyButton";
 
 export default function Alerts() {
   const [view, setView] = useState("guardian");
@@ -140,7 +141,18 @@ export default function Alerts() {
           ) : (
             <div className="space-y-3">
               {filtered.map((analysis) => (
-                <AlertCard key={analysis.id} analysis={analysis} seniorName={getSeniorName(analysis)} />
+                <div key={analysis.id} className="space-y-2">
+                  <AlertCard analysis={analysis} seniorName={getSeniorName(analysis)} />
+                  {protectedBy.length > 0 && (
+                    <AskFamilyButton
+                      analysisId={analysis.id}
+                      analysisType="scam_analysis"
+                      threatExcerpt={analysis.message_text}
+                      riskLevel={analysis.risk_level || "medium"}
+                      scamType={analysis.message_type || "other"}
+                    />
+                  )}
+                </div>
               ))}
             </div>
           )}
