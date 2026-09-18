@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
 import { Bell, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
 import AlertCard from "@/components/alerts/AlertCard";
@@ -14,43 +14,49 @@ export default function Alerts() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("all");
 
-  useEffect(() => {
-    const load = async () => {
-      const user = await base44.auth.me();
-      const [seniorData, analysisData, familyData, protectedByData] = await Promise.all([
-        base44.entities.ProtectedSenior.filter({ guardian_id: user.id }),
-        base44.entities.ScamAnalysis.list("-created_date", 50),
-        base44.entities.FamilyAlert.list("-created_date", 100),
-        base44.entities.ProtectedSenior.filter({ senior_user_id: user.id }),
-      ]);
-      setSeniors(seniorData);
-      setProtectedBy(protectedByData);
+  const load = useCallback(async () => {
+    const user = await base44.auth.me();
+    const [seniorData, analysisData, familyData, protectedByData] = await Promise.all([
+      base44.entities.ProtectedSenior.filter({ guardian_id: user.id }),
+      base44.entities.ScamAnalysis.list("-created_date", 50),
+      base44.entities.FamilyAlert.list("-created_date", 100),
+      base44.entities.ProtectedSenior.filter({ senior_user_id: user.id }),
+    ]);
+    setSeniors(seniorData);
+    setProtectedBy(protectedByData);
 
-      const seniorUserIds = seniorData.map((s) => s.senior_user_id).filter(Boolean);
-      const relevant = analysisData.filter(
-        (a) => a.created_by_id === user.id || seniorUserIds.includes(a.created_by_id)
-      );
-      setAnalyses(relevant);
+    const seniorUserIds = seniorData.map((s) => s.senior_user_id).filter(Boolean);
+    const relevant = analysisData.filter(
+      (a) => a.created_by_id === user.id || seniorUserIds.includes(a.created_by_id)
+    );
+    setAnalyses(relevant);
+    setFamilyAlerts(familyData);
 
-      // Member's own Ask Family requests (with guardian responses)
-      const myAlerts = familyData.filter((a) => a.created_by_id === user.id);
-      setFamilyAlerts(myAlerts);
+    // Guardian with pending Ask Family requests defaults to the family responses view
+    const pendingForMe = familyData.filter((a) => a.guardian_id === user.id && a.status === "pending_guardian");
+    const myAlerts = familyData.filter((a) => a.created_by_id === user.id);
+    if (pendingForMe.length > 0 || (myAlerts.length > 0 && seniorData.length === 0)) setView("family");
 
-      // Members (not guardians) default to the family responses view
-      if (myAlerts.length > 0 && seniorData.length === 0) setView("family");
-
-      setLoading(false);
-    };
-    load();
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    load();
+    const unsub = base44.entities.FamilyAlert.subscribe(() => load());
+    return unsub;
+  }, [load]);
 
   const getSeniorName = (analysis) => {
     const senior = seniors.find((s) => s.senior_user_id === analysis.created_by_id);
     return senior?.name;
   };
 
+  const getMemberName = (alert) => {
+    const senior = seniors.find((s) => s.id === alert.member_id);
+    return senior?.name || "Family member";
+  };
+
   const filtered = tab === "all" ? analyses : analyses.filter((a) => a.guardian_status === tab);
-  const myFamilyCount = familyAlerts.length;
 
   if (loading) {
     return (
@@ -93,28 +99,16 @@ export default function Alerts() {
           className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5 ${view === "family" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
         >
           <MessageCircle className="w-3.5 h-3.5" /> Family Responses
-          {myFamilyCount > 0 && <span className="text-xs px-1.5 rounded-full bg-primary-foreground/20">{myFamilyCount}</span>}
         </button>
       </div>
 
       {view === "family" ? (
-        myFamilyCount === 0 ? (
-          <div className="text-center py-16 space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
-              <MessageCircle className="w-8 h-8 text-primary" />
-            </div>
-            <h2 className="text-lg font-semibold">No family responses yet</h2>
-            <p className="text-muted-foreground max-w-sm mx-auto">
-              When you use "Ask Family" on a scan, your guardian's response will appear here.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {familyAlerts.map((a) => (
-              <FamilyAlertCard key={a.id} alert={a} memberName="You" canRespond={false} />
-            ))}
-          </div>
-        )
+        <FamilyResponsesView
+          familyAlerts={familyAlerts}
+          seniors={seniors}
+          getMemberName={getMemberName}
+          onResponded={load}
+        />
       ) : (
         <>
           <div className="flex gap-1 flex-wrap">
@@ -157,6 +151,75 @@ export default function Alerts() {
             </div>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+function FamilyResponsesView({ familyAlerts, seniors, getMemberName, onResponded }) {
+  // Split into guardian-side (Ask Family requests from seniors I protect) and
+  // member-side (my own requests with the guardian's response).
+  // We can't know the user id here directly, so infer from the two sides:
+  // guardian-side alerts have guardian_id matching one of my seniors' guardian_id (me).
+  const mySeniorIds = seniors.map((s) => s.id);
+  const guardianAlerts = familyAlerts.filter((a) => mySeniorIds.includes(a.member_id));
+  const memberAlerts = familyAlerts.filter((a) => !mySeniorIds.includes(a.member_id));
+
+  const pending = guardianAlerts.filter((a) => a.status === "pending_guardian").length;
+
+  if (guardianAlerts.length === 0 && memberAlerts.length === 0) {
+    return (
+      <div className="text-center py-16 space-y-4">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
+          <MessageCircle className="w-8 h-8 text-primary" />
+        </div>
+        <h2 className="text-lg font-semibold">No family responses yet</h2>
+        <p className="text-muted-foreground max-w-sm mx-auto">
+          When someone uses "Ask Family" on a scan, their request and your response will appear here.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {guardianAlerts.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <MessageCircle className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Ask Family requests
+            </h2>
+            {pending > 0 && (
+              <span className="text-xs font-semibold bg-warning/20 text-warning rounded-full px-2 py-0.5">
+                {pending} waiting
+              </span>
+            )}
+          </div>
+          {guardianAlerts.map((a) => (
+            <FamilyAlertCard
+              key={a.id}
+              alert={a}
+              memberName={getMemberName(a)}
+              canRespond={a.status === "pending_guardian"}
+              onResponded={onResponded}
+            />
+          ))}
+        </div>
+      )}
+
+      {memberAlerts.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <ShieldCheck className="w-4 h-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Your requests
+            </h2>
+          </div>
+          {memberAlerts.map((a) => (
+            <FamilyAlertCard key={a.id} alert={a} memberName="You" canRespond={false} />
+          ))}
+        </div>
       )}
     </div>
   );

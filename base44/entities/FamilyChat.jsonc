@@ -1,0 +1,98 @@
+{
+  "name": "FamilyChat",
+  "type": "object",
+  "properties": {
+    "member_id": {
+      "type": "string",
+      "description": "FK to the ProtectedSenior record \u2014 one ongoing thread per guardian/senior pair"
+    },
+    "guardian_id": {
+      "type": "string",
+      "description": "User id of the guardian"
+    },
+    "senior_user_id": {
+      "type": "string",
+      "description": "User id of the protected senior"
+    },
+    "last_message": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Denormalized preview of the most recent message"
+    },
+    "last_message_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the most recent message was sent"
+    },
+    "last_sender": {
+      "type": "string",
+      "enum": [
+        "guardian",
+        "senior"
+      ],
+      "description": "Who sent the most recent message"
+    },
+    "unread_by_guardian": {
+      "type": "number",
+      "default": 0,
+      "description": "Unread message count for the guardian"
+    },
+    "unread_by_senior": {
+      "type": "number",
+      "default": 0,
+      "description": "Unread message count for the senior"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
+    }
+  },
+  "required": [
+    "member_id",
+    "guardian_id",
+    "senior_user_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.guardian_id": "{{user.id}}"
+        },
+        {
+          "data.senior_user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.guardian_id": "{{user.id}}"
+        },
+        {
+          "data.senior_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.guardian_id": "{{user.id}}"
+        },
+        {
+          "data.senior_user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

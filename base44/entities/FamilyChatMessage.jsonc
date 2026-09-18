@@ -1,0 +1,98 @@
+{
+  "name": "FamilyChatMessage",
+  "type": "object",
+  "properties": {
+    "thread_id": {
+      "type": "string",
+      "description": "FK to the FamilyChat thread"
+    },
+    "guardian_id": {
+      "type": "string",
+      "description": "Denormalized guardian id (for RLS)"
+    },
+    "senior_user_id": {
+      "type": "string",
+      "description": "Denormalized senior user id (for RLS)"
+    },
+    "sender": {
+      "type": "string",
+      "enum": [
+        "guardian",
+        "senior"
+      ],
+      "description": "Who sent the message"
+    },
+    "sender_id": {
+      "type": "string",
+      "description": "User id of the sender"
+    },
+    "text": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Message body"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "message",
+        "warning",
+        "assurance"
+      ],
+      "default": "message",
+      "description": "message = free text; warning/assurance = guardian quick action on an alert"
+    },
+    "alert_id": {
+      "type": "string",
+      "description": "Optional FamilyAlert id this message relates to"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
+    }
+  },
+  "required": [
+    "thread_id",
+    "sender",
+    "text",
+    "guardian_id",
+    "senior_user_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.guardian_id": "{{user.id}}"
+        },
+        {
+          "data.senior_user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.guardian_id": "{{user.id}}"
+        },
+        {
+          "data.senior_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

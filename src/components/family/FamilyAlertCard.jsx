@@ -1,16 +1,31 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { ShieldCheck, ShieldAlert, ShieldX, MessageSquare, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  ShieldCheck, ShieldAlert, MessageCircle, Clock, Loader2, MessageSquare,
+} from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import RiskBadge from "@/components/scam/RiskBadge";
+import ChatThread from "@/components/family/ChatThread";
 
-const ACTION_CONFIG = {
-  mark_safe: { label: "Mark Safe", icon: ShieldCheck, color: "text-success", bg: "bg-success/10", border: "border-success/30", emoji: "✅", memberMsg: "Your guardian reviewed this and said it's safe." },
-  confirm_scam: { label: "Confirm Scam", icon: ShieldAlert, color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30", emoji: "🚨", memberMsg: "Your guardian confirmed this is a scam — do not engage." },
-  ignore: { label: "Tell Them to Ignore", icon: ShieldX, color: "text-muted-foreground", bg: "bg-muted", border: "border-border", emoji: "⛔", memberMsg: "Your guardian said to ignore this." },
-  guidance: { label: "Give Guidance", icon: MessageSquare, color: "text-primary", bg: "bg-primary/10", border: "border-primary/30", emoji: "💬", memberMsg: "Your guardian sent guidance:" },
+const RESOLVED_CONFIG = {
+  mark_safe: {
+    label: "Marked Safe",
+    icon: ShieldCheck,
+    color: "text-success",
+    bg: "bg-success/10",
+    border: "border-success/30",
+    memberMsg: "Your guardian reviewed this and said it's safe.",
+  },
+  confirm_scam: {
+    label: "Warned: Scam",
+    icon: ShieldAlert,
+    color: "text-destructive",
+    bg: "bg-destructive/10",
+    border: "border-destructive/30",
+    memberMsg: "Your guardian warned this is a scam — do not engage.",
+  },
 };
 
 function timeAgo(date) {
@@ -25,13 +40,12 @@ function timeAgo(date) {
   return `${days}d ago`;
 }
 
-// canRespond = true for guardian viewing a pending alert; false for member (read-only response)
-export default function FamilyAlertCard({ alert, memberName, canRespond }) {
-  const [action, setAction] = useState(null);
-  const [guidance, setGuidance] = useState("");
-  const [saving, setSaving] = useState(false);
+// canRespond = true for guardian viewing a pending alert; false for member (read-only)
+export default function FamilyAlertCard({ alert, memberName, canRespond, onResponded }) {
+  const [saving, setSaving] = useState(null); // 'warning' | 'assurance' | null
+  const [chatOpen, setChatOpen] = useState(false);
 
-  const cfg = alert.guardian_action ? ACTION_CONFIG[alert.guardian_action] : null;
+  const cfg = alert.guardian_action ? RESOLVED_CONFIG[alert.guardian_action] : null;
   const initials = (memberName || "?")
     .split(" ")
     .map((s) => s[0])
@@ -39,21 +53,24 @@ export default function FamilyAlertCard({ alert, memberName, canRespond }) {
     .join("")
     .toUpperCase();
 
-  const respond = async (chosen, note) => {
-    setSaving(true);
+  const quickRespond = async (kind) => {
+    setSaving(kind);
     try {
-      await base44.entities.FamilyAlert.update(alert.id, {
-        guardian_action: chosen,
-        guardian_note: chosen === "guidance" ? (note || "").trim() : undefined,
-        status: "resolved",
+      await base44.functions.invoke("sendFamilyChatMessage", {
+        member_id: alert.member_id,
+        kind,
+        alert_id: alert.id,
+        text: "",
       });
-      toast({ title: "Response sent", description: "Your family member will see it in Vardin." });
-      setAction(null);
-      setGuidance("");
+      toast({
+        title: kind === "warning" ? "Warning sent" : "Assurance sent",
+        description: "Your family member will see it in their Chats tab.",
+      });
+      onResponded?.();
     } catch (e) {
       toast({ title: "Couldn't respond", description: e.message || "Try again.", variant: "destructive" });
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
   };
 
@@ -88,29 +105,31 @@ export default function FamilyAlertCard({ alert, memberName, canRespond }) {
       {alert.status === "pending_guardian" && canRespond && (
         <div className="space-y-2.5 pt-2 border-t border-border/40">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Respond</p>
-          <div className="grid grid-cols-2 gap-2">
-            {Object.entries(ACTION_CONFIG).map(([key, c]) => {
-              const Icon = c.icon;
-              const active = action === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setAction(key)}
-                  className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium transition-all ${active ? `${c.border} ${c.bg} ${c.color}` : "border-border/50 hover:border-primary/30"}`}
-                >
-                  <Icon className="w-3.5 h-3.5" /> {c.label}
-                </button>
-              );
-            })}
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => quickRespond("warning")}
+              disabled={!!saving}
+              className="flex flex-col items-center gap-1 p-3 rounded-xl border border-destructive/30 bg-destructive/5 text-destructive text-xs font-medium hover:bg-destructive/10 transition-all disabled:opacity-50"
+            >
+              {saving === "warning" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
+              Warn
+            </button>
+            <button
+              onClick={() => quickRespond("assurance")}
+              disabled={!!saving}
+              className="flex flex-col items-center gap-1 p-3 rounded-xl border border-success/30 bg-success/5 text-success text-xs font-medium hover:bg-success/10 transition-all disabled:opacity-50"
+            >
+              {saving === "assurance" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+              Assure
+            </button>
+            <button
+              onClick={() => setChatOpen(true)}
+              className="flex flex-col items-center gap-1 p-3 rounded-xl border border-primary/30 bg-primary/5 text-primary text-xs font-medium hover:bg-primary/10 transition-all"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Chat
+            </button>
           </div>
-          {action === "guidance" && (
-            <Textarea value={guidance} onChange={(e) => setGuidance(e.target.value)} placeholder="Type your guidance..." rows={2} maxLength={500} />
-          )}
-          {action && (
-            <Button onClick={() => respond(action, guidance)} disabled={saving || (action === "guidance" && !guidance.trim())} className="w-full gap-2">
-              {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : <><CheckCircle2 className="w-4 h-4" /> Send Response</>}
-            </Button>
-          )}
         </div>
       )}
 
@@ -119,11 +138,17 @@ export default function FamilyAlertCard({ alert, memberName, canRespond }) {
           <div className="flex items-center gap-2">
             <cfg.icon className={`w-4 h-4 ${cfg.color}`} />
             <p className={`text-sm font-semibold ${cfg.color}`}>
-              {cfg.emoji} {canRespond ? `You chose: ${cfg.label}` : cfg.memberMsg}
+              {canRespond ? `You chose: ${cfg.label}` : cfg.memberMsg}
             </p>
           </div>
           {alert.guardian_note && <p className="text-sm mt-1.5 text-foreground/80">{alert.guardian_note}</p>}
         </div>
+      )}
+
+      {alert.status === "resolved" && (
+        <Button variant="outline" size="sm" onClick={() => setChatOpen(true)} className="w-full gap-2">
+          <MessageSquare className="w-4 h-4" /> Continue chat
+        </Button>
       )}
 
       {alert.status === "pending_guardian" && !canRespond && (
@@ -131,6 +156,18 @@ export default function FamilyAlertCard({ alert, memberName, canRespond }) {
           <Clock className="w-3.5 h-3.5" /> Waiting for your guardian's response...
         </div>
       )}
+
+      <Dialog open={chatOpen} onOpenChange={setChatOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="w-4 h-4 text-primary" />
+              Chat with {memberName || "family member"}
+            </DialogTitle>
+          </DialogHeader>
+          <ChatThread memberId={alert.member_id} onSent={onResponded} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { toast } from "@/components/ui/use-toast";
 import GuardianDashboardPanel from "@/components/family/GuardianDashboardPanel";
 import ProtectionSettingsPanel from "@/components/family/ProtectionSettingsPanel";
 import FamilyAlertsPanel from "@/components/family/FamilyAlertsPanel";
+import FamilyChatsPanel from "@/components/family/FamilyChatsPanel";
 
 function MemberAvatar({ name }) {
   const initials = (name || "?")
@@ -234,7 +235,18 @@ export default function Family() {
   if (memberships.length > 0 && seniors.length === 0) {
     return (
       <div className="max-w-2xl mx-auto space-y-8">
-        <ProtectedMemberView memberships={memberships} onAccept={handleAccept} onLeave={handleLeave} />
+        <Tabs defaultValue="protection" className="w-full">
+          <TabsList className="grid grid-cols-2 w-full h-auto mb-2">
+            <TabsTrigger value="protection" className="min-h-10">My Protection</TabsTrigger>
+            <TabsTrigger value="chats" className="min-h-10">Chats</TabsTrigger>
+          </TabsList>
+          <TabsContent value="protection" className="mt-0">
+            <ProtectedMemberView memberships={memberships} onAccept={handleAccept} onLeave={handleLeave} />
+          </TabsContent>
+          <TabsContent value="chats" className="mt-0">
+            <FamilyChatsPanel memberships={memberships} />
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
@@ -263,7 +275,7 @@ export default function Family() {
       <ProtectedMemberView memberships={memberships} onAccept={handleAccept} onLeave={handleLeave} />
 
       <Tabs defaultValue="members" className="w-full">
-        <TabsList className="grid grid-cols-1 sm:grid-cols-3 w-full h-auto mb-2">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full h-auto mb-2">
           <TabsTrigger value="members" className="min-h-10">Members</TabsTrigger>
           <TabsTrigger value="guardian" className="min-h-10">Guardian Dashboard</TabsTrigger>
           <TabsTrigger value="alerts" className="relative min-h-10">
@@ -273,6 +285,7 @@ export default function Family() {
               <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-destructive" />
             )}
           </TabsTrigger>
+          <TabsTrigger value="chats" className="min-h-10">Chats</TabsTrigger>
         </TabsList>
         <TabsContent value="members" className="space-y-8 mt-0">
       {familyLimit !== Infinity && seniors.length >= familyLimit && (
@@ -357,6 +370,9 @@ export default function Family() {
         </TabsContent>
         <TabsContent value="alerts" className="mt-0">
           <FamilyAlertsPanel seniors={seniors} />
+        </TabsContent>
+        <TabsContent value="chats" className="mt-0">
+          <FamilyChatsPanel seniors={seniors} />
         </TabsContent>
       </Tabs>
 
