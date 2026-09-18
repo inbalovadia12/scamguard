@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
 import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+import { matchKnownLegitimateDomain } from '../../shared/legitimateDomains.ts';
 const ANSWER_TYPE_COSTS: Record<string, number> = {
   // Logical + monetizable: quick is the cheap gateway, detailed is the flagship
   // upsell (4x quick). More value always costs more credits.
@@ -311,10 +312,57 @@ Deno.serve(async (req) => {
       });
     }
 
+    // === KNOWN-LEGITIMATE SHORTCUT ===
+    // Famous brands dominate the LLM's web-search context with brand-impersonation
+    // scam articles, which biases it toward a generic scam narrative even for the
+    // real official domain. When the target is a well-known official domain and
+    // both threat-intel feeds are clean, return a safe verdict directly.
+    const legitApex = (isUrlScan && page_url) ? matchKnownLegitimateDomain(page_url) : null;
+    if (legitApex && !urlhausReport?.listed && (!vtReport || vtReport.malicious === 0)) {
+      const brand = legitApex.split('.')[0] || legitApex;
+      let safeAnalysis: any;
+      if (answerType === 'quick') {
+        safeAnalysis = { is_scam: false, verdict: `This is the official ${brand} website — safe.` };
+      } else if (answerType === 'risk_score') {
+        safeAnalysis = { risk_score: 4, risk_level: 'low', summary: `Official ${brand} website. No threats detected by VirusTotal or URLhaus.` };
+      } else {
+        safeAnalysis = {
+          page_summary: `This is the official ${brand} website (${legitApex}).`,
+          risk_level: 'low',
+          risk_score: 4,
+          confidence: 95,
+          is_scam: false,
+          scam_category: '',
+          overall_risk: 'low',
+          explanation: `This is the official ${brand} website. VirusTotal and URLhaus report no malware or phishing. Safe to visit.`,
+          tactics_detected: [],
+          red_flags: [],
+          evidence_found: [],
+          sources_checked: ['VirusTotal', 'URLhaus', 'Vardin'],
+          next_steps: [],
+          what_they_want: '',
+        };
+      }
+      const creditsRemaining = await chargeCredits();
+      return Response.json({
+        analysis: safeAnalysis,
+        scan_type: scanType,
+        scan_mode: scanMode,
+        answer_type: answerType,
+        virustotal: vtReport,
+        urlhaus: urlhausReport,
+        timestamp: new Date().toISOString(),
+        credits_used: creditCost,
+        credits_remaining: creditsRemaining,
+        credits_limit: getMonthlyCreditLimit(user),
+        timing_ms: Date.now() - startTime,
+      });
+    }
+
     // === Build LLM prompt (only call if not obviously safe/dangerous) ===
     let prompt = 'You are Vardin, an expert scam and fraud detection AI.\n\n';
     prompt += 'IMPORTANT: Respond entirely in ' + languageName + '. All text must be in ' + languageName + '.\n\n';
-    prompt += 'CRITICAL EVIDENCE RULES: Only report scam indicators that are actually present in the supplied URL, page content, redirects, screenshot, QR destination, or threat-intelligence results. Never invent a scam scenario, attacker goal, credential request, payment request, urgency, manipulation tactic, or other evidence. A legitimate official domain is not made suspicious just because scammers sometimes impersonate that brand elsewhere. Only say the page asks for credentials, payment, personal information, or access when the supplied evidence actually shows that request. For benign content, tactics_detected, red_flags, and scam-specific educational fields must be empty. what_they_want must describe what THIS PAGE is actually requesting, not what scammers generally want. what_to_say is only for suspicious/scam situations.\n\n';
+    prompt += 'CRITICAL EVIDENCE RULES: Only report scam indicators that are actually present in the supplied URL, page content, redirects, screenshot, QR destination, or threat-intelligence results. Never invent a scam scenario, attacker goal, credential request, payment request, urgency, manipulation tactic, or other evidence. A legitimate official domain is not made suspicious just because scammers sometimes impersonate that brand elsewhere. Only say the page asks for credentials, payment, personal information, or access when the supplied evidence actually shows that request. For benign content, tactics_detected, red_flags, and scam-specific educational fields must be empty. what_they_want must describe what THIS PAGE is actually requesting, not what scammers generally want. what_to_say is only for suspicious/scam situations. If the URL is the official/primary domain of a well-known company (e.g. amazon.com, google.com, paypal.com, microsoft.com, apple.com) and the threat-intel results show no malicious reports, you MUST return risk_level "low", a low risk_score, and leave tactics_detected, red_flags, what_they_want, and scam_category EMPTY. Do NOT produce generic educational content about how scammers impersonate that brand.\n\n';
     if (vtReport) {
       prompt += 'VIRUSTOTAL: ' + vtReport.malicious + ' malicious, ' + vtReport.suspicious + ' suspicious, ' + vtReport.harmless + ' harmless, reputation: ' + vtReport.reputation + '\n\n';
     }
@@ -455,7 +503,7 @@ Deno.serve(async (req) => {
     }
 
     // Prevent low-risk scans from displaying invented scam narratives.
-    if (result && result.risk_level === 'low' && Number(result.risk_score || 0) < 20) {
+    if (result && result.risk_level === 'low') {
       result.is_scam = false;
       result.tactics_detected = [];
       result.red_flags = [];

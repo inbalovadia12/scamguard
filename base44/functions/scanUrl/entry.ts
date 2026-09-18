@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
+import { matchKnownLegitimateDomain } from '../../shared/legitimateDomains.ts';
 
 const CREDIT_COST = 7;
 
@@ -216,6 +217,34 @@ Deno.serve(async (req) => {
       });
     }
 
+    // === KNOWN-LEGITIMATE SHORTCUT ===
+    // Famous brands dominate the LLM's web-search context with brand-impersonation
+    // scam articles, which biases it toward a generic scam narrative even for the
+    // real official domain. When the target is a well-known official domain and
+    // both threat-intel feeds are clean, return a safe verdict directly.
+    const legitApex = matchKnownLegitimateDomain(targetUrl);
+    if (legitApex && !urlhausReport?.listed && (!vtReport || vtReport.malicious === 0)) {
+      const brand = legitApex.split('.')[0] || legitApex;
+      const creditsRemaining = await chargeCredits();
+      return Response.json({
+        risk_level: 'low',
+        risk_score: 4,
+        explanation: `This is the official ${brand} website (${legitApex}). VirusTotal and URLhaus report no malware or phishing activity. Safe to visit.`,
+        tactics_detected: [],
+        next_steps: [],
+        why_scammers_do_this: '',
+        what_they_want: '',
+        what_to_say: '',
+        marketplace_platform: marketplace || '',
+        virustotal: vtReport,
+        urlhaus: urlhausReport,
+        credits_used: CREDIT_COST,
+        credits_remaining: creditsRemaining,
+        credits_limit: getMonthlyCreditLimit(user),
+        timing_ms: Date.now() - startTime,
+      });
+    }
+
     // === Build LLM prompt (only if not obviously malicious) ===
     const marketplaceContext = marketplace
       ? `\n\nMARKETPLACE: ${marketplace}. Analyze: seller reputation, pricing vs market value, stock photos, payment methods (gift cards/crypto = red flag), return policy.`
@@ -253,6 +282,7 @@ CRITICAL EVIDENCE RULES:
 - "why_scammers_do_this" is for explaining an actual suspicious pattern. For a benign page, return an empty string.
 - "tactics_detected" must be an empty array when no manipulation tactic is actually present.
 - For an ordinary official/legitimate page with no concrete scam indicators, use a low risk score and keep all scam-specific fields empty.
+- If the URL is the official/primary domain of a well-known company (e.g. amazon.com, google.com, paypal.com, microsoft.com, apple.com) and the threat-intel results above show no malicious reports, you MUST return risk_level "low", a low risk_score, and leave tactics_detected, why_scammers_do_this, what_they_want, and what_to_say EMPTY. Do NOT produce generic educational content about how scammers impersonate that brand.
 
 Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urgency tactics, payment method red flags. risk_score 0-100 integer only.`;
 
@@ -301,7 +331,7 @@ Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urge
     }
 
     // Prevent low-risk scans from displaying invented scam narratives.
-    if (result && result.risk_level === 'low' && Number(result.risk_score || 0) < 20) {
+    if (result && result.risk_level === 'low') {
       result.is_scam = false;
       result.tactics_detected = [];
       result.why_scammers_do_this = '';
