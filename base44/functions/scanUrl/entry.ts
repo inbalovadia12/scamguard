@@ -113,10 +113,6 @@ Deno.serve(async (req) => {
     let fetchError = null;
     let redirectCount = 0;
 
-    // === PARALLEL: VT + URLhaus (don't wait for fetch) ===
-    const vtPromise = getVirusTotalReport(targetUrl);
-    const urlhausPromise = getUrlhausReport(targetUrl);
-
     try {
       const result = await safeFetchText(targetUrl, {
         timeoutMs: 6000,
@@ -138,9 +134,17 @@ Deno.serve(async (req) => {
       fetchError = e.message;
     }
 
-    // Get threat intel
-    vtReport = await vtPromise;
-    const urlhausReport = await urlhausPromise;
+    // Threat intelligence is conditional: suspicious URLs get a reputation check
+    // immediately; ordinary URLs start with Gemini. Results are cached for 24 hours.
+    let threatIntel: any = { virustotal: null, urlhaus: null, cached: false };
+    let threatIntelChecked = false;
+    const intelUrl = canonicalizeUrl(finalUrl || targetUrl);
+    if (shouldCheckThreatIntel(targetUrl, finalUrl, websiteContent)) {
+      threatIntel = await getThreatIntel(base44, intelUrl);
+      threatIntelChecked = true;
+    }
+    vtReport = threatIntel.virustotal;
+    const urlhausReport = threatIntel.urlhaus;
 
     // === EARLY EXIT: URLhaus malware ===
     if (urlhausReport?.listed) {
