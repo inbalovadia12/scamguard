@@ -11,7 +11,7 @@ export default async function(req: Request): Promise<Response> {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { thread_id, member_id, text, kind = 'message', alert_id } = body;
+    const { thread_id, member_id, text, kind = 'message', alert_id, image_url } = body;
 
     // Resolve the ProtectedSenior record + any existing thread
     let senior;
@@ -47,11 +47,13 @@ export default async function(req: Request): Promise<Response> {
     const sender = isGuardian ? 'guardian' : 'senior';
 
     // Build the message text
+    const imageUrl = image_url ? String(image_url).slice(0, 2000) : '';
     let msgText = (text || '').trim();
     if (kind === 'warning' && !msgText) msgText = DEFAULT_WARNING;
     if (kind === 'assurance' && !msgText) msgText = DEFAULT_ASSURANCE;
-    if (!msgText) return Response.json({ error: 'text is required' }, { status: 400 });
+    if (!msgText && !imageUrl) return Response.json({ error: 'text or image_url is required' }, { status: 400 });
     msgText = msgText.slice(0, 2000);
+    const previewText = msgText || '📷 Photo';
 
     // Create the thread if it doesn't exist yet
     if (!thread) {
@@ -76,13 +78,14 @@ export default async function(req: Request): Promise<Response> {
       sender_id: user.id,
       text: msgText,
       kind,
+      image_url: imageUrl || undefined,
       alert_id: alert_id || undefined,
     });
 
     // Update the thread preview + unread count for the other party
     const unreadField = sender === 'guardian' ? 'unread_by_senior' : 'unread_by_guardian';
     await base44.entities.FamilyChat.update(thread.id, {
-      last_message: msgText.slice(0, 500),
+      last_message: previewText.slice(0, 500),
       last_message_at: new Date().toISOString(),
       last_sender: sender,
       [unreadField]: (thread[unreadField] || 0) + 1,
@@ -113,7 +116,7 @@ export default async function(req: Request): Promise<Response> {
           ``,
           `${fromName} sent you a message in Vardin:`,
           ``,
-          msgText,
+          previewText,
           ``,
           `Reply in Vardin:`,
           `https://vardin.base44.app/family`,

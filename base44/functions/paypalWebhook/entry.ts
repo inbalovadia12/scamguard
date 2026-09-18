@@ -89,6 +89,28 @@ async function markEventProcessed(base44: any, eventId: string, eventType: strin
   } catch { /* best-effort; dedup is best-effort */ }
 }
 
+async function downgradeGuardianAndFamily(base44: any, userId: string) {
+  await base44.asServiceRole.entities.User.update(userId, {
+    subscription_plan: "starter",
+    subscription_status: "inactive",
+    family_members_paid: 1,
+  });
+  try {
+    const seniors = await base44.asServiceRole.entities.ProtectedSenior.filter({ guardian_id: userId });
+    for (const s of seniors) {
+      if (s.guardian_plan && s.guardian_plan !== "starter" && s.senior_user_id) {
+        try {
+          const seniorUser = await base44.asServiceRole.entities.User.get(s.senior_user_id);
+          if ((seniorUser?.subscription_plan) === s.guardian_plan) {
+            await base44.asServiceRole.entities.User.update(s.senior_user_id, { subscription_plan: "starter", subscription_status: "inactive" });
+          }
+        } catch {}
+      }
+      try { await base44.asServiceRole.entities.ProtectedSenior.update(s.id, { guardian_plan: "starter" }); } catch {}
+    }
+  } catch {}
+}
+
 async function processEvent(base44: any, event: any) {
   const { userId, members } = parseCustomId(event);
   if (!userId) return;
@@ -161,31 +183,13 @@ async function processEvent(base44: any, event: any) {
     }
 
     case "BILLING.SUBSCRIPTION.CANCELLED":
-      await base44.asServiceRole.entities.User.update(userId, { subscription_status: "canceled" });
+      await downgradeGuardianAndFamily(base44, userId);
       break;
 
     case "BILLING.SUBSCRIPTION.EXPIRED":
     case "BILLING.SUBSCRIPTION.SUSPENDED":
     case "PAYMENT.SALE.DENIED":
-      await base44.asServiceRole.entities.User.update(userId, {
-        subscription_plan: "starter",
-        subscription_status: "inactive",
-        family_members_paid: 1,
-      });
-      try {
-        const seniors = await base44.asServiceRole.entities.ProtectedSenior.filter({ guardian_id: userId });
-        for (const s of seniors) {
-          if (s.guardian_plan && s.guardian_plan !== "starter" && s.senior_user_id) {
-            try {
-              const seniorUser = await base44.asServiceRole.entities.User.get(s.senior_user_id);
-              if ((seniorUser?.subscription_plan) === s.guardian_plan) {
-                await base44.asServiceRole.entities.User.update(s.senior_user_id, { subscription_plan: "starter", subscription_status: "inactive" });
-              }
-            } catch {}
-          }
-          try { await base44.asServiceRole.entities.ProtectedSenior.update(s.id, { guardian_plan: "starter" }); } catch {}
-        }
-      } catch {}
+      await downgradeGuardianAndFamily(base44, userId);
       break;
 
     default:

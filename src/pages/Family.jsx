@@ -13,6 +13,7 @@ import { resolveFamilyLimit } from "@/lib/planPricing";
 import { Link } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/lib/AuthContext";
 import GuardianDashboardPanel from "@/components/family/GuardianDashboardPanel";
 import ProtectionSettingsPanel from "@/components/family/ProtectionSettingsPanel";
 import FamilyAlertsPanel from "@/components/family/FamilyAlertsPanel";
@@ -130,6 +131,7 @@ export default function Family() {
   const [pendingAlerts, setPendingAlerts] = useState(0);
   const [memberships, setMemberships] = useState([]);
   const seniorsRef = useRef([]);
+  const { checkUserAuth } = useAuth();
 
   const loadSeniors = async () => {
     const user = await base44.auth.me();
@@ -166,6 +168,7 @@ export default function Family() {
         : "Your guardian will be notified when you scan something suspicious.",
     });
     await loadSeniors();
+    checkUserAuth();
   };
 
   const handleLeave = async (recordId) => {
@@ -174,20 +177,17 @@ export default function Family() {
     if (data?.error) throw new Error(data.error);
     toast({ title: "You've left the family", description: "You're no longer protected by that guardian." });
     await loadSeniors();
+    checkUserAuth();
   };
 
   useEffect(() => {
     loadSeniors();
 
-    const unsubscribe = base44.entities.ProtectedSenior.subscribe((event) => {
-      if (!seniorsRef.current.some((s) => s.id === event.id)) return;
-      if (event.type === "update") {
-        setSeniors((prev) =>
-          prev.map((s) => (s.id === event.id ? { ...s, ...event.data } : s))
-        );
-      } else if (event.type === "delete") {
-        setSeniors((prev) => prev.filter((s) => s.id !== event.id));
-      }
+    // Reload on any family membership change so new joins, acceptances, and
+    // plan updates appear immediately — like a message or notification, without
+    // needing to refresh the page.
+    const unsubscribe = base44.entities.ProtectedSenior.subscribe(() => {
+      loadSeniors();
     });
 
     const unsubAlerts = base44.entities.FamilyAlert.subscribe(() => loadSeniors());

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
-import { ArrowLeft, Send, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Loader2, Image as ImageIcon } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
 // iMessage-style conversation thread between a guardian and a protected member.
@@ -23,9 +23,11 @@ export default function IMessageThread({ memberId, threadId, contactName, contac
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const threadRef = useRef(null);
   const endRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -72,6 +74,39 @@ export default function IMessageThread({ memberId, threadId, contactName, contac
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const sendImage = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const up = await base44.integrations.Core.UploadPublicFile({ file });
+      const file_url = up?.file_url || up?.data?.file_url;
+      if (!file_url) throw new Error("Upload failed");
+      const res = await base44.functions.invoke("sendFamilyChatMessage", {
+        member_id: memberId,
+        thread_id: thread?.id,
+        text: "",
+        image_url: file_url,
+        kind: "message",
+      });
+      const data = res?.data || res;
+      if (data?.message) {
+        setMessages((prev) => (prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message]));
+      }
+      if (data?.thread_id && !thread) {
+        try {
+          const t = await base44.entities.FamilyChat.get(data.thread_id);
+          threadRef.current = t;
+          setThread(t);
+        } catch {}
+      }
+      onSent?.();
+    } catch (e) {
+      toast({ title: "Couldn't send image", description: e.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const send = async () => {
     const msg = text.trim();
@@ -151,7 +186,7 @@ export default function IMessageThread({ memberId, threadId, contactName, contac
                   )}
                   <div className={`flex ${mine ? "justify-end" : "justify-start"} ${sameSender ? "mt-0.5" : "mt-2"}`}>
                     <div
-                      className={`max-w-[78%] px-3.5 py-2 text-[15px] leading-snug whitespace-pre-wrap break-words shadow-sm ${
+                      className={`max-w-[78%] overflow-hidden shadow-sm ${
                         m.kind === "warning"
                           ? "bg-destructive/10 text-foreground rounded-2xl border border-destructive/20"
                           : m.kind === "assurance"
@@ -159,9 +194,17 @@ export default function IMessageThread({ memberId, threadId, contactName, contac
                           : mine
                           ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
                           : "bg-card text-foreground rounded-2xl rounded-bl-md border border-border/60"
-                      }`}
+                      } ${m.image_url ? "p-1" : "px-3.5 py-2"} text-[15px] leading-snug whitespace-pre-wrap break-words`}
                     >
-                      {m.text}
+                      {m.image_url && (
+                        <img
+                          src={m.image_url}
+                          alt="Shared image"
+                          className="rounded-xl max-w-full max-h-72 object-cover w-auto block"
+                          loading="lazy"
+                        />
+                      )}
+                      {m.text && <div className={m.image_url ? "px-2.5 py-1.5" : ""}>{m.text}</div>}
                     </div>
                   </div>
                 </React.Fragment>
@@ -175,6 +218,25 @@ export default function IMessageThread({ memberId, threadId, contactName, contac
       {/* Input */}
       <div className="px-3 py-3 border-t border-border/50 bg-card/80 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-end gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) sendImage(f);
+              e.target.value = "";
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || sending}
+            className="w-10 h-10 rounded-full bg-muted text-foreground flex items-center justify-center disabled:opacity-40 flex-shrink-0 transition-opacity hover:bg-muted/70"
+            aria-label="Send image"
+          >
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+          </button>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}

@@ -31,6 +31,10 @@
       "maxLength": 2000,
       "description": "Message body"
     },
+    "image_url": {
+      "type": "string",
+      "description": "Optional URL of an image attached to the message"
+    },
     "kind": {
       "type": "string",
       "enum": [
@@ -54,7 +58,6 @@
   "required": [
     "thread_id",
     "sender",
-    "text",
     "guardian_id",
     "senior_user_id"
   ],
