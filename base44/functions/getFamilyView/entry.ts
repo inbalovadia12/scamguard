@@ -11,8 +11,24 @@ export default async function(req: Request): Promise<Response> {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const memberships = await base44.asServiceRole.entities.ProtectedSenior.filter({ senior_user_id: user.id });
-    if (!memberships || memberships.length === 0) {
+    // Match by linked user id (already joined) OR by email (pending invitation
+    // before the post-login linkFamilyMember step runs). This ensures the
+    // protected-member view appears immediately on first load, without a manual
+    // refresh, and that realtime create events surface new invitations.
+    const email = (user.email || '').toLowerCase();
+    const [linked, invited] = await Promise.all([
+      base44.asServiceRole.entities.ProtectedSenior.filter({ senior_user_id: user.id }),
+      email ? base44.asServiceRole.entities.ProtectedSenior.filter({ email }) : [],
+    ]);
+    const seen = new Set<string>();
+    const memberships: any[] = [];
+    for (const m of [...(linked || []), ...(invited || [])]) {
+      if (seen.has(m.id)) continue;
+      seen.add(m.id);
+      if (m.senior_user_id && m.senior_user_id !== user.id) continue;
+      memberships.push(m);
+    }
+    if (memberships.length === 0) {
       return Response.json({ memberships: [] });
     }
 

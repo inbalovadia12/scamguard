@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { base44 } from "@/api/base44Client";
-import { Bell, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
+import { Bell, Loader2, MessageCircle, ShieldCheck, Crown, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import AlertCard from "@/components/alerts/AlertCard";
 import FamilyAlertCard from "@/components/family/FamilyAlertCard";
 import AskFamilyButton from "@/components/family/AskFamilyButton";
@@ -11,19 +12,23 @@ export default function Alerts() {
   const [seniors, setSeniors] = useState([]);
   const [familyAlerts, setFamilyAlerts] = useState([]);
   const [protectedBy, setProtectedBy] = useState([]);
+  const [pendingInvites, setPendingInvites] = useState([]);
+  const [accepting, setAccepting] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("all");
 
   const load = useCallback(async () => {
     const user = await base44.auth.me();
-    const [seniorData, analysisData, familyData, protectedByData] = await Promise.all([
+    const [seniorData, analysisData, familyData, memRes] = await Promise.all([
       base44.entities.ProtectedSenior.filter({ guardian_id: user.id }),
       base44.entities.ScamAnalysis.list("-created_date", 50),
       base44.entities.FamilyAlert.list("-created_date", 100),
-      base44.entities.ProtectedSenior.filter({ senior_user_id: user.id }),
+      base44.functions.invoke("getFamilyView", {}).then((r) => r?.data || r).catch(() => ({ memberships: [] })),
     ]);
     setSeniors(seniorData);
-    setProtectedBy(protectedByData);
+    const memberships = memRes?.memberships || [];
+    setProtectedBy(memberships.filter((m) => m.consent_given));
+    setPendingInvites(memberships.filter((m) => !m.consent_given));
 
     const seniorUserIds = seniorData.map((s) => s.senior_user_id).filter(Boolean);
     const relevant = analysisData.filter(
@@ -42,9 +47,21 @@ export default function Alerts() {
 
   useEffect(() => {
     load();
-    const unsub = base44.entities.FamilyAlert.subscribe(() => load());
-    return unsub;
+    const unsubAlerts = base44.entities.FamilyAlert.subscribe(() => load());
+    const unsubMembers = base44.entities.ProtectedSenior.subscribe(() => load());
+    return () => { try { unsubAlerts(); } catch {} try { unsubMembers(); } catch {} };
   }, [load]);
+
+  const handleAcceptInvite = async (recordId) => {
+    setAccepting(recordId);
+    try {
+      await base44.functions.invoke("acceptFamilyInvitation", { record_id: recordId });
+      await load();
+    } catch {
+    } finally {
+      setAccepting(null);
+    }
+  };
 
   const getSeniorName = (analysis) => {
     const senior = seniors.find((s) => s.senior_user_id === analysis.created_by_id);
@@ -83,6 +100,36 @@ export default function Alerts() {
             <p className="text-muted-foreground mt-0.5">
               You share their Vardin plan benefits. Your scans are shared with your guardian so they can help keep you safe.
             </p>
+          </div>
+        </div>
+      )}
+
+      {pendingInvites.length > 0 && (
+        <div className="rounded-2xl border border-warning/30 bg-warning/5 p-4 flex items-start gap-3 animate-fade-in">
+          <Crown className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+          <div className="text-sm flex-1 min-w-0">
+            <p className="font-medium text-foreground">
+              {pendingInvites.length === 1
+                ? `${pendingInvites[0].guardian_name} added you to their family`
+                : `You have ${pendingInvites.length} family invitations`}
+            </p>
+            <p className="text-muted-foreground mt-0.5">
+              Accept to activate scam protection and share their plan benefits.
+            </p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {pendingInvites.map((m) => (
+                <Button
+                  key={m.senior_record_id}
+                  size="sm"
+                  disabled={accepting === m.senior_record_id}
+                  onClick={() => handleAcceptInvite(m.senior_record_id)}
+                  className="gap-2 bg-gradient-to-r from-primary to-primary/80"
+                >
+                  {accepting === m.senior_record_id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  Accept {pendingInvites.length === 1 ? "invitation" : m.guardian_name}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
       )}

@@ -16,8 +16,22 @@ export default async function(req: Request): Promise<Response> {
     const body = await req.json().catch(() => ({}));
     const recordId = (body?.record_id || '').toString();
 
-    const memberships = await base44.asServiceRole.entities.ProtectedSenior.filter({ senior_user_id: user.id });
-    const pending = (memberships || []).filter((m: any) => !m.consent_given);
+    // Match by linked user id OR by email (pending invitation before the
+    // post-login linkage step runs), so acceptance works immediately even if
+    // linkFamilyMember has not yet executed.
+    const email = (user.email || '').toLowerCase();
+    const [linked, invited] = await Promise.all([
+      base44.asServiceRole.entities.ProtectedSenior.filter({ senior_user_id: user.id }),
+      email ? base44.asServiceRole.entities.ProtectedSenior.filter({ email }) : [],
+    ]);
+    const seen = new Set<string>();
+    const pending: any[] = [];
+    for (const m of [...(linked || []), ...(invited || [])]) {
+      if (seen.has(m.id)) continue;
+      seen.add(m.id);
+      if (m.senior_user_id && m.senior_user_id !== user.id) continue;
+      if (!m.consent_given) pending.push(m);
+    }
     if (pending.length === 0) {
       return Response.json({ accepted: false, message: 'No pending invitations' });
     }
@@ -28,7 +42,10 @@ export default async function(req: Request): Promise<Response> {
     }
 
     for (const m of toAccept) {
-      await base44.asServiceRole.entities.ProtectedSenior.update(m.id, { consent_given: true });
+      await base44.asServiceRole.entities.ProtectedSenior.update(m.id, {
+        senior_user_id: user.id,
+        consent_given: true,
+      });
     }
 
     const currentPlan = normalizePlan(user.subscription_plan);
