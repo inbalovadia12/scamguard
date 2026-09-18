@@ -242,6 +242,18 @@ Content:
 ${websiteContent || '(Could not fetch)'}
 ${marketplaceContext}${redirectInfo}${vtInfo}${urlhausInfo}
 
+CRITICAL EVIDENCE RULES:
+- Only report scam indicators that are actually present in the URL, redirect chain, fetched page content, or the supplied threat-intelligence results.
+- Never invent a scam scenario, victim request, attacker goal, credentials being requested, payment request, urgency, or manipulation tactic.
+- Do NOT treat the existence of phishing sites that impersonate a legitimate brand as evidence that this exact official domain is malicious.
+- The exact domain matters. A real official domain is not the same as a lookalike or unrelated domain.
+- Only say that a page asks for credentials, payment, personal information, or access when the supplied evidence actually shows that request.
+- "what_they_want" must describe what THIS PAGE is actually requesting. For a benign page, return an empty string.
+- "what_to_say" is for suspicious/scam situations only. For a benign page, return an empty string.
+- "why_scammers_do_this" is for explaining an actual suspicious pattern. For a benign page, return an empty string.
+- "tactics_detected" must be an empty array when no manipulation tactic is actually present.
+- For an ordinary official/legitimate page with no concrete scam indicators, use a low risk score and keep all scam-specific fields empty.
+
 Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urgency tactics, payment method red flags. risk_score 0-100 integer only.`;
 
     const llmOptions: any = {
@@ -286,6 +298,15 @@ Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urge
         what_to_say: '',
         marketplace_platform: marketplace || '',
       };
+    }
+
+    // Prevent low-risk scans from displaying invented scam narratives.
+    if (result && result.risk_level === 'low' && Number(result.risk_score || 0) < 20) {
+      result.is_scam = false;
+      result.tactics_detected = [];
+      result.why_scammers_do_this = '';
+      result.what_they_want = '';
+      result.what_to_say = '';
     }
 
     if (marketplace && !result.marketplace_platform) {
