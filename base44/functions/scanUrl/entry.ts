@@ -250,14 +250,32 @@ Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urge
       result = {
         risk_level: vtReport?.malicious ? 'medium' : 'low',
         risk_score: vtReport?.malicious ? 55 : 25,
-        explanation: 'LLM timeout. Check reports above.',
+        explanation: threatIntelChecked ? 'AI analysis timed out. Review the threat-intelligence results above.' : 'AI analysis timed out. Verify the URL through an official channel.',
         tactics_detected: [],
-        next_steps: ['Review VirusTotal/URLhaus reports'],
+        next_steps: threatIntelChecked ? ['Review the threat-intelligence results above.'] : ['Verify the URL through an official channel.'],
         why_scammers_do_this: '',
         what_they_want: '',
         what_to_say: '',
         marketplace_platform: marketplace || '',
       };
+    }
+
+    // AI-first escalation: only invoke VT/URLhaus for URLs skipped by the first
+    // threat-intel pass when Gemini itself sees meaningful risk.
+    if (!threatIntelChecked && (result?.risk_level === 'high' || Number(result?.risk_score || 0) >= 65)) {
+      threatIntel = await getThreatIntel(base44, intelUrl);
+      threatIntelChecked = true;
+      vtReport = threatIntel.virustotal;
+      urlhausReport = threatIntel.urlhaus;
+
+      if (hasKnownThreat(threatIntel)) {
+        result.risk_level = 'high';
+        result.risk_score = urlhausReport?.listed ? 95 : 85;
+        result.explanation = urlhausReport?.listed
+          ? `URLhaus: Active malware distribution site. ${urlhausReport.threat || 'malware'}. DO NOT VISIT.`
+          : `VirusTotal: ${vtReport?.malicious || 0}/${vtReport?.total_engines || 0} security vendors flag malware/phishing. DO NOT VISIT.`;
+        result.tactics_detected = [urlhausReport?.listed ? 'Malware distribution' : 'Malware / Phishing Detection'];
+      }
     }
 
     if (marketplace && !result.marketplace_platform) {
@@ -269,6 +287,16 @@ Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urge
     }
     if (vtReport) {
       (result as any).virustotal = vtReport;
+    }
+
+    if (threatIntelChecked) {
+      if (urlhausReport) (result as any).urlhaus = urlhausReport;
+      if (vtReport) (result as any).virustotal = vtReport;
+      (result as any).threat_intel_checked = true;
+      (result as any).threat_intel_cached = !!threatIntel.cached;
+    } else {
+      (result as any).threat_intel_checked = false;
+      (result as any).threat_intel_cached = false;
     }
 
     const creditsRemaining = await chargeCredits();
