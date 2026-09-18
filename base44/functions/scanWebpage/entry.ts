@@ -128,10 +128,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No file provided for analysis.' }, { status: 400 });
     }
 
-    // === PARALLEL CHECK: VirusTotal + URLhaus + QR decode (all async) ===
-    let vtReport = null;
-    let urlhausReport = null;
-    let qrDecodedContent = '';
     let vtReport: any = null;
     let urlhausReport: any = null;
     let threatIntel: any = { virustotal: null, urlhaus: null, cached: false };
