@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import { getThreatIntel, shouldCheckThreatIntel, hasKnownThreat, canonicalizeUrl } from '../../shared/urlThreatIntel.ts';
+import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
 
@@ -53,6 +53,38 @@ async function validateUrlSafe(urlStr: string): Promise<{ ok: boolean; error?: s
   } catch {}
 
   return { ok: true, resolvedIp: resolvedIp || undefined, hostname };
+}
+
+async function getVirusTotalReport(url: string): Promise<any | null> {
+  const apiKey = Deno.env.get("VIRUSTOTAL_API_KEY");
+  if (!apiKey) return null;
+  try {
+    const urlBytes = new TextEncoder().encode(url);
+    let binary = '';
+    for (let i = 0; i < urlBytes.length; i++) binary += String.fromCharCode(urlBytes[i]);
+    const base64 = btoa(binary);
+    const urlId = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const response = await fetch(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
+      headers: { 'x-apikey': apiKey },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const attrs = data?.data?.attributes;
+    if (!attrs) return null;
+    const stats = attrs.last_analysis_stats || {};
+    return {
+      malicious: stats.malicious || 0,
+      suspicious: stats.suspicious || 0,
+      harmless: stats.harmless || 0,
+      undetected: stats.undetected || 0,
+      total_engines: (stats.malicious || 0) + (stats.suspicious || 0) + (stats.harmless || 0) + (stats.undetected || 0),
+      reputation: attrs.reputation || 0,
+      categories: attrs.categories || {},
+    };
+  } catch (_e) {
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -113,6 +145,10 @@ Deno.serve(async (req) => {
     let fetchError = null;
     let redirectCount = 0;
 
+    // === PARALLEL: VT + URLhaus (don't wait for fetch) ===
+    const vtPromise = getVirusTotalReport(targetUrl);
+    const urlhausPromise = getUrlhausReport(targetUrl);
+
     try {
       const result = await safeFetchText(targetUrl, {
         timeoutMs: 6000,
@@ -134,17 +170,9 @@ Deno.serve(async (req) => {
       fetchError = e.message;
     }
 
-    // Threat intelligence is conditional: suspicious URLs get a reputation check
-    // immediately; ordinary URLs start with Gemini. Results are cached for 24 hours.
-    let threatIntel: any = { virustotal: null, urlhaus: null, cached: false };
-    let threatIntelChecked = false;
-    const intelUrl = canonicalizeUrl(finalUrl || targetUrl);
-    if (shouldCheckThreatIntel(targetUrl, finalUrl, websiteContent)) {
-      threatIntel = await getThreatIntel(base44, intelUrl);
-      threatIntelChecked = true;
-    }
-    vtReport = threatIntel.virustotal;
-    let urlhausReport: any = threatIntel.urlhaus;
+    // Get threat intel
+    vtReport = await vtPromise;
+    const urlhausReport = await urlhausPromise;
 
     // === EARLY EXIT: URLhaus malware ===
     if (urlhausReport?.listed) {
@@ -250,32 +278,14 @@ Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urge
       result = {
         risk_level: vtReport?.malicious ? 'medium' : 'low',
         risk_score: vtReport?.malicious ? 55 : 25,
-        explanation: threatIntelChecked ? 'AI analysis timed out. Review the threat-intelligence results above.' : 'AI analysis timed out. Verify the URL through an official channel.',
+        explanation: 'LLM timeout. Check reports above.',
         tactics_detected: [],
-        next_steps: threatIntelChecked ? ['Review the threat-intelligence results above.'] : ['Verify the URL through an official channel.'],
+        next_steps: ['Review VirusTotal/URLhaus reports'],
         why_scammers_do_this: '',
         what_they_want: '',
         what_to_say: '',
         marketplace_platform: marketplace || '',
       };
-    }
-
-    // AI-first escalation: only invoke VT/URLhaus for URLs skipped by the first
-    // threat-intel pass when Gemini itself sees meaningful risk.
-    if (!threatIntelChecked && (result?.risk_level === 'high' || Number(result?.risk_score || 0) >= 65)) {
-      threatIntel = await getThreatIntel(base44, intelUrl);
-      threatIntelChecked = true;
-      vtReport = threatIntel.virustotal;
-      urlhausReport = threatIntel.urlhaus;
-
-      if (hasKnownThreat(threatIntel)) {
-        result.risk_level = 'high';
-        result.risk_score = urlhausReport?.listed ? 95 : 85;
-        result.explanation = urlhausReport?.listed
-          ? `URLhaus: Active malware distribution site. ${urlhausReport.threat || 'malware'}. DO NOT VISIT.`
-          : `VirusTotal: ${vtReport?.malicious || 0}/${vtReport?.total_engines || 0} security vendors flag malware/phishing. DO NOT VISIT.`;
-        result.tactics_detected = [urlhausReport?.listed ? 'Malware distribution' : 'Malware / Phishing Detection'];
-      }
     }
 
     if (marketplace && !result.marketplace_platform) {
@@ -287,16 +297,6 @@ Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urge
     }
     if (vtReport) {
       (result as any).virustotal = vtReport;
-    }
-
-    if (threatIntelChecked) {
-      if (urlhausReport) (result as any).urlhaus = urlhausReport;
-      if (vtReport) (result as any).virustotal = vtReport;
-      (result as any).threat_intel_checked = true;
-      (result as any).threat_intel_cached = !!threatIntel.cached;
-    } else {
-      (result as any).threat_intel_checked = false;
-      (result as any).threat_intel_cached = false;
     }
 
     const creditsRemaining = await chargeCredits();

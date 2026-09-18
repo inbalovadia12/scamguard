@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
-import { getThreatIntel, shouldCheckThreatIntel, hasKnownThreat, canonicalizeUrl } from '../../shared/urlThreatIntel.ts';
+import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
 import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
 const ANSWER_TYPE_COSTS: Record<string, number> = {
@@ -61,6 +61,43 @@ async function followRedirects(url: string): Promise<{ finalUrl: string; pageTit
     return { finalUrl: result.finalUrl, pageTitle, contentType };
   } catch {
     return { finalUrl: url, pageTitle: null, contentType: null };
+  }
+}
+
+async function getVirusTotalReport(url: string): Promise<any | null> {
+  const apiKey = Deno.env.get("VIRUSTOTAL_API_KEY");
+  if (!apiKey) return null;
+
+  try {
+    const urlBytes = new TextEncoder().encode(url);
+    let binary = '';
+    for (let i = 0; i < urlBytes.length; i++) binary += String.fromCharCode(urlBytes[i]);
+    const base64 = btoa(binary);
+    const urlId = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+    const response = await fetch(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
+      headers: { 'x-apikey': apiKey },
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    const attrs = data?.data?.attributes;
+    if (!attrs) return null;
+
+    const stats = attrs.last_analysis_stats || {};
+    return {
+      malicious: stats.malicious || 0,
+      suspicious: stats.suspicious || 0,
+      harmless: stats.harmless || 0,
+      undetected: stats.undetected || 0,
+      total_engines: (stats.malicious || 0) + (stats.suspicious || 0) + (stats.harmless || 0) + (stats.undetected || 0),
+      reputation: attrs.reputation || 0,
+      categories: attrs.categories || {},
+      last_analysis_date: attrs.last_analysis_date || null,
+    };
+  } catch (_e) {
+    return null;
   }
 }
 
@@ -128,22 +165,46 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No file provided for analysis.' }, { status: 400 });
     }
 
-    let vtReport: any = null;
-    let urlhausReport: any = null;
-    let threatIntel: any = { virustotal: null, urlhaus: null, cached: false };
-    let threatIntelChecked = false;
+    // === PARALLEL CHECK: VirusTotal + URLhaus + QR decode (all async) ===
+    let vtReport = null;
+    let urlhausReport = null;
     let qrDecodedContent = '';
     let qrFinalUrl = '';
     let qrPageTitle = '';
 
-    // Decode QR without calling paid threat-intel until its destination is known.
+    // VirusTotal + URLhaus only matter for URL-based scans. Running them for
+    // screenshot / email / chat / marketplace / page-screenshot scans wastes time,
+    // can trigger false "malware" early-exits that ignore the actual content, and
+    // risks timing out the whole scan (charging credits for nothing).
+    const isUrlScan = scanType === 'url' || (scanType === 'page' && scanMode === 'url');
+
+    // Start all parallel tasks
+    const parallelTasks: Promise<any>[] = [];
+
+    if (isUrlScan && page_url) {
+      parallelTasks.push(
+        getVirusTotalReport(page_url).then(r => { vtReport = r; }),
+        getUrlhausReport(page_url).then(r => { urlhausReport = r; })
+      );
+    }
+
     if (scanType === 'qr') {
       if (clientDecodedContent) {
         qrDecodedContent = clientDecodedContent;
       } else if (screenshot_data_url) {
-        qrDecodedContent = await decodeQrServerSide(screenshot_data_url);
+        parallelTasks.push(
+          decodeQrServerSide(screenshot_data_url).then(r => { qrDecodedContent = r; })
+        );
       }
+    }
 
+    // Wait for all parallel tasks
+    if (parallelTasks.length > 0) {
+      await Promise.all(parallelTasks);
+    }
+
+    // === QR: Handle redirects after decode ===
+    if (scanType === 'qr') {
       if (!qrDecodedContent) {
         return Response.json({
           error: 'Could not decode this QR code. Please try a clearer or higher-resolution image.',
@@ -154,30 +215,17 @@ Deno.serve(async (req) => {
         const redirectResult = await followRedirects(qrDecodedContent);
         qrFinalUrl = redirectResult.finalUrl;
         qrPageTitle = redirectResult.pageTitle;
+
+        // Check the QR's actual destination (NOT the tab the user is on) against
+        // both VirusTotal and URLhaus, in parallel.
+        const qrTargetUrl = qrFinalUrl || qrDecodedContent;
+        const [qrVt, qrUrlhaus] = await Promise.all([
+          getVirusTotalReport(qrTargetUrl),
+          getUrlhausReport(qrTargetUrl),
+        ]);
+        if (qrVt) vtReport = qrVt;
+        if (qrUrlhaus) urlhausReport = qrUrlhaus;
       }
-    }
-
-    // Conditional threat-intel pass. QR destinations are always checked;
-    // ordinary URL scans are checked only when local signals justify it.
-    const isUrlScan = scanType === 'url' || (scanType === 'page' && scanMode === 'url');
-    const threatIntelUrl = scanType === 'qr'
-      ? (qrFinalUrl || qrDecodedContent)
-      : isUrlScan
-        ? (page_url || '')
-        : '';
-    const threatIntelContent = scanType === 'qr'
-      ? ((qrPageTitle || '') + ' ' + qrDecodedContent)
-      : (page_text || '');
-
-    if (
-      threatIntelUrl &&
-      /^https?:\/\//i.test(threatIntelUrl) &&
-      (scanType === 'qr' || shouldCheckThreatIntel(threatIntelUrl, threatIntelUrl, threatIntelContent))
-    ) {
-      threatIntel = await getThreatIntel(base44, canonicalizeUrl(threatIntelUrl));
-      threatIntelChecked = true;
-      vtReport = threatIntel.virustotal;
-      urlhausReport = threatIntel.urlhaus;
     }
 
     // === EARLY EXIT: If URLhaus says malware, return HIGH RISK immediately ===
@@ -401,30 +449,8 @@ Deno.serve(async (req) => {
         risk_score: vtReport?.malicious ? 80 : 50,
         confidence: 35,
         is_scam: !!vtReport?.malicious,
-        explanation: threatIntelChecked
-          ? 'AI analysis could not complete in time. Treat this result as uncertain — review the threat-intelligence results above.'
-          : 'AI analysis could not complete in time. Treat this result as uncertain and verify the URL through an official channel.',
+        explanation: 'AI analysis could not complete in time. Treat this result as uncertain — review the VirusTotal / URLhaus reports above before trusting this page.',
       };
-    }
-
-    // AI-first escalation: a URL that initially skipped threat-intel gets a
-    // reputation lookup only when Gemini sees meaningful risk.
-    if (!threatIntelChecked && isUrlScan && threatIntelUrl && (result?.risk_level === 'high' || Number(result?.risk_score || 0) >= 65)) {
-      threatIntel = await getThreatIntel(base44, canonicalizeUrl(threatIntelUrl));
-      threatIntelChecked = true;
-      vtReport = threatIntel.virustotal;
-      urlhausReport = threatIntel.urlhaus;
-
-      if (hasKnownThreat(threatIntel)) {
-        result.risk_level = 'high';
-        result.risk_score = urlhausReport?.listed ? 95 : 85;
-        result.is_scam = true;
-        result.explanation = urlhausReport?.listed
-          ? `URLhaus: Active malware distribution site. ${urlhausReport.threat || 'malware'}.`
-          : `VirusTotal: ${vtReport?.malicious || 0}/${vtReport?.total_engines || 0} security vendors flag malware/phishing.`;
-        result.tactics_detected = [urlhausReport?.listed ? 'Malware distribution' : 'Malware / Phishing Detection'];
-        result.sources_checked = urlhausReport?.listed ? ['URLhaus'] : ['VirusTotal'];
-      }
     }
 
     // === Override QR decoded content with verified value ===
@@ -449,8 +475,6 @@ Deno.serve(async (req) => {
       credits_used: creditCost,
       credits_remaining: creditsRemaining,
       credits_limit: getMonthlyCreditLimit(user),
-      threat_intel_checked: threatIntelChecked,
-      threat_intel_cached: threatIntelChecked ? !!threatIntel.cached : false,
       timing_ms: Date.now() - startTime,
     });
   } catch (error: any) {
