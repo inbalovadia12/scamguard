@@ -76,6 +76,7 @@ STEPS:
 4. Identify red flags (stock photo indicators, AI artifacts, multiple unrelated profiles)
 
 risk_score: 0-100 (100 = scam profile). Low 0-35, Medium 36-70, High 71-100.
+NO FABRICATION: Only report red_flags and similar_images_found you can actually verify from the image or web results. Never invent sources, URLs, or scam indicators that are not evident. If the image is a normal personal or business photo with no scam indicators, return risk_level "low", a low risk_score, is_likely_scam_profile false, and EMPTY red_flags. Do not generate generic scam-education content for benign images.
 Only report verifiable findings. Respond in ${languageName}.`;
 
     const result = await base44.integrations.Core.InvokeLLM({

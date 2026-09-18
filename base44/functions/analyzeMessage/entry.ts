@@ -58,7 +58,9 @@ Map verdict to risk_level and risk_score consistently:
 - NOT A SCAM → risk_level "low", risk_score 0-20
 - UNCERTAIN → risk_level "low" or "medium", risk_score 20-45
 - LIKELY SCAM → risk_level "medium", risk_score 45-75
-- SCAM → risk_level "high", risk_score 75-100`;
+- SCAM → risk_level "high", risk_score 75-100
+
+NO FABRICATION: Only report scam indicators, red flags, tactics, or "what they want" that are directly and explicitly present in the supplied message. Never invent a scam scenario, attacker, urgency, payment demand, credential request, impersonation, or other evidence that is not actually in the text. If the message is a normal/legitimate business or personal message with no concrete scam indicators, return verdict "NOT A SCAM", risk_level "low", a low risk_score, and leave tactics_detected, why_scammers_do_this, what_they_want, and what_to_say EMPTY. Do not generate generic educational scam content for benign messages.`;
 
 function normalizePlan(plan: string | undefined) {
   if (!plan || plan === "free") return "starter";
@@ -177,6 +179,17 @@ Deno.serve(async (req) => {
     if (["crypto_investment", "conversation", "incognito_conversation", "incognito_phone", "incognito_image"].includes(mode)) llmOptions.add_context_from_internet = true;
 
     const result = await base44.integrations.Core.InvokeLLM(llmOptions);
+
+    // Guard against fabricated scam narratives on benign messages. Only fires
+    // on a clear "NOT A SCAM" verdict — scam/uncertain detections are untouched.
+    if (result && result.verdict === "NOT A SCAM") {
+      result.tactics_detected = [];
+      result.why_scammers_do_this = "";
+      result.what_they_want = "";
+      result.what_to_say = "";
+      result.risk_level = "low";
+    }
+
     const usage = applyCreditUsage(user, cost);
     if (!usage) {
       return Response.json({ error: "Credit balance changed during analysis. Please try again." }, { status: 409 });

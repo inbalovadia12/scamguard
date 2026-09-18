@@ -112,6 +112,7 @@ Return JSON ONLY.
 - analysis: 1-2 sentence assessment
 
 If normal/legitimate, return: is_scam: false, risk_level: "low", empty arrays.
+NO FABRICATION: Only report red_flags, warnings, and tactics that are directly and explicitly visible in the screenshot (quote the actual text). Never invent a scam scenario, urgency, payment demand, credential request, impersonation, or other evidence that is not actually shown. Do not generate generic educational scam content for benign screenshots — empty arrays, not padded guesses.
 Respond in ${languageName}.`;
 
     let analysis: any = null;
@@ -170,6 +171,15 @@ Respond in ${languageName}.`;
         tactics_detected: [],
         analysis: 'Unable to analyze screenshot.',
       };
+    }
+
+    // Guard against fabricated scam narratives on benign screenshots. Only
+    // fires on a 'low' risk_level — medium/high detections keep their flags.
+    if (analysis.risk_level === 'low') {
+      analysis.is_scam = false;
+      analysis.red_flags = [];
+      analysis.warnings = [];
+      analysis.tactics_detected = [];
     }
 
     const creditsRemaining = await chargeCredits();

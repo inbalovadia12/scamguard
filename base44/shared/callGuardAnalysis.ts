@@ -86,6 +86,7 @@ EVIDENCE RULES:
 4. Each warning must have: a title, an explanation (why it matters in context), and an action (what to do). Informative, not alarmist. Severity "caution" for weak signals, "suspicious" for moderate, "high" for strong.
 5. Map verdict to risk_level consistently: NOT A SCAM → "low", UNCERTAIN → "low" (or "medium" if borderline), LIKELY SCAM → "medium", SCAM → "high".
 6. If the conversation is normal (a hospital calling about an appointment, a bank confirming a transaction, a company promoting a legitimate product, a service sending a verification code for your own login), return verdict "NOT A SCAM", empty indicators, empty warnings.
+7. NO FABRICATION: Only report indicators and warnings that are directly and explicitly present in the conversation. Never invent a scam scenario, attacker identity, urgency, payment demand, credential request, or other evidence that was not actually spoken. Do not generate generic educational scam content for a normal call — return empty arrays, not padded guesses.
 
 Return ONLY a JSON object:
 {
@@ -213,6 +214,19 @@ export async function analyzeScamContext(
     const verdict = (["SCAM", "LIKELY SCAM", "NOT A SCAM", "UNCERTAIN"].includes(data.verdict)
       ? data.verdict
       : (merged === "high" ? "LIKELY SCAM" : merged === "medium" ? "UNCERTAIN" : "NOT A SCAM")) as Verdict;
+
+    // Guard against fabricated indicators on clearly-safe calls. Only fires on
+    // a "NOT A SCAM" verdict — scam/uncertain detections keep their indicators.
+    if (verdict === "NOT A SCAM") {
+      return {
+        verdict: "NOT A SCAM",
+        risk_level: "low",
+        new_indicators: [],
+        warnings: [],
+        feedback: data.feedback || "",
+        summary: data.summary || "",
+      };
+    }
 
     return {
       verdict,
