@@ -317,7 +317,8 @@ Deno.serve(async (req) => {
     // scam articles, which biases it toward a generic scam narrative even for the
     // real official domain. When the target is a well-known official domain and
     // both threat-intel feeds are clean, return a safe verdict directly.
-    const legitApex = (isUrlScan && page_url) ? matchKnownLegitimateDomain(page_url) : null;
+    const legitUrlCandidate = isUrlScan ? page_url : (scanType === 'qr' ? (qrFinalUrl || qrDecodedContent) : null);
+    const legitApex = legitUrlCandidate ? matchKnownLegitimateDomain(legitUrlCandidate) : null;
     if (legitApex && !urlhausReport?.listed && (!vtReport || vtReport.malicious === 0)) {
       const brand = legitApex.split('.')[0] || legitApex;
       let safeAnalysis: any;
@@ -351,6 +352,9 @@ Deno.serve(async (req) => {
         answer_type: answerType,
         virustotal: vtReport,
         urlhaus: urlhausReport,
+        decoded_content: qrDecodedContent,
+        final_destination_url: qrFinalUrl,
+        destination_title: qrPageTitle,
         timestamp: new Date().toISOString(),
         credits_used: creditCost,
         credits_remaining: creditsRemaining,

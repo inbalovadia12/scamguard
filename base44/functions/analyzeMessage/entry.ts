@@ -1,5 +1,6 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from "../../shared/credits.ts";
+import { matchKnownLegitimateDomain } from "../../shared/legitimateDomains.ts";
 
 const CREDIT_COSTS: Record<string, number> = {
   message: 3,
@@ -130,6 +131,37 @@ Deno.serve(async (req) => {
         credits_limit: getMonthlyCreditLimit(user),
         credit_cost: cost,
       }, { status: 402 });
+    }
+
+    // If the submitted message is just a URL pointing to a known-legitimate
+    // official domain, return a safe verdict directly. The LLM tends to frame
+    // famous-brand URLs as brand-impersonation scams even when the domain is
+    // the real official one.
+    const trimmedText = text.trim();
+    const isUrlInput = /^https?:\/\/\S+$/i.test(trimmedText) || /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/[^\s]*)?$/i.test(trimmedText);
+    if (isUrlInput && (mode === "message" || mode === "bulk_message" || mode === "crypto_investment")) {
+      const legitApex = matchKnownLegitimateDomain(trimmedText);
+      if (legitApex) {
+        const brand = legitApex.split(".")[0] || legitApex;
+        const safeResult = {
+          verdict: "NOT A SCAM",
+          risk_level: "low",
+          risk_score: 5,
+          explanation: `This is the official ${brand} website (${legitApex}). No scam indicators present.`,
+          tactics_detected: [],
+          next_steps: [],
+          why_scammers_do_this: "",
+          what_they_want: "",
+          what_to_say: "",
+        };
+        const usage = applyCreditUsage(user, cost);
+        if (!usage) {
+          return Response.json({ error: "Credit balance changed during analysis. Please try again." }, { status: 409 });
+        }
+        await base44.auth.updateMe(usage);
+        const remaining = getAvailableCredits({ ...user, ...usage }).remaining;
+        return Response.json({ result: safeResult, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(user) });
+      }
     }
 
     const responseSchema = body.response_json_schema && typeof body.response_json_schema === "object"
