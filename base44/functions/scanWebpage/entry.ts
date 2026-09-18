@@ -314,6 +314,7 @@ Deno.serve(async (req) => {
     // === Build LLM prompt (only call if not obviously safe/dangerous) ===
     let prompt = 'You are Vardin, an expert scam and fraud detection AI.\n\n';
     prompt += 'IMPORTANT: Respond entirely in ' + languageName + '. All text must be in ' + languageName + '.\n\n';
+    prompt += 'CRITICAL EVIDENCE RULES: Only report scam indicators that are actually present in the supplied URL, page content, redirects, screenshot, QR destination, or threat-intelligence results. Never invent a scam scenario, attacker goal, credential request, payment request, urgency, manipulation tactic, or other evidence. A legitimate official domain is not made suspicious just because scammers sometimes impersonate that brand elsewhere. Only say the page asks for credentials, payment, personal information, or access when the supplied evidence actually shows that request. For benign content, tactics_detected, red_flags, and scam-specific educational fields must be empty. what_they_want must describe what THIS PAGE is actually requesting, not what scammers generally want. what_to_say is only for suspicious/scam situations.\n\n';
     if (vtReport) {
       prompt += 'VIRUSTOTAL: ' + vtReport.malicious + ' malicious, ' + vtReport.suspicious + ' suspicious, ' + vtReport.harmless + ' harmless, reputation: ' + vtReport.reputation + '\n\n';
     }
@@ -451,6 +452,17 @@ Deno.serve(async (req) => {
         is_scam: !!vtReport?.malicious,
         explanation: 'AI analysis could not complete in time. Treat this result as uncertain — review the VirusTotal / URLhaus reports above before trusting this page.',
       };
+    }
+
+    // Prevent low-risk scans from displaying invented scam narratives.
+    if (result && result.risk_level === 'low' && Number(result.risk_score || 0) < 20) {
+      result.is_scam = false;
+      result.tactics_detected = [];
+      result.red_flags = [];
+      result.scam_category = '';
+      result.why_scammers_do_this = '';
+      result.what_they_want = '';
+      result.what_to_say = '';
     }
 
     // === Override QR decoded content with verified value ===
