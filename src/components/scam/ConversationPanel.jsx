@@ -13,6 +13,7 @@ import { getCreditStatus } from "@/lib/credits";
 import { formatDistanceToNow } from "date-fns";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import PlanGate from "@/components/PlanGate";
+import SenderContextToggle from "@/components/scam/SenderContextToggle";
 
 const CONVERSATION_TYPES = [
   { value: "sms", label: "SMS / Text Messages" },
@@ -41,6 +42,7 @@ export default function ConversationPanel() {
   const [creditStatus, setCreditStatus] = useState(null);
   const [checkingPlan, setCheckingPlan] = useState(true);
   const [history, setHistory] = useState([]);
+  const [senderContext, setSenderContext] = useState("");
 
   useEffect(() => {
     getCreditStatus().then((s) => {
@@ -69,6 +71,7 @@ export default function ConversationPanel() {
       const response = await base44.functions.invoke("analyzeMessage", {
         mode: "conversation",
         text: transcript.trim(),
+        sender_context: senderContext,
         response_json_schema: {
           type: "object",
           properties: {
@@ -183,6 +186,10 @@ export default function ConversationPanel() {
         </div>
 
         <div>
+          <div className="mb-4">
+            <SenderContextToggle value={senderContext} onChange={setSenderContext} />
+          </div>
+
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium">Paste the full conversation</label>
             <span className={overLimit ? "text-xs text-destructive font-medium" : "text-xs text-muted-foreground"}>

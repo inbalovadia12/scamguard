@@ -22,6 +22,7 @@ import AIDisclaimer from "@/components/AIDisclaimer";
 import ImageUpload from "@/components/scam/ImageUpload";
 import ConversationPanel from "@/components/scam/ConversationPanel";
 import PostScamResponsePanel from "@/components/scam/PostScamResponsePanel";
+import SenderContextToggle from "@/components/scam/SenderContextToggle";
 import { Switch } from "@/components/ui/switch";
 
 const messageTypes = [
@@ -65,6 +66,7 @@ export default function Home() {
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   const [incognito, setIncognito] = useState(false);
+  const [senderContext, setSenderContext] = useState("");
   const [showPostScam, setShowPostScam] = useState(false);
 
   useEffect(() => {
@@ -142,6 +144,7 @@ export default function Home() {
         message_type: messageType,
         text: effectiveInput,
         file_urls: fileUrls,
+        sender_context: senderContext,
         response_json_schema: RESPONSE_SCHEMA,
       });
       if (response.data?.error) throw new Error(response.data.error);
@@ -363,6 +366,8 @@ export default function Home() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <SenderContextToggle value={senderContext} onChange={setSenderContext} />
 
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">

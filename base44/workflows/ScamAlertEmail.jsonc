@@ -1,0 +1,40 @@
+{
+  "name": "Scam Alert Email",
+  "description": "Emails the user via Gmail whenever a high-risk scam is detected in their Message Check scan, so they don't have to keep checking the app",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "ScamAnalysis",
+      "events": [
+        "create"
+      ]
+    },
+    "condition": "${ .trigger.data.risk_level == \"high\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "scam_alert_email",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "send_alert": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "sendScamAlertEmail",
+            "args": {
+              "analysis_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Send scam alert email",
+            "description": "Email the user about the high-risk scan"
+          }
+        }
+      }
+    ]
+  }
+}

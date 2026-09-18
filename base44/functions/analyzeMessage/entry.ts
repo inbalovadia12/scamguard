@@ -72,10 +72,15 @@ function planRank(plan: string) {
   return plan === "premium" ? 2 : plan === "plus" ? 1 : 0;
 }
 
-function buildPrompt(mode: string, text: string, messageType?: string, language?: string) {
+function buildPrompt(mode: string, text: string, messageType?: string, language?: string, senderContext?: string) {
   const languageName = ({ en: "English", he: "Hebrew", es: "Spanish" } as Record<string, string>)[language || "en"] || "English";
+  const senderContextBlock = senderContext === "known"
+    ? "\nSENDER CONTEXT: The user marked this as a message from a KNOWN sender (a contact or business they recognize). Do not inflate the risk just because it mentions money, links, or verification — a recognized sender with normal content is not a scam. Still flag concrete scam indicators if present.\n"
+    : senderContext === "unknown"
+    ? "\nSENDER CONTEXT: The user marked this as a message from an UNKNOWN sender (a stranger, not in their contacts). Weigh unsolicited requests for money, codes, credentials, or remote access more carefully — but still require concrete scam indicators to classify as SCAM or LIKELY SCAM.\n"
+    : "";
   if (mode === "conversation" || mode === "incognito_conversation") {
-    return `You are Vardin, an AI scam detection assistant. Analyze this entire conversation as a whole to detect patterns, escalation, grooming, repeated requests, inconsistencies, information harvesting, isolation, and unrealistic promises.\n\nConversation:\n"""\n${text.slice(0, 10000)}\n"""\n\n${VERDICT_BLOCK}\n\nReturn a structured assessment with: verdict (exactly one of the four), overall risk level, risk score 0-100, patterns detected, suspicious messages and why they are suspicious, escalation summary, what the other party wants, recommended actions, and a concise summary. Never claim certainty when the evidence is ambiguous. If the conversation is a normal business or personal exchange with no concrete scam indicators, return "NOT A SCAM". Respond in ${languageName}.`;
+    return `${senderContextBlock}You are Vardin, an AI scam detection assistant. Analyze this entire conversation as a whole to detect patterns, escalation, grooming, repeated requests, inconsistencies, information harvesting, isolation, and unrealistic promises.\n\nConversation:\n"""\n${text.slice(0, 10000)}\n"""\n\n${VERDICT_BLOCK}\n\nReturn a structured assessment with: verdict (exactly one of the four), overall risk level, risk score 0-100, patterns detected, suspicious messages and why they are suspicious, escalation summary, what the other party wants, recommended actions, and a concise summary. Never claim certainty when the evidence is ambiguous. If the conversation is a normal business or personal exchange with no concrete scam indicators, return "NOT A SCAM". Respond in ${languageName}.`;
   }
 
   if (mode === "incognito_phone") {
@@ -87,10 +92,10 @@ function buildPrompt(mode: string, text: string, messageType?: string, language?
   }
 
   if (mode === "crypto_investment") {
-    return `Scam detection expert: analyze this crypto investment/giveaway message for scam risk.\nMessage: "${text.slice(0, 10000)}"\n\n${VERDICT_BLOCK}\n\nADDITIONAL CRYPTO CONTEXT:\n- A legitimate crypto/investment platform invitation, promotional credit offer, referral bonus, or account notification is NOT a scam. Words like "crypto", "reward", "bonus", "invite", "investment", "promotion" are NOT scam indicators on their own — legitimate exchanges and platforms use them constantly.\n- Concrete crypto scam indicators: an actual request to SEND funds to an unknown wallet, a demand to connect a wallet to a suspicious site (drainer), a fake giveaway matching real brands with a send-to-claim pattern, unrealistic guaranteed returns combined with urgency, or impersonation of a real person/brand.\n- Verification links and login confirmations sent by the platform ITSELF in response to the user's own action are NOT scams.\n- If the message is a normal promotional email/SMS from a real business with no request to send money, connect a wallet, share a seed phrase, or click a suspicious link, the verdict is "NOT A SCAM".\n\nIdentify concrete tactics when present: wallet-drainer links, send-to-claim giveaways, impersonation, unrealistic returns + urgency. Never say "definitely a scam"; use "likely" (LIKELY SCAM) when appropriate. Return a risk_score 0-100 consistent with your verdict.`;
+    return `${senderContextBlock}Scam detection expert: analyze this crypto investment/giveaway message for scam risk.\nMessage: "${text.slice(0, 10000)}"\n\n${VERDICT_BLOCK}\n\nADDITIONAL CRYPTO CONTEXT:\n- A legitimate crypto/investment platform invitation, promotional credit offer, referral bonus, or account notification is NOT a scam. Words like "crypto", "reward", "bonus", "invite", "investment", "promotion" are NOT scam indicators on their own — legitimate exchanges and platforms use them constantly.\n- Concrete crypto scam indicators: an actual request to SEND funds to an unknown wallet, a demand to connect a wallet to a suspicious site (drainer), a fake giveaway matching real brands with a send-to-claim pattern, unrealistic guaranteed returns combined with urgency, or impersonation of a real person/brand.\n- Verification links and login confirmations sent by the platform ITSELF in response to the user's own action are NOT scams.\n- If the message is a normal promotional email/SMS from a real business with no request to send money, connect a wallet, share a seed phrase, or click a suspicious link, the verdict is "NOT A SCAM".\n\nIdentify concrete tactics when present: wallet-drainer links, send-to-claim giveaways, impersonation, unrealistic returns + urgency. Never say "definitely a scam"; use "likely" (LIKELY SCAM) when appropriate. Return a risk_score 0-100 consistent with your verdict.`;
   }
 
-  return `Scam detection expert: analyze this ${messageType || "message"} for scam risk.\nMessage: "${text.slice(0, 10000)}"\n\n${VERDICT_BLOCK}\n\nADDITIONAL GUIDANCE:\n- Flag the underlying BEHAVIOR, not the vocabulary. A message with normal business context (sender domain, professional tone, no urgency/threats) that does NOT request money, passwords, recovery phrases, remote access, or secrecy is "NOT A SCAM".\n- For SCAM or LIKELY SCAM, require concrete indicators: payment-to-receive-money, recovery phrases/passwords, impersonation, deceptive claims, suspicious URLs, unrealistic guarantees, or strong pressure tactics. Look for combinations: urgency + payment demand, authority impersonation + credential request, secrecy + remote access, fake brand + send-to-claim pattern.\n- Never say "definitely a scam"; use "likely" (LIKELY SCAM) when appropriate. Plain English and educational. Give concrete next steps. Return a risk_score 0-100 consistent with your verdict — a normal business notification should score low.`;
+  return `${senderContextBlock}Scam detection expert: analyze this ${messageType || "message"} for scam risk.\nMessage: "${text.slice(0, 10000)}"\n\n${VERDICT_BLOCK}\n\nADDITIONAL GUIDANCE:\n- Flag the underlying BEHAVIOR, not the vocabulary. A message with normal business context (sender domain, professional tone, no urgency/threats) that does NOT request money, passwords, recovery phrases, remote access, or secrecy is "NOT A SCAM".\n- For SCAM or LIKELY SCAM, require concrete indicators: payment-to-receive-money, recovery phrases/passwords, impersonation, deceptive claims, suspicious URLs, unrealistic guarantees, or strong pressure tactics. Look for combinations: urgency + payment demand, authority impersonation + credential request, secrecy + remote access, fake brand + send-to-claim pattern.\n- Never say "definitely a scam"; use "likely" (LIKELY SCAM) when appropriate. Plain English and educational. Give concrete next steps. Return a risk_score 0-100 consistent with your verdict — a normal business notification should score low.`;
 }
 
 Deno.serve(async (req) => {
@@ -104,6 +109,7 @@ Deno.serve(async (req) => {
     const text = String(body.text || "").trim();
     const messageType = typeof body.message_type === "string" ? body.message_type : undefined;
     const language = typeof body.language === "string" ? body.language : "en";
+    const senderContext = typeof body.sender_context === "string" ? body.sender_context : "";
     const fileUrls = Array.isArray(body.file_urls) ? body.file_urls.filter((u) => typeof u === "string").slice(0, 2) : [];
 
     if (!CREDIT_COSTS[mode]) return Response.json({ error: "Invalid analysis mode" }, { status: 400 });
@@ -171,7 +177,7 @@ Deno.serve(async (req) => {
       : DEFAULT_SCHEMA;
 
     const llmOptions: any = {
-      prompt: buildPrompt(mode, text, messageType, language),
+      prompt: buildPrompt(mode, text, messageType, language, senderContext),
       response_json_schema: responseSchema,
       model: "gemini_3_flash",
     };

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut, MessageSquare, ChevronRight, GraduationCap, Puzzle, Radar, Phone, Image as ImageIcon,   MessageCircle, Sparkles, Scan, Siren, History,
+  ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut, MessageSquare, ChevronRight, GraduationCap, Puzzle, Phone, Image as ImageIcon,   MessageCircle, Sparkles, Scan, Siren, History,
   Bitcoin, Smartphone, Gift,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
@@ -45,7 +45,6 @@ const NAV_SECTIONS = [
     items: [
       { path: "/alerts", labelKey: "nav.alerts", icon: Bell },
       { path: "/family", labelKey: "nav.family", icon: Users },
-      { path: "/local-intel", labelKey: "nav.local_intel", icon: Radar },
     ],
   },
   {

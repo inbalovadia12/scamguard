@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-import { base64UrlEncode, getGmailSenderEmail, sendGmail } from "../../shared/gmailMime.ts";
+import { sendAnalysisAlertEmail, formatRiskLabel } from "../../shared/scamAlertEmail.ts";
 
 const FINANCIAL_TYPES = ["bank_government", "marketplace", "crypto_investment", "lottery_prize", "job_offer"];
 
@@ -57,51 +57,19 @@ Deno.serve(async (req) => {
       return Response.json({ skipped: true, reason: 'Financial-only preference not met' });
     }
 
-    // Get Gmail access token (SHARED connection)
+    // Get Gmail access token (SHARED connection) and send via shared helper.
     const { accessToken } = await base44.asServiceRole.connectors.getConnection('gmail');
-    const senderEmail = await getGmailSenderEmail(accessToken);
+    const riskLabel = formatRiskLabel(analysis);
 
-    // Build the email content
-    const riskLabel = (analysis.risk_level || 'unknown').toUpperCase();
-    const subject = `Vardin Alert: ${senior.name} checked a ${riskLabel} risk message`;
-    const steps = (analysis.next_steps || []).map((s: string) => '  • ' + s).join('\n');
-    const tactics = (analysis.tactics_detected || []).join(', ') || 'None detected';
-
-    const bodyText = [
-      `Hi ${senior.guardian_name || 'there'},`,
-      ``,
-      `${senior.name} just checked a suspicious message on Vardin that was flagged as ${riskLabel} risk.`,
-      ``,
-      `Risk Score: ${analysis.risk_score ?? '?'}/100`,
-      `Message Type: ${analysis.message_type || 'other'}`,
-      ``,
-      `Summary:`,
-      `${analysis.explanation || 'No summary available.'}`,
-      ``,
-      `Tactics Detected: ${tactics}`,
-      ``,
-      `Recommended Next Steps:`,
-      `${steps || '  No specific steps available.'}`,
-      ``,
-      `View full details in your Guardian Alerts:`,
-      `https://vardin.base44.app/alerts`,
-      ``,
-      `Stay safe,`,
-      `The Vardin Team`,
-    ].join('\n');
-
-    // Construct RFC 2822 message with proper encoding
-    const mimeMessage = [
-      `From: Vardin Alerts <${senderEmail}>`,
-      `To: ${senior.guardian_name || ''} <${senior.guardian_email}>`,
-      `Subject: ${encodeSubject(subject)}`,
-      `Content-Type: text/plain; charset=UTF-8`,
-      `MIME-Version: 1.0`,
-      ``,
-      bodyText,
-    ].join('\r\n');
-
-    const sent = await sendGmail(accessToken, mimeMessage);
+    const sent = await sendAnalysisAlertEmail({
+      accessToken,
+      recipientName: senior.guardian_name || '',
+      recipientEmail: senior.guardian_email,
+      analysis,
+      subject: `Vardin Alert: ${senior.name} checked a ${riskLabel} risk message`,
+      introLine: `${senior.name} just checked a suspicious message on Vardin that was flagged as ${riskLabel} risk.`,
+      reviewLink: 'https://vardin.base44.app/alerts',
+    });
     if (!sent) {
       return Response.json({ error: 'Gmail send failed' }, { status: 500 });
     }

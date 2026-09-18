@@ -12,8 +12,8 @@ const plans = [
     name: "Starter",
     price: "$0",
     period: "/month",
-    description: "For occasional checks",
-    credits: "30 AI credits/month",
+    description: "Try Vardin free",
+    credits: "30 AI checks/month",
     features: PLAN_FEATURES.starter,
     icon: Shield,
     color: "from-muted-foreground/40 to-muted-foreground/20",
@@ -23,8 +23,8 @@ const plans = [
     name: "Plus",
     price: "$75",
     period: "/year",
-    description: "For proactive individuals",
-    credits: "350 AI credits/month",
+    description: "For people who check often",
+    credits: "350 AI checks/month",
     features: PLAN_FEATURES.plus,
     icon: Zap,
     color: "from-primary to-primary/80",
@@ -36,7 +36,7 @@ const plans = [
     price: "$149",
     period: "/year",
     description: "Complete family protection",
-    credits: "500 AI credits/month",
+    credits: "500 AI checks/month",
     features: PLAN_FEATURES.premium,
     icon: Sparkles,
     color: "from-chart-5 to-chart-5/80",
@@ -102,9 +102,9 @@ export default function Pricing() {
         <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20">
           <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8 text-primary-foreground" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Choose Your Plan</h1>
-        <p className="text-muted-foreground text-base sm:text-lg max-w-md mx-auto">
-          Protect yourself and your loved ones from scams.
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-heading">Stop scams before they cost you</h1>
+        <p className="text-muted-foreground text-base sm:text-lg max-w-lg mx-auto">
+          Every plan checks messages, links, and calls with AI trained to spot the tactics scammers use. Pick the coverage that fits how much you and your family check.
         </p>
       </div>
 

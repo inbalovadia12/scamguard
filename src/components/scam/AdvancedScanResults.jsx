@@ -174,6 +174,7 @@ function DetailedResult({ a, scanType }) {
         <div className={`h-full rounded-full ${getRiskBarColor(score)} transition-all duration-1000`} style={{ width: `${score}%` }} />
       </div>
       {a.confidence != null && <p className="text-sm text-muted-foreground">Confidence: {a.confidence}%</p>}
+      {a.page_summary && <Section label="What this site is"><p className="text-sm leading-relaxed">{a.page_summary}</p></Section>}
       {a.scam_category && <Section label="Scam Category"><p className="text-sm">{a.scam_category}</p></Section>}
       {isQr && a.decoded_content && (
         <Section label="Decoded QR Content">
