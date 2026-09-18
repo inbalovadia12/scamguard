@@ -55,38 +55,6 @@ async function validateUrlSafe(urlStr: string): Promise<{ ok: boolean; error?: s
   return { ok: true, resolvedIp: resolvedIp || undefined, hostname };
 }
 
-async function getVirusTotalReport(url: string): Promise<any | null> {
-  const apiKey = Deno.env.get("VIRUSTOTAL_API_KEY");
-  if (!apiKey) return null;
-  try {
-    const urlBytes = new TextEncoder().encode(url);
-    let binary = '';
-    for (let i = 0; i < urlBytes.length; i++) binary += String.fromCharCode(urlBytes[i]);
-    const base64 = btoa(binary);
-    const urlId = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    const response = await fetch(`https://www.virustotal.com/api/v3/urls/${urlId}`, {
-      headers: { 'x-apikey': apiKey },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!response.ok) return null;
-    const data = await response.json();
-    const attrs = data?.data?.attributes;
-    if (!attrs) return null;
-    const stats = attrs.last_analysis_stats || {};
-    return {
-      malicious: stats.malicious || 0,
-      suspicious: stats.suspicious || 0,
-      harmless: stats.harmless || 0,
-      undetected: stats.undetected || 0,
-      total_engines: (stats.malicious || 0) + (stats.suspicious || 0) + (stats.harmless || 0) + (stats.undetected || 0),
-      reputation: attrs.reputation || 0,
-      categories: attrs.categories || {},
-    };
-  } catch (_e) {
-    return null;
-  }
-}
-
 Deno.serve(async (req) => {
   const startTime = Date.now();
   try {
