@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, Image as ImageIcon } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import ImageLightbox from "@/components/family/ImageLightbox";
 
 // A conversation thread between a guardian and a protected senior.
 // Either memberId (find-or-create thread) or threadId (existing thread) is required.
@@ -15,6 +16,7 @@ export default function ChatThread({ memberId, threadId, onSent }) {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [zoomImage, setZoomImage] = useState(null);
   const threadRef = useRef(null);
   const endRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -159,7 +161,13 @@ export default function ChatThread({ memberId, threadId, onSent }) {
                   }`}
                 >
                   {m.image_url && (
-                    <img src={m.image_url} alt="Shared image" className="rounded-xl max-w-full max-h-72 object-cover w-auto block" loading="lazy" />
+                    <img
+                      src={m.image_url}
+                      alt="Shared image"
+                      className="rounded-xl max-w-full max-h-72 object-cover w-auto block cursor-zoom-in"
+                      loading="lazy"
+                      onDoubleClick={() => setZoomImage(m.image_url)}
+                    />
                   )}
                   {m.text && <div className={m.image_url ? "px-2.5 py-1.5" : ""}>{m.text}</div>}
                 </div>
@@ -209,6 +217,8 @@ export default function ChatThread({ memberId, threadId, onSent }) {
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </Button>
       </div>
+
+      <ImageLightbox src={zoomImage} alt="Shared image" onClose={() => setZoomImage(null)} />
     </div>
   );
 }
