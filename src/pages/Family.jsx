@@ -196,7 +196,10 @@ export default function Family() {
   }, []);
 
   const handleDelete = async (id) => {
-    await base44.entities.ProtectedSenior.delete(id);
+    const res = await base44.functions.invoke("removeFamilyMember", { record_id: id });
+    const data = res?.data || res;
+    if (data?.error) throw new Error(data.error);
+    await loadSeniors();
   };
 
   const handleUpdatePref = async (id, pref) => {

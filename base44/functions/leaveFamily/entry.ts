@@ -20,7 +20,29 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ left: false, message: 'You are not in any family' });
     }
 
+    // Downgrade the leaver's plan back to starter when it was inherited from
+    // one of the families they are leaving, so premium access does not persist
+    // after they leave.
+    const inheritedPlans = toRemove.map((m: any) => m.guardian_plan).filter(Boolean);
+    const currentPlan = user.subscription_plan || 'starter';
+    if (currentPlan !== 'starter' && inheritedPlans.includes(currentPlan)) {
+      try {
+        await base44.asServiceRole.entities.User.update(user.id, {
+          subscription_plan: 'starter',
+          subscription_status: 'inactive',
+        });
+      } catch {}
+    }
+
     for (const m of toRemove) {
+      // Clean up any chat thread + messages for this membership.
+      try {
+        const threads = await base44.asServiceRole.entities.FamilyChat.filter({ member_id: m.id });
+        for (const t of threads) {
+          try { await base44.asServiceRole.entities.FamilyChatMessage.deleteMany({ thread_id: t.id }); } catch {}
+          try { await base44.asServiceRole.entities.FamilyChat.delete(t.id); } catch {}
+        }
+      } catch {}
       await base44.asServiceRole.entities.ProtectedSenior.delete(m.id);
     }
 
