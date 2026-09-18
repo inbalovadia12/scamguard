@@ -146,9 +146,9 @@ export default function AppLayout() {
   }, [user?.id, user?.referred_by]);
 
   // Link this user to any family invitations that match their email. The backend
-  // sets consent, links their account to the ProtectedSenior record, and upgrades
-  // their plan to the guardian's plan (service-role, admin-only field) so they
-  // inherit all the benefits. Runs once after login; idempotent.
+  // only links the account to the ProtectedSenior record — consent and plan
+  // inheritance happen when the user explicitly accepts the invitation on the
+  // Family page. Runs once after login; idempotent.
   useEffect(() => {
     if (!user?.email) return;
     let cancelled = false;
@@ -157,8 +157,8 @@ export default function AppLayout() {
         const res = await base44.functions.invoke("linkFamilyMember", {});
         const data = res?.data || res;
         if (cancelled || data?.error) return;
-        if (data?.linked && data?.upgraded_to) {
-          // Refresh the user in context so the plan badge and limits reflect the upgrade.
+        if (data?.linked) {
+          // Refresh so the Family page sees the freshly-linked membership.
           checkUserAuth?.();
         }
       } catch {}

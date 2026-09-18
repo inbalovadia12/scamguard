@@ -1,12 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
-import { normalizePlan, planDisplayName } from '../../shared/familyPricing.ts';
-
-const PLAN_RANK: Record<string, number> = { starter: 0, plus: 1, premium: 2 };
+import { normalizePlan } from '../../shared/familyPricing.ts';
 
 // Called when a user logs in / signs up. Links any ProtectedSenior records that
-// match this user's email (and aren't yet linked), marks consent, and upgrades
-// the user's plan to inherit the guardian's plan benefits (only ever upgrades,
-// never downgrades). Returns the guardians so the UI can show a notification.
+// match this user's email (and aren't yet linked) by recording their user id —
+// but does NOT mark consent or upgrade the plan. The invited user must
+// explicitly accept the invitation (see acceptFamilyInvitation) before they are
+// monitored and inherit the guardian's plan benefits.
 export default async function(req: Request): Promise<Response> {
   try {
     const base44 = createClientFromRequest(req);
@@ -24,47 +23,24 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ linked: false, guardians: [] });
     }
 
-    const currentPlan = normalizePlan(user.subscription_plan);
-    let upgradedPlan = currentPlan;
     const guardians: any[] = [];
 
     for (const senior of unlinked) {
-      // Link the senior record to this user and mark consent as accepted (by
-      // creating their account after the invite, they consent to protection).
+      // Link the senior record to this user only. Consent + plan upgrade happen
+      // when the user explicitly accepts the invitation.
       await base44.asServiceRole.entities.ProtectedSenior.update(senior.id, {
         senior_user_id: user.id,
-        consent_given: true,
       });
-
-      const guardianPlan = normalizePlan(senior.guardian_plan);
-      if ((PLAN_RANK[guardianPlan] || 0) > (PLAN_RANK[upgradedPlan] || 0)) {
-        upgradedPlan = guardianPlan;
-      }
 
       guardians.push({
         senior_record_id: senior.id,
         guardian_name: senior.guardian_name || 'Your family member',
         guardian_email: senior.guardian_email || '',
-        plan: guardianPlan,
+        plan: normalizePlan(senior.guardian_plan),
       });
     }
 
-    // Upgrade the user's plan to the best guardian plan found (admin-only field,
-    // so it must go through the service role). Only upgrades, never downgrades.
-    if (upgradedPlan !== currentPlan) {
-      try {
-        await base44.asServiceRole.entities.User.update(user.id, { subscription_plan: upgradedPlan });
-      } catch (_e) {
-        // Plan upgrade is best-effort; linking still succeeded.
-      }
-    }
-
-    return Response.json({
-      linked: true,
-      guardians,
-      upgraded_to: upgradedPlan !== currentPlan ? upgradedPlan : null,
-      plan_name: planDisplayName(upgradedPlan),
-    });
+    return Response.json({ linked: true, guardians });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

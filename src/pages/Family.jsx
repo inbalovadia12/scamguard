@@ -8,9 +8,11 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import AddSeniorDialog from "@/components/family/AddSeniorDialog";
+import ProtectedMemberView from "@/components/family/ProtectedMemberView";
 import { resolveFamilyLimit } from "@/lib/planPricing";
 import { Link } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { toast } from "@/components/ui/use-toast";
 import GuardianDashboardPanel from "@/components/family/GuardianDashboardPanel";
 import ProtectionSettingsPanel from "@/components/family/ProtectionSettingsPanel";
 import FamilyAlertsPanel from "@/components/family/FamilyAlertsPanel";
@@ -125,6 +127,7 @@ export default function Family() {
   const [showAdd, setShowAdd] = useState(false);
   const [familyLimit, setFamilyLimit] = useState(1);
   const [pendingAlerts, setPendingAlerts] = useState(0);
+  const [memberships, setMemberships] = useState([]);
   const seniorsRef = useRef([]);
 
   const loadSeniors = async () => {
@@ -133,15 +136,43 @@ export default function Family() {
     if (plan === "free") plan = "starter";
     if (plan === "elite") plan = "premium";
     setFamilyLimit(resolveFamilyLimit(plan, user).limit);
-    const data = await base44.entities.ProtectedSenior.filter({ guardian_id: user.id });
+
+    // Load the people I protect (guardian view) and the families I belong to
+    // (protected-member view) in parallel.
+    const [data, memRes] = await Promise.all([
+      base44.entities.ProtectedSenior.filter({ guardian_id: user.id }),
+      base44.functions.invoke("getFamilyView", {}).then((r) => r?.data || r).catch(() => ({ memberships: [] })),
+    ]);
     seniorsRef.current = data;
     setSeniors(data);
+    setMemberships(memRes?.memberships || []);
     setLoading(false);
 
     try {
       const alerts = await base44.entities.FamilyAlert.list("-created_date", 100);
       setPendingAlerts(alerts.filter((a) => a.status === "pending_guardian").length);
     } catch {}
+  };
+
+  const handleAccept = async (recordId) => {
+    const res = await base44.functions.invoke("acceptFamilyInvitation", { record_id: recordId });
+    const data = res?.data || res;
+    if (data?.error) throw new Error(data.error);
+    toast({
+      title: data?.upgraded_to ? `Welcome to the ${data.plan_name} plan` : "You're protected",
+      description: data?.upgraded_to
+        ? `You now share your guardian's ${data.plan_name} plan benefits.`
+        : "Your guardian will be notified when you scan something suspicious.",
+    });
+    await loadSeniors();
+  };
+
+  const handleLeave = async (recordId) => {
+    const res = await base44.functions.invoke("leaveFamily", { record_id: recordId });
+    const data = res?.data || res;
+    if (data?.error) throw new Error(data.error);
+    toast({ title: "You've left the family", description: "You're no longer protected by that guardian." });
+    await loadSeniors();
   };
 
   useEffect(() => {
@@ -198,6 +229,16 @@ export default function Family() {
     );
   }
 
+  // Pure protected member (not a guardian): show only their protection view —
+  // their guardian and the other members in that family, with accept/leave.
+  if (memberships.length > 0 && seniors.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-8">
+        <ProtectedMemberView memberships={memberships} onAccept={handleAccept} onLeave={handleLeave} />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -218,6 +259,8 @@ export default function Family() {
           Add Person
         </Button>
       </div>
+
+      <ProtectedMemberView memberships={memberships} onAccept={handleAccept} onLeave={handleLeave} />
 
       <Tabs defaultValue="members" className="w-full">
         <TabsList className="grid grid-cols-1 sm:grid-cols-3 w-full h-auto mb-2">
