@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import FollowUpChat from "@/components/FollowUpChat";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Siren, DollarSign, Lock, CreditCard, MousePointerClick, Monitor, IdCard,
@@ -532,6 +533,14 @@ Respond with:
               <RotateCcw className="w-3.5 h-3.5" /> Start Over
             </Button>
           </div>
+
+          {/* Follow-up conversation */}
+          <FollowUpChat
+            persona="recovery"
+            title="Continue the conversation"
+            placeholder="e.g., I called my bank and they said the transfer already went through — what now?"
+            context={`Situation described: ${elaboration}\n\nRecovery plan:\n- Severity: ${aiSteps.severity || ""}\n- Summary: ${aiSteps.situation_summary || ""}\n- Do now: ${(aiSteps.do_now || []).join("; ")}\n- Follow up: ${(aiSteps.follow_up || []).join("; ")}\n- Contacts: ${(aiSteps.contacts || []).join("; ")}\n- Warning signs: ${(aiSteps.warning_signs || []).join("; ")}`}
+          />
         </div>
       )}
 

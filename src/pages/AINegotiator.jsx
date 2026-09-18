@@ -8,6 +8,7 @@ import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import PlanGate from "@/components/PlanGate";
+import FollowUpChat from "@/components/FollowUpChat";
 
 const CREDIT_COST = 3;
 const EXAMPLES = [
@@ -222,6 +223,19 @@ export default function AINegotiator() {
             <QuestionCard key={i} question={q} index={i} />
           ))}
         </div>
+      )}
+
+      {/* Follow-up conversation */}
+      {!loading && questions && questions.length > 0 && (
+        <FollowUpChat
+          persona="scam_exposer"
+          title="Ask a follow-up"
+          placeholder="e.g., They replied and said the deposit is 'refundable' — what should I ask next?"
+          context={`Situation: ${situation}\n\nQuestions generated:\n${questions.map((q, i) => `${i + 1}. ${q.question}`).join("\n")}`}
+          creditCost={2}
+          creditsState={credits}
+          onCreditsUsed={(r) => setCredits((prev) => (prev ? { ...prev, remaining: r } : prev))}
+        />
       )}
     </div>
   );
