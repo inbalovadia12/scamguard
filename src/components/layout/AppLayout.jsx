@@ -358,8 +358,8 @@ export default function AppLayout() {
 
       {/* Main Content */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-[100dvh] min-w-0 overflow-x-hidden">
-        <BroadcastBanner />
         <main className="flex-1 max-w-4xl mx-auto w-full min-w-0 px-4 sm:px-8 pt-20 pb-8 md:py-12" style={{ paddingTop: "max(5rem, calc(4rem + env(safe-area-inset-top)))", paddingBottom: "max(2rem, env(safe-area-inset-bottom))", paddingLeft: "max(1rem, env(safe-area-inset-left))", paddingRight: "max(1rem, env(safe-area-inset-right))" }}>
+          <BroadcastBanner />
           <Outlet />
         </main>
 
