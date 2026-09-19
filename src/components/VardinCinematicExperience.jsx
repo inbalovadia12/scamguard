@@ -97,6 +97,12 @@ const textScenes = {
       visual: "empty",
     },
     {
+      eyebrow: "WORKS BOTH WAYS",
+      title: "For you, or for someone you look after.",
+      support: "Use Vardin for yourself, or set it up to protect a parent or loved one — one account, two ways.",
+      visual: "dualuse",
+    },
+    {
       eyebrow: "VARDIN · SCAMGUARD",
       title: "Some scams look completely ordinary.",
       visual: "empty",
