@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, ArrowRight, Users, Zap, Bot, ScanLine } from "lucide-react";
+import { ShieldCheck, ArrowRight, Users, Zap, Bot, ScanLine, ArrowRightLeft } from "lucide-react";
 
 const stats = [
   { value: "48K+", label: "Analyses performed" },
@@ -42,6 +42,10 @@ export default function LandingHero({ preview = false }) {
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </a>
+          </div>
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-2 text-xs font-medium text-primary animate-fade-in">
+            <ArrowRightLeft className="w-3.5 h-3.5" />
+            Works both ways: protect yourself, or set it up for a parent or loved one
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             No credit card required • Cancel anytime

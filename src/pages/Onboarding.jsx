@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import VardinCinematicExperience from "@/components/VardinCinematicExperience";
+import DualUseBanner from "@/components/family/DualUseBanner";
 
 const goals = [
   { id: "personal", label: "Personal Use", icon: ShieldCheck, description: "Detect and avoid scams targeting me" },
@@ -205,6 +206,7 @@ function WelcomeStep({ onNext }) {
           </div>
         ))}
       </div>
+      <DualUseBanner className="max-w-lg mx-auto" />
       <Button onClick={onNext} size="lg" className="h-12 px-8 text-base font-semibold bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20">
         Get Started
         <ArrowRight className="w-4 h-4 ml-1" />
@@ -313,6 +315,9 @@ function InviteFamilyStep({ emails, setEmails, onNext, onBack, inviting }) {
         </div>
         <h1 className="text-2xl font-bold tracking-tight font-heading">Invite Family Members</h1>
         <p className="text-muted-foreground max-w-md mx-auto">Add loved ones you'd like to protect. We'll send them an email invitation.</p>
+        <p className="text-xs text-muted-foreground/80 max-w-md mx-auto pt-1">
+          Using Vardin for yourself only? Skip this step — one account works both ways.
+        </p>
       </div>
       <div className="space-y-3">
         {emails.map((email, i) => (

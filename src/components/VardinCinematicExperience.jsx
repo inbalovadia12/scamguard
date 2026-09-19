@@ -2,11 +2,45 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ArrowRight, Bot, ChevronRight, Image as ImageIcon, Phone, Radio,
+  ArrowRight, ArrowRightLeft, Bot, ChevronRight, Image as ImageIcon, Phone, Radio,
   ScanLine, ShieldAlert, ShieldCheck, Users, X,
 } from "lucide-react";
 
 const EASE = [0.22, 1, 0.36, 1];
+
+function DualUseVisual() {
+  return (
+    <div className="grid w-[min(92vw,470px)] gap-3 sm:grid-cols-2">
+      {[
+        { icon: Users, title: "For a guardian", text: "Protect a parent or loved one." },
+        { icon: ShieldCheck, title: "For yourself", text: "Check what reaches you directly." },
+      ].map((c, i) => (
+        <motion.div
+          key={c.title}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 + i * 0.15, duration: 0.55, ease: EASE }}
+          className="rounded-2xl border border-white/[0.12] bg-white/[0.035] p-4 text-left shadow-[0_24px_80px_rgba(0,0,0,0.26)] backdrop-blur-md"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#2f8f83]/15 text-[#79c9bd]">
+            <c.icon className="h-4 w-4" />
+          </div>
+          <div className="mt-3 text-sm font-medium text-white/88">{c.title}</div>
+          <p className="mt-1 text-[11px] leading-5 text-white/52">{c.text}</p>
+        </motion.div>
+      ))}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6, duration: 0.5 }}
+        className="col-span-full flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.025] py-2 text-[10px] tracking-[0.14em] text-white/55"
+      >
+        <ArrowRightLeft className="h-3.5 w-3.5 text-[#83b9c5]" />
+        ONE ACCOUNT · WORKS BOTH WAYS
+      </motion.div>
+    </div>
+  );
+}
 
 function TypingTitle({ text }) {
   const [visible, setVisible] = useState(0);
@@ -78,6 +112,12 @@ const textScenes = {
       eyebrow: "VARDIN · WELCOME",
       title: "Let's show you how Vardin works.",
       visual: "empty",
+    },
+    {
+      eyebrow: "WORKS BOTH WAYS",
+      title: "For you, or for someone you look after.",
+      support: "Use Vardin for yourself, or set it up to protect a parent or loved one — one account, two ways.",
+      visual: "dualuse",
     },
     {
       eyebrow: "A QUIET START",
@@ -331,6 +371,7 @@ function SceneVisual({ type, isMobile = false }) {
     local: <LocalVisual />,
     community: <CommunityVisual />,
     ready: <ReadyVisual isMobile={isMobile} />,
+    dualuse: <DualUseVisual />,
     number: <div className="font-mono text-3xl tracking-[0.06em] text-white/78 sm:text-5xl">+1 212 555 0198</div>,
   }[type];
 

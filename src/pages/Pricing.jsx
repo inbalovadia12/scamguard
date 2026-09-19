@@ -4,6 +4,7 @@ import { Check, Shield, Loader2, Zap, Sparkles, ShieldCheck } from "lucide-react
 import { getCreditStatus, startPaypalCheckout, PLAN_FEATURES, captureCreditPurchase } from "@/lib/credits";
 import { computeFamilyTotal } from "@/lib/planPricing";
 import FamilyMemberSelector from "@/components/pricing/FamilyMemberSelector";
+import DualUseBanner from "@/components/family/DualUseBanner";
 import CreditPacks from "@/components/CreditPacks";
 
 const plans = [
@@ -107,6 +108,8 @@ export default function Pricing() {
           Every plan checks messages, links, and calls with AI trained to spot the tactics scammers use. Pick the coverage that fits how much you and your family check.
         </p>
       </div>
+
+      <DualUseBanner className="max-w-2xl mx-auto" />
 
       {paypalStatus === "approved" && (
         <div className="p-4 rounded-2xl bg-success/10 border border-success/20 text-center">

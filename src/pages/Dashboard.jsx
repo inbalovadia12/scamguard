@@ -12,6 +12,7 @@ import { isWrappedSeason } from "@/lib/wrappedSeason";
 import StreakBadges from "@/components/gamification/StreakBadges";
 import Analytics from "@/pages/Analytics";
 import VardinCinematicExperience from "@/components/VardinCinematicExperience";
+import DualUseBanner from "@/components/family/DualUseBanner";
 
 export default function Dashboard() {
   const { t } = useI18n();
@@ -91,6 +92,11 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      )}
+
+      {/* Dual-use reminder */}
+      {view === "overview" && (
+        <DualUseBanner className="animate-slide-up" />
       )}
 
       {/* Tab toggle */}
