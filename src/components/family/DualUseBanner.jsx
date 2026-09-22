@@ -1,6 +1,5 @@
 import React from "react";
 import { ShieldCheck, Users, ArrowRightLeft } from "lucide-react";
-import { Link } from "react-router-dom";
 
 // Makes it unmissable that Vardin works both ways: a guardian setting up
 // protection for a senior, or a senior setting it up for themselves.

@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 // AudioWorklet processor: captures microphone/system audio, downsamples to
 // 16 kHz mono, converts Float32 → Int16 PCM (little-endian), and posts raw
 // PCM buffers to the main thread for forwarding to the AssemblyAI WebSocket.
