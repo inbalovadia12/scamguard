@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity, Flag } from "lucide-react";
+import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity, Flag, Globe } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { RISK_META } from "@/components/scam/ScamReportCard";
 import CommunityIntel, { matchCategoriesToEnum } from "@/components/community/CommunityIntel";
@@ -23,6 +23,7 @@ export default function PhoneResultView({ data }) {
   const effectiveStatus = data.caller_id_status || "UNKNOWN";
   const status = STATUS_META[effectiveStatus] || STATUS_META.UNKNOWN;
   const communityReports = data.community?.reports || [];
+  const webFindings = data.web?.reports || [];
   const totalReports = data.report_count || communityReports.length;
   const hasReportCounts = (data.scam_report_count || 0) + (data.spam_report_count || 0) + (data.suspicious_report_count || 0) + (data.safe_report_count || 0) > 0;
 
@@ -198,12 +199,37 @@ export default function PhoneResultView({ data }) {
           </div>
         </div>
       ) : (
-        !(data.reddit?.matched) && (
+        !(data.reddit?.matched) && !(data.web?.matched) && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/20 rounded-lg p-3 border border-border/40">
             <Users className="w-3.5 h-3.5 flex-shrink-0" />
-            No verified community reports found for this exact number.
+            No verified community or web reports found for this exact number.
           </div>
         )
+      )}
+
+      {/* Web evidence (live search findings, each with a source URL) */}
+      {webFindings.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <Globe className="w-3.5 h-3.5" /> Web Evidence ({webFindings.length})
+          </div>
+          <div className="space-y-2">
+            {webFindings.map((f, i) => (
+              <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground border border-border/40 rounded-lg p-2.5 bg-muted/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary/40 mt-2 flex-shrink-0" />
+                <div className="min-w-0">
+                  {f.title && <p className="font-medium text-foreground/80 leading-snug">{f.title}</p>}
+                  {f.snippet && <p className="leading-relaxed mt-0.5">{f.snippet}</p>}
+                  <p className="text-[11px] mt-1">
+                    {f.category && <span className="capitalize text-muted-foreground/70">{f.category}</span>}
+                    {f.category && " · "}
+                    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">{f.url}</a>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Sources */}
@@ -223,12 +249,12 @@ export default function PhoneResultView({ data }) {
       )}
 
       {/* Source breakdown */}
-      {(data.community?.matched || data.reddit?.matched) && (
+      {(data.community?.matched || data.reddit?.matched || data.web?.matched) && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <Users className="w-3.5 h-3.5" /> Evidence Sources
           </div>
-          <div className="grid sm:grid-cols-2 gap-2">
+          <div className="grid sm:grid-cols-3 gap-2">
             <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
               <p className="text-sm font-semibold">Vardin Community</p>
               <p className="text-xs text-muted-foreground mt-1">{data.community?.report_count || 0} phone report{(data.community?.report_count || 0) === 1 ? "" : "s"}</p>
@@ -236,6 +262,10 @@ export default function PhoneResultView({ data }) {
             <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
               <p className="text-sm font-semibold">Reddit · r/ScamNumbers</p>
               <p className="text-xs text-muted-foreground mt-1">{data.reddit?.report_count || 0} indexed report{(data.reddit?.report_count || 0) === 1 ? "" : "s"}</p>
+            </div>
+            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
+              <p className="text-sm font-semibold">Web Search</p>
+              <p className="text-xs text-muted-foreground mt-1">{data.web?.report_count || 0} source page{(data.web?.report_count || 0) === 1 ? "" : "s"}</p>
             </div>
           </div>
         </div>

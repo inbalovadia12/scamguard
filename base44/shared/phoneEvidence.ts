@@ -2,23 +2,21 @@
 //
 // The lookup engine must NEVER invent evidence. Reputation score, classification,
 // confidence, and report counts are computed ONLY from traceable, exact-match
-// stored evidence:
+// evidence:
 //   1. Official company / government numbers registry (highest weight)
 //   2. Stored community reports (PhoneCommunityReport) for the EXACT number
 //   3. Indexed public reports (RedditScamNumber) for the EXACT number
-// The LLM is used only to identify country / carrier / business name — never to
-// generate report counts, scam categories, or risk claims.
+//   4. Live web-search findings that EXPLICITLY mention the exact number, each
+//      with a verifiable source URL (medium weight — corroboration, never the
+//      sole basis for a SCAM verdict unless many distinct sources agree).
+// The LLM identifies country / carrier / business and surfaces web findings;
+// it never generates free-standing report counts or risk claims.
 
 import { normalizePhoneNumber } from "./phoneReputation.ts";
 
 // ---------------------------------------------------------------------------
 // Official / verified business number registry
 // ---------------------------------------------------------------------------
-// Curated from each company's official contact page. Keyed by the canonical
-// "+digits" form (normalizePhoneNumber). This is a general, extensible registry —
-// not a per-number special case. Entries here are treated as high-trust official
-// sources; they strongly reduce the scam score unless strong evidence shows the
-// number is being spoofed (see computePhoneAssessment).
 const OFFICIAL_NUMBERS: Record<string, { business: string; source: string }> = {
   "+18008648331": { business: "United Airlines", source: "https://www.united.com/ual/en/us/contact" },
   "+18008291040": { business: "IRS (U.S. Internal Revenue Service)", source: "https://www.irs.gov/help/telephone-assistance" },
@@ -74,6 +72,7 @@ export interface PhoneAssessmentInput {
   officialMatch: OfficialMatch;
   communityReports: any[]; // PhoneCommunityReport rows (already exact-match validated)
   redditReports: any[]; // RedditScamNumber rows (already exact-match validated)
+  webFindings?: any[]; // live web-search findings, each with a source URL mentioning the exact number
   llmInfo?: { country?: string; carrier?: string; business_name?: string } | null;
 }
 
@@ -96,7 +95,7 @@ export interface PhoneAssessment {
 }
 
 export function computePhoneAssessment(input: PhoneAssessmentInput): PhoneAssessment {
-  const { officialMatch, communityReports = [], redditReports = [], llmInfo } = input;
+  const { officialMatch, communityReports = [], redditReports = [], webFindings = [], llmInfo } = input;
 
   const communityScam = communityReports.filter((r) => r.report_type === "scam").length;
   const communitySpam = communityReports.filter((r) => r.report_type === "spam").length;
@@ -105,19 +104,23 @@ export function computePhoneAssessment(input: PhoneAssessmentInput): PhoneAssess
   const communityTotal = communityReports.length;
 
   const redditCount = redditReports.length;
+  const webCount = webFindings.length;
 
-  // Independent scam indicators across traceable sources.
-  const totalScamIndicators = communityScam + redditCount;
-  const independentScamSources = (communityScam > 0 ? 1 : 0) + (redditCount > 0 ? 1 : 0);
+  // Stored reports are high-trust; web findings are medium-trust corroboration.
+  const storedScamIndicators = communityScam + redditCount;
+  const webScamIndicators = Math.min(webCount, 10);
+  const totalScamIndicators = storedScamIndicators + webScamIndicators;
+  const independentSources =
+    (communityScam > 0 ? 1 : 0) + (redditCount > 0 ? 1 : 0) + (webScamIndicators > 0 ? 1 : 0);
 
   const recentReports =
     communityReports.filter((r) => isRecent(r.created_date)).length +
     redditReports.filter((r) => isRecent(r.posted_at)).length;
 
-  // Consistency: scam categories repeated across reports.
   const scamCategories = uniqueNonEmpty([
     ...communityReports.filter((r) => r.report_type === "scam").map((r) => r.scam_category),
     ...redditReports.map((r) => r.scam_category),
+    ...webFindings.map((r) => r.category),
   ]);
 
   // --- Evidence-weighted score (higher = more scam risk) ---
@@ -129,11 +132,16 @@ export function computePhoneAssessment(input: PhoneAssessmentInput): PhoneAssess
   else if (totalScamIndicators === 1) score = 30;
   else score = 0;
 
-  if (totalScamIndicators > 0 && recentReports > 0) score = Math.min(score + 5, 95);
-  if (independentScamSources >= 2 && totalScamIndicators >= 3) score = Math.min(score + 5, 95);
+  // Web-only evidence (no stored reports) is weaker and capped lower.
+  if (storedScamIndicators === 0 && webScamIndicators > 0) {
+    score = Math.min(score, webScamIndicators >= 4 ? 55 : webScamIndicators >= 2 ? 40 : 30);
+  }
 
-  // Official / verified business strongly reduces the score unless there is
-  // strong evidence the official number is being impersonated / spoofed.
+  if (totalScamIndicators > 0 && recentReports > 0) score = Math.min(score + 5, 95);
+  if (independentSources >= 2 && totalScamIndicators >= 3) score = Math.min(score + 5, 95);
+
+  // Official / verified business strongly reduces the score unless strong
+  // evidence shows the official number is being impersonated / spoofed.
   if (officialMatch.matched) {
     if (totalScamIndicators === 0) score = 5;
     else if (totalScamIndicators === 1) score = 12; // insufficient evidence vs. an official number
@@ -157,7 +165,11 @@ export function computePhoneAssessment(input: PhoneAssessmentInput): PhoneAssess
     else if (totalScamIndicators >= 2) caller_id_status = "SUSPICIOUS";
     else caller_id_status = "SAFE";
   } else {
-    if (totalScamIndicators >= 3) caller_id_status = "SCAM";
+    // SCAM requires strong evidence: 3+ stored reports, OR stored + web
+    // corroboration, OR 4+ distinct web sources.
+    if (storedScamIndicators >= 3) caller_id_status = "SCAM";
+    else if (storedScamIndicators >= 1 && webScamIndicators >= 1) caller_id_status = "SCAM";
+    else if (webScamIndicators >= 4) caller_id_status = "SCAM";
     else if (totalScamIndicators >= 1) caller_id_status = "SUSPICIOUS";
     else if (communitySafe > 0 && totalScamIndicators === 0) caller_id_status = "SAFE";
     else caller_id_status = "UNKNOWN";
@@ -166,18 +178,21 @@ export function computePhoneAssessment(input: PhoneAssessmentInput): PhoneAssess
   // --- Confidence in the classification (reflects evidence quality/quantity) ---
   let confidence_score = 10;
   if (officialMatch.matched && totalScamIndicators === 0) confidence_score = 90;
-  else if (totalScamIndicators >= 5) confidence_score = 90;
-  else if (totalScamIndicators >= 3) confidence_score = 75;
-  else if (totalScamIndicators === 2) confidence_score = 50;
+  else if (storedScamIndicators >= 5) confidence_score = 90;
+  else if (storedScamIndicators >= 3) confidence_score = 75;
+  else if (storedScamIndicators >= 1 && webScamIndicators >= 1) confidence_score = 70; // corroborated
+  else if (webScamIndicators >= 4) confidence_score = 65;
+  else if (storedScamIndicators === 2) confidence_score = 50;
   else if (totalScamIndicators === 1) confidence_score = 20; // "insufficient evidence"
   else if (officialMatch.matched) confidence_score = 85;
   else if (communitySafe > 0) confidence_score = 55;
   else confidence_score = 10;
 
-  // --- Traceable sources (only exact-match stored report URLs) ---
+  // --- Traceable sources (exact-match stored + web URLs) ---
   const sources = uniqueNonEmpty([
     ...redditReports.map((r) => r.post_url).filter(Boolean),
     ...communityReports.flatMap((r) => Array.isArray(r.sources) ? r.sources : []),
+    ...webFindings.map((r) => r.url).filter(Boolean),
   ]);
 
   // --- Evidence-based summary (never invents claims) ---
@@ -185,25 +200,29 @@ export function computePhoneAssessment(input: PhoneAssessmentInput): PhoneAssess
   let summary = "";
   if (officialMatch.matched) {
     if (totalScamIndicators === 0) {
-      summary = `Official business number found (${business}). No community or scam reports were found for this exact number.`;
+      summary = `Official business number found (${business}). No community, indexed, or web reports were found for this exact number.`;
     } else if (totalScamIndicators === 1) {
-      summary = `Official business number found (${business}). One community report exists, but there is insufficient evidence to classify this number as a scam.`;
+      summary = `Official business number found (${business}). One report exists, but there is insufficient evidence to classify this number as a scam — it may be spoofed. Verify the caller independently.`;
     } else if (totalScamIndicators <= 4) {
-      summary = `Official business number found (${business}), but ${totalScamIndicators} scam reports exist for this exact number — it may be impersonated or spoofed. Verify the caller independently.`;
+      summary = `Official business number found (${business}), but ${storedScamIndicators} stored report(s) and ${webScamIndicators} web finding(s) exist for this exact number — it may be impersonated or spoofed. Verify the caller independently.`;
     } else {
-      summary = `Official business number found (${business}), but multiple scam reports suggest this number is actively being spoofed. Do not trust the caller based on caller ID alone.`;
+      summary = `Official business number found (${business}), but multiple reports and web findings suggest this number is actively being spoofed. Do not trust the caller based on caller ID alone.`;
     }
   } else {
     if (totalScamIndicators === 0) {
       summary = communitySafe > 0
         ? `No scam reports found for this exact number. ${communitySafe} community report(s) mark it as safe.`
-        : `No verified community reports found for this number. There is insufficient evidence to classify it.`;
-    } else if (totalScamIndicators === 1) {
-      summary = `One community report exists for this exact number. There is insufficient evidence to confirm a scam.`;
-    } else if (totalScamIndicators === 2) {
-      summary = `Two scam reports exist for this exact number across community and indexed sources. This number is suspicious but not yet confirmed.`;
+        : `No verified community, indexed, or web reports found for this number. There is insufficient evidence to classify it.`;
+    } else if (storedScamIndicators === 0 && webScamIndicators === 1) {
+      summary = `One web page mentions this exact number in a scam context. There is insufficient stored evidence to confirm a scam.`;
+    } else if (storedScamIndicators === 0 && webScamIndicators >= 2) {
+      summary = `${webScamIndicators} web pages mention this exact number in a scam context, but no stored community reports exist yet. This number is suspicious but not yet confirmed.`;
+    } else if (storedScamIndicators >= 1 && webScamIndicators >= 1) {
+      summary = `${storedScamIndicators} stored report(s) and ${webScamIndicators} web finding(s) corroborate scam activity for this exact number.`;
+    } else if (storedScamIndicators >= 3) {
+      summary = `${storedScamIndicators} scam reports across community and indexed sources indicate this number is likely associated with scams.`;
     } else {
-      summary = `${totalScamIndicators} scam reports across community and indexed sources indicate this number is likely associated with scams.`;
+      summary = `${totalScamIndicators} report(s) exist for this exact number. This number is suspicious but not yet confirmed.`;
     }
   }
 
@@ -225,7 +244,9 @@ export function computePhoneAssessment(input: PhoneAssessmentInput): PhoneAssess
     evidence: {
       official_match: officialMatch,
       total_scam_indicators: totalScamIndicators,
-      independent_sources: independentScamSources,
+      stored_scam_indicators: storedScamIndicators,
+      web_scam_indicators: webScamIndicators,
+      independent_sources: independentSources,
       recent_reports: recentReports,
       community: {
         matched: communityTotal > 0,
@@ -256,7 +277,18 @@ export function computePhoneAssessment(input: PhoneAssessmentInput): PhoneAssess
           posted_at: r.posted_at,
         })),
       },
-      assessment_basis: "stored community reports + indexed public reports + official registry (exact number match only)",
+      web: {
+        matched: webCount > 0,
+        report_count: webCount,
+        sources: webFindings.map((r) => r.url).filter(Boolean),
+        reports: webFindings.map((r) => ({
+          url: r.url,
+          title: r.title,
+          snippet: r.snippet,
+          category: r.category,
+        })),
+      },
+      assessment_basis: "stored community reports + indexed public reports + live web findings + official registry (exact number match only)",
     },
   };
 }

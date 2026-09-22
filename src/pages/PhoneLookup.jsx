@@ -76,6 +76,7 @@ export default function PhoneLookup() {
     created_date: result.created_date || new Date().toISOString(),
     community: result.community || { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0, reports: [] },
     reddit: result.reddit || { matched: false, report_count: 0, sources: [], reports: [] },
+    web: result.web || { matched: false, report_count: 0, sources: [], reports: [] },
     evidence: result.evidence || null,
     caller_id_label: result.caller_id_label || "",
     };

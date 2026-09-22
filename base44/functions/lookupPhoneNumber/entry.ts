@@ -4,7 +4,6 @@ import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '..
 import { matchOfficialNumber, computePhoneAssessment } from '../../shared/phoneEvidence.ts';
 
 const CREDIT_COST = 5;
-const LLM_STALE_MS = 1000 * 60 * 60 * 24 * 30; // reuse LLM identification for 30 days
 
 // A stored report may only be attached to a number when its own phone_number
 // normalizes to the EXACT scanned number. This prevents merging reports from
@@ -195,67 +194,97 @@ Deno.serve(async (req) => {
     const communityEvidence = await fetchCommunityEvidence();
     const redditEvidence = await fetchRedditEvidence();
 
-    // ---- LLM identification (country / carrier / business ONLY — never reports) ----
-    // Reuse cached identification when fresh; the scam SCORE is always recomputed
-    // below from the freshly-fetched stored evidence.
+    // ---- LLM: identify the number AND gather traceable web evidence ----
+    // The LLM identifies country/carrier/business and searches the web for pages
+    // that EXPLICITLY mention this exact number in a scam/fraud/spam context. Web
+    // findings are returned with source URLs and validated (exact-number mention +
+    // valid URL). They are traceable per-source evidence — never fabricated counts.
     let llmInfo: any = { country: '', carrier: '', business_name: '' };
-    let usedCache = false;
-    try {
-      const cached = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
-      const r = cached[0];
-      if (r && r.last_external_check_at && (Date.now() - new Date(r.last_external_check_at).getTime() < LLM_STALE_MS)) {
-        llmInfo = { country: r.country || '', carrier: r.carrier || '', business_name: r.business_name || '' };
-        usedCache = true;
-      }
-    } catch {}
+    let webFindings: any[] = [];
+    const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
+    const languageName = LANGUAGE_NAMES[language] || 'English';
+    const digitKey = cacheKey.replace(/\D/g, '');
+    const isNanp = digitKey.length === 11 && digitKey.startsWith('1');
+    const matchKeys = isNanp ? [digitKey, digitKey.slice(-10)] : [digitKey];
+    const prompt = `Analyze the phone number ${displayFormat}.
 
-    if (!usedCache) {
-      const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
-      const languageName = LANGUAGE_NAMES[language] || 'English';
-      const prompt = `Identify the phone number ${displayFormat}.
-
-Return ONLY valid JSON with these fields:
+Return ONLY valid JSON:
 {
   "country": "",
   "carrier": "",
   "is_known_business": false,
   "business_name": "",
   "business_source_url": "",
-  "web_notes": ""
+  "web_notes": "",
+  "findings": [{ "url": "", "title": "", "snippet": "", "category": "" }]
 }
 
-STRICT RULES:
-- Identify the country and telecom carrier from official/public data only.
-- "is_known_business" = true ONLY if an official company/government source explicitly lists THIS EXACT number as its contact number; then provide the official source URL in business_source_url.
-- Do NOT generate scam reports, report counts, scam categories, risk scores, or confidence.
-- Do NOT claim the number is "widely reported", "fraudulent", or associated with scams.
-- web_notes: brief, factual identification context only (max 200 chars). Never infer scam activity or fabricate reports.
-- If a field cannot be verified, return an empty string / false — never guess.
+PART 1 — IDENTIFICATION:
+- Identify the country and telecom carrier from official/public data.
+- "is_known_business" = true ONLY if an official company/government source explicitly lists THIS EXACT number. Provide the official source URL in business_source_url.
+- web_notes: brief factual identification context (max 200 chars). Never infer scam activity.
+
+PART 2 — WEB EVIDENCE (scam/fraud/spam findings):
+- Search the web for pages that EXPLICITLY mention the exact number ${displayFormat} (or its digits ${digitKey}) and associate it with scams, fraud, spam, or unwanted calls.
+- Include a finding ONLY when the EXACT number is explicitly written on the page. Do NOT include pages about a different number, or generic scam discussions that do not name this exact number.
+- Every finding MUST have a real, verifiable URL where the exact number appears, plus a short title and a snippet quoted/paraphrased from the page.
+- category: one of phishing, smishing, romance, crypto_investment, tech_support, government_impersonation, bank_impersonation, marketplace, delivery, other.
+- Do NOT invent URLs, titles, snippets, or counts. If no page explicitly names this exact number, return findings: [].
+- Never guess. Empty arrays/strings if unsure.
 
 Respond in ${languageName}.`;
-      try {
-        const llmResponse = await base44.integrations.Core.InvokeLLM({
-          prompt,
-          add_context_from_internet: true,
-          model: 'gemini_3_flash',
-          response_json_schema: {
-            type: 'object',
-            properties: {
-              country: { type: 'string' },
-              carrier: { type: 'string' },
-              is_known_business: { type: 'boolean' },
-              business_name: { type: 'string' },
-              business_source_url: { type: 'string' },
-              web_notes: { type: 'string' },
+    try {
+      const llmResponse = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        add_context_from_internet: true,
+        model: 'gemini_3_flash',
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            country: { type: 'string' },
+            carrier: { type: 'string' },
+            is_known_business: { type: 'boolean' },
+            business_name: { type: 'string' },
+            business_source_url: { type: 'string' },
+            web_notes: { type: 'string' },
+            findings: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  url: { type: 'string' },
+                  title: { type: 'string' },
+                  snippet: { type: 'string' },
+                  category: { type: 'string' },
+                },
+              },
             },
           },
-        });
-        const parsed = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : JSON.stringify(llmResponse)) || {};
-        llmInfo = { country: parsed.country || '', carrier: parsed.carrier || '', business_name: parsed.business_name || '' };
-      } catch (e) {
-        console.error('LLM identification failed:', e);
-        llmInfo = { country: '', carrier: '', business_name: '' };
-      }
+        },
+      });
+      const parsed = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : JSON.stringify(llmResponse)) || {};
+      llmInfo = { country: parsed.country || '', carrier: parsed.carrier || '', business_name: parsed.business_name || '' };
+      const rawFindings = Array.isArray(parsed.findings) ? parsed.findings : [];
+      webFindings = rawFindings
+        .filter((f: any) => f && typeof f.url === 'string' && /^https?:\/\//i.test(f.url))
+        .filter((f: any) => {
+          // Defensive: the finding must relate to the exact number — its URL,
+          // title, or snippet must contain the number's digit string (full
+          // international form, or the 10-digit NANP national form).
+          const blob = `${f.url} ${f.title || ''} ${f.snippet || ''}`.replace(/\D/g, '');
+          return matchKeys.some((k) => blob.includes(k));
+        })
+        .slice(0, 10)
+        .map((f: any) => ({
+          url: f.url,
+          title: String(f.title || '').slice(0, 200),
+          snippet: String(f.snippet || '').slice(0, 400),
+          category: f.category || 'other',
+        }));
+    } catch (e) {
+      console.error('LLM identification/web evidence failed:', e);
+      llmInfo = { country: '', carrier: '', business_name: '' };
+      webFindings = [];
     }
 
     // ---- Evidence-weighted assessment ----
@@ -264,6 +293,7 @@ Respond in ${languageName}.`;
       officialMatch,
       communityReports: communityEvidence.reports || [],
       redditReports: redditEvidence.reports || [],
+      webFindings,
       llmInfo,
     });
 
@@ -305,6 +335,7 @@ Respond in ${languageName}.`;
       last_checked_at: new Date().toISOString(),
       community: communityEvidence,
       reddit: redditEvidence,
+      web: { matched: webFindings.length > 0, report_count: webFindings.length, sources: webFindings.map((f) => f.url), reports: webFindings },
       evidence: assessment.evidence,
     };
 
@@ -330,8 +361,8 @@ Respond in ${languageName}.`;
     const creditsRemaining = await chargeCredits();
     return Response.json({
       result: fullResult,
-      lookup: lookup ? { id: lookup.id, phone_number: displayFormat, cached: usedCache } : { phone_number: displayFormat, cached: usedCache },
-      cached: usedCache,
+      lookup: lookup ? { id: lookup.id, phone_number: displayFormat, cached: false } : { phone_number: displayFormat, cached: false },
+      cached: false,
       credits_used: CREDIT_COST, credits_remaining: creditsRemaining, credits_limit: getMonthlyCreditLimit(user),
     });
   } catch (error) {
