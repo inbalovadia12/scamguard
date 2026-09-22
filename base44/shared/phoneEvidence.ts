@@ -31,6 +31,7 @@ const OFFICIAL_NUMBERS: Record<string, { business: string; source: string }> = {
   "+18004337300": { business: "American Airlines", source: "https://www.aa.com/contact/us" },
   "+18002211212": { business: "Delta Air Lines", source: "https://www.delta.com/contactus" },
   "+18006427676": { business: "Microsoft Support", source: "https://support.microsoft.com/contactus" },
+  "+18009256278": { business: "Walmart Customer Service", source: "https://www.walmart.com/help/contact-us" },
 };
 
 export interface OfficialMatch {
