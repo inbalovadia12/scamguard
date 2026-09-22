@@ -17,16 +17,13 @@ const STATUS_META = {
 export default function PhoneResultView({ data }) {
   const [reportOpen, setReportOpen] = useState(false);
   const risk = RISK_META[data.risk_level] || RISK_META.medium;
-  const confirmedCommunityScam =
-    (data.community?.scam_reports || 0) > 0 ||
-    (data.reddit?.report_count || 0) > 0 ||
-    (data.scam_report_count || 0) > 0;
-  const score = confirmedCommunityScam ? 100 : (data.reputation_score ?? 0);
+  const score = data.reputation_score ?? 0;
   const scoreColor = score >= 71 ? "text-destructive" : score >= 31 ? "text-warning" : "text-success";
   const barColor = score >= 71 ? "bg-destructive" : score >= 31 ? "bg-warning" : "bg-success";
-  const effectiveStatus = confirmedCommunityScam ? "SCAM" : (data.caller_id_status || "UNKNOWN");
+  const effectiveStatus = data.caller_id_status || "UNKNOWN";
   const status = STATUS_META[effectiveStatus] || STATUS_META.UNKNOWN;
-  const totalReports = data.report_count || (data.user_reports?.length || 0);
+  const communityReports = data.community?.reports || [];
+  const totalReports = data.report_count || communityReports.length;
   const hasReportCounts = (data.scam_report_count || 0) + (data.spam_report_count || 0) + (data.suspicious_report_count || 0) + (data.safe_report_count || 0) > 0;
 
   return (
@@ -74,13 +71,18 @@ export default function PhoneResultView({ data }) {
 
       {/* Verified business badge */}
       {data.verified_business && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30">
-          <BadgeCheck className="w-4 h-4 text-success flex-shrink-0" />
-          <div>
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-success/10 border border-success/30">
+          <BadgeCheck className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-success">
-              Business Match{data.business_name ? `: ${data.business_name}` : ""}
+              Official business number{data.business_name ? `: ${data.business_name}` : ""}
             </p>
-            <p className="text-xs text-muted-foreground">This number matches a business record in the available data. This does not guarantee the caller is legitimate.</p>
+            <p className="text-xs text-muted-foreground">This number is listed as an official contact number. This does not guarantee the caller is legitimate — scammers can spoof official numbers. Verify independently.</p>
+            {data.evidence?.official_match?.source && (
+              <a href={data.evidence.official_match.source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline break-all">
+                Source: {data.evidence.official_match.source}
+              </a>
+            )}
           </div>
         </div>
       )}
@@ -161,21 +163,47 @@ export default function PhoneResultView({ data }) {
         <p className="text-sm text-muted-foreground leading-relaxed">{data.summary}</p>
       )}
 
-      {/* User reports */}
-      {data.user_reports?.length > 0 && (
+      {/* Stored community reports (exact number match only) */}
+      {communityReports.length > 0 ? (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            <Users className="w-3.5 h-3.5" /> User Reports
+            <Users className="w-3.5 h-3.5" /> Community Report{communityReports.length === 1 ? "" : "s"}
           </div>
           <div className="space-y-2">
-            {data.user_reports.map((report, i) => (
-              <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+            {communityReports.map((report, i) => (
+              <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground border border-border/40 rounded-lg p-2.5 bg-muted/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary/40 mt-2 flex-shrink-0" />
-                <span className="leading-relaxed">{report}</span>
+                <div className="min-w-0">
+                  <p className="leading-relaxed">{report.summary || "No description provided."}</p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-1">
+                    {report.type ? <span className="capitalize">{report.type}</span> : null}
+                    {report.category ? ` · ${report.category}` : ""}
+                    {report.created ? ` · ${report.created}` : ""}
+                  </p>
+                  {Array.isArray(report.sources) && report.sources.length > 0 && (
+                    <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                      {report.sources.map((s, j) => (
+                        <span key={j}>
+                          {j > 0 && " · "}
+                          {s.startsWith("http") ? (
+                            <a href={s} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">{s}</a>
+                          ) : s}
+                        </span>
+                      ))}
+                    </p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
+      ) : (
+        !(data.reddit?.matched) && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/20 rounded-lg p-3 border border-border/40">
+            <Users className="w-3.5 h-3.5 flex-shrink-0" />
+            No verified community reports found for this exact number.
+          </div>
+        )
       )}
 
       {/* Sources */}

@@ -53,12 +53,11 @@ export default function PhoneLookup() {
   };
 
   const applyLookupToResult = (phone, result) => {
-    const confirmedCommunityScam = (result.community?.scam_reports || 0) > 0 || (result.reddit?.report_count || 0) > 0 || (result.scam_report_count || 0) > 0;
     return {
     phone_number: phone,
     country: result.country,
     carrier: result.carrier,
-    reputation_score: confirmedCommunityScam ? 100 : (result.reputation_score ?? 0),
+    reputation_score: result.reputation_score ?? 0,
     risk_level: result.risk_level,
     user_reports: result.user_reports || [],
     scam_categories: result.scam_categories || [],
@@ -75,8 +74,10 @@ export default function PhoneLookup() {
     business_name: result.business_name || "",
     caller_id_label: result.caller_id_label || "",
     created_date: result.created_date || new Date().toISOString(),
-    community: result.community || { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0 },
-    reddit: result.reddit || { matched: false, report_count: 0, sources: [] },
+    community: result.community || { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0, reports: [] },
+    reddit: result.reddit || { matched: false, report_count: 0, sources: [], reports: [] },
+    evidence: result.evidence || null,
+    caller_id_label: result.caller_id_label || "",
     };
   };
 
