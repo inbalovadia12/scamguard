@@ -37,6 +37,34 @@ function enforceConsistency(score: number, risk: string): { score: number; risk:
   return { score: s, risk: r };
 }
 
+// The LLM is inconsistent about verified_business even when it found the business
+// name. Normalize any result (fresh or cached) so a found business is consistently
+// classified as a verified, SAFE number with a clear summary. A scam that happens
+// to carry a business name (impersonation) is NOT promoted — the scam classification
+// is preserved when there is scam/spam/suspicious evidence.
+function normalizeBusinessResult(result: any): any {
+  if (!result) return result;
+  const bn = String(result.business_name || '').trim();
+  const realBusiness = !!bn && !/^(n\/a|unknown|none|not found|null|undefined|\-)$/i.test(bn);
+  const scam = result.scam_report_count || 0;
+  const spam = result.spam_report_count || 0;
+  const susp = result.suspicious_report_count || 0;
+  const risky = scam > 0 || spam > 0 || susp > 0 || result.risk_level === 'high' || (result.reputation_score || 0) >= 41;
+  if (realBusiness && !result.verified_business && !risky) {
+    result.verified_business = true;
+  }
+  const VAGUE_SUMMARY = /insufficient evidence|no (?:verified )?community reports|no reports found|no scam reports found/i;
+  if (result.verified_business && realBusiness && VAGUE_SUMMARY.test(result.summary || '')) {
+    result.summary = `This number belongs to ${bn}. No scam reports were found for this number.`;
+  }
+  if (result.verified_business) {
+    result.caller_id_status = 'SAFE';
+    result.confidence_score = 100;
+    result.caller_id_label = 'Vardin: Safe';
+  }
+  return result;
+}
+
 function parseJsonFromText(text: string): any {
   if (!text) return null;
   try { return JSON.parse(text); } catch {}
@@ -229,6 +257,7 @@ Deno.serve(async (req) => {
           community: communityEvidence,
           reddit: redditEvidence,
         };
+        normalizeBusinessResult(result);
         return Response.json({
           result,
           lookup: { id: r.id, phone_number: r.phone_number, cached: true },
@@ -363,18 +392,7 @@ Respond in ${languageName}.`;
     } else {
       result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
     }
-    // The LLM is inconsistent about verified_business even when it identified the
-    // business name. If a business name was found, treat the number as a verified
-    // business so the classification is consistent (SAFE, high confidence).
-    if (result.business_name && !result.verified_business) {
-      result.verified_business = true;
-    }
-    // When verified, replace any vague "insufficient evidence" placeholder the LLM
-    // sometimes returns with a summary that names the identified business.
-    const VAGUE_SUMMARY = /insufficient evidence|no (?:verified )?community reports|no reports found|no scam reports found/i;
-    if (result.verified_business && result.business_name && VAGUE_SUMMARY.test(result.summary || '')) {
-      result.summary = `This number belongs to ${result.business_name}. No scam reports were found for this number.`;
-    }
+    result = normalizeBusinessResult(result);
     const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
     const cleanSummary = sanitizeSummary(result.summary || '');
 
