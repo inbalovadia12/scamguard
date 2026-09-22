@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity, Flag, Globe } from "lucide-react";
+import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity, Flag } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { RISK_META } from "@/components/scam/ScamReportCard";
 import CommunityIntel, { matchCategoriesToEnum } from "@/components/community/CommunityIntel";
@@ -17,14 +17,16 @@ const STATUS_META = {
 export default function PhoneResultView({ data }) {
   const [reportOpen, setReportOpen] = useState(false);
   const risk = RISK_META[data.risk_level] || RISK_META.medium;
-  const score = data.reputation_score ?? 0;
+  const confirmedCommunityScam =
+    (data.community?.scam_reports || 0) > 0 ||
+    (data.reddit?.report_count || 0) > 0 ||
+    (data.scam_report_count || 0) > 0;
+  const score = confirmedCommunityScam ? 100 : (data.reputation_score ?? 0);
   const scoreColor = score >= 71 ? "text-destructive" : score >= 31 ? "text-warning" : "text-success";
   const barColor = score >= 71 ? "bg-destructive" : score >= 31 ? "bg-warning" : "bg-success";
-  const effectiveStatus = data.caller_id_status || "UNKNOWN";
+  const effectiveStatus = confirmedCommunityScam ? "SCAM" : (data.caller_id_status || "UNKNOWN");
   const status = STATUS_META[effectiveStatus] || STATUS_META.UNKNOWN;
-  const communityReports = data.community?.reports || [];
-  const webFindings = data.web?.reports || [];
-  const totalReports = data.report_count || communityReports.length;
+  const totalReports = data.report_count || (data.user_reports?.length || 0);
   const hasReportCounts = (data.scam_report_count || 0) + (data.spam_report_count || 0) + (data.suspicious_report_count || 0) + (data.safe_report_count || 0) > 0;
 
   return (
@@ -72,18 +74,13 @@ export default function PhoneResultView({ data }) {
 
       {/* Verified business badge */}
       {data.verified_business && (
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-success/10 border border-success/30">
-          <BadgeCheck className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
-          <div className="min-w-0">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30">
+          <BadgeCheck className="w-4 h-4 text-success flex-shrink-0" />
+          <div>
             <p className="text-sm font-semibold text-success">
-              Official business number{data.business_name ? `: ${data.business_name}` : ""}
+              Business Match{data.business_name ? `: ${data.business_name}` : ""}
             </p>
-            <p className="text-xs text-muted-foreground">This number is listed as an official contact number. This does not guarantee the caller is legitimate — scammers can spoof official numbers. Verify independently.</p>
-            {data.evidence?.official_match?.source && (
-              <a href={data.evidence.official_match.source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline break-all">
-                Source: {data.evidence.official_match.source}
-              </a>
-            )}
+            <p className="text-xs text-muted-foreground">This number matches a business record in the available data. This does not guarantee the caller is legitimate.</p>
           </div>
         </div>
       )}
@@ -164,68 +161,17 @@ export default function PhoneResultView({ data }) {
         <p className="text-sm text-muted-foreground leading-relaxed">{data.summary}</p>
       )}
 
-      {/* Stored community reports (exact number match only) */}
-      {communityReports.length > 0 ? (
+      {/* User reports */}
+      {data.user_reports?.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            <Users className="w-3.5 h-3.5" /> Community Report{communityReports.length === 1 ? "" : "s"}
+            <Users className="w-3.5 h-3.5" /> User Reports
           </div>
           <div className="space-y-2">
-            {communityReports.map((report, i) => (
-              <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground border border-border/40 rounded-lg p-2.5 bg-muted/20">
+            {data.user_reports.map((report, i) => (
+              <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary/40 mt-2 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="leading-relaxed">{report.summary || "No description provided."}</p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-1">
-                    {report.type ? <span className="capitalize">{report.type}</span> : null}
-                    {report.category ? ` · ${report.category}` : ""}
-                    {report.created ? ` · ${report.created}` : ""}
-                  </p>
-                  {Array.isArray(report.sources) && report.sources.length > 0 && (
-                    <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-                      {report.sources.map((s, j) => (
-                        <span key={j}>
-                          {j > 0 && " · "}
-                          {s.startsWith("http") ? (
-                            <a href={s} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">{s}</a>
-                          ) : s}
-                        </span>
-                      ))}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        !(data.reddit?.matched) && !(data.web?.matched) && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/20 rounded-lg p-3 border border-border/40">
-            <Users className="w-3.5 h-3.5 flex-shrink-0" />
-            No verified community or web reports found for this exact number.
-          </div>
-        )
-      )}
-
-      {/* Web evidence (live search findings, each with a source URL) */}
-      {webFindings.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            <Globe className="w-3.5 h-3.5" /> Web Evidence ({webFindings.length})
-          </div>
-          <div className="space-y-2">
-            {webFindings.map((f, i) => (
-              <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground border border-border/40 rounded-lg p-2.5 bg-muted/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary/40 mt-2 flex-shrink-0" />
-                <div className="min-w-0">
-                  {f.title && <p className="font-medium text-foreground/80 leading-snug">{f.title}</p>}
-                  {f.snippet && <p className="leading-relaxed mt-0.5">{f.snippet}</p>}
-                  <p className="text-[11px] mt-1">
-                    {f.category && <span className="capitalize text-muted-foreground/70">{f.category}</span>}
-                    {f.category && " · "}
-                    <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">{f.url}</a>
-                  </p>
-                </div>
+                <span className="leading-relaxed">{report}</span>
               </div>
             ))}
           </div>
@@ -249,12 +195,12 @@ export default function PhoneResultView({ data }) {
       )}
 
       {/* Source breakdown */}
-      {(data.community?.matched || data.reddit?.matched || data.web?.matched) && (
+      {(data.community?.matched || data.reddit?.matched) && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <Users className="w-3.5 h-3.5" /> Evidence Sources
           </div>
-          <div className="grid sm:grid-cols-3 gap-2">
+          <div className="grid sm:grid-cols-2 gap-2">
             <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
               <p className="text-sm font-semibold">Vardin Community</p>
               <p className="text-xs text-muted-foreground mt-1">{data.community?.report_count || 0} phone report{(data.community?.report_count || 0) === 1 ? "" : "s"}</p>
@@ -262,10 +208,6 @@ export default function PhoneResultView({ data }) {
             <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
               <p className="text-sm font-semibold">Reddit · r/ScamNumbers</p>
               <p className="text-xs text-muted-foreground mt-1">{data.reddit?.report_count || 0} indexed report{(data.reddit?.report_count || 0) === 1 ? "" : "s"}</p>
-            </div>
-            <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
-              <p className="text-sm font-semibold">Web Search</p>
-              <p className="text-xs text-muted-foreground mt-1">{data.web?.report_count || 0} source page{(data.web?.report_count || 0) === 1 ? "" : "s"}</p>
             </div>
           </div>
         </div>

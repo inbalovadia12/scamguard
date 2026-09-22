@@ -3,11 +3,10 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowRight, ShieldCheck, Lock, Crown, AlertTriangle, QrCode, FileText } from "lucide-react";
+import { Loader2, ArrowRight, ShieldCheck, Lock, Crown, AlertTriangle, QrCode } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { getCreditStatus } from "@/lib/credits";
-import { Switch } from "@/components/ui/switch";
 import ScanTypeGrid, { SCAN_TYPES, ANSWER_TYPES, getScanCost } from "@/components/scam/ScanTypeGrid";
 import FileDropzone from "@/components/scam/FileDropzone";
 import AdvancedScanResults from "@/components/scam/AdvancedScanResults";
@@ -264,18 +263,6 @@ export default function AdvancedScanner() {
                 className="h-11 text-base rounded-xl" />
               
                   <p className="text-xs text-muted-foreground">Includes VirusTotal reputation check across 70+ security engines.</p>
-                  <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${answerType === "detailed" ? "bg-primary/5 border-primary/30" : "bg-card border-border/50"}`}>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <FileText className={`w-4 h-4 flex-shrink-0 ${answerType === "detailed" ? "text-primary" : "text-muted-foreground"}`} />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">Detailed report</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {answerType === "detailed" ? "Full breakdown — explanation, tactics, sources" : "Quick verdict — risk level and score only"}
-                        </p>
-                      </div>
-                    </div>
-                    <Switch checked={answerType === "detailed"} onCheckedChange={(v) => setAnswerType(v ? "detailed" : "quick")} />
-                  </div>
                 </>
             }
               {selectedType?.inputType === "image" &&

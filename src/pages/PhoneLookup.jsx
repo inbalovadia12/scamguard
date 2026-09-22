@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Phone, Search, Loader2, History, Clock, ChevronRight, AlertTriangle, ShieldCheck, ShieldAlert, CheckCircle2, MapPin, Radio, FileText } from "lucide-react";
+import { Phone, Search, Loader2, History, Clock, ChevronRight, AlertTriangle, ShieldCheck, ShieldAlert, CheckCircle2, MapPin, Radio } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PhoneResultView from "@/components/scam/PhoneResultView";
-import QuickVerdictCard from "@/components/scam/QuickVerdictCard";
-import { Switch } from "@/components/ui/switch";
 import PlanGate from "@/components/PlanGate";
 import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
@@ -28,7 +26,6 @@ export default function PhoneLookup() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [creditStatus, setCreditStatus] = useState(null);
   const [checkingPlan, setCheckingPlan] = useState(true);
-  const [detailedReport, setDetailedReport] = useState(true);
 
   useEffect(() => {
     const init = async () => {
@@ -53,11 +50,12 @@ export default function PhoneLookup() {
   };
 
   const applyLookupToResult = (phone, result) => {
+    const confirmedCommunityScam = (result.community?.scam_reports || 0) > 0 || (result.reddit?.report_count || 0) > 0 || (result.scam_report_count || 0) > 0;
     return {
     phone_number: phone,
     country: result.country,
     carrier: result.carrier,
-    reputation_score: result.reputation_score ?? 0,
+    reputation_score: confirmedCommunityScam ? 100 : (result.reputation_score ?? 0),
     risk_level: result.risk_level,
     user_reports: result.user_reports || [],
     scam_categories: result.scam_categories || [],
@@ -74,11 +72,8 @@ export default function PhoneLookup() {
     business_name: result.business_name || "",
     caller_id_label: result.caller_id_label || "",
     created_date: result.created_date || new Date().toISOString(),
-    community: result.community || { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0, reports: [] },
-    reddit: result.reddit || { matched: false, report_count: 0, sources: [], reports: [] },
-    web: result.web || { matched: false, report_count: 0, sources: [], reports: [] },
-    evidence: result.evidence || null,
-    caller_id_label: result.caller_id_label || "",
+    community: result.community || { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0 },
+    reddit: result.reddit || { matched: false, report_count: 0, sources: [] },
     };
   };
 
@@ -176,18 +171,6 @@ export default function PhoneLookup() {
             {looking ? "Checking…" : "Check Number"}
           </Button>
         </div>
-        <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${detailedReport ? "bg-primary/5 border-primary/30" : "bg-card border-border/50"}`}>
-          <div className="flex items-center gap-2.5 min-w-0">
-            <FileText className={`w-4 h-4 flex-shrink-0 ${detailedReport ? "text-primary" : "text-muted-foreground"}`} />
-            <div className="min-w-0">
-              <p className="text-sm font-medium">Detailed report</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {detailedReport ? "Full breakdown — explanation, sources, community reports" : "Quick summary — risk level and score only"}
-              </p>
-            </div>
-          </div>
-          <Switch checked={detailedReport} onCheckedChange={setDetailedReport} />
-        </div>
         {error && (
           <div className="flex items-center gap-2 text-sm text-destructive">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
@@ -205,45 +188,39 @@ export default function PhoneLookup() {
         </div>
       )}
 
-      {/* Result — quick summary or full details */}
+      {/* Result — quick risk badge + full details */}
       {!looking && currentResult && cfg && RiskIcon && (
-        detailedReport ? (
-          <div className="space-y-4 animate-slide-up">
-            <div className={`rounded-3xl border-2 ${cfg.border} ${cfg.bg} p-6 sm:p-8`}>
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <div className={`w-14 h-14 rounded-2xl ${cfg.bg} flex items-center justify-center`}>
-                    <RiskIcon className={`w-7 h-7 ${cfg.color}`} />
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Phone Risk</p>
-                    <h2 className={`text-2xl font-bold font-heading ${cfg.color}`}>{cfg.label}</h2>
-                  </div>
+        <div className="space-y-4 animate-slide-up">
+          <div className={`rounded-3xl border-2 ${cfg.border} ${cfg.bg} p-6 sm:p-8`}>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className={`w-14 h-14 rounded-2xl ${cfg.bg} flex items-center justify-center`}>
+                  <RiskIcon className={`w-7 h-7 ${cfg.color}`} />
                 </div>
-                <div className="text-right">
-                  <div className="text-4xl font-bold font-heading">{currentResult.reputation_score}</div>
-                  <div className="text-xs text-muted-foreground">/100 risk score</div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Phone Risk</p>
+                  <h2 className={`text-2xl font-bold font-heading ${cfg.color}`}>{cfg.label}</h2>
                 </div>
               </div>
-              <div className="mt-5 h-2.5 bg-muted rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-500 ${currentResult.reputation_score >= 71 ? "bg-destructive" : currentResult.reputation_score >= 41 ? "bg-warning" : "bg-success"}`} style={{ width: `${currentResult.reputation_score}%` }} />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
-                {currentResult.country && <div className="rounded-xl bg-background/60 border border-border/40 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Country</p><p className="text-sm font-semibold mt-1 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-primary" />{currentResult.country}</p></div>}
-                {currentResult.carrier && <div className="rounded-xl bg-background/60 border border-border/40 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Carrier</p><p className="text-sm font-semibold mt-1 flex items-center gap-1.5"><Radio className="w-3.5 h-3.5 text-primary" />{currentResult.carrier}</p></div>}
-                {currentResult.caller_id_status && <div className="rounded-xl bg-background/60 border border-border/40 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Classification</p><p className="text-sm font-semibold mt-1 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-primary" />{currentResult.caller_id_status}</p></div>}
+              <div className="text-right">
+                <div className="text-4xl font-bold font-heading">{currentResult.reputation_score}</div>
+                <div className="text-xs text-muted-foreground">/100 risk score</div>
               </div>
             </div>
+            <div className="mt-5 h-2.5 bg-muted rounded-full overflow-hidden">
+              <div className={`h-full rounded-full transition-all duration-500 ${currentResult.reputation_score >= 71 ? "bg-destructive" : currentResult.reputation_score >= 41 ? "bg-warning" : "bg-success"}`} style={{ width: `${currentResult.reputation_score}%` }} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+              {currentResult.country && <div className="rounded-xl bg-background/60 border border-border/40 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Country</p><p className="text-sm font-semibold mt-1 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-primary" />{currentResult.country}</p></div>}
+              {currentResult.carrier && <div className="rounded-xl bg-background/60 border border-border/40 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Carrier</p><p className="text-sm font-semibold mt-1 flex items-center gap-1.5"><Radio className="w-3.5 h-3.5 text-primary" />{currentResult.carrier}</p></div>}
+              {currentResult.caller_id_status && <div className="rounded-xl bg-background/60 border border-border/40 p-3"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">Classification</p><p className="text-sm font-semibold mt-1 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-primary" />{currentResult.caller_id_status}</p></div>}
+            </div>
+          </div>
 
-            <div className="bg-card rounded-2xl border border-border/50 p-5">
-              <PhoneResultView data={currentResult} />
-            </div>
+          <div className="bg-card rounded-2xl border border-border/50 p-5">
+            <PhoneResultView data={currentResult} />
           </div>
-        ) : (
-          <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6 animate-slide-up">
-            <QuickVerdictCard kind="phone" data={currentResult} />
-          </div>
-        )
+        </div>
       )}
 
       {/* History */}

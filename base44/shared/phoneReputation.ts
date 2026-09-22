@@ -41,22 +41,16 @@ export function statusFromReputation(input: any): CallerIdStatus {
   const safe = input.safe_report_count || 0;
   const score = input.reputation_score ?? 0;
 
-  // Verified official business: safe unless strong evidence of spoofing.
-  if (input.verified_business) {
-    if (scam >= 5) return "SCAM";
-    if (scam >= 2) return "SUSPICIOUS";
-    return "SAFE";
-  }
+  if (input.verified_business) return "SAFE";
 
-  // A single scam report is NOT enough to classify a number as SCAM.
-  if (scam >= 3) return "SCAM";
-  if (scam >= 1) return "SUSPICIOUS";
-  if (spam >= 3) return "SPAM";
-  if (spam >= 1 || susp >= 1) return "SUSPICIOUS";
-  if (safe > 0 && scam === 0 && spam === 0 && susp === 0) return "SAFE";
+  if (scam > 0 && scam >= Math.max(spam, susp, 1)) return "SCAM";
+  if (spam > 0 && spam >= Math.max(susp, 1)) return "SPAM";
+  if (susp > 0) return "SUSPICIOUS";
+  if (safe > 0) return "SAFE";
 
-  // fall back to the score only when no community reports exist; never auto-SCAM.
-  if (score >= 71 || input.risk_level === "high") return "SUSPICIOUS";
+  // fall back to the LLM risk level / score when no community reports exist
+  if (score >= 71 || input.risk_level === "high") return "SCAM";
+  if (score >= 41 || input.risk_level === "medium") return "SUSPICIOUS";
   if (score > 0 && score <= 30) return "SAFE";
 
   return "UNKNOWN";
@@ -76,28 +70,19 @@ export function computeLabel(status: CallerIdStatus, config: any): string {
 
 // Confidence in the classification: how much evidence backs the status.
 export function computeConfidence(input: any): number {
-  const scam = input.scam_report_count || 0;
-  const safe = input.safe_report_count || 0;
   const total =
     (input.scam_report_count || 0) +
     (input.spam_report_count || 0) +
     (input.suspicious_report_count || 0) +
     (input.safe_report_count || 0);
-  if (input.verified_business) {
-    if (scam === 0) return 90;
-    if (scam >= 5) return 90;
-    if (scam >= 2) return 50;
-    return 25;
-  }
-  if (scam >= 5) return 90;
-  if (scam >= 3) return 75;
-  if (scam === 2) return 50;
-  if (scam === 1) return 20; // "insufficient evidence"
-  if (safe > 0 && scam === 0) return 55;
-  if (total >= 5) return 55;
+  if (input.verified_business) return 100;
+  if (total >= 10) return 95;
+  if (total >= 5) return 85;
+  if (total >= 3) return 75;
+  if (total >= 1) return 65;
   const score = input.reputation_score ?? 0;
-  if (score > 0) return 25;
-  return 10;
+  if (score > 0) return 45; // LLM-only, lower confidence
+  return 0;
 }
 
 // Whether a reputation record should appear in the published Call Directory dataset.
@@ -192,9 +177,9 @@ export async function upsertPhoneReputation(base44: any, data: any): Promise<any
       safe_report_count: patch.safe_report_count ?? rep.safe_report_count,
       verified_business: patch.verified_business ?? rep.verified_business,
     };
-    patch.caller_id_status = data.caller_id_status ?? statusFromReputation(next);
+    patch.caller_id_status = statusFromReputation(next);
     patch.caller_id_label = computeLabel(patch.caller_id_status, config);
-    patch.confidence_score = data.confidence_score ?? computeConfidence(next);
+    patch.confidence_score = computeConfidence(next);
 
     await base44.asServiceRole.entities.PhoneReputation.update(rep.id, patch);
     return { ...rep, ...patch };
@@ -206,7 +191,7 @@ export async function upsertPhoneReputation(base44: any, data: any): Promise<any
   const spam = rc ? (rc.spam || 0) : (data.report?.type === "spam" ? (data.report.count ?? 1) : 0);
   const susp = rc ? (rc.suspicious || 0) : (data.report?.type === "suspicious" ? (data.report.count ?? 1) : 0);
   const safe = rc ? (rc.safe || 0) : (data.report?.type === "safe" ? (data.report.count ?? 1) : 0);
-  const status = data.caller_id_status ?? statusFromReputation({
+  const status = statusFromReputation({
     reputation_score: data.reputation_score,
     risk_level: data.risk_level,
     scam_report_count: scam,
@@ -225,7 +210,7 @@ export async function upsertPhoneReputation(base44: any, data: any): Promise<any
     reputation_score: data.reputation_score || 0,
     risk_level: data.risk_level || "low",
     caller_id_status: status,
-    confidence_score: data.confidence_score ?? computeConfidence({
+    confidence_score: computeConfidence({
       scam_report_count: scam, spam_report_count: spam, suspicious_report_count: susp,
       safe_report_count: safe, verified_business: data.verified_business, reputation_score: data.reputation_score,
     }),
