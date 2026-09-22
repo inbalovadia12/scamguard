@@ -193,9 +193,15 @@ Deno.serve(async (req) => {
     // ---- Cache hit (check fresh PhoneReputation + fetch community/reddit evidence) ----
     try {
       const cached = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
-      const STALE_MS = 1000 * 60 * 60 * 24 * 7;
+      const FRESH_MS = 1000 * 60 * 60 * 24 * 7;
+      const MIN_RECHECK_MS = 1000 * 60 * 60; // re-run web search at most hourly for uninformative results
       const r = cached[0];
-      if (r && r.last_external_check_at && (Date.now() - new Date(r.last_external_check_at).getTime() < STALE_MS)) {
+      const ageMs = r?.last_external_check_at ? Date.now() - new Date(r.last_external_check_at).getTime() : Infinity;
+      const hasClassification = !!r?.caller_id_status && r.caller_id_status !== 'UNKNOWN';
+      const hasEvidence = (r?.scam_report_count || 0) > 0 || (r?.spam_report_count || 0) > 0 || (r?.suspicious_report_count || 0) > 0 || (r?.safe_report_count || 0) > 0 || !!r?.verified_business;
+      const isInformative = hasClassification || hasEvidence;
+      const serveCache = !!r && !!r.last_external_check_at && (isInformative ? ageMs < FRESH_MS : ageMs < MIN_RECHECK_MS);
+      if (serveCache) {
         const communityEvidence = await fetchCommunityEvidence();
         const redditEvidence = await fetchRedditEvidence();
         
@@ -311,8 +317,9 @@ Rules:
 reputation_score (0-100, HIGHER = more dangerous): 0-15 = confirmed legitimate business or no negative reports; 16-35 = limited/anecdotal negative reports; 36-60 = suspicious or spam; 61-80 = strong scam indicators / multiple scam reports; 81-100 = confirmed scam number.
 risk_level: "low" (no negative reports, or confirmed legitimate business), "medium" (suspicious/spam), "high" (strong scam evidence).
 confidence_score (0-100): how confident you are based on the evidence found.
-verified_business: true if you found this number officially listed by a known business or organization. Set business_name to that business's name.
+verified_business: true if you found this number officially listed by a known business or organization — in that case you MUST set verified_business=true AND business_name to the business's name. If you could not identify a specific business, set verified_business=false and business_name="".
 summary (max 300 chars): describe what you found. If the number belongs to a known business, name it (e.g., "This is the customer service line for Target."). If you found scam reports, summarize them. If you found nothing, say "No scam reports found for this number." Never mention background checks or future processing.
+sources: ALWAYS include the full URLs of the websites where you found this information (official business "contact" pages, complaint sites, Reddit posts, news articles). If you found nothing, return an empty array.
 
 Respond in ${languageName}.`;
 
@@ -355,6 +362,18 @@ Respond in ${languageName}.`;
       result = llmResponse;
     } else {
       result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
+    }
+    // The LLM is inconsistent about verified_business even when it identified the
+    // business name. If a business name was found, treat the number as a verified
+    // business so the classification is consistent (SAFE, high confidence).
+    if (result.business_name && !result.verified_business) {
+      result.verified_business = true;
+    }
+    // When verified, replace any vague "insufficient evidence" placeholder the LLM
+    // sometimes returns with a summary that names the identified business.
+    const VAGUE_SUMMARY = /insufficient evidence|no (?:verified )?community reports|no reports found|no scam reports found/i;
+    if (result.verified_business && result.business_name && VAGUE_SUMMARY.test(result.summary || '')) {
+      result.summary = `This number belongs to ${result.business_name}. No scam reports were found for this number.`;
     }
     const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
     const cleanSummary = sanitizeSummary(result.summary || '');
