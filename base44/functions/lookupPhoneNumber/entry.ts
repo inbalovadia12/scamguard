@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-import { upsertPhoneReputation } from '../../shared/phoneReputation.ts';
+import { upsertPhoneReputation, statusFromReputation, computeConfidence, computeLabel, DEFAULT_CONFIG } from '../../shared/phoneReputation.ts';
 import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
 
 const CREDIT_COST = 5;
@@ -61,6 +61,41 @@ function normalizeBusinessResult(result: any): any {
     result.caller_id_status = 'SAFE';
     result.confidence_score = 100;
     result.caller_id_label = 'Vardin: Safe';
+  }
+  return result;
+}
+
+// Merge authoritative community + Reddit evidence into a lookup result so the
+// classification reflects real reports even when the LLM's web search found
+// nothing. Uses the max per category to avoid double-counting reports the LLM
+// may have already seen on the same sites. Verified businesses are never
+// downgraded — a Reddit "scam" report about a real business is a spoofing
+// warning, not proof the business itself is a scam.
+function mergeEvidence(result: any, communityEvidence: any, redditEvidence: any): any {
+  if (!result) return result;
+  const communityScam = (communityEvidence?.scam_reports || 0) + (redditEvidence?.report_count || 0);
+  const communitySpam = communityEvidence?.spam_reports || 0;
+  const communitySusp = communityEvidence?.suspicious_reports || 0;
+  const communitySafe = communityEvidence?.safe_reports || 0;
+  result.scam_report_count = Math.max(result.scam_report_count || 0, communityScam);
+  result.spam_report_count = Math.max(result.spam_report_count || 0, communitySpam);
+  result.suspicious_report_count = Math.max(result.suspicious_report_count || 0, communitySusp);
+  result.safe_report_count = Math.max(result.safe_report_count || 0, communitySafe);
+  result.report_count = (result.scam_report_count || 0) + (result.spam_report_count || 0) + (result.suspicious_report_count || 0) + (result.safe_report_count || 0);
+
+  if ((result.scam_report_count || 0) > 0 && !result.verified_business) {
+    if ((result.reputation_score ?? 0) < 71) { result.reputation_score = 75; result.risk_level = 'high'; }
+  }
+
+  const evidenceSources = [...(Array.isArray(result.sources) ? result.sources : []), ...(Array.isArray(redditEvidence?.sources) ? redditEvidence.sources : [])];
+  const seenSrc = new Set<string>();
+  result.sources = evidenceSources.filter((s: string) => { if (!s || seenSrc.has(s)) return false; seenSrc.add(s); return true; });
+
+  if ((result.scam_report_count || 0) > 0 && /no scam reports found|no specific (?:scam|information)|yielded no specific|no negative reports/i.test(result.summary || '')) {
+    const titles = (redditEvidence?.reports || []).map((r: any) => r.title).filter(Boolean).slice(0, 3);
+    result.summary = titles.length > 0
+      ? `Community scam reports flag this number: ${titles.join('; ')}.`
+      : `${result.scam_report_count} scam report(s) from community sources flag this number.`;
   }
   return result;
 }
@@ -258,6 +293,10 @@ Deno.serve(async (req) => {
           reddit: redditEvidence,
         };
         normalizeBusinessResult(result);
+        mergeEvidence(result, communityEvidence, redditEvidence);
+        result.caller_id_status = statusFromReputation(result);
+        result.confidence_score = computeConfidence(result);
+        result.caller_id_label = computeLabel(result.caller_id_status, DEFAULT_CONFIG);
         return Response.json({
           result,
           lookup: { id: r.id, phone_number: r.phone_number, cached: true },
@@ -400,20 +439,38 @@ Respond in ${languageName}.`;
     const communityEvidence = await fetchCommunityEvidence();
     const redditEvidence = await fetchRedditEvidence();
 
+    // Merge authoritative community + Reddit evidence into the LLM result so the
+    // classification reflects real reports even when the web search found nothing.
+    const merged = mergeEvidence(
+      {
+        reputation_score: consistentScore,
+        risk_level: consistentRisk,
+        summary: cleanSummary,
+        sources: Array.isArray(result.sources) ? result.sources : [],
+        scam_report_count: result.scam_report_count || 0,
+        spam_report_count: result.spam_report_count || 0,
+        suspicious_report_count: result.suspicious_report_count || 0,
+        safe_report_count: result.safe_report_count || 0,
+        verified_business: result.verified_business || false,
+      },
+      communityEvidence,
+      redditEvidence,
+    );
+
     const fullResult = {
       country: result.country || '',
       carrier: result.carrier || '',
-      reputation_score: consistentScore,
-      risk_level: consistentRisk,
+      reputation_score: merged.reputation_score,
+      risk_level: merged.risk_level,
       user_reports: Array.isArray(result.user_reports) ? result.user_reports : [],
       scam_categories: Array.isArray(result.scam_categories) ? result.scam_categories : [],
-      summary: cleanSummary,
-      sources: Array.isArray(result.sources) ? result.sources : [],
-      report_count: (result.scam_report_count || 0) + (result.spam_report_count || 0) + (result.suspicious_report_count || 0) + (result.safe_report_count || 0),
-      scam_report_count: result.scam_report_count || 0,
-      spam_report_count: result.spam_report_count || 0,
-      suspicious_report_count: result.suspicious_report_count || 0,
-      safe_report_count: result.safe_report_count || 0,
+      summary: merged.summary,
+      sources: merged.sources,
+      report_count: merged.report_count,
+      scam_report_count: merged.scam_report_count,
+      spam_report_count: merged.spam_report_count,
+      suspicious_report_count: merged.suspicious_report_count,
+      safe_report_count: merged.safe_report_count,
       caller_id_status: 'UNKNOWN',
       confidence_score: Math.max(0, Math.min(100, Number(result.confidence_score) || 0)),
       verified_business: result.verified_business || false,
@@ -437,6 +494,12 @@ Respond in ${languageName}.`;
       last_external_check_at: new Date().toISOString(),
       verified_business: fullResult.verified_business,
       business_name: fullResult.business_name,
+      report_counts: {
+        scam: merged.scam_report_count,
+        spam: merged.spam_report_count,
+        suspicious: merged.suspicious_report_count,
+        safe: merged.safe_report_count,
+      },
     });
 
     fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';

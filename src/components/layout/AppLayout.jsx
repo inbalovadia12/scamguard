@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Search, Users, Bell, Bot, Crown, Menu, X, LogOut, MessageSquare, ChevronRight, GraduationCap, Puzzle, Phone, Image as ImageIcon,   MessageCircle, Sparkles, Scan, Siren, History,
-  Bitcoin, Smartphone, Gift,
+  Bitcoin, Smartphone, Gift, MapPin,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -32,6 +32,7 @@ const NAV_SECTIONS = [
       { path: "/check", labelKey: "nav.message_check", icon: Search },
       { path: "/image-scanner", labelKey: "nav.image_scan", icon: ImageIcon },
       { path: "/crypto-scanner", label: "Crypto Scanner", icon: Bitcoin },
+      { path: "/local-scam-finder", label: "Local Scam Finder", icon: MapPin },
     ],
   },
   {
