@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Phone, Search, Loader2, History, Clock, ChevronRight, AlertTriangle, ShieldCheck, ShieldAlert, CheckCircle2, MapPin, Radio } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Phone, Search, Loader2, History, ChevronRight, AlertTriangle, ShieldCheck, ShieldAlert, CheckCircle2, MapPin, Radio } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -259,10 +258,6 @@ export default function PhoneLookup() {
                     <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate font-mono">{lookup.phone_number}</p>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatDistanceToNow(new Date(lookup.created_date), { addSuffix: true })}
-                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">

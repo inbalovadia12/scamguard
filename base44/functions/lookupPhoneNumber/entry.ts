@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
     // ---- Cache hit (check fresh PhoneReputation + fetch community/reddit evidence) ----
     try {
       const cached = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
-      const STALE_MS = 1000 * 60 * 60 * 24 * 30;
+      const STALE_MS = 1000 * 60 * 60 * 24 * 7;
       const r = cached[0];
       if (r && r.last_external_check_at && (Date.now() - new Date(r.last_external_check_at).getTime() < STALE_MS)) {
         const communityEvidence = await fetchCommunityEvidence();
@@ -297,41 +297,45 @@ Deno.serve(async (req) => {
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
-    const prompt = `Search the web for scam/spam reports on ${displayFormat}.
+    const prompt = `Research the phone number ${displayFormat} across the web.
+
+Step 1 — Identify the owner. Search for the business, organization, or person this number belongs to. Check official company websites, "contact us" pages, and business directories. Many numbers belong to well-known legitimate businesses (airlines, retailers, banks, utilities, government agencies) — identify them when you can.
+
+Step 2 — Check for scam/spam reports. Search crowd-sourced complaint sites (800notes.com, whocallsme.com, callercomplaints.com), Reddit (r/ScamNumbers, r/scams), and fraud databases for reports about THIS EXACT number.
 
 Rules:
-- Count only reports about THIS EXACT number, not similar numbers or area codes.
-- Do not invent data.
-- Distinguish scam, spam, suspicious, and legitimate reports.
-- High confidence (80+) for definitive cases (fictional numbers, confirmed scams, official listings).
-- Lower confidence (30-60) for anecdotal reports.
+- Report only what you actually found on the web. Do not invent data.
+- Consider only reports about THIS EXACT number, not similar numbers or area codes.
+- Distinguish scam, spam, suspicious, and legitimate/verified reports.
 
-Score 0-100: 0-25=confirmed scam, 26-40=strong indicators, 41-60=suspicious/spam, 61-75=limited negative, 76-100=no negatives/legitimate.
-Risk level: "high" (strong scam evidence), "medium" (suspicious/spam), "low" (no negatives).
-
-Return ONLY valid JSON:
-{
-  "country": "",
-  "carrier": "",
-  "reputation_score": 0,
-  "risk_level": "low",
-  "confidence_score": 0,
-  "user_reports": [],
-  "scam_categories": [],
-  "summary": "",
-  "sources": [],
-  "scam_report_count": 0,
-  "spam_report_count": 0,
-  "suspicious_report_count": 0,
-  "safe_report_count": 0,
-  "verified_business": false,
-  "business_name": ""
-}
-
-- summary: max 300 chars, what you found. No mention of future checking or background processes.
-- If nothing found: all counts=0, sources=[], summary="No scam reports found for this number."
+reputation_score (0-100, HIGHER = more dangerous): 0-15 = confirmed legitimate business or no negative reports; 16-35 = limited/anecdotal negative reports; 36-60 = suspicious or spam; 61-80 = strong scam indicators / multiple scam reports; 81-100 = confirmed scam number.
+risk_level: "low" (no negative reports, or confirmed legitimate business), "medium" (suspicious/spam), "high" (strong scam evidence).
+confidence_score (0-100): how confident you are based on the evidence found.
+verified_business: true if you found this number officially listed by a known business or organization. Set business_name to that business's name.
+summary (max 300 chars): describe what you found. If the number belongs to a known business, name it (e.g., "This is the customer service line for Target."). If you found scam reports, summarize them. If you found nothing, say "No scam reports found for this number." Never mention background checks or future processing.
 
 Respond in ${languageName}.`;
+
+    const RESPONSE_SCHEMA = {
+      type: 'object' as const,
+      properties: {
+        country: { type: 'string' },
+        carrier: { type: 'string' },
+        reputation_score: { type: 'number' },
+        risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
+        confidence_score: { type: 'number' },
+        user_reports: { type: 'array', items: { type: 'string' } },
+        scam_categories: { type: 'array', items: { type: 'string' } },
+        summary: { type: 'string' },
+        sources: { type: 'array', items: { type: 'string' } },
+        scam_report_count: { type: 'number' },
+        spam_report_count: { type: 'number' },
+        suspicious_report_count: { type: 'number' },
+        safe_report_count: { type: 'number' },
+        verified_business: { type: 'boolean' },
+        business_name: { type: 'string' },
+      },
+    };
 
     let llmResponse: any = null;
     try {
@@ -339,13 +343,19 @@ Respond in ${languageName}.`;
         prompt,
         add_context_from_internet: true,
         model: 'gemini_3_flash',
+        response_json_schema: RESPONSE_SCHEMA,
       });
     } catch (llmError) {
       console.error('LLM web search failed', llmError);
       return Response.json({ error: 'Phone lookup service temporarily unavailable. Please try again.' }, { status: 502 });
     }
 
-    const result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
+    let result: any = {};
+    if (llmResponse && typeof llmResponse === 'object' && !Array.isArray(llmResponse)) {
+      result = llmResponse;
+    } else {
+      result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
+    }
     const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
     const cleanSummary = sanitizeSummary(result.summary || '');
 

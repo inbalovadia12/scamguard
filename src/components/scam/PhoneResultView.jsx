@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity, Flag } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import { RISK_META } from "@/components/scam/ScamReportCard";
 import CommunityIntel, { matchCategoriesToEnum } from "@/components/community/CommunityIntel";
 import ReportScamDialog from "@/components/scam/ReportScamDialog";
@@ -37,11 +36,6 @@ export default function PhoneResultView({ data }) {
           {effectiveStatus !== "UNKNOWN" && (
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${status.color}`}>
               {status.label}
-            </span>
-          )}
-          {data.created_date && (
-            <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(data.created_date), { addSuffix: true })}
             </span>
           )}
         </div>
