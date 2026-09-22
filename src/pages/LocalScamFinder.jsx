@@ -46,17 +46,42 @@ export default function LocalScamFinder() {
   };
 
   const handleLocate = () => {
-    if (!navigator.geolocation) { setError("Geolocation is not supported on this device."); return; }
     setLocating(true); setError(null);
+    if (!navigator.geolocation) { fallbackIpLocate(); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
         setLocationInput("");
         setLocating(false);
       },
-      () => { setError("Couldn't get your location. Enter a city manually instead."); setLocating(false); },
-      { enableHighAccuracy: true, timeout: 10000 }
+      () => {
+        // Browser geolocation blocked/unavailable (common in embedded preview
+        // iframes without geolocation permission). Fall back to IP-based
+        // geolocation for an approximate location.
+        fallbackIpLocate();
+      },
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
     );
+  };
+
+  const fallbackIpLocate = async () => {
+    setLocating(true);
+    try {
+      const res = await fetch("https://ipwho.is/");
+      const data = await res.json();
+      if (data && data.success !== false && data.latitude != null) {
+        const name = [data.city, data.region, data.country].filter(Boolean).join(", ");
+        setLocationInput(name || data.country || "");
+        setCoords({ latitude: data.latitude, longitude: data.longitude });
+        setLocating(false);
+        return;
+      }
+      throw new Error(data?.message || "failed");
+    } catch (e) {
+      setLocating(false);
+      setError("Couldn't detect your location automatically. Please enter your city manually.");
+      setCoords(null);
+    }
   };
 
   const handleScan = async () => {
