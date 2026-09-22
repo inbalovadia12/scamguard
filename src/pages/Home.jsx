@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ShieldCheck, Loader2, ArrowRight, MessageSquare, MessagesSquare, Mail, Briefcase, ShoppingCart,
   Heart, Landmark, HelpCircle, Lock, Link2, TrendingUp, Package, Gift, HeartHandshake, Globe,
-  AlertTriangle, Crown, X, EyeOff, FileText,
+  AlertTriangle, Crown, X, EyeOff,
 } from "lucide-react";
 import TruncatedText from "@/components/TruncatedText";
 import AnalysisResult from "@/components/scam/AnalysisResult";
@@ -24,9 +24,6 @@ import ConversationPanel from "@/components/scam/ConversationPanel";
 import PostScamResponsePanel from "@/components/scam/PostScamResponsePanel";
 import SenderContextToggle from "@/components/scam/SenderContextToggle";
 import { Switch } from "@/components/ui/switch";
-import { detectInputKind } from "@/lib/detectInputKind";
-import QuickVerdictCard from "@/components/scam/QuickVerdictCard";
-import PhoneResultView from "@/components/scam/PhoneResultView";
 
 const messageTypes = [
   { value: "sms", label: "SMS / Text", icon: MessageSquare },
@@ -71,8 +68,6 @@ export default function Home() {
   const [incognito, setIncognito] = useState(false);
   const [senderContext, setSenderContext] = useState("");
   const [showPostScam, setShowPostScam] = useState(false);
-  const [detailedReport, setDetailedReport] = useState(true);
-  const [resultKind, setResultKind] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,45 +110,22 @@ export default function Home() {
   const handleAnalyze = async () => {
     const input = mode === "url" ? urlText.trim() : messageText.trim();
     if (!input && mode !== "url" && images.length === 0) return;
-    const inputKind = mode === "url" ? detectInputKind(urlText) : "message";
-    const cost = mode === "url" ? (inputKind === "phone" ? CREDIT_COSTS.PHONE_LOOKUP : CREDIT_COSTS.URL_SCAN) : CREDIT_COSTS.MESSAGE;
+    const cost = mode === "url" ? CREDIT_COSTS.URL_SCAN : CREDIT_COSTS.MESSAGE;
     if (!credits || credits.remaining < cost) return;
 
-    // Check cache first (URL text only, not phone, not incognito)
-    if (input && !incognito && mode === "url" && inputKind === "url") {
+    // Check cache first (text-only, not in incognito)
+    if (input && !incognito) {
       const cached = getCachedAnalysis(input);
       if (cached) {
         setResult(cached);
-        setResultKind("url");
         return;
       }
     }
 
     setAnalyzing(true);
     setResult(null);
-    setResultKind(null);
 
     try {
-      // Phone number lookup (URL mode with a phone number entered)
-      if (mode === "url" && inputKind === "phone") {
-        const response = await base44.functions.invoke("lookupPhoneNumber", { phone_number: urlText.trim() });
-        if (response.data?.error) throw new Error(response.data.error);
-        const phoneResult = {
-          ...(response.data?.result || response.data || {}),
-          phone_number: response.data?.lookup?.phone_number || urlText.trim(),
-        };
-        const remainingFromLookup = response.data?.credits_remaining;
-        setCredits((prev) => prev
-          ? { ...prev, remaining: typeof remainingFromLookup === "number" ? remainingFromLookup : prev.remaining }
-          : prev);
-        if (typeof remainingFromLookup !== "number") {
-          setCredits(await getCreditStatus());
-        }
-        setResult(phoneResult);
-        setResultKind("phone");
-        return;
-      }
-
       let fileUrls = [];
       for (const img of images) {
         const { file_url } = await base44.integrations.Core.UploadFile({ file: img });
@@ -199,11 +171,9 @@ export default function Home() {
       }
     }
       setResult(llmResult);
-      setResultKind(mode === "url" ? "url" : "message");
     } catch (error) {
       console.error("Scam analysis failed:", error);
       setResult(null);
-      setResultKind(null);
     } finally {
       setAnalyzing(false);
     }
@@ -215,7 +185,6 @@ export default function Home() {
     setImages([]);
     setImagePreviews([]);
     setResult(null);
-    setResultKind(null);
   };
 
   const handleImageSelect = (file) => {
@@ -232,8 +201,7 @@ export default function Home() {
 
   const outOfCredits = credits && !credits.canAnalyze;
   const urlLocked = credits && !credits.isPaid;
-  const detectedUrlKind = mode === "url" ? detectInputKind(urlText) : "message";
-  const currentCost = mode === "url" ? (detectedUrlKind === "phone" ? CREDIT_COSTS.PHONE_LOOKUP : CREDIT_COSTS.URL_SCAN) : CREDIT_COSTS.MESSAGE;
+  const currentCost = mode === "url" ? CREDIT_COSTS.URL_SCAN : CREDIT_COSTS.MESSAGE;
   const insufficientCredits = credits && credits.remaining > 0 && credits.remaining < currentCost;
   const urlCost = CREDIT_COSTS.URL_SCAN;
 
@@ -461,7 +429,7 @@ export default function Home() {
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
                   <Globe className="w-4 h-4 text-primary" />
-                  Paste a link or phone number
+                  Paste the link
                 </label>
                 <Input
                   value={urlText}
@@ -470,27 +438,13 @@ export default function Home() {
                     const text = e.dataTransfer.getData("text/plain");
                     if (text) { e.preventDefault(); setUrlText(text.trim()); }
                   }}
-                  placeholder="https://suspicious-link.com  or  +1 555-010-0123"
+                  placeholder="https://suspicious-link.com/... or drag a URL here"
                   className="h-11 sm:h-12 text-base rounded-xl"
                   disabled={outOfCredits}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {detectedUrlKind === "phone"
-                    ? `Phone reputation lookup across community & web reports. Uses ${CREDIT_COSTS.PHONE_LOOKUP} credits.`
-                    : `We fetch the actual website content and analyze it for scams. Uses ${urlCost} credits.`}
-                </p>
-                <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${detailedReport ? "bg-primary/5 border-primary/30" : "bg-card border-border/50"}`}>
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <FileText className={`w-4 h-4 flex-shrink-0 ${detailedReport ? "text-primary" : "text-muted-foreground"}`} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">Detailed report</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {detailedReport ? "Full breakdown — explanation, tactics, sources" : "Quick verdict — risk level and score only"}
-                      </p>
-                    </div>
-                  </div>
-                  <Switch checked={detailedReport} onCheckedChange={setDetailedReport} />
-                </div>
+                   We fetch the actual website content and analyze it for scams. Uses {urlCost} credits.
+                 </p>
               </div>
             )}
 
@@ -508,7 +462,7 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    {mode === "url" ? `Scan · ${currentCost} credits` : `Analyze Message · ${CREDIT_COSTS.MESSAGE} credits`}
+                    {mode === "url" ? `Scan Link · ${urlCost} credits` : `Analyze Message · ${CREDIT_COSTS.MESSAGE} credits`}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </>
                 )}
@@ -544,15 +498,13 @@ export default function Home() {
       ) : (
         <div className="space-y-6 animate-scale-in">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h1 className="text-2xl font-bold tracking-tight font-heading">
-              {resultKind === "phone" ? "Phone Lookup Result" : "Analysis Result"}
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight font-heading">Analysis Result</h1>
             <Button variant="outline" onClick={handleReset}>Check another</Button>
           </div>
 
           <div className="bg-card rounded-2xl border border-border/50 p-4">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              {resultKind === "phone" ? "Looked up number" : mode === "url" ? "Scanned link" : "Original message"}
+              {mode === "url" ? "Scanned link" : "Original message"}
             </h3>
             <TruncatedText
               text={mode === "url" ? urlText : messageText}
@@ -562,13 +514,7 @@ export default function Home() {
           </div>
 
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6">
-            {resultKind === "phone" ? (
-              detailedReport ? <PhoneResultView data={result} /> : <QuickVerdictCard kind="phone" data={result} />
-            ) : mode === "url" && !detailedReport ? (
-              <QuickVerdictCard kind="url" data={result} />
-            ) : (
-              <AnalysisResult analysis={result} messageType={mode === "url" ? "url" : messageType} originalMessage={mode === "url" ? urlText : messageText} />
-            )}
+            <AnalysisResult analysis={result} messageType={mode === "url" ? "url" : messageType} originalMessage={mode === "url" ? urlText : messageText} />
           </div>
         </div>
       )}

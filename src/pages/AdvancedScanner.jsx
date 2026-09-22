@@ -6,11 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Loader2, ArrowRight, ShieldCheck, Lock, Crown, AlertTriangle, QrCode, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
-import { getCreditStatus, CREDIT_COSTS } from "@/lib/credits";
+import { getCreditStatus } from "@/lib/credits";
 import { Switch } from "@/components/ui/switch";
-import { detectInputKind } from "@/lib/detectInputKind";
-import QuickVerdictCard from "@/components/scam/QuickVerdictCard";
-import PhoneResultView from "@/components/scam/PhoneResultView";
 import ScanTypeGrid, { SCAN_TYPES, ANSWER_TYPES, getScanCost } from "@/components/scam/ScanTypeGrid";
 import FileDropzone from "@/components/scam/FileDropzone";
 import AdvancedScanResults from "@/components/scam/AdvancedScanResults";
@@ -31,17 +28,13 @@ export default function AdvancedScanner() {
   const [error, setError] = useState(null);
   const [credits, setCredits] = useState(null);
   const [decodedQR, setDecodedQR] = useState("");
-  const [resultKind, setResultKind] = useState(null);
 
   useEffect(() => {
     getCreditStatus().then(setCredits);
   }, []);
 
   const selectedType = SCAN_TYPES.find((t) => t.value === scanType);
-  const detectedUrlKind = scanType === "url" ? detectInputKind(url) : null;
-  const cost = scanType === "url" && detectedUrlKind === "phone"
-    ? CREDIT_COSTS.PHONE_LOOKUP
-    : getScanCost(scanType, answerType);
+  const cost = getScanCost(scanType, answerType);
   const outOfCredits = credits && !credits.canAnalyze;
   const isPremium = credits?.isPremiumPlan;
   const insufficientCredits = credits && credits.remaining > 0 && credits.remaining < cost;
@@ -78,21 +71,7 @@ export default function AdvancedScanner() {
     setScanning(true);
     setError(null);
     setResult(null);
-    setResultKind(null);
     try {
-      // Phone number lookup (URL scan type with a phone number entered)
-      if (scanType === "url" && detectInputKind(url) === "phone") {
-        const response = await base44.functions.invoke("lookupPhoneNumber", { phone_number: url.trim() });
-        const data = response.data;
-        if (data?.error) throw new Error(data.error);
-        if (data.credits_remaining != null) {
-          setCredits((prev) => ({ ...prev, remaining: data.credits_remaining, limit: data.credits_limit }));
-        }
-        setResult({ ...(data.result || data || {}), phone_number: data?.lookup?.phone_number || url.trim() });
-        setResultKind("phone");
-        return;
-      }
-
       const payload = {
         page_text: "",
         screenshot_data_url: "",
@@ -141,7 +120,6 @@ export default function AdvancedScanner() {
 
   const handleRescan = () => {
     setResult(null);
-    setResultKind(null);
     setError(null);
     resetInputs();
   };
@@ -196,15 +174,11 @@ export default function AdvancedScanner() {
       result ?
       <div className="space-y-6 animate-scale-in">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-bold font-heading">{resultKind === "phone" ? "Phone Lookup Result" : "Scan Result"}</h2>
+            <h2 className="text-xl font-bold font-heading">Scan Result</h2>
             <Button variant="outline" onClick={handleRescan}>New Scan</Button>
           </div>
           <div className="bg-card rounded-3xl border border-border/50 shadow-sm p-4 sm:p-6">
-            {resultKind === "phone" ? (
-              answerType === "detailed" ? <PhoneResultView data={result} /> : <QuickVerdictCard kind="phone" data={result} />
-            ) : (
-              <AdvancedScanResults data={result} onRescan={handleRescan} />
-            )}
+            <AdvancedScanResults data={result} onRescan={handleRescan} />
           </div>
         </div> :
 
@@ -282,18 +256,14 @@ export default function AdvancedScanner() {
             }
               {selectedType?.inputType === "url" &&
             <>
-                  <label className="text-sm font-medium">URL or phone number</label>
+                  <label className="text-sm font-medium">URL</label>
                   <Input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://suspicious-link.com  or  +1 555-010-0123"
+                placeholder="https://suspicious-link.com"
                 className="h-11 text-base rounded-xl" />
               
-                  <p className="text-xs text-muted-foreground">
-                    {detectedUrlKind === "phone"
-                      ? "Phone reputation lookup across community & web reports."
-                      : "Includes VirusTotal reputation check across 70+ security engines."}
-                  </p>
+                  <p className="text-xs text-muted-foreground">Includes VirusTotal reputation check across 70+ security engines.</p>
                   <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${answerType === "detailed" ? "bg-primary/5 border-primary/30" : "bg-card border-border/50"}`}>
                     <div className="flex items-center gap-2.5 min-w-0">
                       <FileText className={`w-4 h-4 flex-shrink-0 ${answerType === "detailed" ? "text-primary" : "text-muted-foreground"}`} />
