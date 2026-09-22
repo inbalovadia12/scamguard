@@ -59,9 +59,9 @@ export default function CommunityIntel({ scamTypes = [], country, title = "Commu
           "-created_date",
           20
         );
-        let filtered = scamTypes.length
+        const filtered = scamTypes.length
           ? data.filter((s) => scamTypes.includes(s.scam_type))
-          : data;
+          : [];
         if (country) {
           const countryMatches = data.filter(
             (s) => s.country && s.country.toLowerCase().includes(country.toLowerCase())
