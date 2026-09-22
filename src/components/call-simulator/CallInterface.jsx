@@ -78,7 +78,7 @@ export default function CallInterface({ scenario, conversation, setConversation,
         setCallEnded(true);
         setTimeout(() => onEndCall([...updatedConvo, ...(data.scammer_line ? [{ speaker: "scammer", text: data.scammer_line }] : [])]), 1500);
       }
-    } catch (e) {
+    } catch {
       setFeedback({
         feedback: "Connection error. Try sending your message again.",
         fell_for_tactic: false,

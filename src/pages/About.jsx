@@ -1,11 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { ShieldCheck, Eye, Users, Globe, AlertTriangle } from "lucide-react";
-import { useI18n } from "@/lib/i18n";
 
 export default function About() {
-  const { t } = useI18n();
-
   return (
     <div className="min-h-screen bg-background luxury-mesh">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16 md:py-24">

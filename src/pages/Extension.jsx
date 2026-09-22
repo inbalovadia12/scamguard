@@ -16,15 +16,6 @@ const STEPS_KEYS = [
   "ext.step_6",
 ];
 
-const STEPS = [
-  "Download the ZIP file using the button above",
-  "Extract the ZIP into a folder named vardin-extension",
-  "Open Chrome and go to chrome://extensions",
-  "Enable Developer mode (toggle in the top-right corner)",
-  "Click Load unpacked and select your vardin-extension folder",
-  "Pin the extension to your toolbar and click it on any webpage to scan!",
-];
-
 export default function Extension() {
   const { t } = useI18n();
   const [downloading, setDownloading] = useState(false);

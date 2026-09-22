@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ArrowRight, ArrowRightLeft, Bot, ChevronRight, Image as ImageIcon, Phone, Radio,
+  ArrowRight, ArrowRightLeft, Bot, Phone,
   ScanLine, ShieldAlert, ShieldCheck, Users, X,
 } from "lucide-react";
 
@@ -144,137 +144,6 @@ function Surface({ children, className = "" }) {
       {children}
     </div>
   );
-}
-
-function CallerVisual({ risk = false }) {
-  return (
-    <div className="relative w-[min(88vw,320px)]">
-      {risk && <div className="absolute -right-12 -top-8 h-32 w-32 rounded-full bg-[#236f68]/10 blur-3xl" />}
-      <Surface className="relative overflow-hidden p-5">
-        <div className="flex items-center justify-between text-[9px] font-medium tracking-[0.22em] text-white/42">
-          <span>INCOMING CALL</span><span className="h-1.5 w-1.5 rounded-full bg-white/35" />
-        </div>
-        <div className="mt-8 flex flex-col items-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.06]">
-            <Phone className="h-6 w-6 text-white/70" />
-          </div>
-          <div className="mt-4 text-lg font-medium tracking-tight text-white">Unknown caller</div>
-          <div className="mt-1 text-xs text-white/42">+1 212 555 0198</div>
-        </div>
-        {risk ? (
-          <div className="mt-6 flex items-center gap-3 border-t border-white/[0.08] pt-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#236f68]/15 text-[#79c9bd]"><ShieldAlert className="h-4 w-4" /></div>
-            <div><div className="text-xs font-medium text-white/85">Suspicious pattern</div><div className="mt-0.5 text-[10px] text-white/42">Tap for context</div></div>
-            <ChevronRight className="ml-auto h-4 w-4 text-white/35" />
-          </div>
-        ) : <div className="mt-6 h-px bg-white/[0.08]" />}
-      </Surface>
-    </div>
-  );
-}
-
-function SignalsVisual() {
-  return (
-    <div className="grid w-[min(90vw,440px)] grid-cols-3 gap-2">
-      {[["72", "RISK SCORE"], ["14", "REPORTS"], ["3", "SIGNALS"]].map(([value, label], index) => (
-        <Surface key={label} className="p-4 text-center">
-          <div className={index === 0 ? "text-2xl font-semibold text-[#79c9bd]" : "text-2xl font-semibold text-white/85"}>{value}</div>
-          <div className="mt-2 text-[8px] tracking-[0.18em] text-white/38">{label}</div>
-        </Surface>
-      ))}
-      <Surface className="col-span-3 mt-1 flex items-center gap-3 p-3.5">
-        <span className="h-2 w-2 rounded-full bg-[#2f8f83]" />
-        <span className="text-xs text-white/68">Reported as delivery impersonation</span>
-      </Surface>
-    </div>
-  );
-}
-
-function VerdictVisual() {
-  return (
-    <Surface className="w-[min(90vw,420px)] overflow-hidden">
-      <div className="border-b border-white/[0.08] px-5 py-3 text-[9px] font-medium tracking-[0.2em] text-white/42">VARDIN ANALYSIS</div>
-      <div className="p-5">
-        <div className="flex items-start gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#2f8f83]/30 bg-[#2f8f83]/10"><ShieldAlert className="h-5 w-5 text-[#79c9bd]" /></div>
-          <div><div className="text-base font-medium text-white">High risk</div><div className="mt-1 text-xs text-white/48">Likely impersonation attempt</div></div>
-          <div className="ml-auto text-2xl font-semibold text-[#79c9bd]">82</div>
-        </div>
-        <div className="mt-5 space-y-2 border-t border-white/[0.08] pt-4">
-          <div className="flex justify-between text-[10px] text-white/46"><span>Caller reputation</span><span className="text-white/75">Reported</span></div>
-          <div className="h-1 overflow-hidden rounded-full bg-white/[0.08]"><div className="h-full w-[82%] rounded-full bg-[#2f8f83]" /></div>
-        </div>
-      </div>
-    </Surface>
-  );
-}
-
-function ExplainVisual() {
-  return (
-    <Surface className="w-[min(90vw,430px)] p-5">
-      <div className="flex items-center gap-2 text-[9px] tracking-[0.18em] text-white/42"><Bot className="h-3.5 w-3.5 text-[#83b9c5]" /> AI EXPLANATION</div>
-      <p className="mt-5 text-sm leading-6 text-white/82">The caller is creating urgency and asking you to move the conversation away from an official channel.</p>
-      <div className="mt-5 flex flex-wrap gap-2">
-        {["Urgency", "Impersonation", "Payment request"].map((tag) => <span key={tag} className="rounded-full border border-[#2f8f83]/25 bg-[#2f8f83]/[0.07] px-2.5 py-1 text-[10px] text-[#79c9bd]">{tag}</span>)}
-      </div>
-    </Surface>
-  );
-}
-
-function ScanVisual() {
-  return (
-    <Surface className="w-[min(90vw,470px)] p-4">
-      <div className="flex items-center gap-2 text-[9px] tracking-[0.18em] text-white/42"><ScanLine className="h-3.5 w-3.5 text-[#83b9c5]" /> UNIVERSAL SCAN</div>
-      <div className="mt-4 rounded-xl border border-white/[0.09] bg-black/20 p-3 text-xs leading-5 text-white/48">Your package is held. Confirm delivery details here…</div>
-      <div className="mt-3 flex items-center justify-between"><span className="text-[10px] text-white/38">Message detected</span><span className="rounded-lg bg-white/10 px-3 py-1.5 text-[10px] font-medium text-white/75">Analyze</span></div>
-    </Surface>
-  );
-}
-
-function ImageVisual() {
-  return (
-    <Surface className="flex w-[min(90vw,420px)] gap-4 p-4">
-      <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/[0.1] bg-[#0b1014]">
-        <div className="absolute h-10 w-16 border border-[#2f8f83]/45" /><ImageIcon className="h-5 w-5 text-white/35" />
-      </div>
-      <div className="py-1"><div className="text-xs font-medium text-white/82">Screenshot scan</div><p className="mt-2 text-[11px] leading-4 text-white/46">Checks suspicious pages, profiles, and visual cues.</p><div className="mt-3 text-[10px] text-[#83b9c5]">Image detected</div></div>
-    </Surface>
-  );
-}
-
-function LiveVisual() {
-  return (
-    <Surface className="w-[min(90vw,460px)] p-5">
-      <div className="flex items-center justify-between text-[9px] tracking-[0.18em] text-white/42"><span className="flex items-center gap-2"><Radio className="h-3.5 w-3.5 text-[#2f8f83]" /> CALL GUARD</span><span className="text-[#79c9bd]">LIVE</span></div>
-      <div className="mt-7 flex h-12 items-center justify-center gap-1">
-        {[18, 28, 12, 38, 21, 44, 25, 14, 34, 20, 29, 12, 38, 23, 16].map((height, index) => <span key={index} className={"w-1 rounded-full " + (index > 7 ? "bg-[#2f8f83]/75" : "bg-[#83b9c5]/60")} style={{ height }} />)}
-      </div>
-      <div className="mt-6 border-t border-white/[0.08] pt-3 text-center text-[11px] text-white/55">A warning can appear while the call is still happening.</div>
-    </Surface>
-  );
-}
-
-function FamilyVisual() {
-  return (
-    <Surface className="w-[min(90vw,420px)] p-4">
-      <div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#83b9c5]/10"><Users className="h-4 w-4 text-[#83b9c5]" /></div><div><div className="text-xs font-medium text-white/84">Family protection</div><div className="mt-0.5 text-[10px] text-white/42">Important alerts, shared with care</div></div></div>
-      <div className="mt-4 flex items-center gap-3 rounded-xl border border-white/[0.08] bg-black/15 p-3"><span className="h-2 w-2 rounded-full bg-[#2f8f83]" /><span className="flex-1 text-[11px] text-white/64">High-risk scan needs attention</span><ChevronRight className="h-3.5 w-3.5 text-white/35" /></div>
-    </Surface>
-  );
-}
-
-function IntelVisual() {
-  return (
-    <Surface className="w-[min(90vw,420px)] p-5">
-      <div className="text-[9px] tracking-[0.2em] text-white/42">LOCAL SCAM INTELLIGENCE</div>
-      <div className="mt-5 flex items-end gap-2">{[24, 46, 35, 64, 51, 78, 44, 58, 70, 39, 84].map((height, index) => <span key={index} className={index === 10 ? "w-3 rounded-t bg-[#2f8f83]" : "w-3 rounded-t bg-[#83b9c5]/38"} style={{ height }} />)}</div>
-      <div className="mt-4 text-xs text-white/60">Reports turn isolated moments into useful context.</div>
-    </Surface>
-  );
-}
-
-function SummaryVisual() {
-  return <div className="flex h-24 w-24 items-center justify-center rounded-full border border-white/[0.11] bg-white/[0.035] shadow-[0_0_80px_rgba(47,143,131,0.11)]"><ShieldCheck className="h-9 w-9 text-white/78" /></div>;
 }
 
 function AssistantVisual() {

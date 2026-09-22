@@ -542,7 +542,7 @@ function CallerIdTab() {
 
 export default function Admin() {
   const [unlocked, setUnlocked] = useState(false);
-  const [error, setError] = useState(false);
+  const [, setError] = useState(false);
   const [checking, setChecking] = useState(false);
 
   useEffect(() => {

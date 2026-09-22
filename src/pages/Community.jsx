@@ -68,14 +68,12 @@ export default function Community() {
         story_id: id,
         action: isLiked ? "unlike" : "like",
       });
-    } catch (e) {
+    } catch {
       // Revert on error
       setStories((prev) => prev.map((s) => s.id === id ? { ...s, likes_count: story.likes_count } : s));
       toggleLiked(id);
     }
   };
-
-  const totalStories = stories.length;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">

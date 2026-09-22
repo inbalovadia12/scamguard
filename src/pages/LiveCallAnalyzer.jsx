@@ -438,7 +438,7 @@ export default function LiveCallAnalyzer() {
     analyzeUploadedRecording(f, duration);
   };
 
-  const analyzeUploadedRecording = async (file, estimatedDuration = 0) => {
+  const analyzeUploadedRecording = async (file, _estimatedDuration = 0) => {
     setError(null);
     resetState();
     setUploading(true);

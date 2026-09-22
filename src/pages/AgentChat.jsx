@@ -62,7 +62,7 @@ export default function AgentChat() {
             }
           }
         }
-      } catch (error) {
+      } catch {
         // A credit/conversation API failure must never blank the entire assistant page.
         if (!cancelled) {
           setCredits(null);

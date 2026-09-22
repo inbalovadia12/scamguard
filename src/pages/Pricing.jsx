@@ -91,7 +91,7 @@ export default function Pricing() {
     setSubscribing(planName);
     try {
       await startPaypalCheckout(planName, memberCounts[planName] || 1);
-    } catch (error) {
+    } catch {
       setSubscribing(null);
       setPaypalStatus("error");
     }

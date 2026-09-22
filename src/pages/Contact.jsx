@@ -30,7 +30,7 @@ export default function Contact() {
       setName("");
       setEmail("");
       setMessage("");
-    } catch (err) {
+    } catch {
       toast({ title: "Something went wrong", description: "Please try again later.", variant: "destructive" });
     } finally {
       setSubmitting(false);

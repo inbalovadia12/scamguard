@@ -78,7 +78,7 @@ export default function Onboarding() {
         notify_email: notifyEmail,
         privacy_auto_redact: privacyAutoRedact,
       });
-    } catch (e) {
+    } catch {
       // Non-blocking
     }
     confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
@@ -111,7 +111,7 @@ export default function Onboarding() {
         } catch (emailErr) {
           console.error("Failed to send invite to", email, emailErr);
         }
-      } catch (e) { /* skip duplicates */ }
+      } catch { /* skip duplicates */ }
     }
     setInviting(false);
     setStep(4);

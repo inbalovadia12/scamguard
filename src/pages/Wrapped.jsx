@@ -47,7 +47,7 @@ export default function Wrapped() {
         await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
         toast({ title: "Copied to clipboard!", description: "Share your Wrapped with friends" });
       }
-    } catch (e) {
+    } catch {
       try {
         await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
         toast({ title: "Copied to clipboard!" });

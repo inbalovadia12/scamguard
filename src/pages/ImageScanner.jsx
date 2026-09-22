@@ -3,7 +3,6 @@ import { Image as ImageIcon, Upload, Loader2, AlertTriangle, ExternalLink, Shiel
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { RISK_META } from "@/components/scam/ScamReportCard";
 import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import CommunityIntel from "@/components/community/CommunityIntel";
@@ -244,7 +243,6 @@ export default function ImageScanner() {
 }
 
 function ImageScanResult({ data, previewUrl }) {
-  const risk = RISK_META[data.risk_level] || RISK_META.medium;
   const score = data.risk_score || 0;
   const scoreColor = score >= 71 ? "text-destructive" : score >= 36 ? "text-warning" : "text-success";
   const barColor = score >= 71 ? "bg-destructive" : score >= 36 ? "bg-warning" : "bg-success";
