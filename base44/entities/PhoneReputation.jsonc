@@ -81,6 +81,10 @@
     "business_name": {
       "type": "string"
     },
+    "lookup_country": {
+      "type": "string",
+      "description": "The country context the user provided for this lookup (defaults to United States). The same digits can map to different businesses in different countries; this disambiguates the cached result."
+    },
     "scam_categories": {
       "type": "array",
       "items": {

@@ -172,7 +172,11 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { phone_number, language } = body;
+    const { phone_number, language, country_hint } = body;
+    // Country context biases the LLM to the correct caller for the user's country
+    // (the same digits can map to different businesses in different countries).
+    // Defaults to the United States when left blank.
+    const countryHint = (String(country_hint || '').trim()) || 'United States';
 
     if (!phone_number || !phone_number.trim()) {
       return Response.json({ error: 'Phone number is required' }, { status: 400 });
@@ -263,7 +267,9 @@ Deno.serve(async (req) => {
       const hasClassification = !!r?.caller_id_status && r.caller_id_status !== 'UNKNOWN';
       const hasEvidence = (r?.scam_report_count || 0) > 0 || (r?.spam_report_count || 0) > 0 || (r?.suspicious_report_count || 0) > 0 || (r?.safe_report_count || 0) > 0 || !!r?.verified_business;
       const isInformative = hasClassification || hasEvidence;
-      const serveCache = !!r && !!r.last_external_check_at && (isInformative ? ageMs < FRESH_MS : ageMs < MIN_RECHECK_MS);
+      const storedCountry = (String(r?.lookup_country || 'United States')).toLowerCase();
+      const countryMatches = storedCountry === countryHint.toLowerCase();
+      const serveCache = !!r && !!r.last_external_check_at && countryMatches && (isInformative ? ageMs < FRESH_MS : ageMs < MIN_RECHECK_MS);
       if (serveCache) {
         const communityEvidence = await fetchCommunityEvidence();
         const redditEvidence = await fetchRedditEvidence();
@@ -372,6 +378,8 @@ Deno.serve(async (req) => {
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
     const prompt = `Research the phone number ${displayFormat} across the web.
+
+IMPORTANT — Country context: The user is located in ${countryHint}. The same phone digits can belong to completely different businesses in different countries (for example, a number that reaches an airline in one country may reach a small business in another). Identify who THIS number belongs to WITHIN ${countryHint}: interpret the number according to ${countryHint}'s phone numbering plan, and prioritize official listings, directories, and complaint sites from ${countryHint}. If you cannot find a ${countryHint}-specific owner, say so clearly — do not substitute a business from a different country.
 
 Step 1 — Identify the owner. Search for the business, organization, or person this number belongs to. Check official company websites, "contact us" pages, and business directories. Many numbers belong to well-known legitimate businesses (airlines, retailers, banks, utilities, government agencies) — identify them when you can.
 
@@ -494,6 +502,7 @@ Respond in ${languageName}.`;
       last_external_check_at: new Date().toISOString(),
       verified_business: fullResult.verified_business,
       business_name: fullResult.business_name,
+      lookup_country: countryHint,
       report_counts: {
         scam: merged.scam_report_count,
         spam: merged.spam_report_count,

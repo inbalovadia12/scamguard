@@ -146,6 +146,7 @@ export async function upsertPhoneReputation(base44: any, data: any): Promise<any
     if (data.sources) patch.sources = data.sources;
     if (data.verified_business != null) patch.verified_business = data.verified_business;
     if (data.business_name) patch.business_name = data.business_name;
+    if (data.lookup_country != null) patch.lookup_country = data.lookup_country;
 
     if (data.report) {
       const inc = data.report.count ?? 1;
@@ -221,6 +222,7 @@ export async function upsertPhoneReputation(base44: any, data: any): Promise<any
     safe_report_count: safe,
     verified_business: !!data.verified_business,
     business_name: data.business_name || "",
+    lookup_country: data.lookup_country || "",
     scam_categories: data.scam_categories || [],
     last_checked_at: now,
     last_updated_at: now,

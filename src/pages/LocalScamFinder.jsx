@@ -3,6 +3,7 @@ import { MapPin, Search, Loader2, LocateFixed, ShieldCheck, AlertTriangle, Shiel
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import PlanGate from "@/components/PlanGate";
 import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
@@ -18,6 +19,7 @@ const COST = 5;
 
 export default function LocalScamFinder() {
   const [locationInput, setLocationInput] = useState("");
+  const [extraInfo, setExtraInfo] = useState("");
   const [coords, setCoords] = useState(null);
   const [locating, setLocating] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -92,6 +94,7 @@ export default function LocalScamFinder() {
       const payload = { language: lang };
       if (locationInput.trim()) payload.location = locationInput.trim();
       else { payload.latitude = coords.latitude; payload.longitude = coords.longitude; }
+      if (extraInfo.trim()) payload.extra_info = extraInfo.trim();
       const response = await base44.functions.invoke("scanLocalScams", payload);
       if (response.data?.error) throw new Error(response.data.error);
       setResult(response.data?.result);
@@ -104,7 +107,7 @@ export default function LocalScamFinder() {
     } finally { setScanning(false); }
   };
 
-  const handleRescan = () => { setResult(null); setLocationInput(""); setCoords(null); setError(null); };
+  const handleRescan = () => { setResult(null); setLocationInput(""); setExtraInfo(""); setCoords(null); setError(null); };
 
   const showHistoryItem = (h) => {
     let details = [];
@@ -164,6 +167,16 @@ export default function LocalScamFinder() {
                 </Button>
               </div>
               {coords && <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1"><MapPin className="w-3 h-3" /> Detected: {coords.latitude.toFixed(3)}, {coords.longitude.toFixed(3)}</p>}
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Extra information <span className="text-muted-foreground font-normal">(optional)</span></label>
+              <Textarea
+                value={extraInfo}
+                onChange={(e) => setExtraInfo(e.target.value)}
+                placeholder="e.g. We're vacationing in Los Angeles and plan to take taxis and walk around tourist areas a lot."
+                className="text-base rounded-xl min-h-[80px] resize-y"
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">Describe your situation and we'll prioritize the scams most relevant to you.</p>
             </div>
             <Button onClick={handleScan} disabled={scanning || (!locationInput.trim() && !coords)} className="w-full h-11 sm:h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20 gap-2">
               {scanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}

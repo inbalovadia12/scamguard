@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Phone, Search, Loader2, History, ChevronRight, AlertTriangle, ShieldCheck, ShieldAlert, CheckCircle2, MapPin, Radio } from "lucide-react";
+import { Phone, Search, Loader2, History, ChevronRight, AlertTriangle, ShieldCheck, ShieldAlert, CheckCircle2, MapPin, Radio, LocateFixed } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,9 @@ const RISK_CONFIG = {
 
 export default function PhoneLookup() {
   const [phoneInput, setPhoneInput] = useState("");
+  const [locationInput, setLocationInput] = useState(() => { try { return localStorage.getItem('vardin_phone_location') || ''; } catch { return ''; } });
+  const [coords, setCoords] = useState(null);
+  const [locating, setLocating] = useState(false);
   const [looking, setLooking] = useState(false);
   const [currentResult, setCurrentResult] = useState(null);
   const [history, setHistory] = useState([]);
@@ -36,6 +39,10 @@ export default function PhoneLookup() {
     };
     init();
   }, []);
+
+  useEffect(() => {
+    try { if (locationInput) localStorage.setItem('vardin_phone_location', locationInput); } catch {}
+  }, [locationInput]);
 
   const loadHistory = async () => {
     try {
@@ -76,6 +83,47 @@ export default function PhoneLookup() {
     };
   };
 
+  const handleLocate = () => {
+    setLocating(true); setError(null);
+    if (!navigator.geolocation) { fallbackIpLocate(); return; }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setCoords({ latitude: lat, longitude: lng });
+        try {
+          const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`);
+          const data = await res.json();
+          const name = [data.city, data.countryName].filter(Boolean).join(", ");
+          if (name) { setLocationInput(name); setLocating(false); return; }
+        } catch {}
+        setLocating(false);
+      },
+      () => { fallbackIpLocate(); },
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
+    );
+  };
+
+  const fallbackIpLocate = async () => {
+    setLocating(true);
+    try {
+      const res = await fetch("https://ipwho.is/");
+      const data = await res.json();
+      if (data && data.success !== false && data.latitude != null) {
+        const name = [data.city, data.region, data.country].filter(Boolean).join(", ");
+        setLocationInput(name || data.country || "");
+        setCoords({ latitude: data.latitude, longitude: data.longitude });
+        setLocating(false);
+        return;
+      }
+      throw new Error("failed");
+    } catch (e) {
+      setLocating(false);
+      setError("Couldn't detect your location. Enter your country manually.");
+      setCoords(null);
+    }
+  };
+
   const handleLookup = async () => {
     if (!phoneInput.trim()) return;
     setLooking(true);
@@ -85,9 +133,11 @@ export default function PhoneLookup() {
     const phone = phoneInput.trim();
     try {
       const lang = localStorage.getItem("vardin_language") || "en";
+      const countryHint = locationInput.trim() || (coords ? `${coords.latitude},${coords.longitude}` : "");
       const response = await base44.functions.invoke("lookupPhoneNumber", {
         phone_number: phone,
         language: lang,
+        country_hint: countryHint,
       });
       if (response.data?.error) throw new Error(response.data.error);
       const result = response.data?.result;
@@ -168,6 +218,19 @@ export default function PhoneLookup() {
           <Button onClick={handleLookup} disabled={looking || !phoneInput.trim()} className="gap-2 h-12 px-6 rounded-xl">
             {looking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             {looking ? "Checking…" : "Check Number"}
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <Input
+            value={locationInput}
+            onChange={(e) => { setLocationInput(e.target.value); setCoords(null); }}
+            placeholder="Your country (defaults to United States)"
+            className="h-9 text-sm flex-1"
+          />
+          <Button variant="outline" size="sm" onClick={handleLocate} disabled={locating} className="gap-1.5 flex-shrink-0 rounded-lg">
+            {locating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{locating ? "Locating…" : "My location"}</span>
           </Button>
         </div>
         {error && (

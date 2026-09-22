@@ -15,6 +15,7 @@ export default async function(req: Request): Promise<Response> {
     const latitude = body.latitude != null ? Number(body.latitude) : null;
     const longitude = body.longitude != null ? Number(body.longitude) : null;
     const language = String(body.language || 'en');
+    const extraInfo = String(body.extra_info || '').trim();
 
     if (!location && (latitude == null || longitude == null)) {
       return Response.json({ error: 'Please provide a location or allow location access.' }, { status: 400 });
@@ -46,7 +47,11 @@ export default async function(req: Request): Promise<Response> {
       ? location
       : `coordinates ${latitude}, ${longitude} (identify the nearest city/region and research it)`;
 
-    const prompt = `You are Vardin's local scam intelligence analyst. Research the scam landscape for: ${where}.
+    const extraContext = extraInfo
+      ? `\n\nThe user added extra context about their situation: "${extraInfo}". ORDER the scam_details array so the scams most relevant to what they described appear FIRST, then the remaining common local scams after them. For example, if they mention taking taxis, put taxi/ride-hailing scams at the top of the list; if they mention walking around a tourist area, put tourist/street scams at the top. Still include all the other common local scams — this is about ordering, not filtering.`
+      : '';
+
+    const prompt = `You are Vardin's local scam intelligence analyst. Research the scam landscape for: ${where}.${extraContext}
 
 Using web search, find accurate, current information about:
 1. Common scams targeting residents or visitors of this specific area (name each scam and describe how it works).
@@ -59,7 +64,7 @@ Rules:
 - Be specific to this location (city/region/country). If hyper-local data is scarce, provide the best country/region-level information and still name the location.
 - risk_level: "low" (few reports), "medium" (notable scam activity), "high" (active scam hot zone).
 - summary (max 300 chars): a plain-English overview of scam risk in this area.
-- scam_details: array of { name, description, peak_season, peak_months } for the most common local scams.
+- scam_details: array of { name, description, peak_season, peak_months } for the most common local scams. Aim for AT LEAST 5 entries when the area has enough distinct scams; never pad with duplicates or generic filler — if fewer than 5 genuinely distinct scams exist, return only the real ones.
 - local_resources: official URLs/phone numbers/hotlines for reporting scams locally.
 - sources: full URLs of the websites where you found this information. Always include source URLs.
 
