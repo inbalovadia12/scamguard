@@ -194,17 +194,44 @@ Deno.serve(async (req) => {
     const cleaned = phone_number.trim().replace(/[^\d]/g, '');
     if (cleaned.length < 7) return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
 
-    let tenDigit: string;
-    if (cleaned.length === 10) tenDigit = cleaned;
-    else if (cleaned.length === 11 && cleaned.startsWith('1')) tenDigit = cleaned.slice(1);
-    else if (cleaned.length > 10) tenDigit = cleaned.slice(-10);
-    else tenDigit = cleaned;
+    // Country-aware normalization. Users enter numbers in national form
+    // (e.g. "03-977-1111") OR with a country-code prefix (e.g. "972-3-977-1111"
+    // or "+972 3 977 1111"). The old logic assumed NANP and took the last 10
+    // digits prefixed with +1, which mangled international numbers into fake
+    // US numbers. Build a canonical E.164 cache key + display format that
+    // preserves the real country code so the LLM researches the correct number.
+    const COUNTRY_CODES: Record<string, string> = {
+      israel: '972', 'united states': '1', usa: '1', canada: '1',
+    };
+    const hintCc = COUNTRY_CODES[countryHint.toLowerCase()] || '';
 
-    const isValidNANP = tenDigit.length === 10 && !tenDigit.startsWith('0') && !tenDigit.startsWith('1');
-    const displayFormat = isValidNANP
-      ? `${tenDigit.slice(0, 3)}-${tenDigit.slice(3, 6)}-${tenDigit.slice(6)}`
-      : phone_number.trim();
-    const cacheKey = isValidNANP ? `+1${tenDigit}` : `+${cleaned}`;
+    let cacheKey: string;
+    let displayFormat: string;
+
+    if (cleaned.startsWith('972')) {
+      // Israeli number entered with its country code (972-3-977-1111 / 972039771111).
+      let national = cleaned.slice(3);
+      if (national.startsWith('0')) national = national.slice(1); // drop leading 0 if included
+      cacheKey = `+972${national}`;
+      displayFormat = `+972 ${national}`;
+    } else if (hintCc === '972' && cleaned.startsWith('0')) {
+      // Israeli national format (03-977-1111) with Israel selected as the country.
+      const national = cleaned.slice(1); // drop leading 0
+      cacheKey = `+972${national}`;
+      displayFormat = `+972 ${national}`;
+    } else {
+      // NANP (US/Canada) or fallback: keep the existing 10-digit logic.
+      let tenDigit: string;
+      if (cleaned.length === 10) tenDigit = cleaned;
+      else if (cleaned.length === 11 && cleaned.startsWith('1')) tenDigit = cleaned.slice(1);
+      else if (cleaned.length > 10) tenDigit = cleaned.slice(-10);
+      else tenDigit = cleaned;
+      const isValidNANP = tenDigit.length === 10 && !tenDigit.startsWith('0') && !tenDigit.startsWith('1');
+      displayFormat = isValidNANP
+        ? `${tenDigit.slice(0, 3)}-${tenDigit.slice(3, 6)}-${tenDigit.slice(6)}`
+        : phone_number.trim();
+      cacheKey = isValidNANP ? `+1${tenDigit}` : `+${cleaned}`;
+    }
 
     // ---- Helper: fetch community evidence ----
     const fetchCommunityEvidence = async (): Promise<any> => {
