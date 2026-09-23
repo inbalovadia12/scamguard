@@ -747,6 +747,8 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
     // Re-run business normalization AFTER community/Reddit evidence is merged so an
     // exact official business match can become SAFE before the final score is derived.
     normalizeBusinessResult(merged);
+    // Re-run business normalization after community/Reddit evidence is merged.
+    normalizeBusinessResult(merged);
     const finalConsistency = enforceConsistency(merged.reputation_score ?? 0, merged.risk_level || 'low', mergedEvidence);
     merged.reputation_score = finalConsistency.score;
     merged.risk_level = finalConsistency.risk;
