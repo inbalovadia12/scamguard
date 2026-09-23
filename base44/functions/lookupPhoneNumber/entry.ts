@@ -102,9 +102,11 @@ function mergeEvidence(result: any, communityEvidence: any, redditEvidence: any)
 
   if ((result.scam_report_count || 0) > 0 && /no scam reports found|no specific (?:scam|information)|yielded no specific|no negative reports/i.test(result.summary || '')) {
     const titles = (redditEvidence?.reports || []).map((r: any) => r.title).filter(Boolean).slice(0, 3);
+    const evidenceReports = [...(redditEvidence?.reports || []), ...(redditEvidence?.reports ? [] : []), ...(Array.isArray((redditEvidence as any)?.web_reports) ? (redditEvidence as any).web_reports : []), ...(Array.isArray((redditEvidence as any)?.reports) ? [] : [])];
+    const titles = evidenceReports.map((r: any) => r.title).filter(Boolean).slice(0, 3);
     result.summary = titles.length > 0
-      ? `Community scam reports flag this number: ${titles.join('; ')}.`
-      : `${result.scam_report_count} scam report(s) from community sources flag this number.`;
+      ? `Web reports flag this exact number: ${titles.join('; ')}.`
+      : `${result.scam_report_count} scam report(s) from web/community sources flag this exact number.`;
   }
   return result;
 }
