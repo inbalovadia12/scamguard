@@ -428,16 +428,16 @@ Deno.serve(async (req) => {
       const hasClassification = !!r?.caller_id_status && r.caller_id_status !== 'UNKNOWN';
       const hasEvidence = (r?.scam_report_count || 0) > 0 || (r?.spam_report_count || 0) > 0 || (r?.suspicious_report_count || 0) > 0 || (r?.safe_report_count || 0) > 0 || !!r?.verified_business;
       const isInformative = hasClassification || hasEvidence;
-      const storedCountry = (String(r?.lookup_country || 'United States')).toLowerCase();
-      const countryMatches = storedCountry === effectiveCountry.toLowerCase();
-      const serveCache = !!r && !!r.last_external_check_at && countryMatches && (isInformative ? ageMs < FRESH_MS : ageMs < MIN_RECHECK_MS);
+      // The E.164 cache key is globally unique, so the same number always maps
+      // to the same research regardless of the user's selected country.
+      const serveCache = !!r && !!r.last_external_check_at && (isInformative ? ageMs < FRESH_MS : ageMs < MIN_RECHECK_MS);
       if (serveCache) {
         const communityEvidence = await fetchCommunityEvidence();
         const redditEvidence = await fetchRedditEvidence();
         
         const creditsRemaining = await chargeCredits();
         const result = {
-          country: r.country || '',
+          country: r.country || effectiveCountry,
           carrier: r.carrier || '',
           reputation_score: r.reputation_score ?? 0,
           risk_level: r.risk_level || 'low',
@@ -542,13 +542,13 @@ Deno.serve(async (req) => {
 
     const prompt = `Research the phone number ${displayFormat} across the web.
 
-IMPORTANT — Country context: The user is located in ${effectiveCountry}. The same phone digits can belong to completely different businesses in different countries (for example, a number that reaches an airline in one country may reach a small business in another). Identify who THIS number belongs to WITHIN ${effectiveCountry}: interpret the number according to ${effectiveCountry}'s phone numbering plan, and prioritize official listings, directories, and complaint sites from ${effectiveCountry}. If you cannot find a ${effectiveCountry}-specific owner, say so clearly — do not substitute a business from a different country.
+This number is in international format: the digits after "+" are the country calling code followed by the national number. Search for THIS EXACT number globally — do NOT restrict your search to any single country. The number may be listed on security blogs (e.g. gridinsoft.com, kaspersky.com, malwarebytes.com), scam-report databases, crowd-sourced complaint sites, news articles, business directories, or company "contact us" pages anywhere in the world. Include results from every country.
 
-Step 1 — Identify the owner. Search for the business, organization, or person this number belongs to. Check official company websites, "contact us" pages, and business directories. Many numbers belong to well-known legitimate businesses (airlines, retailers, banks, utilities, government agencies) — identify them when you can.
+Step 1 — Identify the owner. Search for the business, organization, or person this number belongs to. Check official company websites, "contact us" pages, and business directories. Many numbers belong to well-known legitimate businesses (airlines, retailers, banks, utilities, government agencies) — identify them when you can. Also check security blogs and news articles that may list this number as dangerous.
 
-CRITICAL — do NOT guess, infer, or fabricate the owner. Only report a business_name if you found THIS EXACT phone number (every digit matching) listed on the business's OWN official website or "contact us" page, or on a major verified directory (official Google Business listing, official government registry) within ${effectiveCountry}. Seeing the number on a complaint site, forum, or blog is NOT enough. If you are inferring from the area code, number format, or partial matches, do NOT set a business name. If you cannot confirm the owner from an official source, leave business_name empty and say so plainly in the summary. Fabricating a business name is far worse than admitting you didn't find one.
+CRITICAL — do NOT guess, infer, or fabricate the owner. Only report a business_name if you found THIS EXACT phone number (every digit matching) listed on the business's OWN official website or "contact us" page, or on a major verified directory (official Google Business listing, official government registry). Seeing the number on a complaint site, forum, security blog, or news article is NOT enough to call it a verified business. If you are inferring from the area code, number format, or partial matches, do NOT set a business name. If you cannot confirm the owner from an official source, leave business_name empty and say so plainly in the summary. Fabricating a business name is far worse than admitting you didn't find one.
 
-Step 2 — Check for scam/spam reports. Search crowd-sourced complaint sites (800notes.com, whocallsme.com, callercomplaints.com), Reddit (r/ScamNumbers, r/scams), and fraud databases for reports about THIS EXACT number.
+Step 2 — Check for scam/spam reports. Search crowd-sourced complaint sites (800notes.com, whocallsme.com, callercomplaints.com), Reddit (r/ScamNumbers, r/scams), security blogs, and fraud databases for reports about THIS EXACT number. A number flagged as "dangerous" on a security blog or scam database counts as a scam report — do not dismiss it just because the source is not from the number's home country.
 
 Rules:
 - Report only what you actually found on the web. Do not invent data.
@@ -558,9 +558,9 @@ Rules:
 reputation_score (0-100, HIGHER = more dangerous): 0-15 = confirmed legitimate business or no negative reports; 16-35 = limited/anecdotal negative reports; 36-60 = suspicious or spam; 61-80 = strong scam indicators / multiple scam reports; 81-100 = confirmed scam number.
 risk_level: "low" (no negative reports, or confirmed legitimate business), "medium" (suspicious/spam), "high" (strong scam evidence).
 confidence_score (0-100): how confident you are based on the evidence found.
-verified_business: true ONLY if you found THIS EXACT number on an official source (the business's own website/contact page, or a major verified directory) within ${effectiveCountry}, AND you include that source URL in sources. If you are inferring, guessing, or only saw the number on an unofficial complaint site/forum, set verified_business=false and business_name="". Never fabricate a business name.
-summary (max 300 chars): describe what you found. If the number belongs to a known business, name it (e.g., "This is the customer service line for Target."). If you found scam reports, summarize them. If you found nothing, say "No scam reports found for this number." Never mention background checks or future processing.
-sources: ALWAYS include the full URLs of the websites where you found this information (official business "contact" pages, complaint sites, Reddit posts, news articles). If you found nothing, return an empty array.
+verified_business: true ONLY if you found THIS EXACT number on an official source (the business's own website/contact page, or a major verified directory), AND you include that source URL in sources. A security blog listing a number as dangerous is scam evidence, NOT proof of a verified business — set verified_business=false in that case. Never fabricate a business name.
+summary (max 300 chars): describe what you found. If the number belongs to a known business, name it. If you found scam/dangerous reports (including from security blogs), summarize them and name the source. If you found nothing, say "No scam reports found for this number." Never mention background checks or future processing.
+sources: ALWAYS include the full URLs of the websites where you found this information (official business "contact" pages, complaint sites, Reddit posts, security blogs, news articles). If you found nothing, return an empty array.
 
 Respond in ${languageName}.`;
 
@@ -631,7 +631,7 @@ Respond in ${languageName}.`;
     );
 
     const fullResult = {
-      country: result.country || '',
+      country: result.country || effectiveCountry,
       carrier: result.carrier || '',
       reputation_score: merged.reputation_score,
       risk_level: merged.risk_level,
