@@ -10,7 +10,7 @@ const STATUS_META = {
   SPAM: { label: "Spam", color: "bg-warning/10 text-warning border-warning/30" },
   SUSPICIOUS: { label: "Suspicious", color: "bg-warning/10 text-warning border-warning/30" },
   SAFE: { label: "No Known Risk Found", color: "bg-success/10 text-success border-success/30" },
-  UNKNOWN: { label: "Unknown", color: "bg-muted text-muted-foreground border-border/50" },
+  UNKNOWN: { label: "No Known Risk Found", color: "bg-muted text-muted-foreground border-border/50" },
 };
 
 export default function PhoneResultView({ data }) {
@@ -32,11 +32,9 @@ export default function PhoneResultView({ data }) {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <span className="font-semibold text-sm font-mono">{data.phone_number}</span>
         <div className="flex items-center gap-2">
-          {effectiveStatus !== "UNKNOWN" && (
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${status.color}`}>
-              {status.label}
-            </span>
-          )}
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${status.color}`}>
+            {status.label}
+          </span>
         </div>
       </div>
 
