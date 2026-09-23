@@ -55,13 +55,14 @@ function normalizeBusinessResult(result: any): any {
   const scam = result.scam_report_count || 0;
   const spam = result.spam_report_count || 0;
   const susp = result.suspicious_report_count || 0;
-  const risky = scam > 0 || spam > 0 || susp > 0 || result.risk_level === 'high' || (result.reputation_score || 0) >= 41;
+  const explicitFraud = scam > 0 || spam > 0 || susp > 0;
+  const risky = explicitFraud || result.risk_level === 'high';
   const hasSources = Array.isArray(result.sources) && result.sources.length > 0;
   // Anti-fabrication guardrail: a business can only be "verified" if at least
   // one source URL backs the claim. A hallucinated business name with no
   // source is not trustworthy — never promote it, and demote it if the LLM
   // claimed verified_business without any source URL.
-  if (realBusiness && !result.verified_business && !risky && hasSources) {
+  if (realBusiness && !result.verified_business && !explicitFraud && hasSources) {
     result.verified_business = true;
   }
   if (result.verified_business && !hasSources) {
@@ -73,6 +74,8 @@ function normalizeBusinessResult(result: any): any {
     result.summary = `This number belongs to ${bn}. No scam reports were found for this number.`;
   }
   if (result.verified_business) {
+    result.reputation_score = 10;
+    result.risk_level = 'low';
     result.caller_id_status = 'SAFE';
     result.confidence_score = 100;
     result.caller_id_label = 'Vardin: Safe';
