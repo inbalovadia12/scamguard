@@ -150,6 +150,160 @@ function checkKnownFictional(cleaned: string): any {
   return null;
 }
 
+// Phone country calling-code table. Used to detect a number's country from its
+// dialing-code prefix and to normalize local-format numbers using the selected
+// country's trunk rules. `stripLeadingZero` indicates that local dialing uses a
+// leading 0 trunk prefix which is dropped in international format (Italy keeps
+// its 0; US/Canada have no trunk 0).
+const PHONE_COUNTRY_TABLE: { code: string; country: string; stripLeadingZero: boolean }[] = [
+  { code: '1', country: 'United States', stripLeadingZero: false },
+  { code: '1', country: 'Canada', stripLeadingZero: false },
+  { code: '7', country: 'Russia', stripLeadingZero: true },
+  { code: '20', country: 'Egypt', stripLeadingZero: true },
+  { code: '27', country: 'South Africa', stripLeadingZero: true },
+  { code: '30', country: 'Greece', stripLeadingZero: true },
+  { code: '31', country: 'Netherlands', stripLeadingZero: true },
+  { code: '32', country: 'Belgium', stripLeadingZero: true },
+  { code: '33', country: 'France', stripLeadingZero: true },
+  { code: '34', country: 'Spain', stripLeadingZero: true },
+  { code: '36', country: 'Hungary', stripLeadingZero: true },
+  { code: '39', country: 'Italy', stripLeadingZero: false },
+  { code: '40', country: 'Romania', stripLeadingZero: true },
+  { code: '41', country: 'Switzerland', stripLeadingZero: true },
+  { code: '43', country: 'Austria', stripLeadingZero: true },
+  { code: '44', country: 'United Kingdom', stripLeadingZero: true },
+  { code: '45', country: 'Denmark', stripLeadingZero: false },
+  { code: '46', country: 'Sweden', stripLeadingZero: true },
+  { code: '47', country: 'Norway', stripLeadingZero: false },
+  { code: '48', country: 'Poland', stripLeadingZero: true },
+  { code: '49', country: 'Germany', stripLeadingZero: true },
+  { code: '51', country: 'Peru', stripLeadingZero: true },
+  { code: '52', country: 'Mexico', stripLeadingZero: true },
+  { code: '53', country: 'Cuba', stripLeadingZero: true },
+  { code: '54', country: 'Argentina', stripLeadingZero: true },
+  { code: '55', country: 'Brazil', stripLeadingZero: true },
+  { code: '56', country: 'Chile', stripLeadingZero: true },
+  { code: '57', country: 'Colombia', stripLeadingZero: true },
+  { code: '58', country: 'Venezuela', stripLeadingZero: true },
+  { code: '60', country: 'Malaysia', stripLeadingZero: true },
+  { code: '61', country: 'Australia', stripLeadingZero: true },
+  { code: '62', country: 'Indonesia', stripLeadingZero: true },
+  { code: '63', country: 'Philippines', stripLeadingZero: true },
+  { code: '64', country: 'New Zealand', stripLeadingZero: true },
+  { code: '65', country: 'Singapore', stripLeadingZero: false },
+  { code: '66', country: 'Thailand', stripLeadingZero: true },
+  { code: '81', country: 'Japan', stripLeadingZero: true },
+  { code: '82', country: 'South Korea', stripLeadingZero: true },
+  { code: '84', country: 'Vietnam', stripLeadingZero: true },
+  { code: '86', country: 'China', stripLeadingZero: true },
+  { code: '90', country: 'Turkey', stripLeadingZero: true },
+  { code: '91', country: 'India', stripLeadingZero: true },
+  { code: '92', country: 'Pakistan', stripLeadingZero: true },
+  { code: '94', country: 'Sri Lanka', stripLeadingZero: true },
+  { code: '95', country: 'Myanmar', stripLeadingZero: true },
+  { code: '98', country: 'Iran', stripLeadingZero: true },
+  { code: '212', country: 'Morocco', stripLeadingZero: true },
+  { code: '213', country: 'Algeria', stripLeadingZero: true },
+  { code: '216', country: 'Tunisia', stripLeadingZero: true },
+  { code: '234', country: 'Nigeria', stripLeadingZero: true },
+  { code: '254', country: 'Kenya', stripLeadingZero: true },
+  { code: '255', country: 'Tanzania', stripLeadingZero: true },
+  { code: '256', country: 'Uganda', stripLeadingZero: true },
+  { code: '260', country: 'Zambia', stripLeadingZero: true },
+  { code: '263', country: 'Zimbabwe', stripLeadingZero: true },
+  { code: '351', country: 'Portugal', stripLeadingZero: true },
+  { code: '353', country: 'Ireland', stripLeadingZero: true },
+  { code: '358', country: 'Finland', stripLeadingZero: true },
+  { code: '370', country: 'Lithuania', stripLeadingZero: true },
+  { code: '371', country: 'Latvia', stripLeadingZero: true },
+  { code: '372', country: 'Estonia', stripLeadingZero: true },
+  { code: '375', country: 'Belarus', stripLeadingZero: true },
+  { code: '380', country: 'Ukraine', stripLeadingZero: true },
+  { code: '385', country: 'Croatia', stripLeadingZero: true },
+  { code: '386', country: 'Slovenia', stripLeadingZero: true },
+  { code: '420', country: 'Czech Republic', stripLeadingZero: true },
+  { code: '421', country: 'Slovakia', stripLeadingZero: true },
+  { code: '505', country: 'Nicaragua', stripLeadingZero: true },
+  { code: '506', country: 'Costa Rica', stripLeadingZero: true },
+  { code: '507', country: 'Panama', stripLeadingZero: true },
+  { code: '595', country: 'Paraguay', stripLeadingZero: true },
+  { code: '598', country: 'Uruguay', stripLeadingZero: true },
+  { code: '880', country: 'Bangladesh', stripLeadingZero: true },
+  { code: '886', country: 'Taiwan', stripLeadingZero: true },
+  { code: '961', country: 'Lebanon', stripLeadingZero: true },
+  { code: '962', country: 'Jordan', stripLeadingZero: true },
+  { code: '965', country: 'Kuwait', stripLeadingZero: true },
+  { code: '966', country: 'Saudi Arabia', stripLeadingZero: true },
+  { code: '968', country: 'Oman', stripLeadingZero: true },
+  { code: '971', country: 'United Arab Emirates', stripLeadingZero: true },
+  { code: '974', country: 'Qatar', stripLeadingZero: true },
+  { code: '972', country: 'Israel', stripLeadingZero: true },
+];
+
+function matchCountryCode(digits: string) {
+  const sorted = PHONE_COUNTRY_TABLE.slice().sort((a, b) => b.code.length - a.code.length);
+  for (const e of sorted) {
+    if (digits.startsWith(e.code)) return e;
+  }
+  return null;
+}
+
+// Normalize any user-entered phone number into a canonical E.164 cache key plus
+// a human-readable display format and the resolved country. When the user
+// included an explicit international prefix (+ or 00), the number's own
+// dialing code is authoritative and overrides the location selector; otherwise
+// we use the selected country's dialing code and trunk-prefix rules. This
+// prevents international numbers (e.g. +44 7407 394404) from being mangled into
+// a fake US NANP number.
+function normalizePhoneNumber(input: string, countryHint: string): { cacheKey: string; displayFormat: string; country: string } {
+  const raw = (input || '').trim();
+  let digits = raw.replace(/[^\d]/g, '');
+  let explicitIntl = raw.startsWith('+');
+  if (!explicitIntl && digits.startsWith('00')) { digits = digits.slice(2); explicitIntl = true; }
+
+  const fmtDisplay = (cc: string, national: string) => {
+    if (cc === '1' && national.length === 10) {
+      return `${national.slice(0, 3)}-${national.slice(3, 6)}-${national.slice(6)}`;
+    }
+    return `+${cc} ${national}`.trim();
+  };
+
+  // Explicit international prefix: the number's own dialing code wins.
+  if (explicitIntl && digits.length > 0) {
+    const found = matchCountryCode(digits);
+    if (found) {
+      const national = digits.slice(found.code.length);
+      return { cacheKey: `+${found.code}${national}`, displayFormat: fmtDisplay(found.code, national), country: found.country };
+    }
+    // Unrecognized country code — keep the exact digits so we still research
+    // the exact number the user entered.
+    return { cacheKey: `+${digits}`, displayFormat: `+${digits}`, country: countryHint || 'United States' };
+  }
+
+  // Local format: derive the dialing code from the selected country and apply
+  // its trunk rules. Accept "City, Country" hint strings from geolocation.
+  const hintCountry = countryHint.split(',').pop().trim();
+  const hintEntry = PHONE_COUNTRY_TABLE.find((e) => e.country.toLowerCase() === hintCountry.toLowerCase());
+  if (hintEntry) {
+    let national = digits;
+    if (hintEntry.stripLeadingZero && national.startsWith('0')) national = national.slice(1);
+    return { cacheKey: `+${hintEntry.code}${national}`, displayFormat: fmtDisplay(hintEntry.code, national), country: hintEntry.country };
+  }
+
+  // Fallback: NANP 10-digit logic (preserves prior behavior for US/Canada).
+  let tenDigit: string;
+  if (digits.length === 10) tenDigit = digits;
+  else if (digits.length === 11 && digits.startsWith('1')) tenDigit = digits.slice(1);
+  else if (digits.length > 10) tenDigit = digits.slice(-10);
+  else tenDigit = digits;
+  const isValidNANP = tenDigit.length === 10 && !tenDigit.startsWith('0') && !tenDigit.startsWith('1');
+  return {
+    cacheKey: isValidNANP ? `+1${tenDigit}` : `+${digits}`,
+    displayFormat: isValidNANP ? `${tenDigit.slice(0, 3)}-${tenDigit.slice(3, 6)}-${tenDigit.slice(6)}` : raw,
+    country: isValidNANP ? 'United States' : (countryHint || 'United States'),
+  };
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -194,44 +348,15 @@ Deno.serve(async (req) => {
     const cleaned = phone_number.trim().replace(/[^\d]/g, '');
     if (cleaned.length < 7) return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
 
-    // Country-aware normalization. Users enter numbers in national form
-    // (e.g. "03-977-1111") OR with a country-code prefix (e.g. "972-3-977-1111"
-    // or "+972 3 977 1111"). The old logic assumed NANP and took the last 10
-    // digits prefixed with +1, which mangled international numbers into fake
-    // US numbers. Build a canonical E.164 cache key + display format that
-    // preserves the real country code so the LLM researches the correct number.
-    const COUNTRY_CODES: Record<string, string> = {
-      israel: '972', 'united states': '1', usa: '1', canada: '1',
-    };
-    const hintCc = COUNTRY_CODES[countryHint.toLowerCase()] || '';
-
-    let cacheKey: string;
-    let displayFormat: string;
-
-    if (cleaned.startsWith('972')) {
-      // Israeli number entered with its country code (972-3-977-1111 / 972039771111).
-      let national = cleaned.slice(3);
-      if (national.startsWith('0')) national = national.slice(1); // drop leading 0 if included
-      cacheKey = `+972${national}`;
-      displayFormat = `+972 ${national}`;
-    } else if (hintCc === '972' && cleaned.startsWith('0')) {
-      // Israeli national format (03-977-1111) with Israel selected as the country.
-      const national = cleaned.slice(1); // drop leading 0
-      cacheKey = `+972${national}`;
-      displayFormat = `+972 ${national}`;
-    } else {
-      // NANP (US/Canada) or fallback: keep the existing 10-digit logic.
-      let tenDigit: string;
-      if (cleaned.length === 10) tenDigit = cleaned;
-      else if (cleaned.length === 11 && cleaned.startsWith('1')) tenDigit = cleaned.slice(1);
-      else if (cleaned.length > 10) tenDigit = cleaned.slice(-10);
-      else tenDigit = cleaned;
-      const isValidNANP = tenDigit.length === 10 && !tenDigit.startsWith('0') && !tenDigit.startsWith('1');
-      displayFormat = isValidNANP
-        ? `${tenDigit.slice(0, 3)}-${tenDigit.slice(3, 6)}-${tenDigit.slice(6)}`
-        : phone_number.trim();
-      cacheKey = isValidNANP ? `+1${tenDigit}` : `+${cleaned}`;
-    }
+    // Country-aware normalization. The number's own dialing-code prefix (when
+    // the user included one via + or 00) is authoritative and overrides the
+    // location selector; for local-format numbers we fall back to the selected
+    // country and its trunk rules. This keeps international numbers (e.g.
+    // +44 7407 394404) intact instead of mangling them into a fake US number.
+    const norm = normalizePhoneNumber(phone_number, countryHint);
+    const cacheKey = norm.cacheKey;
+    const displayFormat = norm.displayFormat;
+    const effectiveCountry = norm.country;
 
     // ---- Helper: fetch community evidence ----
     const fetchCommunityEvidence = async (): Promise<any> => {
@@ -304,7 +429,7 @@ Deno.serve(async (req) => {
       const hasEvidence = (r?.scam_report_count || 0) > 0 || (r?.spam_report_count || 0) > 0 || (r?.suspicious_report_count || 0) > 0 || (r?.safe_report_count || 0) > 0 || !!r?.verified_business;
       const isInformative = hasClassification || hasEvidence;
       const storedCountry = (String(r?.lookup_country || 'United States')).toLowerCase();
-      const countryMatches = storedCountry === countryHint.toLowerCase();
+      const countryMatches = storedCountry === effectiveCountry.toLowerCase();
       const serveCache = !!r && !!r.last_external_check_at && countryMatches && (isInformative ? ageMs < FRESH_MS : ageMs < MIN_RECHECK_MS);
       if (serveCache) {
         const communityEvidence = await fetchCommunityEvidence();
@@ -342,6 +467,7 @@ Deno.serve(async (req) => {
         return Response.json({
           result,
           lookup: { id: r.id, phone_number: r.phone_number, cached: true },
+          detected_country: effectiveCountry,
           cached: true,
           credits_used: CREDIT_COST,
           credits_remaining: creditsRemaining,
@@ -402,6 +528,7 @@ Deno.serve(async (req) => {
       return Response.json({
         result: fullResult,
         lookup: lookup ? { id: lookup.id, phone_number: displayFormat, cached: false } : { phone_number: displayFormat, cached: false },
+        detected_country: effectiveCountry,
         cached: false,
         credits_used: CREDIT_COST,
         credits_remaining: creditsRemaining,
@@ -415,11 +542,11 @@ Deno.serve(async (req) => {
 
     const prompt = `Research the phone number ${displayFormat} across the web.
 
-IMPORTANT — Country context: The user is located in ${countryHint}. The same phone digits can belong to completely different businesses in different countries (for example, a number that reaches an airline in one country may reach a small business in another). Identify who THIS number belongs to WITHIN ${countryHint}: interpret the number according to ${countryHint}'s phone numbering plan, and prioritize official listings, directories, and complaint sites from ${countryHint}. If you cannot find a ${countryHint}-specific owner, say so clearly — do not substitute a business from a different country.
+IMPORTANT — Country context: The user is located in ${effectiveCountry}. The same phone digits can belong to completely different businesses in different countries (for example, a number that reaches an airline in one country may reach a small business in another). Identify who THIS number belongs to WITHIN ${effectiveCountry}: interpret the number according to ${effectiveCountry}'s phone numbering plan, and prioritize official listings, directories, and complaint sites from ${effectiveCountry}. If you cannot find a ${effectiveCountry}-specific owner, say so clearly — do not substitute a business from a different country.
 
 Step 1 — Identify the owner. Search for the business, organization, or person this number belongs to. Check official company websites, "contact us" pages, and business directories. Many numbers belong to well-known legitimate businesses (airlines, retailers, banks, utilities, government agencies) — identify them when you can.
 
-CRITICAL — do NOT guess, infer, or fabricate the owner. Only report a business_name if you found THIS EXACT phone number (every digit matching) listed on the business's OWN official website or "contact us" page, or on a major verified directory (official Google Business listing, official government registry) within ${countryHint}. Seeing the number on a complaint site, forum, or blog is NOT enough. If you are inferring from the area code, number format, or partial matches, do NOT set a business name. If you cannot confirm the owner from an official source, leave business_name empty and say so plainly in the summary. Fabricating a business name is far worse than admitting you didn't find one.
+CRITICAL — do NOT guess, infer, or fabricate the owner. Only report a business_name if you found THIS EXACT phone number (every digit matching) listed on the business's OWN official website or "contact us" page, or on a major verified directory (official Google Business listing, official government registry) within ${effectiveCountry}. Seeing the number on a complaint site, forum, or blog is NOT enough. If you are inferring from the area code, number format, or partial matches, do NOT set a business name. If you cannot confirm the owner from an official source, leave business_name empty and say so plainly in the summary. Fabricating a business name is far worse than admitting you didn't find one.
 
 Step 2 — Check for scam/spam reports. Search crowd-sourced complaint sites (800notes.com, whocallsme.com, callercomplaints.com), Reddit (r/ScamNumbers, r/scams), and fraud databases for reports about THIS EXACT number.
 
@@ -431,7 +558,7 @@ Rules:
 reputation_score (0-100, HIGHER = more dangerous): 0-15 = confirmed legitimate business or no negative reports; 16-35 = limited/anecdotal negative reports; 36-60 = suspicious or spam; 61-80 = strong scam indicators / multiple scam reports; 81-100 = confirmed scam number.
 risk_level: "low" (no negative reports, or confirmed legitimate business), "medium" (suspicious/spam), "high" (strong scam evidence).
 confidence_score (0-100): how confident you are based on the evidence found.
-verified_business: true ONLY if you found THIS EXACT number on an official source (the business's own website/contact page, or a major verified directory) within ${countryHint}, AND you include that source URL in sources. If you are inferring, guessing, or only saw the number on an unofficial complaint site/forum, set verified_business=false and business_name="". Never fabricate a business name.
+verified_business: true ONLY if you found THIS EXACT number on an official source (the business's own website/contact page, or a major verified directory) within ${effectiveCountry}, AND you include that source URL in sources. If you are inferring, guessing, or only saw the number on an unofficial complaint site/forum, set verified_business=false and business_name="". Never fabricate a business name.
 summary (max 300 chars): describe what you found. If the number belongs to a known business, name it (e.g., "This is the customer service line for Target."). If you found scam reports, summarize them. If you found nothing, say "No scam reports found for this number." Never mention background checks or future processing.
 sources: ALWAYS include the full URLs of the websites where you found this information (official business "contact" pages, complaint sites, Reddit posts, news articles). If you found nothing, return an empty array.
 
@@ -540,7 +667,7 @@ Respond in ${languageName}.`;
       last_external_check_at: new Date().toISOString(),
       verified_business: fullResult.verified_business,
       business_name: fullResult.business_name,
-      lookup_country: countryHint,
+      lookup_country: effectiveCountry,
       report_counts: {
         scam: merged.scam_report_count,
         spam: merged.spam_report_count,
@@ -585,6 +712,7 @@ Respond in ${languageName}.`;
     return Response.json({
       result: fullResult,
       lookup: lookup ? { id: lookup.id, phone_number: displayFormat, cached: false } : { phone_number: displayFormat, cached: false },
+      detected_country: effectiveCountry,
       cached: false,
       credits_used: CREDIT_COST,
       credits_remaining: creditsRemaining,

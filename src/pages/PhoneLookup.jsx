@@ -8,6 +8,7 @@ import PlanGate from "@/components/PlanGate";
 import { getCreditStatus } from "@/lib/credits";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import { detectPhoneCountry } from "@/lib/phoneCountries";
 
 const RISK_CONFIG = {
   low: { color: "text-success", bg: "bg-success/10", border: "border-success/30", icon: ShieldCheck, label: "No Known Risk Found" },
@@ -43,6 +44,13 @@ export default function PhoneLookup() {
   useEffect(() => {
     try { if (locationInput) localStorage.setItem('vardin_phone_location', locationInput); } catch {}
   }, [locationInput]);
+
+  // When the user enters a number with an explicit international prefix
+  // (+ or 00), auto-set the country selector to the detected country.
+  useEffect(() => {
+    const country = detectPhoneCountry(phoneInput);
+    if (country) setLocationInput(country);
+  }, [phoneInput]);
 
   const loadHistory = async () => {
     try {
@@ -142,6 +150,7 @@ export default function PhoneLookup() {
       if (response.data?.error) throw new Error(response.data.error);
       const result = response.data?.result;
       const saved = response.data?.lookup;
+      if (response.data?.detected_country) setLocationInput(response.data.detected_country);
       setCurrentResult(applyLookupToResult(phone, { ...result, created_date: saved?.created_date }));
       loadHistory();
     } catch (e) {
