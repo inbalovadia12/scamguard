@@ -64,14 +64,18 @@ export default function PhoneLookup() {
   };
 
   const applyLookupToResult = (phone, result) => {
-    const confirmedCommunityScam = (result.community?.scam_reports || 0) > 0 || (result.reddit?.scam_reports || result.reddit?.report_count || 0) > 0 || !!result.web_evidence?.gridinsoft?.matched || (result.scam_report_count || 0) > 0;
+    const confirmedCommunityScam =
+      (result.community?.scam_reports || 0) > 0 ||
+      (result.reddit?.scam_reports || result.reddit?.report_count || 0) > 0 ||
+      !!result.web_evidence?.gridinsoft?.matched ||
+      (result.scam_report_count || 0) > 0;
     const effectiveStatus = confirmedCommunityScam ? "SCAM" : (result.caller_id_status || "UNKNOWN");
     const effectiveConfidence = effectiveStatus === "UNKNOWN" ? 50 : (result.confidence_score ?? 50);
     return {
     phone_number: phone,
     country: result.country,
     carrier: result.carrier,
-    reputation_score: confirmedCommunityScam ? 100 : (result.reputation_score ?? 0),
+    reputation_score: confirmedCommunityScam ? Math.max(75, result.reputation_score ?? 0) : (result.reputation_score ?? 0),
     risk_level: result.risk_level,
     user_reports: result.user_reports || [],
     scam_categories: result.scam_categories || [],
@@ -82,8 +86,8 @@ export default function PhoneLookup() {
     spam_report_count: result.spam_report_count || 0,
     suspicious_report_count: result.suspicious_report_count || 0,
     safe_report_count: result.safe_report_count || 0,
-    caller_id_status: result.caller_id_status || "UNKNOWN",
-    confidence_score: result.confidence_score || 0,
+    caller_id_status: effectiveStatus,
+    confidence_score: Math.max(0, Math.min(100, Number(effectiveConfidence) || 50)),
     verified_business: result.verified_business || false,
     business_name: result.business_name || "",
     caller_id_label: result.caller_id_label || "",
@@ -209,7 +213,17 @@ export default function PhoneLookup() {
     );
   }
 
-  const cfg = currentResult ? (RISK_CONFIG[currentResult.risk_level] || RISK_CONFIG.low) : null;
+  const currentConfirmedScam = currentResult && (
+    (currentResult.scam_report_count || 0) > 0 ||
+    (currentResult.reddit?.scam_reports || currentResult.reddit?.report_count || 0) > 0 ||
+    !!currentResult.web_evidence?.gridinsoft?.matched
+  );
+  const currentEffectiveStatus = currentConfirmedScam ? "SCAM" : (currentResult?.caller_id_status || "UNKNOWN");
+  const cfg = currentResult
+    ? (currentEffectiveStatus === "UNKNOWN"
+      ? { color: "text-muted-foreground", bg: "bg-muted/40", border: "border-border/50", icon: ShieldCheck, label: "Unknown / Insufficient Evidence" }
+      : (RISK_CONFIG[currentResult.risk_level] || RISK_CONFIG.low))
+    : null;
   const RiskIcon = cfg?.icon;
 
   return (
