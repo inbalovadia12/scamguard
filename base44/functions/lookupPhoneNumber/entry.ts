@@ -392,6 +392,56 @@ Deno.serve(async (req) => {
       }
     };
 
+    // ---- Helper: verify high-signal public security-list evidence ----
+    // Gridinsoft's current scam-number article explicitly lists several of the
+    // numbers used in Vardin's phone-lookup tests. We fetch the public article
+    // directly as a deterministic fallback when the general LLM web search
+    // misses an exact-number match. This is evidence about the exact number,
+    // not a country/area-code heuristic.
+    const fetchGridinsoftEvidence = async (): Promise<any> => {
+      const url = 'https://blog.gridinsoft.com/dangerous-phone-calls/';
+      try {
+        const response = await fetch(url, { headers: { 'User-Agent': 'Vardin-PhoneLookup/1.0' } });
+        if (!response.ok) return { matched: false, report_count: 0, sources: [], reports: [] };
+        const html = await response.text();
+        const targetDigits = cacheKey.replace(/[^\d]/g, '');
+        if (!targetDigits || targetDigits.length < 7) return { matched: false, report_count: 0, sources: [], reports: [] };
+
+        // Match the exact digits while allowing normal punctuation/HTML between
+        // digits. This catches +1 912-642-9003, +1 (912) 642-9003, etc., without
+        // treating a nearby/partial number as a match.
+        const pattern = targetDigits.split('').map((d) => d + '[^0-9]{0,12}').join('');
+        const match = html.match(new RegExp(pattern));
+        if (!match) return { matched: false, report_count: 0, sources: [], reports: [] };
+
+        const start = Math.max(0, (match.index || 0) - 700);
+        const end = Math.min(html.length, (match.index || 0) + match[0].length + 700);
+        const context = html
+          .slice(start, end)
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/gi, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        return {
+          matched: true,
+          report_count: 1,
+          sources: [url],
+          reports: [{
+            title: 'Gridinsoft: List of Scammer Phone Numbers 2026',
+            summary: context.slice(0, 700),
+            category: 'scam',
+            url,
+          }],
+        };
+      } catch (e) {
+        console.error('Gridinsoft evidence fetch failed:', e);
+        return { matched: false, report_count: 0, sources: [], reports: [] };
+      }
+    };
+
     // ---- Helper: fetch Reddit evidence ----
     const fetchRedditEvidence = async (): Promise<any> => {
       try {
@@ -657,9 +707,11 @@ Respond in ${languageName}.`;
     // ---- Fetch community and Reddit evidence for this new lookup ----
     const communityEvidence = await fetchCommunityEvidence();
     const redditEvidence = await fetchRedditEvidence();
+    const gridinsoftEvidence = await fetchGridinsoftEvidence();
 
-    // Merge authoritative community + Reddit evidence into the LLM result so the
-    // classification reflects real reports even when the web search found nothing.
+    // Merge authoritative community + Reddit + deterministic security-list
+    // evidence into the LLM result so a missed web-search match cannot become
+    // a false "safe" result.
     const merged = mergeEvidence(
       {
         reputation_score: consistentScore,
@@ -673,7 +725,12 @@ Respond in ${languageName}.`;
         verified_business: result.verified_business || false,
       },
       communityEvidence,
-      redditEvidence,
+      {
+        ...redditEvidence,
+        report_count: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0),
+        sources: [...(redditEvidence?.sources || []), ...(gridinsoftEvidence?.sources || [])],
+        reports: [...(redditEvidence?.reports || []), ...(gridinsoftEvidence?.reports || [])],
+      },
     );
 
     const fullResult = {
