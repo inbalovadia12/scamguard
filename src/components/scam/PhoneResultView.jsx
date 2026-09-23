@@ -41,10 +41,10 @@ export default function PhoneResultView({ data }) {
         </div>
       </div>
 
-      {/* Reputation score */}
+      {/* Risk score — the single numeric phone-risk metric. */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Reputation Score</span>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Risk Score</span>
           <span className={`text-2xl font-bold ${scoreColor}`}>
             {score}
             <span className="text-sm text-muted-foreground">/100</span>
