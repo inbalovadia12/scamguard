@@ -5,7 +5,7 @@ import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '..
 const CREDIT_COST = 5;
 
 function sanitizeSummary(raw: string): string {
-  if (!raw) return 'No scam reports found for this number.';
+  if (!raw) return 'No reliable evidence found for this number; status is unknown.';
   const withoutProcessClaims = raw.replace(
     /[^.!?]*\b(?:deeper\s+check|running\s+in\s+the\s+background|background\s+check|ongoing\s+process|further\s+analysis|still\s+checking|currently\s+(?:checking|analyzing)|will\s+(?:be\s+)?(?:check|analyz|updat)\w*)\b[^.!?]*[.!?]*/gi,
     ''
@@ -25,7 +25,7 @@ function sanitizeSummary(raw: string): string {
     })
     .join(' ');
 
-  return cleaned || 'No scam reports found for this number.';
+  return cleaned || 'No reliable evidence found for this number; status is unknown.';
 }
 
 function enforceConsistency(score: number, risk: string): { score: number; risk: 'low' | 'medium' | 'high' } {
@@ -708,10 +708,21 @@ Respond in ${languageName}.`;
     const communityEvidence = await fetchCommunityEvidence();
     const redditEvidence = await fetchRedditEvidence();
     const gridinsoftEvidence = await fetchGridinsoftEvidence();
+    const webEvidence = {
+      matched: !!(redditEvidence?.matched || gridinsoftEvidence?.matched),
+      report_count: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0),
+      scam_reports: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0),
+      spam_reports: 0,
+      suspicious_reports: 0,
+      safe_reports: 0,
+      sources: [...(redditEvidence?.sources || []), ...(gridinsoftEvidence?.sources || [])],
+      reports: [...(redditEvidence?.reports || []), ...(gridinsoftEvidence?.reports || [])],
+    };
 
-    // Merge authoritative community + Reddit + deterministic security-list
-    // evidence into the LLM result so a missed web-search match cannot become
-    // a false "safe" result.
+    // Merge community + exact-number web evidence into the LLM result. The
+    // deterministic Gridinsoft match is explicitly counted as scam evidence;
+    // previously it was only added to report_count, leaving scam_report_count
+    // at zero and allowing the result to remain UNKNOWN/low-risk.
     const merged = mergeEvidence(
       {
         reputation_score: consistentScore,
@@ -725,12 +736,7 @@ Respond in ${languageName}.`;
         verified_business: result.verified_business || false,
       },
       communityEvidence,
-      {
-        ...redditEvidence,
-        report_count: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0),
-        sources: [...(redditEvidence?.sources || []), ...(gridinsoftEvidence?.sources || [])],
-        reports: [...(redditEvidence?.reports || []), ...(gridinsoftEvidence?.reports || [])],
-      },
+      webEvidence,
     );
 
     const fullResult = {
@@ -748,7 +754,10 @@ Respond in ${languageName}.`;
       suspicious_report_count: merged.suspicious_report_count,
       safe_report_count: merged.safe_report_count,
       caller_id_status: 'UNKNOWN',
+      // Never trust an LLM-generated confidence value when there is no evidence.
+      // Evidence-backed results use the shared reputation confidence calculation.
       confidence_score: Math.max(0, Math.min(100, Number(result.confidence_score) || 0)),
+      evidence_backed: !!(merged.scam_report_count || merged.spam_report_count || merged.suspicious_report_count || merged.safe_report_count || result.verified_business),
       verified_business: result.verified_business || false,
       business_name: result.business_name || '',
       caller_id_label: '',
@@ -780,8 +789,15 @@ Respond in ${languageName}.`;
     });
 
     fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
-    fullResult.confidence_score = Math.max(fullResult.confidence_score, rep?.confidence_score || 0);
+    fullResult.confidence_score = fullResult.evidence_backed
+      ? Math.max(0, Math.min(100, rep?.confidence_score || fullResult.confidence_score || 0))
+      : 0;
     fullResult.caller_id_label = rep?.caller_id_label || '';
+    if (!fullResult.evidence_backed) {
+      fullResult.risk_level = 'low';
+      fullResult.caller_id_status = 'UNKNOWN';
+      fullResult.summary = 'No reliable evidence found for this number; status is unknown.';
+    }
 
     let lookup: any = null;
     try {
