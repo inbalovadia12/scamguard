@@ -468,6 +468,18 @@ Deno.serve(async (req) => {
         };
         normalizeBusinessResult(result);
         mergeEvidence(result, communityEvidence, redditEvidence);
+        // Re-run the canonical score/risk derivation after merging fresh evidence.
+        // Cached records must obey the same single-score contract as fresh lookups.
+        const cachedEvidence = {
+          scam: Number(result.scam_report_count) || 0,
+          spam: Number(result.spam_report_count) || 0,
+          suspicious: Number(result.suspicious_report_count) || 0,
+          safe: Number(result.safe_report_count) || 0,
+          verified: !!result.verified_business,
+        };
+        const cachedConsistency = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low', cachedEvidence);
+        result.reputation_score = cachedConsistency.score;
+        result.risk_level = cachedConsistency.risk;
         result.caller_id_status = statusFromReputation(result);
         result.confidence_score = computeConfidence(result);
         result.caller_id_label = computeLabel(result.caller_id_status, DEFAULT_CONFIG);
@@ -717,6 +729,19 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       communityEvidence,
       redditEvidence,
     );
+
+    // Re-derive BOTH values from the final merged evidence. This makes the
+    // numeric score and risk level a single canonical pair all the way to the UI.
+    const mergedEvidence = {
+      scam: Number(merged.scam_report_count) || 0,
+      spam: Number(merged.spam_report_count) || 0,
+      suspicious: Number(merged.suspicious_report_count) || 0,
+      safe: Number(merged.safe_report_count) || 0,
+      verified: !!merged.verified_business,
+    };
+    const finalConsistency = enforceConsistency(merged.reputation_score ?? 0, merged.risk_level || 'low', mergedEvidence);
+    merged.reputation_score = finalConsistency.score;
+    merged.risk_level = finalConsistency.risk;
 
     const fullResult = {
       country: result.country || effectiveCountry,
