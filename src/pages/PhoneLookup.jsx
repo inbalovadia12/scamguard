@@ -292,7 +292,7 @@ export default function PhoneLookup() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-4xl font-bold font-heading">{currentResult.reputation_score}</div>
+                <div className="text-4xl font-bold font-heading">{currentConfirmedScam ? Math.max(75, currentResult.reputation_score ?? 0) : (currentResult.reputation_score ?? 0)}</div>
                 <div className="text-xs text-muted-foreground">/100 risk score</div>
               </div>
             </div>
