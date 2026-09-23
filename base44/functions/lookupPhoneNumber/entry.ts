@@ -523,7 +523,7 @@ Deno.serve(async (req) => {
         normalizeBusinessResult(result);
         mergeEvidence(result, communityEvidence, redditEvidence);
         result.caller_id_status = statusFromReputation(result);
-        result.confidence_score = computeConfidence(result);
+        result.confidence_score = (result.scam_report_count || result.spam_report_count || result.suspicious_report_count || result.safe_report_count || result.verified_business) ? computeConfidence(result) : 50;
         result.caller_id_label = computeLabel(result.caller_id_status, DEFAULT_CONFIG);
         return Response.json({
           result,
