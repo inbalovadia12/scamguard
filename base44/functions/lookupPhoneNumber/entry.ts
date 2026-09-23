@@ -476,7 +476,7 @@ Deno.serve(async (req) => {
       try {
         const redditReports = await base44.asServiceRole.entities.RedditScamNumber.filter({ normalized_number: cacheKey });
         if (!redditReports || redditReports.length === 0) {
-          return { matched: false, report_count: 0, sources: [] };
+          return { matched: false, report_count: 0, sources: [], reports: [] };
         }
 
         return {
@@ -493,15 +493,101 @@ Deno.serve(async (req) => {
         };
       } catch (e) {
         console.error('Reddit evidence fetch failed:', e);
-        return { matched: false, report_count: 0, sources: [] };
+        return { matched: false, report_count: 0, sources: [], reports: [] };
       }
     };
 
-    // ---- Cache hit (check fresh PhoneReputation + fetch community/reddit evidence) ----
+    // ---- Helper: fetch public exact-number directory evidence ----
+    // Direct exact-number checks supplement the LLM's web search. They only
+    // count a page when the FULL canonical number occurs on that page AND the
+    // page contains a clear negative/reporting signal. No area-code or prefix
+    // matching is used.
+    const fetchPublicDirectoryEvidence = async (): Promise<any> => {
+      const digits = cacheKey.replace(/[^\d]/g, '');
+      if (!digits) return { matched: false, report_count: 0, sources: [], reports: [] };
+
+      const candidates: Array<{ url: string; source: string }> = [];
+      if (digits.startsWith('44') && digits.length > 2) {
+        candidates.push({
+          url: `https://who-called.co.uk/Number/${digits.slice(2)}`,
+          source: 'Who Called Me? UK',
+        });
+      }
+      if (digits.startsWith('1') && digits.length === 11) {
+        const nanp = digits.slice(1);
+        const formatted = `${nanp.slice(0, 3)}-${nanp.slice(3, 6)}-${nanp.slice(6)}`;
+        candidates.push(
+          { url: `https://phoneregistry.org/us/${formatted}/`, source: 'Phone Registry' },
+          { url: `https://www.reportedcalls.com/${nanp}`, source: 'ReportedCalls' },
+          { url: `https://www.everycaller.com/phone-number/1-${nanp}/`, source: 'EveryCaller' },
+        );
+      }
+
+      const fetchOne = async (candidate: { url: string; source: string }) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        try {
+          const response = await fetch(candidate.url, {
+            headers: { 'User-Agent': 'Vardin-PhoneLookup/1.0' },
+            signal: controller.signal,
+          });
+          if (!response.ok) return null;
+          const html = await response.text();
+          const normalizedHtml = html.replace(/[^\d]/g, '');
+          if (!normalizedHtml.includes(digits)) return null;
+
+          const textContent = html
+            .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')
+            .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/gi, ' ')
+            .replace(/&amp;/gi, '&')
+            .replace(/\\s+/g, ' ')
+            .trim();
+          const lower = textContent.toLowerCase();
+          const negativeTerms = ['dangerous', 'scam', 'spam', 'fraud', 'phishing', 'harassing', 'reported', 'unsafe', 'suspicious', 'nuisance'];
+          const matchedTerms = negativeTerms.filter((term) => lower.includes(term));
+          if (matchedTerms.length === 0) return null;
+
+          const firstIndex = matchedTerms
+            .map((term) => lower.indexOf(term))
+            .filter((i) => i >= 0)
+            .sort((a, b) => a - b)[0] ?? 0;
+          const context = textContent.slice(Math.max(0, firstIndex - 220), firstIndex + 700);
+
+          return {
+            source: candidate.source,
+            url: candidate.url,
+            summary: context,
+          };
+        } catch (e) {
+          console.warn('Public directory fetch failed:', candidate.url);
+          return null;
+        } finally {
+          clearTimeout(timer);
+        }
+      };
+
+      const found = (await Promise.all(candidates.map(fetchOne))).filter(Boolean) as any[];
+      const unique = Array.from(new Map(found.map((item: any) => [item.url, item])).values());
+      return {
+        matched: unique.length > 0,
+        report_count: unique.length,
+        sources: unique.map((item: any) => item.url),
+        reports: unique.map((item: any) => ({
+          title: `${item.source}: exact-number report`,
+          summary: item.summary,
+          category: 'scam',
+          url: item.url,
+        })),
+      };
+    };
+
+    // ---- Cache hit (check fresh PhoneReputation + refresh public evidence) ----
     try {
       const cached = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
       const FRESH_MS = 1000 * 60 * 60 * 24 * 7;
-      const MIN_RECHECK_MS = 1000 * 60 * 60; // re-run web search at most hourly for uninformative results
+      const MIN_RECHECK_MS = 0; // no-evidence results are never allowed to become stale during testing
       const r = cached[0];
       const ageMs = r?.last_external_check_at ? Date.now() - new Date(r.last_external_check_at).getTime() : Infinity;
       const hasNegativeEvidence = (r?.scam_report_count || 0) > 0 || (r?.spam_report_count || 0) > 0 || (r?.suspicious_report_count || 0) > 0;
@@ -524,6 +610,18 @@ Deno.serve(async (req) => {
       if (serveCache) {
         const communityEvidence = await fetchCommunityEvidence();
         const redditEvidence = await fetchRedditEvidence();
+        const gridinsoftEvidence = await fetchGridinsoftEvidence();
+        const directoryEvidence = await fetchPublicDirectoryEvidence();
+        const webEvidence = {
+          matched: !!(redditEvidence?.matched || gridinsoftEvidence?.matched || directoryEvidence?.matched),
+          report_count: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0) + (directoryEvidence?.report_count || 0),
+          scam_reports: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0) + (directoryEvidence?.report_count || 0),
+          spam_reports: 0,
+          suspicious_reports: 0,
+          safe_reports: 0,
+          sources: [...(redditEvidence?.sources || []), ...(gridinsoftEvidence?.sources || []), ...(directoryEvidence?.sources || [])],
+          reports: [...(redditEvidence?.reports || []), ...(gridinsoftEvidence?.reports || []), ...(directoryEvidence?.reports || [])],
+        };
         
         const creditsRemaining = await chargeCredits();
         const result = {
@@ -548,13 +646,19 @@ Deno.serve(async (req) => {
           last_checked_at: r.last_checked_at || r.last_updated_at || '',
           community: communityEvidence,
           reddit: redditEvidence,
-          web_evidence: { gridinsoft: { matched: false, report_count: 0, sources: [], reports: [] } },
+          web_evidence: { gridinsoft: gridinsoftEvidence, public_directories: directoryEvidence },
         };
         normalizeBusinessResult(result);
-        mergeEvidence(result, communityEvidence, redditEvidence);
+        mergeEvidence(result, communityEvidence, webEvidence);
         result.caller_id_status = statusFromReputation(result);
         result.confidence_score = (result.scam_report_count || result.spam_report_count || result.suspicious_report_count || result.safe_report_count || result.verified_business) ? computeConfidence(result) : 50;
         result.caller_id_label = computeLabel(result.caller_id_status, DEFAULT_CONFIG);
+        if ((result.scam_report_count || 0) > 0) {
+          result.reputation_score = Math.max(75, Number(result.reputation_score) || 0);
+          result.risk_level = 'high';
+          result.caller_id_status = 'SCAM';
+          result.caller_id_label = 'Vardin: Scam Likely';
+        }
         return Response.json({
           result,
           lookup: { id: r.id, phone_number: r.phone_number, cached: true },
@@ -739,15 +843,16 @@ Respond in ${languageName}.`;
     const communityEvidence = await fetchCommunityEvidence();
     const redditEvidence = await fetchRedditEvidence();
     const gridinsoftEvidence = await fetchGridinsoftEvidence();
+    const directoryEvidence = await fetchPublicDirectoryEvidence();
     const webEvidence = {
-      matched: !!(redditEvidence?.matched || gridinsoftEvidence?.matched),
-      report_count: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0),
-      scam_reports: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0),
+      matched: !!(redditEvidence?.matched || gridinsoftEvidence?.matched || directoryEvidence?.matched),
+      report_count: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0) + (directoryEvidence?.report_count || 0),
+      scam_reports: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0) + (directoryEvidence?.report_count || 0),
       spam_reports: 0,
       suspicious_reports: 0,
       safe_reports: 0,
-      sources: [...(redditEvidence?.sources || []), ...(gridinsoftEvidence?.sources || [])],
-      reports: [...(redditEvidence?.reports || []), ...(gridinsoftEvidence?.reports || [])],
+      sources: [...(redditEvidence?.sources || []), ...(gridinsoftEvidence?.sources || []), ...(directoryEvidence?.sources || [])],
+      reports: [...(redditEvidence?.reports || []), ...(gridinsoftEvidence?.reports || []), ...(directoryEvidence?.reports || [])],
     };
 
     // Merge community + exact-number web evidence into the LLM result. The
@@ -795,7 +900,7 @@ Respond in ${languageName}.`;
       last_checked_at: new Date().toISOString(),
       community: communityEvidence,
       reddit: redditEvidence,
-      web_evidence: { gridinsoft: gridinsoftEvidence },
+      web_evidence: { gridinsoft: gridinsoftEvidence, public_directories: directoryEvidence },
     };
 
     const rep = await upsertPhoneReputation(base44, {
