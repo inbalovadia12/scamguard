@@ -480,7 +480,8 @@ Deno.serve(async (req) => {
       const hasClassification = !!r?.caller_id_status && r.caller_id_status !== 'UNKNOWN';
       const looksLikeNoEvidenceSafe = !hasNegativeEvidence && !r?.verified_business && (
         r?.caller_id_status === 'SAFE' ||
-        /no (?:known )?(?:scam|negative|credible)|no scam reports found|no negative reports/i.test(String(r?.summary || ''))
+        r?.caller_id_status === 'UNKNOWN' ||
+        /no (?:known )?(?:scam|negative|credible)|no scam reports found|no negative reports|no reliable evidence/i.test(String(r?.summary || ''))
       );
       // A previous lookup can be wrong even when it was cached as SAFE. Do not
       // let an unverified/no-evidence SAFE result suppress fresh web research
