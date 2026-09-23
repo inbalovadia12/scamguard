@@ -890,15 +890,32 @@ Rules:
     const redditEvidence = await fetchRedditEvidence();
     const gridinsoftEvidence = await fetchGridinsoftEvidence();
     const directoryEvidence = await fetchPublicDirectoryEvidence();
-    const webEvidence = {
-      matched: !!(redditEvidence?.matched || gridinsoftEvidence?.matched || directoryEvidence?.matched),
-      report_count: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0) + (directoryEvidence?.report_count || 0),
-      scam_reports: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0) + (directoryEvidence?.report_count || 0),
+    const webResearchReports = Array.isArray(webResearch?.reports) ? webResearch.reports.filter((r: any) => r?.url && r?.summary) : [];
+    const webResearchSources = Array.isArray(webResearch?.sources) ? webResearch.sources.filter((s: any) => typeof s === 'string' && s.startsWith('http')) : [];
+    const webResearchEvidence = {
+      matched: webResearchReports.length > 0,
+      report_count: webResearchReports.length,
+      scam_reports: webResearchReports.length,
       spam_reports: 0,
       suspicious_reports: 0,
       safe_reports: 0,
-      sources: [...(redditEvidence?.sources || []), ...(gridinsoftEvidence?.sources || []), ...(directoryEvidence?.sources || [])],
-      reports: [...(redditEvidence?.reports || []), ...(gridinsoftEvidence?.reports || []), ...(directoryEvidence?.reports || [])],
+      sources: [...webResearchSources, ...webResearchReports.map((r: any) => r.url)],
+      reports: webResearchReports.map((r: any) => ({
+        title: 'Live web exact-number report',
+        summary: r.summary,
+        category: r.category || 'scam',
+        url: r.url,
+      })),
+    };
+    const webEvidence = {
+      matched: !!(redditEvidence?.matched || gridinsoftEvidence?.matched || directoryEvidence?.matched || webResearchEvidence.matched),
+      report_count: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0) + (directoryEvidence?.report_count || 0) + webResearchEvidence.report_count,
+      scam_reports: (redditEvidence?.report_count || 0) + (gridinsoftEvidence?.report_count || 0) + (directoryEvidence?.report_count || 0) + webResearchEvidence.scam_reports,
+      spam_reports: 0,
+      suspicious_reports: 0,
+      safe_reports: 0,
+      sources: [...(redditEvidence?.sources || []), ...(gridinsoftEvidence?.sources || []), ...(directoryEvidence?.sources || []), ...webResearchEvidence.sources],
+      reports: [...(redditEvidence?.reports || []), ...(gridinsoftEvidence?.reports || []), ...(directoryEvidence?.reports || []), ...webResearchEvidence.reports],
     };
 
     // Merge community + exact-number web evidence into the LLM result. The
@@ -946,7 +963,7 @@ Rules:
       last_checked_at: new Date().toISOString(),
       community: communityEvidence,
       reddit: redditEvidence,
-      web_evidence: { gridinsoft: gridinsoftEvidence, public_directories: directoryEvidence },
+      web_evidence: { gridinsoft: gridinsoftEvidence, public_directories: directoryEvidence, live_search: webResearchEvidence },
     };
 
     const rep = await upsertPhoneReputation(base44, {
