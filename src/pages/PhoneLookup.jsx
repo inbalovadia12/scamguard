@@ -64,18 +64,12 @@ export default function PhoneLookup() {
   };
 
   const applyLookupToResult = (phone, result) => {
-    const confirmedCommunityScam =
-      (result.community?.scam_reports || 0) > 0 ||
-      (result.reddit?.scam_reports || result.reddit?.report_count || 0) > 0 ||
-      !!result.web_evidence?.gridinsoft?.matched ||
-      (result.scam_report_count || 0) > 0;
-    const effectiveStatus = confirmedCommunityScam ? "SCAM" : (result.caller_id_status || "UNKNOWN");
-    const effectiveConfidence = effectiveStatus === "UNKNOWN" ? 50 : (result.confidence_score ?? 50);
+    const confirmedCommunityScam = (result.community?.scam_reports || 0) > 0 || (result.reddit?.report_count || 0) > 0 || (result.scam_report_count || 0) > 0;
     return {
     phone_number: phone,
     country: result.country,
     carrier: result.carrier,
-    reputation_score: confirmedCommunityScam ? Math.max(75, result.reputation_score ?? 0) : (result.reputation_score ?? 0),
+    reputation_score: confirmedCommunityScam ? 100 : (result.reputation_score ?? 0),
     risk_level: result.risk_level,
     user_reports: result.user_reports || [],
     scam_categories: result.scam_categories || [],
@@ -86,15 +80,14 @@ export default function PhoneLookup() {
     spam_report_count: result.spam_report_count || 0,
     suspicious_report_count: result.suspicious_report_count || 0,
     safe_report_count: result.safe_report_count || 0,
-    caller_id_status: effectiveStatus,
-    confidence_score: Math.max(0, Math.min(100, Number(effectiveConfidence) || 50)),
+    caller_id_status: result.caller_id_status || "UNKNOWN",
+    confidence_score: result.confidence_score || 0,
     verified_business: result.verified_business || false,
     business_name: result.business_name || "",
     caller_id_label: result.caller_id_label || "",
     created_date: result.created_date || new Date().toISOString(),
     community: result.community || { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0 },
     reddit: result.reddit || { matched: false, report_count: 0, sources: [] },
-    web_evidence: result.web_evidence || { gridinsoft: { matched: false, report_count: 0, sources: [], reports: [] } },
     };
   };
 
@@ -190,7 +183,6 @@ export default function PhoneLookup() {
       business_name: lookup.business_name || "",
       caller_id_label: lookup.caller_id_label || "",
       created_date: lookup.created_date,
-      web_evidence: { gridinsoft: { matched: false, report_count: 0, sources: [], reports: [] } },
     });
   };
 
@@ -213,17 +205,7 @@ export default function PhoneLookup() {
     );
   }
 
-  const currentConfirmedScam = currentResult && (
-    (currentResult.scam_report_count || 0) > 0 ||
-    (currentResult.reddit?.scam_reports || currentResult.reddit?.report_count || 0) > 0 ||
-    !!currentResult.web_evidence?.gridinsoft?.matched
-  );
-  const currentEffectiveStatus = currentConfirmedScam ? "SCAM" : (currentResult?.caller_id_status || "UNKNOWN");
-  const cfg = currentResult
-    ? (currentEffectiveStatus === "UNKNOWN"
-      ? { color: "text-muted-foreground", bg: "bg-muted/40", border: "border-border/50", icon: ShieldCheck, label: "Unknown / Insufficient Evidence" }
-      : (RISK_CONFIG[currentResult.risk_level] || RISK_CONFIG.low))
-    : null;
+  const cfg = currentResult ? (RISK_CONFIG[currentResult.risk_level] || RISK_CONFIG.low) : null;
   const RiskIcon = cfg?.icon;
 
   return (
@@ -292,7 +274,7 @@ export default function PhoneLookup() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-4xl font-bold font-heading">{currentConfirmedScam ? Math.max(75, currentResult.reputation_score ?? 0) : (currentResult.reputation_score ?? 0)}</div>
+                <div className="text-4xl font-bold font-heading">{currentResult.reputation_score}</div>
                 <div className="text-xs text-muted-foreground">/100 risk score</div>
               </div>
             </div>
