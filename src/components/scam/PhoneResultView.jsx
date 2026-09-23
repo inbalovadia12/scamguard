@@ -16,14 +16,13 @@ const STATUS_META = {
 export default function PhoneResultView({ data }) {
   const [reportOpen, setReportOpen] = useState(false);
   const risk = RISK_META[data.risk_level] || RISK_META.medium;
-  const confirmedCommunityScam =
-    (data.community?.scam_reports || 0) > 0 ||
-    (data.reddit?.report_count || 0) > 0 ||
-    (data.scam_report_count || 0) > 0;
-  const score = confirmedCommunityScam ? 100 : (data.reputation_score ?? 0);
+  // The backend is the single source of truth for the numeric phone-risk score.
+  // Never recalculate it here from community/Reddit evidence, because doing so
+  // can produce a second score that disagrees with the result returned by lookup.
+  const score = Math.max(0, Math.min(100, Number(data.reputation_score) || 0));
   const scoreColor = score >= 71 ? "text-destructive" : score >= 31 ? "text-warning" : "text-success";
   const barColor = score >= 71 ? "bg-destructive" : score >= 31 ? "bg-warning" : "bg-success";
-  const effectiveStatus = confirmedCommunityScam ? "SCAM" : (data.caller_id_status || "UNKNOWN");
+  const effectiveStatus = data.caller_id_status || (data.risk_level === "high" ? "SCAM" : data.risk_level === "medium" ? "SUSPICIOUS" : "UNKNOWN");
   const status = STATUS_META[effectiveStatus] || STATUS_META.UNKNOWN;
   const totalReports = data.report_count || (data.user_reports?.length || 0);
   const hasReportCounts = (data.scam_report_count || 0) + (data.spam_report_count || 0) + (data.suspicious_report_count || 0) + (data.safe_report_count || 0) > 0;
