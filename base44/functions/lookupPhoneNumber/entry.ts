@@ -540,27 +540,56 @@ Deno.serve(async (req) => {
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
-    const prompt = `Research the phone number ${displayFormat} across the web.
+    const prompt = `Research the phone number ${displayFormat} across the web. This is an exact-number reputation lookup, not a general country lookup.
 
-This number is in international format: the digits after "+" are the country calling code followed by the national number. Search for THIS EXACT number globally — do NOT restrict your search to any single country. The number may be listed on security blogs (e.g. gridinsoft.com, kaspersky.com, malwarebytes.com), scam-report databases, crowd-sourced complaint sites, news articles, business directories, or company "contact us" pages anywhere in the world. Include results from every country.
+MANDATORY EXACT SEARCH TARGETS:
+- Canonical: ${cacheKey}
+- International spaced: ${displayFormat}
+- Digits-only: ${cleaned}
+- If the number has a national-format equivalent, search that exact national number too.
 
-Step 1 — Identify the owner. Search for the business, organization, or person this number belongs to. Check official company websites, "contact us" pages, and business directories. Many numbers belong to well-known legitimate businesses (airlines, retailers, banks, utilities, government agencies) — identify them when you can. Also check security blogs and news articles that may list this number as dangerous.
+You MUST search for the exact digits in multiple representations. Never add a country name, city, area code explanation, or other words to the phone number itself when doing the exact-number search. After exact searches, use targeted searches with the exact number plus terms such as scam, fraud, spam, phishing, dangerous, robocall, complaint, review, who called.
 
-CRITICAL — do NOT guess, infer, or fabricate the owner. Only report a business_name if you found THIS EXACT phone number (every digit matching) listed on the business's OWN official website or "contact us" page, or on a major verified directory (official Google Business listing, official government registry). Seeing the number on a complaint site, forum, security blog, or news article is NOT enough to call it a verified business. If you are inferring from the area code, number format, or partial matches, do NOT set a business name. If you cannot confirm the owner from an official source, leave business_name empty and say so plainly in the summary. Fabricating a business name is far worse than admitting you didn't find one.
+MANDATORY SOURCE CHECKS:
+1. Search exact-number results on caller-report/community sites such as Who Called Me / WhoCallsMe, 800notes, CallerSmart, Truecaller and similar services when available.
+2. Search exact-number results on security and threat-intelligence sites, including Malwarebytes Scam Number Check, Gridinsoft, Kaspersky and similar sources when available.
+3. Search Reddit and other public forums for the exact number.
+4. Search news, government/fraud warnings, and official business/contact pages for the exact number.
 
-Step 2 — Check for scam/spam reports. Search crowd-sourced complaint sites (800notes.com, whocallsme.com, callercomplaints.com), Reddit (r/ScamNumbers, r/scams), security blogs, and fraud databases for reports about THIS EXACT number. A number flagged as "dangerous" on a security blog or scam database counts as a scam report — do not dismiss it just because the source is not from the number's home country.
+IMPORTANT ABOUT MALWAREBYTES:
+If the Malwarebytes Scam Number Check web page is accessible, check the exact number there and use its result as evidence. Do not claim Malwarebytes found anything unless you actually saw a result for THIS EXACT number. If the page is unavailable or its result cannot be retrieved, simply omit it and continue with other sources.
 
-Rules:
-- Report only what you actually found on the web. Do not invent data.
-- Consider only reports about THIS EXACT number, not similar numbers or area codes.
-- Distinguish scam, spam, suspicious, and legitimate/verified reports.
+EXACT MATCH RULE:
+Only count a source when the phone number on that source matches THIS EXACT number digit-for-digit. Different numbers, prefixes, area codes, nearby numbers, or generic articles do not count. Normalize punctuation and spaces only for comparison. An exact number appearing on a security blog or community complaint site is valid negative evidence even if the source is outside the number's country.
 
-reputation_score (0-100, HIGHER = more dangerous): 0-15 = confirmed legitimate business or no negative reports; 16-35 = limited/anecdotal negative reports; 36-60 = suspicious or spam; 61-80 = strong scam indicators / multiple scam reports; 81-100 = confirmed scam number.
-risk_level: "low" (no negative reports, or confirmed legitimate business), "medium" (suspicious/spam), "high" (strong scam evidence).
-confidence_score (0-100): how confident you are based on the evidence found.
-verified_business: true ONLY if you found THIS EXACT number on an official source (the business's own website/contact page, or a major verified directory), AND you include that source URL in sources. A security blog listing a number as dangerous is scam evidence, NOT proof of a verified business — set verified_business=false in that case. Never fabricate a business name.
-summary (max 300 chars): describe what you found. If the number belongs to a known business, name it. If you found scam/dangerous reports (including from security blogs), summarize them and name the source. If you found nothing, say "No scam reports found for this number." Never mention background checks or future processing.
-sources: ALWAYS include the full URLs of the websites where you found this information (official business "contact" pages, complaint sites, Reddit posts, security blogs, news articles). If you found nothing, return an empty array.
+SEARCH EXECUTION:
+Do not stop after the first search or after finding no result from one source. Try all exact representations and multiple source categories. If a search engine result points to a source-specific phone-number page, open that page and verify the exact number and the reported classification/comments before counting it.
+
+Step 1 — Identify the owner. Only set business_name when THIS EXACT number is shown on the business's own official website/contact page or a major verified directory. Do not infer an owner from area code, country, number format, or complaint-site text.
+
+Step 2 — Determine scam/spam/suspicious/legitimate evidence from the exact-number sources you actually verified.
+
+Do not invent data. Return the URLs of every source that actually contained evidence about THIS EXACT number. If a source was searched but did not contain the number, do not include it in sources.
+
+reputation_score (0-100, HIGHER = more dangerous):
+0-15 = no negative evidence or confirmed legitimate business
+16-35 = limited/anecdotal negative evidence
+36-60 = suspicious/spam
+61-80 = strong scam indicators / multiple scam reports
+81-100 = very strong/confirmed scam evidence
+
+risk_level:
+- low = no negative evidence or confirmed legitimate business
+- medium = suspicious/spam
+- high = strong scam evidence
+
+confidence_score (0-100) = confidence in the classification based ONLY on verified exact-number evidence. If no exact-number evidence is found, keep confidence low and do not call the number safe merely because nothing was found.
+
+verified_business = true ONLY when an official/verified source contains THIS EXACT number and its source URL is included.
+
+summary (max 300 chars): State what exact-number evidence was actually found, naming the source(s) and type of report. If nothing was found, say that no exact-number evidence was found; do not imply the number is safe.
+
+sources: full URLs for every source where THIS EXACT number was verified.
 
 Respond in ${languageName}.`;
 
