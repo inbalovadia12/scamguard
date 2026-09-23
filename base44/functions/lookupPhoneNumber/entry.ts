@@ -425,12 +425,22 @@ Deno.serve(async (req) => {
       const MIN_RECHECK_MS = 1000 * 60 * 60; // re-run web search at most hourly for uninformative results
       const r = cached[0];
       const ageMs = r?.last_external_check_at ? Date.now() - new Date(r.last_external_check_at).getTime() : Infinity;
+      const hasNegativeEvidence = (r?.scam_report_count || 0) > 0 || (r?.spam_report_count || 0) > 0 || (r?.suspicious_report_count || 0) > 0;
+      const hasPositiveEvidence = (r?.safe_report_count || 0) > 0 || !!r?.verified_business;
       const hasClassification = !!r?.caller_id_status && r.caller_id_status !== 'UNKNOWN';
-      const hasEvidence = (r?.scam_report_count || 0) > 0 || (r?.spam_report_count || 0) > 0 || (r?.suspicious_report_count || 0) > 0 || (r?.safe_report_count || 0) > 0 || !!r?.verified_business;
-      const isInformative = hasClassification || hasEvidence;
+      const looksLikeNoEvidenceSafe = !hasNegativeEvidence && !r?.verified_business && (
+        r?.caller_id_status === 'SAFE' ||
+        /no (?:known )?(?:scam|negative|credible)|no scam reports found|no negative reports/i.test(String(r?.summary || ''))
+      );
+      // A previous lookup can be wrong even when it was cached as SAFE. Do not
+      // let an unverified/no-evidence SAFE result suppress fresh web research
+      // for a week; those are rechecked hourly. Only strong evidence (negative
+      // reports or an actually verified business) gets the long cache window.
+      const isInformative = hasClassification || hasNegativeEvidence || hasPositiveEvidence;
+      const cacheWindow = looksLikeNoEvidenceSafe ? MIN_RECHECK_MS : (isInformative ? FRESH_MS : MIN_RECHECK_MS);
       // The E.164 cache key is globally unique, so the same number always maps
       // to the same research regardless of the user's selected country.
-      const serveCache = !!r && !!r.last_external_check_at && (isInformative ? ageMs < FRESH_MS : ageMs < MIN_RECHECK_MS);
+      const serveCache = !!r && !!r.last_external_check_at && ageMs < cacheWindow;
       if (serveCache) {
         const communityEvidence = await fetchCommunityEvidence();
         const redditEvidence = await fetchRedditEvidence();
@@ -540,27 +550,63 @@ Deno.serve(async (req) => {
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
+    const rawDigits = phone_number.trim().replace(/[^\d]/g, '');
+    const searchVariants = Array.from(new Set([
+      displayFormat,
+      cacheKey,
+      rawDigits,
+      phone_number.trim(),
+      displayFormat.replace(/[\s()-]/g, ''),
+      displayFormat.replace(/[\s()-]/g, '.'),
+    ].filter(Boolean)));
+
     const prompt = `Research the phone number ${displayFormat} across the web.
 
-This number is in international format: the digits after "+" are the country calling code followed by the national number. Search for THIS EXACT number globally — do NOT restrict your search to any single country. The number may be listed on security blogs (e.g. gridinsoft.com, kaspersky.com, malwarebytes.com), scam-report databases, crowd-sourced complaint sites, news articles, business directories, or company "contact us" pages anywhere in the world. Include results from every country.
+PRIMARY IDENTIFIER — EXACT PHONE NUMBER:
+- Canonical number: ${cacheKey}
+- Exact search variants to use: ${searchVariants.map((v) => '"' + v + '"').join(', ')}
+- The digits are the identifier. Preserve every digit exactly.
+- NEVER append a country name, city name, country adjective, or other geographic term to the phone-number query. Country is metadata only, not part of the search identifier.
+- Do NOT replace the number with a country name + number query.
+- Search the exact digits first, then the exact formatted variants above. Search globally.
+- If a result shows the same digits in a different punctuation/spacing format, treat it as the same number.
+- Do not treat a partial match, area code, prefix, or similar number as a match.
 
-Step 1 — Identify the owner. Search for the business, organization, or person this number belongs to. Check official company websites, "contact us" pages, and business directories. Many numbers belong to well-known legitimate businesses (airlines, retailers, banks, utilities, government agencies) — identify them when you can. Also check security blogs and news articles that may list this number as dangerous.
+The number may be listed on security blogs (including Gridinsoft), Kaspersky, Malwarebytes, scam-report databases, crowd-sourced complaint sites, Reddit, news articles, business directories, or official company pages. A security article that explicitly lists this exact number as dangerous/scam evidence must be counted as relevant evidence even if the article discusses several countries or number groups.
 
-CRITICAL — do NOT guess, infer, or fabricate the owner. Only report a business_name if you found THIS EXACT phone number (every digit matching) listed on the business's OWN official website or "contact us" page, or on a major verified directory (official Google Business listing, official government registry). Seeing the number on a complaint site, forum, security blog, or news article is NOT enough to call it a verified business. If you are inferring from the area code, number format, or partial matches, do NOT set a business name. If you cannot confirm the owner from an official source, leave business_name empty and say so plainly in the summary. Fabricating a business name is far worse than admitting you didn't find one.
+Step 1 — Identify the owner. Search the exact number variants above. Check official company websites, contact pages, and reliable business directories. Do not infer an owner from country, area code, prefix, carrier, or number format.
 
-Step 2 — Check for scam/spam reports. Search crowd-sourced complaint sites (800notes.com, whocallsme.com, callercomplaints.com), Reddit (r/ScamNumbers, r/scams), security blogs, and fraud databases for reports about THIS EXACT number. A number flagged as "dangerous" on a security blog or scam database counts as a scam report — do not dismiss it just because the source is not from the number's home country.
+Step 2 — Check for scam/spam reports. Search the exact number variants above across complaint sites, Reddit, security blogs, and fraud databases. If an exact-number result says the number is dangerous, reported, scam-related, impersonating an organization, or associated with fraudulent calls, count that as negative evidence and cite the source.
+
+CRITICAL SEARCH RULE:
+The user may enter an international number such as +44 7407 394404. Search "${cacheKey}", "${displayFormat}", and the digits-only form separately. Do NOT search "${effectiveCountry} ${displayFormat}", "${effectiveCountry} ${rawDigits}", or any equivalent country-plus-number query. Country may be used after a result is found to interpret context, but it must not contaminate the exact-number search.
 
 Rules:
 - Report only what you actually found on the web. Do not invent data.
-- Consider only reports about THIS EXACT number, not similar numbers or area codes.
-- Distinguish scam, spam, suspicious, and legitimate/verified reports.
+- Consider only reports about THIS EXACT number.
+- Distinguish scam, spam, suspicious, legitimate/verified, and no-evidence results.
+- No evidence found is NOT evidence that the number is safe.
+- Do not assign a SAFE result merely because searches returned nothing.
+- A verified business requires an exact-number match on an official source or major verified directory.
 
-reputation_score (0-100, HIGHER = more dangerous): 0-15 = confirmed legitimate business or no negative reports; 16-35 = limited/anecdotal negative reports; 36-60 = suspicious or spam; 61-80 = strong scam indicators / multiple scam reports; 81-100 = confirmed scam number.
-risk_level: "low" (no negative reports, or confirmed legitimate business), "medium" (suspicious/spam), "high" (strong scam evidence).
-confidence_score (0-100): how confident you are based on the evidence found.
-verified_business: true ONLY if you found THIS EXACT number on an official source (the business's own website/contact page, or a major verified directory), AND you include that source URL in sources. A security blog listing a number as dangerous is scam evidence, NOT proof of a verified business — set verified_business=false in that case. Never fabricate a business name.
-summary (max 300 chars): describe what you found. If the number belongs to a known business, name it. If you found scam/dangerous reports (including from security blogs), summarize them and name the source. If you found nothing, say "No scam reports found for this number." Never mention background checks or future processing.
-sources: ALWAYS include the full URLs of the websites where you found this information (official business "contact" pages, complaint sites, Reddit posts, security blogs, news articles). If you found nothing, return an empty array.
+reputation_score (0-100, HIGHER = more dangerous):
+0 = no negative evidence found / unknown, NOT safe.
+1-30 = weak or limited evidence.
+31-60 = suspicious or spam evidence.
+61-80 = strong scam indicators or multiple credible scam reports.
+81-100 = very strong / repeated scam evidence.
+A confirmed legitimate business should still score 0-15 only when the exact number is verified on an authoritative source.
+
+risk_level:
+- "low" = no credible negative evidence OR verified legitimate business.
+- "medium" = suspicious/spam/limited negative evidence.
+- "high" = strong scam evidence.
+For no-evidence numbers, use score 0, risk_level "low", confidence_score 0, verified_business false, and clearly say that no reliable evidence was found; this is UNKNOWN, not SAFE.
+
+confidence_score (0-100): confidence in the classification based on actual evidence. No-evidence results must have confidence 0.
+verified_business: true ONLY if THIS EXACT number is on an authoritative official source or major verified directory, with that URL in sources. A security blog listing the number as dangerous is scam evidence, NOT business verification.
+summary (max 300 chars): describe the evidence. If scam/dangerous reports were found, name the source and what it reports. If nothing reliable was found, say "No reliable evidence found for this number; status is unknown." Never say or imply that absence of search results means the number is safe.
+sources: ALWAYS include full URLs actually used and relevant to the exact number. If nothing useful was found, return [].
 
 Respond in ${languageName}.`;
 
