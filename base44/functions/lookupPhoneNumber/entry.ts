@@ -621,24 +621,69 @@ Respond in ${languageName}.`;
       },
     };
 
-    let llmResponse: any = null;
-    try {
-      llmResponse = await base44.integrations.Core.InvokeLLM({
-        prompt,
+    const runPhoneResearch = async (researchPrompt: string): Promise<any> => {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: researchPrompt,
         add_context_from_internet: true,
         model: 'gemini_3_flash',
         response_json_schema: RESPONSE_SCHEMA,
       });
+      if (response && typeof response === 'object' && !Array.isArray(response)) return response;
+      return parseJsonFromText(typeof response === 'string' ? response : (response as any)?.response || JSON.stringify(response)) || {};
+    };
+
+    let result: any = {};
+    try {
+      result = await runPhoneResearch(prompt);
+
+      // Recovery pass: if the first web retrieval found no exact-number evidence,
+      // perform a narrower source-focused search. This addresses missed caller-report
+      // pages without adding a second web call to successful lookups.
+      const firstPassHasEvidence =
+        (Array.isArray(result.sources) && result.sources.length > 0) ||
+        (Number(result.scam_report_count) || 0) > 0 ||
+        (Number(result.spam_report_count) || 0) > 0 ||
+        (Number(result.suspicious_report_count) || 0) > 0 ||
+        (Number(result.safe_report_count) || 0) > 0 ||
+        !!result.verified_business;
+
+      if (!firstPassHasEvidence) {
+        const recoveryPrompt = `SECOND-PASS EXACT PHONE SEARCH.
+Number: ${cacheKey}
+Display: ${displayFormat}
+Digits: ${cleaned}
+Country: ${effectiveCountry}
+
+The first web search returned no usable evidence. Search the live web again, but this time focus on exact-number source pages.
+
+Search ALL exact representations above, then target:
+Who Called Me / WhoCallsMe, Should I Answer, CallFilter, Clever Dialer, Tellows, 800notes, CallerSmart, Truecaller, Malwarebytes Scam Number Check, Gridinsoft, Reddit/public forums, official business/contact pages, and reputable directories.
+
+Use exact-number + scam/spam/fraud/complaint/review/robocall/unsolicited queries. Open result pages and verify that the page itself contains this exact number before counting it.
+
+Do not count similar numbers, prefixes, area codes, generic articles, or search snippets that do not show this exact number. Do not invent owners, reports, classifications, or URLs. Return only verified exact-number evidence and the supplied JSON structure.`;
+        const recovery = await runPhoneResearch(recoveryPrompt);
+
+        const mergedRecovery = { ...result };
+        for (const key of ['country', 'carrier', 'summary', 'business_name']) {
+          if (!mergedRecovery[key] && recovery[key]) mergedRecovery[key] = recovery[key];
+        }
+        for (const key of ['reputation_score', 'confidence_score']) {
+          if ((Number(mergedRecovery[key]) || 0) === 0 && Number(recovery[key]) > 0) mergedRecovery[key] = recovery[key];
+        }
+        if (recovery.risk_level && (!mergedRecovery.risk_level || mergedRecovery.risk_level === 'low')) mergedRecovery.risk_level = recovery.risk_level;
+        for (const key of ['scam_report_count', 'spam_report_count', 'suspicious_report_count', 'safe_report_count']) {
+          mergedRecovery[key] = Math.max(Number(mergedRecovery[key]) || 0, Number(recovery[key]) || 0);
+        }
+        mergedRecovery.verified_business = !!mergedRecovery.verified_business || !!recovery.verified_business;
+        mergedRecovery.user_reports = [...(Array.isArray(mergedRecovery.user_reports) ? mergedRecovery.user_reports : []), ...(Array.isArray(recovery.user_reports) ? recovery.user_reports : [])].slice(0, 6);
+        mergedRecovery.scam_categories = [...new Set([...(Array.isArray(mergedRecovery.scam_categories) ? mergedRecovery.scam_categories : []), ...(Array.isArray(recovery.scam_categories) ? recovery.scam_categories : [])])];
+        mergedRecovery.sources = [...new Set([...(Array.isArray(mergedRecovery.sources) ? mergedRecovery.sources : []), ...(Array.isArray(recovery.sources) ? recovery.sources : [])])];
+        result = mergedRecovery;
+      }
     } catch (llmError) {
       console.error('LLM web search failed', llmError);
       return Response.json({ error: 'Phone lookup service temporarily unavailable. Please try again.' }, { status: 502 });
-    }
-
-    let result: any = {};
-    if (llmResponse && typeof llmResponse === 'object' && !Array.isArray(llmResponse)) {
-      result = llmResponse;
-    } else {
-      result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
     }
     result = normalizeBusinessResult(result);
     const rawEvidence = {
