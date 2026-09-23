@@ -64,12 +64,14 @@ export default function PhoneLookup() {
   };
 
   const applyLookupToResult = (phone, result) => {
-    const confirmedCommunityScam = (result.community?.scam_reports || 0) > 0 || (result.reddit?.report_count || 0) > 0 || (result.scam_report_count || 0) > 0;
     return {
     phone_number: phone,
     country: result.country,
     carrier: result.carrier,
-    reputation_score: confirmedCommunityScam ? 100 : (result.reputation_score ?? 0),
+    // The backend returns the canonical phone-risk score. Do not recalculate or
+    // override it in the UI from community/Reddit evidence, or the page can show
+    // two different scores for the same lookup.
+    reputation_score: result.reputation_score ?? 0,
     risk_level: result.risk_level,
     user_reports: result.user_reports || [],
     scam_categories: result.scam_categories || [],
@@ -274,8 +276,8 @@ export default function PhoneLookup() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-4xl font-bold font-heading">{currentResult.reputation_score}</div>
-                <div className="text-xs text-muted-foreground">/100 risk score</div>
+                <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Phone Risk</div>
+                <div className={`text-lg font-bold font-heading ${cfg.color}`}>{cfg.label}</div>
               </div>
             </div>
             <div className="mt-5 h-2.5 bg-muted rounded-full overflow-hidden">
