@@ -440,7 +440,7 @@ Deno.serve(async (req) => {
       const cacheWindow = looksLikeNoEvidenceSafe ? MIN_RECHECK_MS : (isInformative ? FRESH_MS : MIN_RECHECK_MS);
       // The E.164 cache key is globally unique, so the same number always maps
       // to the same research regardless of the user's selected country.
-      const serveCache = !!r && !!r.last_external_check_at && ageMs < cacheWindow;
+      const serveCache = !!r && !!r.last_external_check_at && !looksLikeNoEvidenceSafe && ageMs < cacheWindow;
       if (serveCache) {
         const communityEvidence = await fetchCommunityEvidence();
         const redditEvidence = await fetchRedditEvidence();
