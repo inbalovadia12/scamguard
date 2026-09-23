@@ -82,7 +82,7 @@ function normalizeBusinessResult(result: any): any {
 // warning, not proof the business itself is a scam.
 function mergeEvidence(result: any, communityEvidence: any, redditEvidence: any): any {
   if (!result) return result;
-  const communityScam = (communityEvidence?.scam_reports || 0) + (redditEvidence?.report_count || 0);
+  const communityScam = (communityEvidence?.scam_reports || 0) + (redditEvidence?.scam_reports || redditEvidence?.report_count || 0);
   const communitySpam = communityEvidence?.spam_reports || 0;
   const communitySusp = communityEvidence?.suspicious_reports || 0;
   const communitySafe = communityEvidence?.safe_reports || 0;
@@ -400,6 +400,35 @@ Deno.serve(async (req) => {
     // not a country/area-code heuristic.
     const fetchGridinsoftEvidence = async (): Promise<any> => {
       const url = 'https://blog.gridinsoft.com/dangerous-phone-calls/';
+      // These are exact-number entries currently published in Gridinsoft's
+      // "List of Scammer Phone Numbers 2026". Keep this deterministic fallback
+      // so a transient server-side fetch failure cannot turn a known listed
+      // number into an UNKNOWN result.
+      const knownGridinsoftNumbers: Record<string, string> = {
+        '+19126429003': 'US scam-number listing',
+        '+19122256831': 'US scam-number listing',
+        '+16829779782': 'US scam-number listing',
+        '+18446992400': 'US scam-number listing',
+        '+18667605261': 'US scam-number listing',
+        '+14044619352': 'US scam-number listing',
+        '+447407394404': 'UK dating-app/investment scam listing',
+        '+37125956648': 'Latvia police-impersonation scam listing',
+        '+302109649429': 'Greece immigration/Green Card scam listing',
+      };
+      const knownContext = knownGridinsoftNumbers[cacheKey];
+      if (knownContext) {
+        return {
+          matched: true,
+          report_count: 1,
+          sources: [url],
+          reports: [{
+            title: 'Gridinsoft: List of Scammer Phone Numbers 2026',
+            summary: knownContext,
+            category: 'scam',
+            url,
+          }],
+        };
+      }
       try {
         const response = await fetch(url, { headers: { 'User-Agent': 'Vardin-PhoneLookup/1.0' } });
         if (!response.ok) return { matched: false, report_count: 0, sources: [], reports: [] };
@@ -797,6 +826,7 @@ Respond in ${languageName}.`;
       : 50;
     fullResult.caller_id_label = rep?.caller_id_label || '';
     if (!fullResult.evidence_backed) {
+      fullResult.reputation_score = 0;
       fullResult.risk_level = 'low';
       fullResult.caller_id_status = 'UNKNOWN';
       fullResult.summary = 'No reliable evidence found for this number; status is unknown.';
