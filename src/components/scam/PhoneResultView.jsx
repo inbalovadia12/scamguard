@@ -25,6 +25,7 @@ export default function PhoneResultView({ data }) {
   const barColor = score >= 71 ? "bg-destructive" : score >= 31 ? "bg-warning" : "bg-success";
   const effectiveStatus = confirmedCommunityScam ? "SCAM" : (data.caller_id_status || "UNKNOWN");
   const status = STATUS_META[effectiveStatus] || STATUS_META.UNKNOWN;
+  const isUnknown = effectiveStatus === "UNKNOWN";
   const totalReports = data.report_count || (data.user_reports?.length || 0);
   const hasReportCounts = (data.scam_report_count || 0) + (data.spam_report_count || 0) + (data.suspicious_report_count || 0) + (data.safe_report_count || 0) > 0;
 
@@ -54,15 +55,13 @@ export default function PhoneResultView({ data }) {
           <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${score}%` }} />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${risk.color}`}>
-            {risk.label}
+          <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${isUnknown ? "bg-muted text-muted-foreground" : risk.color}`}>
+            {isUnknown ? "Unknown / Insufficient Evidence" : risk.label}
           </span>
-          {data.confidence_score > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
-              <Activity className="w-3 h-3" />
-              {data.confidence_score}% confidence
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+            <Activity className="w-3 h-3" />
+            {Math.max(0, Math.min(100, Number(data.confidence_score) || 0))}% confidence
+          </span>
         </div>
       </div>
 
@@ -152,7 +151,7 @@ export default function PhoneResultView({ data }) {
 
       {/* Summary */}
       {data.summary && (
-        <p className="text-sm text-muted-foreground leading-relaxed">{data.summary}</p>
+        <p className="text-sm text-muted-foreground leading-relaxed">{isUnknown ? "No reliable evidence was found for this number. Its status is unknown; this does not mean the number is safe." : data.summary}</p>
       )}
 
       {/* User reports */}
@@ -189,7 +188,7 @@ export default function PhoneResultView({ data }) {
       )}
 
       {/* Source breakdown */}
-      {(data.community?.matched || data.reddit?.matched) && (
+      {(data.community?.matched || data.reddit?.matched || data.web_evidence?.gridinsoft?.matched) && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <Users className="w-3.5 h-3.5" /> Evidence Sources
@@ -203,6 +202,12 @@ export default function PhoneResultView({ data }) {
               <p className="text-sm font-semibold">Reddit · r/ScamNumbers</p>
               <p className="text-xs text-muted-foreground mt-1">{data.reddit?.report_count || 0} indexed report{(data.reddit?.report_count || 0) === 1 ? "" : "s"}</p>
             </div>
+            {data.web_evidence?.gridinsoft?.matched && (
+              <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+                <p className="text-sm font-semibold">Gridinsoft</p>
+                <p className="text-xs text-muted-foreground mt-1">Exact-number scam listing matched</p>
+              </div>
+            )}
           </div>
         </div>
       )}
