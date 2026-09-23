@@ -9,6 +9,7 @@ import {
   UserPlus, Loader2,
 } from "lucide-react";
 import confetti from "canvas-confetti";
+import { PLAN_NAMES, PLAN_PRICES, PLAN_LIMITS } from "@/lib/credits";
 import VardinCinematicExperience from "@/components/VardinCinematicExperience";
 import DualUseBanner from "@/components/family/DualUseBanner";
 
@@ -342,10 +343,12 @@ function InviteFamilyStep({ emails, setEmails, onNext, onBack, inviting }) {
 
 function ChoosePlanStep({ onComplete, onBack }) {
   const navigate = useNavigate();
+  // Plan details are derived from the single source of truth in credits.js so
+  // this screen never drifts from the actual checkout page (Pricing.jsx).
   const plans = [
-    { name: "Starter", price: "$0", icon: ShieldCheck, features: "10 analyses/mo", paid: false, highlight: false },
-    { name: "Plus", price: "$59/yr", icon: Zap, features: "150 analyses/mo", paid: true, highlight: true },
-    { name: "Premium", price: "$119/yr", icon: Sparkles, features: "400 analyses/mo", paid: true, highlight: false },
+    { id: "starter", name: PLAN_NAMES.starter, price: "$0", period: "", icon: ShieldCheck, checks: `${PLAN_LIMITS.starter} checks/mo`, paid: false, highlight: false },
+    { id: "plus", name: PLAN_NAMES.plus, price: `$${PLAN_PRICES.plus}`, period: "/year", icon: Zap, checks: `${PLAN_LIMITS.plus} checks/mo`, paid: true, highlight: true },
+    { id: "premium", name: PLAN_NAMES.premium, price: `$${PLAN_PRICES.premium}`, period: "/year", icon: Sparkles, checks: `${PLAN_LIMITS.premium} checks/mo`, paid: true, highlight: false },
   ];
   const choose = (plan) => {
     onComplete();
@@ -366,8 +369,8 @@ function ChoosePlanStep({ onComplete, onBack }) {
             {plan.highlight && <div className="text-xs font-bold text-primary mb-1">RECOMMENDED</div>}
             <plan.icon className={`w-6 h-6 mx-auto mb-2 ${plan.highlight ? "text-primary" : "text-muted-foreground"}`} />
             <div className="font-bold text-sm font-heading">{plan.name}</div>
-            <div className="text-lg font-bold font-heading">{plan.price}</div>
-            <div className="text-xs text-muted-foreground">{plan.features}</div>
+            <div className="text-lg font-bold font-heading">{plan.price}<span className="text-xs font-normal text-muted-foreground">{plan.period}</span></div>
+            <div className="text-xs text-muted-foreground">{plan.checks}</div>
             <div className="mt-3 text-xs font-semibold text-primary">{plan.paid ? "Continue to checkout →" : "Start free"}</div>
           </button>
         ))}
