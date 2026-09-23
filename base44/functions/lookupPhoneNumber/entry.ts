@@ -518,6 +518,7 @@ Deno.serve(async (req) => {
           last_checked_at: r.last_checked_at || r.last_updated_at || '',
           community: communityEvidence,
           reddit: redditEvidence,
+          web_evidence: { gridinsoft: { matched: false, report_count: 0, sources: [], reports: [] } },
         };
         normalizeBusinessResult(result);
         mergeEvidence(result, communityEvidence, redditEvidence);
@@ -764,6 +765,7 @@ Respond in ${languageName}.`;
       last_checked_at: new Date().toISOString(),
       community: communityEvidence,
       reddit: redditEvidence,
+      web_evidence: { gridinsoft: gridinsoftEvidence },
     };
 
     const rep = await upsertPhoneReputation(base44, {
