@@ -28,12 +28,18 @@ function sanitizeSummary(raw: string): string {
   return cleaned || 'No scam reports found for this number.';
 }
 
-function enforceConsistency(score: number, risk: string): { score: number; risk: 'low' | 'medium' | 'high' } {
-  let s = score || 0;
-  let r = (risk || 'low') as 'low' | 'medium' | 'high';
-  if (r === 'high' && s < 71) s = 75;
-  if (r === 'medium' && (s < 36 || s > 70)) s = 50;
-  if (r === 'low' && s > 35) s = 15;
+function enforceConsistency(score: number, risk: string, evidence?: { scam: number; spam: number; suspicious: number; safe: number; verified: boolean }): { score: number; risk: 'low' | 'medium' | 'high' } {
+  let s = Number.isFinite(Number(score)) ? Math.max(0, Math.min(100, Number(score))) : 0;
+  const e = evidence || { scam: 0, spam: 0, suspicious: 0, safe: 0, verified: false };
+  // reputation_score is the legacy field name for Vardin's single numeric RISK score: higher = more dangerous.
+  if (e.verified) s = Math.min(s || 10, 30);
+  else if (e.scam > 0 && s < 71) s = 75;
+  else if ((e.spam > 0 || e.suspicious > 0) && s < 41) s = 50;
+  else if (s === 0 && e.safe > 0) s = 10;
+  let r: 'low' | 'medium' | 'high';
+  if (s >= 71 || e.scam > 0) r = 'high';
+  else if (s >= 41 || e.spam > 0 || e.suspicious > 0) r = 'medium';
+  else r = 'low';
   return { score: s, risk: r };
 }
 
@@ -422,7 +428,8 @@ Deno.serve(async (req) => {
     try {
       const cached = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
       const FRESH_MS = 1000 * 60 * 60 * 24 * 7;
-      const MIN_RECHECK_MS = 1000 * 60 * 60; // re-run web search at most hourly for uninformative results
+      // Never cache an empty/UNKNOWN research result. A missed web result is exactly what this lookup must recover from.
+      const MIN_RECHECK_MS = 0;
       const r = cached[0];
       const ageMs = r?.last_external_check_at ? Date.now() - new Date(r.last_external_check_at).getTime() : Infinity;
       const hasClassification = !!r?.caller_id_status && r.caller_id_status !== 'UNKNOWN';
@@ -634,7 +641,14 @@ Respond in ${languageName}.`;
       result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
     }
     result = normalizeBusinessResult(result);
-    const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
+    const rawEvidence = {
+      scam: Number(result.scam_report_count) || 0,
+      spam: Number(result.spam_report_count) || 0,
+      suspicious: Number(result.suspicious_report_count) || 0,
+      safe: Number(result.safe_report_count) || 0,
+      verified: !!result.verified_business,
+    };
+    const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low', rawEvidence);
     const cleanSummary = sanitizeSummary(result.summary || '');
 
     // ---- Fetch community and Reddit evidence for this new lookup ----
