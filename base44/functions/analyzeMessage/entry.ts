@@ -84,7 +84,7 @@ function buildPrompt(mode: string, text: string, messageType?: string, language?
   }
 
   if (mode === "incognito_phone") {
-    return `You are a phone number reputation analyst. Research this phone number: ${text.slice(0, 100)}. Check scam reports, robocall/spam reports, and other high-signal public sources. Do not invent reports or URLs. Return country, carrier, reputation_score (0-100, 0=safe), risk_level, user_reports, scam_categories, summary, and sources. Respond in ${languageName}.`;
+    return `You are a phone number reputation analyst. Research this phone number: ${text.slice(0, 100)}. Check scam reports, robocall/spam reports, and other high-signal public sources. Do not invent reports or URLs. Return country, carrier, reputation_score (0-100, higher = more phone risk, 0 = lowest risk), risk_level, user_reports, scam_categories, summary, and sources. Respond in ${languageName}.`;
   }
 
   if (mode === "incognito_image") {
