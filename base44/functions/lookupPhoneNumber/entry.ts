@@ -537,12 +537,12 @@ Deno.serve(async (req) => {
           if (!normalizedHtml.includes(digits)) return null;
 
           const textContent = html
-            .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')
-            .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')
+            .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<style[\s\S]*?<\/style>/gi, ' ')
             .replace(/<[^>]+>/g, ' ')
             .replace(/&nbsp;/gi, ' ')
             .replace(/&amp;/gi, '&')
-            .replace(/\\s+/g, ' ')
+            .replace(/\s+/g, ' ')
             .trim();
           const lower = textContent.toLowerCase();
           const negativeTerms = ['dangerous', 'scam', 'spam', 'fraud', 'phishing', 'harassing', 'reported', 'unsafe', 'suspicious', 'nuisance'];
