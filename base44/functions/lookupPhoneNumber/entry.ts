@@ -368,6 +368,13 @@ Deno.serve(async (req) => {
     const cacheKey = norm.cacheKey;
     const displayFormat = norm.displayFormat;
     const effectiveCountry = norm.country;
+    const canonicalDigits = cacheKey.replace(/^\\+/, '');
+    const matchedCountry = matchCountryCode(canonicalDigits);
+    const nationalDigits = matchedCountry
+      ? (matchedCountry.stripLeadingZero ? `0${canonicalDigits.slice(matchedCountry.code.length)}` : canonicalDigits.slice(matchedCountry.code.length))
+      : '';
+    // Search canonical E.164 plus published international, digits-only, and national forms.
+    const searchVariants = [...new Set([cacheKey, displayFormat, canonicalDigits, nationalDigits, rawDigits].filter(Boolean))];
 
     // ---- Helper: fetch community evidence ----
     const fetchCommunityEvidence = async (): Promise<any> => {
@@ -503,7 +510,7 @@ Deno.serve(async (req) => {
     } catch {}
 
     // ---- Quick check for known fictional numbers (instant) ----
-    const knownFictional = checkKnownFictional(cleaned);
+    const knownFictional = checkKnownFictional(rawDigits);
     if (knownFictional) {
       const fullResult = {
         ...knownFictional,
@@ -571,10 +578,9 @@ Deno.serve(async (req) => {
 MANDATORY EXACT SEARCH TARGETS:
 - Canonical: ${cacheKey}
 - International spaced: ${displayFormat}
-- Digits-only: ${cleaned}
-- If the number has a national-format equivalent, search that exact national number too.
+${searchVariants.map((v) => `- ${v}`).join('\n')}
 
-You MUST search for the exact digits in multiple representations. Never add a country name, city, area code explanation, or other words to the phone number itself when doing the exact-number search. After exact searches, use targeted searches with the exact number plus terms such as scam, fraud, spam, phishing, dangerous, robocall, complaint, review, who called.
+You MUST search the exact digits in each useful representation above. Never add a country name, city, area code explanation, or other words to the phone number itself when doing the exact-number search. After exact searches, use targeted searches with the exact number plus terms such as scam, fraud, spam, phishing, dangerous, robocall, complaint, review, who called.
 
 MANDATORY SOURCE CHECKS:
 1. Search exact-number results on caller-report/community sites such as Who Called Me / WhoCallsMe, 800notes, CallerSmart, Truecaller and similar services when available.
@@ -665,7 +671,7 @@ Display: ${displayFormat}
 Digits: ${rawDigits}
 Country: ${effectiveCountry}
 
-The first web search returned no usable evidence. Search the live web again, but this time focus on exact-number source pages.
+Search the live web independently from the first pass, focusing on exact-number source pages and independent caller-report databases.
 
 Search ALL exact representations above, then target:
 Who Called Me / WhoCallsMe, Should I Answer, CallFilter, Clever Dialer, Tellows, 800notes, CallerSmart, Truecaller, Malwarebytes Scam Number Check, Gridinsoft, Reddit/public forums, official business/contact pages, and reputable directories.
@@ -723,7 +729,7 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
         spam_report_count: result.spam_report_count || 0,
         suspicious_report_count: result.suspicious_report_count || 0,
         safe_report_count: result.safe_report_count || 0,
-        verified_business: result.verified_business || false,
+        verified_business: !!merged.verified_business,
       },
       communityEvidence,
       redditEvidence,
@@ -740,8 +746,6 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
     };
     // Re-run business normalization AFTER community/Reddit evidence is merged so an
     // exact official business match can become SAFE before the final score is derived.
-    normalizeBusinessResult(merged);
-    // Re-run business normalization after community/Reddit evidence is merged.
     normalizeBusinessResult(merged);
     const finalConsistency = enforceConsistency(merged.reputation_score ?? 0, merged.risk_level || 'low', mergedEvidence);
     merged.reputation_score = finalConsistency.score;
@@ -763,8 +767,8 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       safe_report_count: merged.safe_report_count,
       caller_id_status: 'UNKNOWN',
       confidence_score: Math.max(0, Math.min(100, Number(result.confidence_score) || 0)),
-      verified_business: result.verified_business || false,
-      business_name: result.business_name || '',
+      verified_business: !!merged.verified_business,
+      business_name: merged.business_name || '',
       caller_id_label: '',
       last_checked_at: new Date().toISOString(),
       community: communityEvidence,
