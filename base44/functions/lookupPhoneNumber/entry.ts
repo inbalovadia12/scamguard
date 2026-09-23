@@ -356,8 +356,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Phone number is required' }, { status: 400 });
     }
 
-    const cleaned = phone_number.trim().replace(/[^\d]/g, '');
-    if (cleaned.length < 7) return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
+    const rawDigits = phone_number.trim().replace(/[^\d]/g, '');
+    if (rawDigits.length < 7) return Response.json({ error: 'Please enter a valid phone number.' }, { status: 400 });
 
     // Country-aware normalization. The number's own dialing-code prefix (when
     // the user included one via + or 00) is authoritative and overrides the
@@ -442,7 +442,9 @@ Deno.serve(async (req) => {
       const isInformative = hasClassification || hasEvidence;
       // The E.164 cache key is globally unique, so the same number always maps
       // to the same research regardless of the user's selected country.
-      const serveCache = !!r && !!r.last_external_check_at && (isInformative ? ageMs < FRESH_MS : ageMs < MIN_RECHECK_MS);
+      // Every explicit phone scan must revalidate live evidence. A previous LLM
+      // miss or misclassification must not be served unchanged for seven days.
+      const serveCache = false;
       if (serveCache) {
         const communityEvidence = await fetchCommunityEvidence();
         const redditEvidence = await fetchRedditEvidence();
@@ -653,22 +655,14 @@ Respond in ${languageName}.`;
     try {
       result = await runPhoneResearch(prompt);
 
-      // Recovery pass: if the first web retrieval found no exact-number evidence,
-      // perform a narrower source-focused search. This addresses missed caller-report
-      // pages without adding a second web call to successful lookups.
-      const firstPassHasEvidence =
-        (Array.isArray(result.sources) && result.sources.length > 0) ||
-        (Number(result.scam_report_count) || 0) > 0 ||
-        (Number(result.spam_report_count) || 0) > 0 ||
-        (Number(result.suspicious_report_count) || 0) > 0 ||
-        (Number(result.safe_report_count) || 0) > 0 ||
-        !!result.verified_business;
-
-      if (!firstPassHasEvidence) {
-        const recoveryPrompt = `SECOND-PASS EXACT PHONE SEARCH.
+      // Always run an independent second pass. The old implementation only did
+      // this when pass #1 found zero evidence, so a plausible but incomplete first
+      // result could hide stronger evidence and become the final classification.
+      {
+        const recoveryPrompt = `SECOND, INDEPENDENT EXACT-NUMBER RESEARCH PASS.
 Number: ${cacheKey}
 Display: ${displayFormat}
-Digits: ${cleaned}
+Digits: ${rawDigits}
 Country: ${effectiveCountry}
 
 The first web search returned no usable evidence. Search the live web again, but this time focus on exact-number source pages.
