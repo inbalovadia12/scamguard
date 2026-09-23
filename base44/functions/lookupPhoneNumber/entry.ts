@@ -56,7 +56,6 @@ function normalizeBusinessResult(result: any): any {
   const scam = result.scam_report_count || 0;
   const spam = result.spam_report_count || 0;
   const susp = result.suspicious_report_count || 0;
-  const explicitFraud = scam > 0 || spam > 0 || susp > 0;
   const hasSources = Array.isArray(result.sources) && result.sources.length > 0;
   // Do not promote a business name into a verified identity merely because the
   // LLM returned a source URL. Caller-report pages can mention businesses too.
