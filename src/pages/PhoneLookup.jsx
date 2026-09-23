@@ -88,6 +88,7 @@ export default function PhoneLookup() {
     created_date: result.created_date || new Date().toISOString(),
     community: result.community || { matched: false, report_count: 0, scam_reports: 0, spam_reports: 0, suspicious_reports: 0, safe_reports: 0 },
     reddit: result.reddit || { matched: false, report_count: 0, sources: [] },
+    web_evidence: result.web_evidence || { gridinsoft: { matched: false, report_count: 0, sources: [], reports: [] } },
     };
   };
 
@@ -183,6 +184,7 @@ export default function PhoneLookup() {
       business_name: lookup.business_name || "",
       caller_id_label: lookup.caller_id_label || "",
       created_date: lookup.created_date,
+      web_evidence: { gridinsoft: { matched: false, report_count: 0, sources: [], reports: [] } },
     });
   };
 
