@@ -33,8 +33,9 @@ function enforceConsistency(score: number, risk: string, evidence?: { scam: numb
   const e = evidence || { scam: 0, spam: 0, suspicious: 0, safe: 0, verified: false };
   // reputation_score is the legacy field name for Vardin's single numeric RISK score: higher = more dangerous.
   if (e.verified) s = Math.min(s || 10, 30);
-  else if (e.scam > 0 && s < 71) s = 75;
-  else if ((e.spam > 0 || e.suspicious > 0) && s < 41) s = 50;
+  else if (e.scam > 0) s = Math.max(75, s);
+  else if (e.spam > 0 && e.suspicious === 0) s = Math.max(50, Math.min(s, 60));
+  else if (e.suspicious > 0) s = Math.max(41, Math.min(s, 70));
   else if (s === 0 && e.safe > 0) s = 10;
   let r: 'low' | 'medium' | 'high';
   if (s >= 71 || e.scam > 0) r = 'high';
@@ -60,13 +61,10 @@ function normalizeBusinessResult(result: any): any {
   // Only explicit negative evidence (scam/spam/suspicious reports) blocks SAFE promotion.
   const risky = explicitFraud;
   const hasSources = Array.isArray(result.sources) && result.sources.length > 0;
-  // Anti-fabrication guardrail: a business can only be "verified" if at least
-  // one source URL backs the claim. A hallucinated business name with no
-  // source is not trustworthy — never promote it, and demote it if the LLM
-  // claimed verified_business without any source URL.
-  if (realBusiness && !result.verified_business && !explicitFraud && hasSources) {
-    result.verified_business = true;
-  }
+  // Do not promote a business name into a verified identity merely because the
+  // LLM returned a source URL. Caller-report pages can mention businesses too.
+  // The research model must explicitly verify the exact number on an official
+  // or verified business source.
   if (result.verified_business && !hasSources) {
     result.verified_business = false;
     result.business_name = '';
