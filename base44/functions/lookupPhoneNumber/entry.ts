@@ -757,7 +757,7 @@ Respond in ${languageName}.`;
       caller_id_status: 'UNKNOWN',
       // Never trust an LLM-generated confidence value when there is no evidence.
       // Evidence-backed results use the shared reputation confidence calculation.
-      confidence_score: Math.max(0, Math.min(100, Number(result.confidence_score) || 0)),
+      confidence_score: (merged.scam_report_count || merged.spam_report_count || merged.suspicious_report_count || merged.safe_report_count || result.verified_business) ? Math.max(0, Math.min(100, Number(result.confidence_score) || 0)) : 50,
       evidence_backed: !!(merged.scam_report_count || merged.spam_report_count || merged.suspicious_report_count || merged.safe_report_count || result.verified_business),
       verified_business: result.verified_business || false,
       business_name: result.business_name || '',
@@ -793,7 +793,7 @@ Respond in ${languageName}.`;
     fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
     fullResult.confidence_score = fullResult.evidence_backed
       ? Math.max(0, Math.min(100, rep?.confidence_score || fullResult.confidence_score || 0))
-      : 0;
+      : 50;
     fullResult.caller_id_label = rep?.caller_id_label || '';
     if (!fullResult.evidence_backed) {
       fullResult.risk_level = 'low';
