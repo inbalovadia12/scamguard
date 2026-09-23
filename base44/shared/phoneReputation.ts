@@ -51,7 +51,8 @@ export function statusFromReputation(input: any): CallerIdStatus {
   // fall back to the LLM risk level / score when no community reports exist
   if (score >= 71 || input.risk_level === "high") return "SCAM";
   if (score >= 41 || input.risk_level === "medium") return "SUSPICIOUS";
-  if (score > 0 && score <= 30) return "SAFE";
+  // A low score alone is not proof of safety. Only explicit safe reports or a verified business can produce SAFE.
+  if (score > 0 && score <= 30 && safe > 0) return "SAFE";
 
   return "UNKNOWN";
 }
