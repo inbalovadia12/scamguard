@@ -57,9 +57,6 @@ function normalizeBusinessResult(result: any): any {
   const spam = result.spam_report_count || 0;
   const susp = result.suspicious_report_count || 0;
   const explicitFraud = scam > 0 || spam > 0 || susp > 0;
-  // A conservative numeric/risk-level result must not override an exact official business match.
-  // Only explicit negative evidence (scam/spam/suspicious reports) blocks SAFE promotion.
-  const risky = explicitFraud;
   const hasSources = Array.isArray(result.sources) && result.sources.length > 0;
   // Do not promote a business name into a verified identity merely because the
   // LLM returned a source URL. Caller-report pages can mention businesses too.
