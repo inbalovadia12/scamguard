@@ -841,7 +841,7 @@ Respond in ${languageName}.`;
     // from winning when a public report exists but the first search missed it.
     let webResearch: any = { reports: [], sources: [] };
     try {
-      const exactVariants = searchVariants.map((v) => `"${v}"`).join(', ');
+      const exactVariants = Array.from(new Set([displayFormat, cacheKey, phone_number.trim(), phone_number.trim().replace(/[^\d]/g, ''), displayFormat.replace(/[\s()-]/g, '')].filter(Boolean))).map((v) => `"${v}"`).join(', ');
       webResearch = await base44.integrations.Core.InvokeLLM({
         prompt: `Search the live public web RIGHT NOW for scam/spam/fraud reports about this EXACT phone number: ${cacheKey}.
 
