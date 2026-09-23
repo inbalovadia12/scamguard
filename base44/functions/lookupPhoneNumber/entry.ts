@@ -835,6 +835,52 @@ Respond in ${languageName}.`;
     } else {
       result = parseJsonFromText(typeof llmResponse === 'string' ? llmResponse : (llmResponse as any)?.response || JSON.stringify(llmResponse)) || {};
     }
+    // Independent exact-number web-evidence pass. The first LLM call produces the
+    // overall classification, but this second pass is deliberately focused only on
+    // finding public scam reports. That prevents a "no evidence" classification
+    // from winning when a public report exists but the first search missed it.
+    let webResearch: any = { reports: [], sources: [] };
+    try {
+      const exactVariants = searchVariants.map((v) => `"${v}"`).join(', ');
+      webResearch = await base44.integrations.Core.InvokeLLM({
+        prompt: `Search the live public web RIGHT NOW for scam/spam/fraud reports about this EXACT phone number: ${cacheKey}.
+
+Exact search strings (search each separately): ${exactVariants}
+
+Rules:
+- Search the web, do not rely on Vardin's database or memory.
+- The phone digits are the only identifier. Never substitute country + number, area code, prefix, or a similar number.
+- Check public complaint sites, security blogs, Reddit, scam databases, and search results.
+- A page counts only if it clearly refers to this exact phone number.
+- If an exact-number page says dangerous, scam, phishing, fraud, cryptocurrency scam, impersonation, spam, or similar, return it as a negative report.
+- Return the actual source URL and a short paraphrase of what it reports.
+- If nothing is found, return an empty reports array. Never invent a report or URL.`,
+        add_context_from_internet: true,
+        model: 'gemini_3_flash',
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            reports: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  url: { type: 'string' },
+                  summary: { type: 'string' },
+                  category: { type: 'string' },
+                },
+              },
+            },
+            sources: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      });
+      if (!webResearch || typeof webResearch !== 'object') webResearch = { reports: [], sources: [] };
+    } catch (webSearchError) {
+      console.error('Independent phone web-evidence search failed', webSearchError);
+      webResearch = { reports: [], sources: [] };
+    }
+
     result = normalizeBusinessResult(result);
     const { score: consistentScore, risk: consistentRisk } = enforceConsistency(result.reputation_score ?? 0, result.risk_level || 'low');
     const cleanSummary = sanitizeSummary(result.summary || '');
