@@ -20,6 +20,7 @@ const COST = 5;
 export default function LocalScamFinder() {
   const [locationInput, setLocationInput] = useState("");
   const [extraInfo, setExtraInfo] = useState("");
+  const [scamType, setScamType] = useState("both");
   const [coords, setCoords] = useState(null);
   const [locating, setLocating] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -95,6 +96,7 @@ export default function LocalScamFinder() {
       if (locationInput.trim()) payload.location = locationInput.trim();
       else { payload.latitude = coords.latitude; payload.longitude = coords.longitude; }
       if (extraInfo.trim()) payload.extra_info = extraInfo.trim();
+      payload.scam_type = scamType;
       const response = await base44.functions.invoke("scanLocalScams", payload);
       if (response.data?.error) throw new Error(response.data.error);
       setResult(response.data?.result);
@@ -107,7 +109,7 @@ export default function LocalScamFinder() {
     } finally { setScanning(false); }
   };
 
-  const handleRescan = () => { setResult(null); setLocationInput(""); setExtraInfo(""); setCoords(null); setError(null); };
+  const handleRescan = () => { setResult(null); setLocationInput(""); setExtraInfo(""); setScamType("both"); setCoords(null); setError(null); };
 
   const showHistoryItem = (h) => {
     let details = [];
@@ -177,6 +179,28 @@ export default function LocalScamFinder() {
                 className="text-base rounded-xl min-h-[80px] resize-y"
               />
               <p className="text-xs text-muted-foreground mt-1.5">Describe your situation and we'll prioritize the scams most relevant to you.</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Scam types to show</label>
+              <div className="grid grid-cols-3 gap-1 p-1 bg-muted rounded-xl">
+                {[
+                  { value: "physical", label: "Physical" },
+                  { value: "online", label: "Online" },
+                  { value: "both", label: "Both" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setScamType(opt.value)}
+                    className={`h-9 rounded-lg text-sm font-medium transition-colors ${scamType === opt.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                {scamType === "physical" ? "Street, market, taxi, and face-to-face scams." : scamType === "online" ? "Banking fraud, online shopping, phishing, and app scams." : "All local scams, physical and online."}
+              </p>
             </div>
             <Button onClick={handleScan} disabled={scanning || (!locationInput.trim() && !coords)} className="w-full h-11 sm:h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20 gap-2">
               {scanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}

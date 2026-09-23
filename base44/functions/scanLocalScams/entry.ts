@@ -16,6 +16,7 @@ export default async function(req: Request): Promise<Response> {
     const longitude = body.longitude != null ? Number(body.longitude) : null;
     const language = String(body.language || 'en');
     const extraInfo = String(body.extra_info || '').trim();
+    const scamType = String(body.scam_type || 'both');
 
     if (!location && (latitude == null || longitude == null)) {
       return Response.json({ error: 'Please provide a location or allow location access.' }, { status: 400 });
@@ -51,10 +52,19 @@ export default async function(req: Request): Promise<Response> {
       ? `\n\nThe user added extra context about their situation: "${extraInfo}". ORDER the scam_details array so the scams most relevant to what they described appear FIRST, then the remaining common local scams after them. For example, if they mention taking taxis, put taxi/ride-hailing scams at the top of the list; if they mention walking around a tourist area, put tourist/street scams at the top. Still include all the other common local scams — this is about ordering, not filtering.`
       : '';
 
+    const TYPE_SCOPES: Record<string, string> = {
+      physical: 'Focus ONLY on in-person, physical scams that happen on the street, in markets, shops, taxis, public transport, and face-to-face. Examples: pickpocketing, taxi/ride overcharging, street distraction scams, market counterfeit goods, fake police, ATM/cashpoint tampering, door-to-door cons. EXCLUDE purely online/digital scams (phishing emails, online banking fraud, online shopping, online romance scams, investment apps, online surveys).',
+      online: 'Focus ONLY on online/digital scams that happen through the internet, phones, apps, or email. Examples: online banking fraud, phishing, online shopping scams, online surveys/sweepstakes, romance/dating scams online, investment/crypto scams, tech support pop-ups, social media scams. EXCLUDE in-person, physical street/market/taxi scams.',
+      both: 'Cover both physical/in-person AND online/digital scams.',
+    };
+    const typeScope = TYPE_SCOPES[scamType] || TYPE_SCOPES.both;
+
     const prompt = `You are Vardin's local scam intelligence analyst. Research the scam landscape for: ${where}.${extraContext}
 
+Scope: ${typeScope}
+
 Using web search, find accurate, current information about:
-1. Common scams targeting residents or visitors of this specific area (name each scam and describe how it works).
+1. Common scams targeting residents or visitors of this specific area (name each scam and describe how it works) — respect the Scope above (physical-only, online-only, or both).
 2. Seasonal patterns — when certain scams peak here (season or months).
 3. Local authorities, official hotlines, and government/police websites where people in this region can report scams.
 4. Current trending scams in this area.
@@ -64,7 +74,7 @@ Rules:
 - Be specific to this location (city/region/country). If hyper-local data is scarce, provide the best country/region-level information and still name the location.
 - risk_level: "low" (few reports), "medium" (notable scam activity), "high" (active scam hot zone).
 - summary (max 300 chars): a plain-English overview of scam risk in this area.
-- scam_details: array of { name, description, peak_season, peak_months } for the most common local scams. Aim for AT LEAST 5 entries when the area has enough distinct scams; never pad with duplicates or generic filler — if fewer than 5 genuinely distinct scams exist, return only the real ones.
+- scam_details: array of { name, description, peak_season, peak_months } for the most common local scams that fit the Scope. Aim for AT LEAST 5 entries when the area has enough distinct in-scope scams; never pad with duplicates or out-of-scope filler — if fewer than 5 genuinely distinct in-scope scams exist, return only the real ones.
 - local_resources: official URLs/phone numbers/hotlines for reporting scams locally.
 - sources: full URLs of the websites where you found this information. Always include source URLs.
 

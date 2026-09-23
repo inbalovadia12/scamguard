@@ -50,8 +50,17 @@ function normalizeBusinessResult(result: any): any {
   const spam = result.spam_report_count || 0;
   const susp = result.suspicious_report_count || 0;
   const risky = scam > 0 || spam > 0 || susp > 0 || result.risk_level === 'high' || (result.reputation_score || 0) >= 41;
-  if (realBusiness && !result.verified_business && !risky) {
+  const hasSources = Array.isArray(result.sources) && result.sources.length > 0;
+  // Anti-fabrication guardrail: a business can only be "verified" if at least
+  // one source URL backs the claim. A hallucinated business name with no
+  // source is not trustworthy — never promote it, and demote it if the LLM
+  // claimed verified_business without any source URL.
+  if (realBusiness && !result.verified_business && !risky && hasSources) {
     result.verified_business = true;
+  }
+  if (result.verified_business && !hasSources) {
+    result.verified_business = false;
+    result.business_name = '';
   }
   const VAGUE_SUMMARY = /insufficient evidence|no (?:verified )?community reports|no reports found|no scam reports found/i;
   if (result.verified_business && realBusiness && VAGUE_SUMMARY.test(result.summary || '')) {
@@ -383,6 +392,8 @@ IMPORTANT — Country context: The user is located in ${countryHint}. The same p
 
 Step 1 — Identify the owner. Search for the business, organization, or person this number belongs to. Check official company websites, "contact us" pages, and business directories. Many numbers belong to well-known legitimate businesses (airlines, retailers, banks, utilities, government agencies) — identify them when you can.
 
+CRITICAL — do NOT guess, infer, or fabricate the owner. Only report a business_name if you found THIS EXACT phone number (every digit matching) listed on the business's OWN official website or "contact us" page, or on a major verified directory (official Google Business listing, official government registry) within ${countryHint}. Seeing the number on a complaint site, forum, or blog is NOT enough. If you are inferring from the area code, number format, or partial matches, do NOT set a business name. If you cannot confirm the owner from an official source, leave business_name empty and say so plainly in the summary. Fabricating a business name is far worse than admitting you didn't find one.
+
 Step 2 — Check for scam/spam reports. Search crowd-sourced complaint sites (800notes.com, whocallsme.com, callercomplaints.com), Reddit (r/ScamNumbers, r/scams), and fraud databases for reports about THIS EXACT number.
 
 Rules:
@@ -393,7 +404,7 @@ Rules:
 reputation_score (0-100, HIGHER = more dangerous): 0-15 = confirmed legitimate business or no negative reports; 16-35 = limited/anecdotal negative reports; 36-60 = suspicious or spam; 61-80 = strong scam indicators / multiple scam reports; 81-100 = confirmed scam number.
 risk_level: "low" (no negative reports, or confirmed legitimate business), "medium" (suspicious/spam), "high" (strong scam evidence).
 confidence_score (0-100): how confident you are based on the evidence found.
-verified_business: true if you found this number officially listed by a known business or organization — in that case you MUST set verified_business=true AND business_name to the business's name. If you could not identify a specific business, set verified_business=false and business_name="".
+verified_business: true ONLY if you found THIS EXACT number on an official source (the business's own website/contact page, or a major verified directory) within ${countryHint}, AND you include that source URL in sources. If you are inferring, guessing, or only saw the number on an unofficial complaint site/forum, set verified_business=false and business_name="". Never fabricate a business name.
 summary (max 300 chars): describe what you found. If the number belongs to a known business, name it (e.g., "This is the customer service line for Target."). If you found scam reports, summarize them. If you found nothing, say "No scam reports found for this number." Never mention background checks or future processing.
 sources: ALWAYS include the full URLs of the websites where you found this information (official business "contact" pages, complaint sites, Reddit posts, news articles). If you found nothing, return an empty array.
 
