@@ -368,7 +368,7 @@ Deno.serve(async (req) => {
     const cacheKey = norm.cacheKey;
     const displayFormat = norm.displayFormat;
     const effectiveCountry = norm.country;
-    const canonicalDigits = cacheKey.replace(/^\\+/, '');
+    const canonicalDigits = cacheKey.replace(/^\+/, '');
     const matchedCountry = matchCountryCode(canonicalDigits);
     const nationalDigits = matchedCountry
       ? (matchedCountry.stripLeadingZero ? `0${canonicalDigits.slice(matchedCountry.code.length)}` : canonicalDigits.slice(matchedCountry.code.length))
@@ -729,7 +729,7 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
         spam_report_count: result.spam_report_count || 0,
         suspicious_report_count: result.suspicious_report_count || 0,
         safe_report_count: result.safe_report_count || 0,
-        verified_business: !!merged.verified_business,
+        verified_business: !!result.verified_business,
       },
       communityEvidence,
       redditEvidence,
