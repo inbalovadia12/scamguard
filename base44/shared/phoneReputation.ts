@@ -41,10 +41,16 @@ export function statusFromReputation(input: any): CallerIdStatus {
   const safe = input.safe_report_count || 0;
   const score = input.reputation_score ?? 0;
 
+  // A verified official business identity is the strongest positive identity signal.
+  // Community reports can still describe spoofing/impersonation, so they do not
+  // automatically turn the legitimate published number into a scam number.
   if (input.verified_business) return "SAFE";
 
-  if (scam > 0 && scam >= Math.max(spam, susp, 1)) return "SCAM";
-  if (spam > 0 && spam >= Math.max(susp, 1)) return "SPAM";
+  // Negative categories are intentionally ordered by severity, not by count.
+  // One exact scam report must never be downgraded to SPAM merely because there
+  // are more nuisance/telemarketing reports.
+  if (scam > 0) return "SCAM";
+  if (spam > 0) return "SPAM";
   if (susp > 0) return "SUSPICIOUS";
   if (safe > 0) return "SAFE";
 
