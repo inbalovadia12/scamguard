@@ -73,9 +73,6 @@ function normalizeBusinessResult(result: any): any {
   // independent exact-number scam evidence (for example, spoofing/impersonation
   // reports). Keep the business badge; let the canonical evidence pass determine
   // the final score/status.
-  if (result.verified_business) {
-    result.confidence_score = Math.max(Number(result.confidence_score) || 0, 100);
-  }
   return result;
 }
 
