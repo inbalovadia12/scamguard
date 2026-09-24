@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity, Flag, ShieldCheck } from "lucide-react";
+import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity, Flag } from "lucide-react";
 import { RISK_META } from "@/components/scam/ScamReportCard";
 import CommunityIntel, { matchCategoriesToEnum } from "@/components/community/CommunityIntel";
 import ReportScamDialog from "@/components/scam/ReportScamDialog";
@@ -16,12 +16,6 @@ const STATUS_META = {
 export default function PhoneResultView({ data }) {
   const [reportOpen, setReportOpen] = useState(false);
 
-  const checkWithMalwarebytes = async () => {
-    const number = String(data.phone_number || "").trim();
-    if (!number) return;
-    try { await navigator.clipboard?.writeText(number); } catch {}
-    window.open("https://www.malwarebytes.com/scam-check/phone", "_blank", "noopener,noreferrer");
-  };
   const risk = RISK_META[data.risk_level] || RISK_META.medium;
   // The backend is the single source of truth for the numeric phone-risk score.
   // Never recalculate it here from community/Reddit evidence, because doing so
