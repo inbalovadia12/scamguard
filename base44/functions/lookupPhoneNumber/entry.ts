@@ -32,8 +32,8 @@ function enforceConsistency(score: number, risk: string, evidence?: { scam: numb
   let s = Number.isFinite(Number(score)) ? Math.max(0, Math.min(100, Number(score))) : 0;
   const e = evidence || { scam: 0, spam: 0, suspicious: 0, safe: 0, verified: false };
   // reputation_score is the legacy field name for Vardin's single numeric RISK score: higher = more dangerous.
-  if (e.verified) s = Math.min(s || 10, 30);
-  else if (e.scam > 0) s = Math.max(75, s);
+  if (e.scam > 0) s = Math.max(75, s);
+  else if (e.verified) s = Math.min(s || 10, 30);
   else if (e.spam > 0 && e.suspicious === 0) s = Math.max(50, Math.min(s, 60));
   else if (e.suspicious > 0) s = Math.max(41, Math.min(s, 70));
   else if (s === 0 && e.safe > 0) s = 10;
@@ -84,7 +84,12 @@ function normalizeBusinessResult(result: any): any {
 // warning, not proof the business itself is a scam.
 function mergeEvidence(result: any, communityEvidence: any, redditEvidence: any): any {
   if (!result) return result;
-  const communityScam = (communityEvidence?.scam_reports || 0) + (redditEvidence?.report_count || 0);
+  // RedditScamNumber records are already scam-number records, so each matched
+  // Reddit record is negative evidence. Do not add them to a verified business
+  // as if the business itself were fraudulent; the status layer keeps identity
+  // and threat evidence separate.
+  const redditScam = Number(redditEvidence?.report_count) || 0;
+  const communityScam = (communityEvidence?.scam_reports || 0) + redditScam;
   const communitySpam = communityEvidence?.spam_reports || 0;
   const communitySusp = communityEvidence?.suspicious_reports || 0;
   const communitySafe = communityEvidence?.safe_reports || 0;
@@ -665,7 +670,7 @@ Country: ${effectiveCountry}
 Search the live web independently from the first pass, focusing on exact-number source pages and independent caller-report databases.
 
 Search ALL exact representations above, then target:
-Who Called Me / WhoCallsMe, Should I Answer, CallFilter, Clever Dialer, Tellows, 800notes, CallerSmart, Truecaller, Malwarebytes Scam Number Check, Gridinsoft, Reddit/public forums, official business/contact pages, and reputable directories.
+Who Called Me / WhoCallsMe, Should I Answer, CallFilter, Clever Dialer, Tellows, 800notes, CallerSmart, Truecaller, Gridinsoft, Reddit/public forums, official business/contact pages, and reputable directories.
 
 Use exact-number + scam/spam/fraud/complaint/review/robocall/unsolicited queries. Open result pages and verify that the page itself contains this exact number before counting it.
 
