@@ -69,12 +69,12 @@ function normalizeBusinessResult(result: any): any {
   if (result.verified_business && realBusiness && VAGUE_SUMMARY.test(result.summary || '')) {
     result.summary = `This number belongs to ${bn}. No scam reports were found for this number.`;
   }
+  // A verified business is positive identity evidence, but it must not erase
+  // independent exact-number scam evidence (for example, spoofing/impersonation
+  // reports). Keep the business badge; let the canonical evidence pass determine
+  // the final score/status.
   if (result.verified_business) {
-    result.reputation_score = 10;
-    result.risk_level = 'low';
-    result.caller_id_status = 'SAFE';
-    result.confidence_score = 100;
-    result.caller_id_label = 'Vardin: Safe';
+    result.confidence_score = Math.max(Number(result.confidence_score) || 0, 100);
   }
   return result;
 }
@@ -273,11 +273,17 @@ function normalizePhoneNumber(input: string, countryHint: string): { cacheKey: s
     return `+${cc} ${national}`.trim();
   };
 
-  // Explicit international prefix: the number's own dialing code wins.
+  // Explicit international prefix: the dialing code is authoritative. For
+  // +1 (the shared NANP code), the code alone cannot distinguish the US from
+  // Canada, so honor an explicit Canada hint when supplied instead of always
+  // labeling every +1 number as US.
   if (explicitIntl && digits.length > 0) {
     const found = matchCountryCode(digits);
     if (found) {
       const national = digits.slice(found.code.length);
+      if (found.code === '1' && /canada/i.test(countryHint)) {
+        return { cacheKey: `+1${national}`, displayFormat: fmtDisplay('1', national), country: 'Canada' };
+      }
       return { cacheKey: `+${found.code}${national}`, displayFormat: fmtDisplay(found.code, national), country: found.country };
     }
     // Unrecognized country code — keep the exact digits so we still research
@@ -746,7 +752,10 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
     merged.risk_level = finalConsistency.risk;
 
     const fullResult = {
-      country: result.country || effectiveCountry,
+      // The parsed dialing code / explicit country context is authoritative for
+      // country display. Never let the research model replace it with a guessed
+      // country based on search results.
+      country: effectiveCountry,
       carrier: result.carrier || '',
       reputation_score: merged.reputation_score,
       risk_level: merged.risk_level,
