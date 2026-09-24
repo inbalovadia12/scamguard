@@ -64,29 +64,6 @@ export default function PhoneResultView({ data }) {
         </div>
       </div>
 
-      {/* Malwarebytes live verification */}
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-background flex items-center justify-center border border-border/60 flex-shrink-0">
-            <ShieldCheck className="w-5 h-5 text-primary" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-sm font-semibold text-foreground">Verify with Malwarebytes</p>
-              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">Live check</span>
-            </div>
-            <p className="mt-1 text-xs sm:text-sm text-muted-foreground leading-5">
-              Vardin cannot directly access Malwarebytes' private threat-intelligence service. Open the official Malwarebytes Scam Number Check to verify this exact number against its live database.
-            </p>
-            <Button type="button" variant="outline" size="sm" onClick={checkWithMalwarebytes} className="mt-3 gap-2 rounded-lg">
-              <ExternalLink className="w-3.5 h-3.5" />
-              Check this number on Malwarebytes
-            </Button>
-            <p className="mt-2 text-[11px] text-muted-foreground">The number is copied to your clipboard so you can paste it into the Malwarebytes lookup.</p>
-          </div>
-        </div>
-      </div>
-
       {/* Verified business badge */}
       {data.verified_business && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30">
