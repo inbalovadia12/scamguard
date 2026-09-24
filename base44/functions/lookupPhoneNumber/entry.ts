@@ -566,7 +566,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ---- LLM web search (only for unknown numbers) ----
+    // ---- LLM web research (exact-number evidence only) ----
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
 
@@ -579,40 +579,34 @@ ${searchVariants.map((v) => `- ${v}`).join('\n')}
 
 You MUST search the exact digits in each useful representation above. Never add a country name, city, area code explanation, or other words to the phone number itself when doing the exact-number search. After exact searches, use targeted searches with the exact number plus terms such as scam, fraud, spam, phishing, dangerous, robocall, complaint, review, who called.
 
-MANDATORY SOURCE CHECKS:
-1. Search exact-number results on caller-report/community sites such as Who Called Me / WhoCallsMe, 800notes, CallerSmart, Truecaller and similar services when available.
-2. Search exact-number results on security and threat-intelligence sites, including Malwarebytes Scam Number Check, Gridinsoft, Kaspersky and similar sources when available.
-3. Search Reddit and other public forums for the exact number.
-4. Search news, government/fraud warnings, and official business/contact pages for the exact number.
-
-IMPORTANT ABOUT MALWAREBYTES:
-If the Malwarebytes Scam Number Check web page is accessible, check the exact number there and use its result as evidence. Do not claim Malwarebytes found anything unless you actually saw a result for THIS EXACT number. If the page is unavailable or its result cannot be retrieved, simply omit it and continue with other sources.
+SOURCE PRIORITY:
+1. Official business/contact pages and reputable directories for identity.
+2. Established caller-report databases such as WhoCallsMe, Should I Answer, CallFilter, Tellows, 800notes, CallerSmart and Truecaller.
+3. Established security/threat-intelligence sources.
+4. Public forums, Reddit, news and government/fraud sources.
+Use public, easily discoverable sources. Do NOT search or rely on dark-web, private, obscure, or suspicious sites.
 
 EXACT MATCH RULE:
-Only count a source when the phone number on that source matches THIS EXACT number digit-for-digit. Different numbers, prefixes, area codes, nearby numbers, or generic articles do not count. Normalize punctuation and spaces only for comparison. An exact number appearing on a security blog or community complaint site is valid negative evidence even if the source is outside the number's country.
+Only count a source when the phone number on that source matches THIS EXACT number digit-for-digit. Different numbers, prefixes, area codes, nearby numbers, or generic articles do not count. Normalize punctuation and spaces only for comparison. An exact number appearing on a credible public source is valid evidence regardless of country.
 
 SEARCH EXECUTION:
 Do not stop after the first search or after finding no result from one source. Try all exact representations and multiple source categories. If a search engine result points to a source-specific phone-number page, open that page and verify the exact number and the reported classification/comments before counting it.
 
-Step 1 — Identify the owner. Only set business_name when THIS EXACT number is shown on the business's own official website/contact page or a major verified directory. Do not infer an owner from area code, country, number format, or complaint-site text.
+Step 1 — Identify the owner. Set business_name ONLY when THIS EXACT number is published by the business's own official website/contact page or a clearly reputable directory. Never infer an owner from area code, country, prefix, carrier, number pattern, complaint text, or a similar number.
 
-Step 2 — Determine scam/spam/suspicious/legitimate evidence from the exact-number sources you actually verified.
+Step 2 — Determine scam/spam/suspicious/legitimate evidence only from exact-number sources you actually verified. Generic articles about spoofing a company do not make the company's real number suspicious. Spam/telemarketing is not automatically a scam.
 
 Do not invent data. Return the URLs of every source that actually contained evidence about THIS EXACT number. If a source was searched but did not contain the number, do not include it in sources.
 
-reputation_score (0-100, HIGHER = more dangerous):
-0-15 = no negative evidence or confirmed legitimate business
-16-35 = limited/anecdotal negative evidence
-36-60 = suspicious/spam
-61-80 = strong scam indicators / multiple scam reports
-81-100 = very strong/confirmed scam evidence
+reputation_score (0-100, HIGHER = more dangerous; provisional only — the application recalculates the final score from verified evidence):
+Do NOT invent a score from the absence of search results. Treat the score as provisional evidence only.
 
 risk_level:
-- low = no negative evidence or confirmed legitimate business
-- medium = suspicious/spam
-- high = strong scam evidence
+- low = no verified negative evidence or verified legitimate business
+- medium = verified spam/suspicious evidence
+- high = verified scam evidence
 
-confidence_score (0-100) = confidence in the classification based ONLY on verified exact-number evidence. If no exact-number evidence is found, keep confidence low and do not call the number safe merely because nothing was found.
+confidence_score (0-100) = confidence based ONLY on verified exact-number evidence. No evidence means UNKNOWN/insufficient evidence, never SAFE.
 
 verified_business = true ONLY when an official/verified source contains THIS EXACT number and its source URL is included.
 
