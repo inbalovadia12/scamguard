@@ -11,7 +11,7 @@ import AIDisclaimer from "@/components/AIDisclaimer";
 import { detectPhoneCountry } from "@/lib/phoneCountries";
 
 const RISK_CONFIG = {
-  low: { color: "text-success", bg: "bg-success/10", border: "border-success/30", icon: ShieldCheck, label: "No Known Risk Found" },
+  low: { color: "text-success", bg: "bg-success/10", border: "border-success/30", icon: ShieldCheck, label: "Low Risk" },
   medium: { color: "text-warning", bg: "bg-warning/10", border: "border-warning/30", icon: AlertTriangle, label: "Be Cautious" },
   high: { color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30", icon: ShieldAlert, label: "Likely Scam" },
 };
@@ -156,7 +156,20 @@ export default function PhoneLookup() {
       setCurrentResult(applyLookupToResult(phone, { ...result, created_date: saved?.created_date }));
       loadHistory();
     } catch (e) {
-      setError(e.message || "Lookup failed. Please try again.");
+      // Base44 may surface HTTP errors as a generic Axios-style message.
+      // Preserve the backend's structured credit response so users never see
+      // an opaque "Request failed with status code 402" message.
+      const status = e?.response?.status ?? e?.status;
+      const payload = e?.response?.data ?? e?.data;
+      if (status === 402 || payload?.credits_remaining != null) {
+        const remaining = Number(payload?.credits_remaining);
+        const cost = Number(payload?.credit_cost) || 5;
+        setError(Number.isFinite(remaining)
+          ? `You have ${remaining} credit${remaining === 1 ? "" : "s"} left. This phone lookup costs ${cost} credits. Add credits or wait for your plan reset to continue.`
+          : `Not enough credits for this phone lookup. It costs ${cost} credits.`);
+      } else {
+        setError(e.message || "Lookup failed. Please try again.");
+      }
     } finally {
       setLooking(false);
     }

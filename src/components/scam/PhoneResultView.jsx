@@ -10,7 +10,7 @@ const STATUS_META = {
   SPAM: { label: "Spam", color: "bg-warning/10 text-warning border-warning/30" },
   SUSPICIOUS: { label: "Suspicious", color: "bg-warning/10 text-warning border-warning/30" },
   SAFE: { label: "No Known Risk Found", color: "bg-success/10 text-success border-success/30" },
-  UNKNOWN: { label: "No Known Risk Found", color: "bg-muted text-muted-foreground border-border/50" },
+  UNKNOWN: { label: "Insufficient Evidence", color: "bg-muted text-muted-foreground border-border/50" },
 };
 
 export default function PhoneResultView({ data }) {
