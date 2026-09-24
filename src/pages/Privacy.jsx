@@ -182,7 +182,6 @@ export default function Privacy() {
           "PayPal for subscriptions and credit purchases.",
           "Google/Gmail for configured guardian and family notification email delivery.",
           "VirusTotal and URLhaus for URL threat intelligence when the relevant scanner is used.",
-          'Malwarebytes, when you choose the Vardin "Verify with Malwarebytes" link. That action opens Malwarebytes Scam Number Check in a separate browser tab; Vardin does not receive the Malwarebytes result through this handoff.',
           "QR Server for server-side QR decoding when QR analysis uses the server decoder.",
           "ElevenLabs for text-to-speech when Vardin's voice features are used.",
           "Professional advisers, regulators, courts, law enforcement or other parties when required or permitted by law.",
@@ -196,7 +195,6 @@ export default function Privacy() {
         <div className="rounded-xl border border-border overflow-hidden bg-card">
           {providerLinks.map(([name, url]) => <div key={name} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 border-b last:border-b-0 border-border px-4 py-3 text-sm"><span className="font-medium text-foreground">{name}</span><a className="text-primary underline underline-offset-2 break-all" href={url} target="_blank" rel="noreferrer">Provider documentation</a></div>)}
         </div>
-        <p><strong>Malwarebytes Scam Number Check:</strong> Vardin provides an optional external verification handoff for phone lookups. When you choose the Malwarebytes check, Vardin opens the official Malwarebytes Scam Number Check page and copies the phone number to your clipboard so you can paste it into the lookup. The Malwarebytes result is displayed by Malwarebytes, not returned to Vardin through this handoff. Malwarebytes states that its Scam Number Check checks phone numbers against its threat-intelligence database and community reports. See the <a className="text-primary underline underline-offset-2 break-all" href="https://www.malwarebytes.com/scam-check/phone" target="_blank" rel="noreferrer">Malwarebytes Scam Number Check</a> and <a className="text-primary underline underline-offset-2 break-all" href="https://help.malwarebytes.com/hc/en-us/articles/48220277395611-Use-Malwarebytes-Scam-Number-Check" target="_blank" rel="noreferrer">Malwarebytes Help Center</a>.</p>
         <p>Provider terms and retention settings can change. This Policy describes Vardin's current code-level integrations and external handoffs, not a guarantee that a provider's practices will remain unchanged.</p>
       </Section>
 
