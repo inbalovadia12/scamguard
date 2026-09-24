@@ -41,10 +41,11 @@ export function statusFromReputation(input: any): CallerIdStatus {
   const safe = input.safe_report_count || 0;
   const score = input.reputation_score ?? 0;
 
-  // A verified official business identity is the strongest positive identity signal.
-  // Community reports can still describe spoofing/impersonation, so they do not
-  // automatically turn the legitimate published number into a scam number.
-  if (input.verified_business) return "SAFE";
+  // A verified official business identity is strong positive identity evidence,
+  // but it is not proof that every call displaying that number is legitimate:
+  // caller-ID spoofing can make a scammer appear as a real business.
+  // Evaluate exact-number negative evidence first; the UI can still show the
+  // verified business badge separately.
 
   // Negative categories are intentionally ordered by severity, not by count.
   // One exact scam report must never be downgraded to SPAM merely because there
@@ -53,6 +54,7 @@ export function statusFromReputation(input: any): CallerIdStatus {
   if (spam > 0) return "SPAM";
   if (susp > 0) return "SUSPICIOUS";
   if (safe > 0) return "SAFE";
+  if (input.verified_business) return "SAFE";
 
   // fall back to the LLM risk level / score when no community reports exist
   if (score >= 71 || input.risk_level === "high") return "SCAM";
