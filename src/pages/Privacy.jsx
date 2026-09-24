@@ -30,7 +30,6 @@ const providerLinks = [
   ["PayPal", "https://www.paypal.com/us/legalhub/paypal/privacy-full?redirect=false"],
   ["Google Workspace / Gmail API", "https://developers.google.com/workspace/workspace-api-user-data-developer-policy"],
   ["VirusTotal", "https://docs.virustotal.com/docs/private-scanning"],
-  ["Malwarebytes Scam Number Check", "https://www.malwarebytes.com/scam-check/phone"],
 ];
 
 export default function Privacy() {
