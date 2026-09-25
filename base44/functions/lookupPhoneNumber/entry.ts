@@ -731,8 +731,10 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       redditEvidence,
     );
 
-    // Re-derive BOTH values from the final merged evidence. This makes the
-    // numeric score and risk level a single canonical pair all the way to the UI.
+    // Normalize identity first, then build the final evidence snapshot. This
+    // prevents a stale verified_business value from influencing the score/status
+    // after normalization removes an unsupported business claim.
+    normalizeBusinessResult(merged);
     const mergedEvidence = {
       scam: Number(merged.scam_report_count) || 0,
       spam: Number(merged.spam_report_count) || 0,
@@ -740,9 +742,8 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       safe: Number(merged.safe_report_count) || 0,
       verified: !!merged.verified_business,
     };
-    // Re-run business normalization AFTER community/Reddit evidence is merged so an
-    // exact official business match can become SAFE before the final score is derived.
-    normalizeBusinessResult(merged);
+    // Re-derive BOTH values from the final merged evidence. This makes the
+    // numeric score and risk level a single canonical pair all the way to the UI.
     const finalConsistency = enforceConsistency(merged.reputation_score ?? 0, merged.risk_level || 'low', mergedEvidence);
     merged.reputation_score = finalConsistency.score;
     merged.risk_level = finalConsistency.risk;
