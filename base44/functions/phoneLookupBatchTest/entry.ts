@@ -11,7 +11,7 @@ const DEFAULT_CASES: Expected[] = [
   { number: '+1 800 692 7753', country: 'United States', business: 'Apple', status: 'SAFE' },
   { number: '+44 800 048 0408', country: 'United Kingdom', business: 'Embargo Lifestyle Limited', status: 'SAFE' },
   { number: '+1 800 642 7676', country: 'United States', business: 'Microsoft', status: 'SAFE' },
-  { number: '+44 800 026 0329', country: 'United Kingdom', status: 'UNKNOWN' },
+  { number: '+44 800 026 0329', country: 'United Kingdom', business: 'Microsoft', status: 'SAFE' },
   { number: '+1 800 442 4000', country: 'United States', business: 'Beats by Apple', status: 'SAFE' },
   { number: '+44 12 5630 6995', country: 'United Kingdom', status: 'SCAM' },
   { number: '+44 77 0017 8674', country: 'United Kingdom', status: 'SCAM' },
@@ -28,6 +28,12 @@ function digits(value: unknown) {
 
 function scoreCase(expected: Expected, actual: any) {
   const failures: string[] = [];
+  const scam = Number(actual.scam_report_count) || 0;
+  const spam = Number(actual.spam_report_count) || 0;
+  const suspicious = Number(actual.suspicious_report_count) || 0;
+  const safe = Number(actual.safe_report_count) || 0;
+  const verified = actual.verified_business === true;
+  const status = String(actual.caller_id_status || '').toUpperCase();
   if (expected.country && !String(actual.country || '').toLowerCase().includes(expected.country.toLowerCase())) {
     failures.push(`country expected ${expected.country}, got ${actual.country || 'empty'}`);
   }
@@ -44,6 +50,18 @@ function scoreCase(expected: Expected, actual: any) {
   }
   const score = Number(actual.reputation_score);
   if (!Number.isFinite(score) || score < 0 || score > 100) failures.push(`invalid risk score ${actual.reputation_score}`);
+
+  // Cross-field invariants: the scanner must not emit a classification that
+  // contradicts the evidence it reports alongside it.
+  if (status === 'SCAM' && scam <= 0) failures.push('SCAM status without scam evidence');
+  if (status === 'SPAM' && spam <= 0) failures.push('SPAM status without spam evidence');
+  if (status === 'SUSPICIOUS' && suspicious <= 0) failures.push('SUSPICIOUS status without suspicious evidence');
+  if (status === 'SAFE' && safe <= 0 && !verified) failures.push('SAFE status without safe evidence or verified business');
+  if (status === 'UNKNOWN' && (scam > 0 || spam > 0 || suspicious > 0 || safe > 0 || verified)) failures.push('UNKNOWN status despite classification evidence');
+  if (scam > 0 && score < 75) failures.push(`scam evidence requires risk >= 75, got ${score}`);
+  if (verified && scam === 0 && spam === 0 && suspicious === 0 && score > 30) failures.push(`verified business without negative evidence must have risk <= 30, got ${score}`);
+  if (status === 'SAFE' && score >= 71) failures.push(`SAFE status cannot have high risk score ${score}`);
+
   return failures;
 }
 
