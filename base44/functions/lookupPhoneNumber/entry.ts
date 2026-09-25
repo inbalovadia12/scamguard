@@ -135,7 +135,7 @@ function checkKnownFictional(cleaned: string): any {
       return {
         country: 'USA',
         carrier: 'None (Fictional Number)',
-        reputation_score: 15,
+        reputation_score: 0,
         risk_level: 'low',
         confidence_score: 100,
         user_reports: [],
