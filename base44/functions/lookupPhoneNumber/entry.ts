@@ -796,9 +796,23 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       },
     });
 
-    fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
+    // The response classification must describe the evidence from THIS scan.
+    // PhoneReputation is persisted for history/confidence, but its historical
+    // status must not overwrite a fresh contradictory research result. This is
+    // especially important when an old high-risk record is superseded by a
+    // newly verified business identity with no current exact-number negatives.
+    const currentStatus = statusFromReputation({
+      reputation_score: fullResult.reputation_score,
+      risk_level: fullResult.risk_level,
+      scam_report_count: fullResult.scam_report_count,
+      spam_report_count: fullResult.spam_report_count,
+      suspicious_report_count: fullResult.suspicious_report_count,
+      safe_report_count: fullResult.safe_report_count,
+      verified_business: fullResult.verified_business,
+    });
+    fullResult.caller_id_status = currentStatus;
+    fullResult.caller_id_label = computeLabel(currentStatus, DEFAULT_CONFIG);
     fullResult.confidence_score = Math.max(fullResult.confidence_score, rep?.confidence_score || 0);
-    fullResult.caller_id_label = rep?.caller_id_label || '';
 
     let lookup: any = null;
     try {
