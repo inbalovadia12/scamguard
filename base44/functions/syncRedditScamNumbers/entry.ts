@@ -2,11 +2,43 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
 const LANGUAGE = 'English';
 
-function normalizePhone(raw: string): string | null {
-  const digits = String(raw || '').replace(/\D/g, '');
+const COUNTRY_CODES: Record<string, string> = {
+  'united states': '1', 'usa': '1', 'us': '1', 'canada': '1',
+  'united kingdom': '44', 'uk': '44', 'great britain': '44',
+  'australia': '61', 'new zealand': '64', 'ireland': '353', 'france': '33',
+  'germany': '49', 'spain': '34', 'italy': '39', 'netherlands': '31',
+  'belgium': '32', 'switzerland': '41', 'austria': '43', 'sweden': '46',
+  'norway': '47', 'denmark': '45', 'finland': '358', 'poland': '48',
+  'portugal': '351', 'israel': '972', 'south africa': '27', 'india': '91',
+  'japan': '81', 'south korea': '82', 'china': '86', 'singapore': '65',
+  'malaysia': '60', 'philippines': '63', 'thailand': '66', 'mexico': '52',
+  'brazil': '55', 'argentina': '54', 'colombia': '57', 'turkey': '90',
+  'uae': '971', 'united arab emirates': '971',
+};
+
+function normalizePhone(raw: string, countryHint = ''): string | null {
+  const text = String(raw || '').trim();
+  const digits = text.replace(/\D/g, '');
+  if (digits.length < 7 || digits.length > 15) return null;
+
+  // Explicit international formats are authoritative.
+  if (text.startsWith('+')) return `+${digits}`;
+  if (digits.startsWith('00') && digits.length > 8) return `+${digits.slice(2)}`;
+
+  const hint = String(countryHint || '').toLowerCase().trim();
+  const code = COUNTRY_CODES[hint] || Object.entries(COUNTRY_CODES).find(([name]) => hint.includes(name))?.[1];
+  if (code) {
+    let national = digits;
+    if (code !== '1' && national.startsWith('0')) national = national.slice(1);
+    if (code === '1' && national.length === 11 && national.startsWith('1')) national = national.slice(1);
+    if (code === '1' && national.length === 10) return `+1${national}`;
+    if (national.length >= 6) return `+${code}${national}`;
+  }
+
+  // Only assume NANP for an unqualified 10/11 digit number. Other lengths
+  // remain unresolved instead of becoming a false international number.
   if (digits.length === 10) return `+1${digits}`;
   if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
-  if (digits.length >= 7 && digits.length <= 15) return `+${digits}`;
   return null;
 }
 
@@ -50,6 +82,7 @@ Deno.serve(async (req) => {
                 title: { type: 'string' },
                 summary: { type: 'string' },
                 posted_at: { type: 'string' },
+                country: { type: 'string' },
                 phones: { type: 'array', items: { type: 'string' } },
               },
               required: ['post_url', 'title', 'phones'],
@@ -70,7 +103,7 @@ Deno.serve(async (req) => {
 
       const phones = Array.isArray(post?.phones) ? post.phones : [];
       for (const rawPhone of phones) {
-        const normalized = normalizePhone(rawPhone);
+        const normalized = normalizePhone(rawPhone, String(post?.country || ''));
         if (!normalized) continue;
         phoneMatches += 1;
 
