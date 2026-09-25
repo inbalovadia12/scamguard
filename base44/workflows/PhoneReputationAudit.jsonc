@@ -1,0 +1,45 @@
+{
+  "description": "Continuously reconciles PhoneReputation status, risk score, confidence, report totals, and caller-ID labels from authoritative stored evidence",
+  "name": "Phone Reputation Audit",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 */6 * * *",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "phone_reputation_audit",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "audit_phone_reputation": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "auditPhoneReputation",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Audit phone reputation",
+            "description": "Reconcile phone risk and caller-ID classification from stored exact-number evidence"
+          }
+        }
+      }
+    ]
+  }
+}
