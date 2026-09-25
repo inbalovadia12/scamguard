@@ -612,6 +612,15 @@ Step 1 — Identify the owner. Set business_name ONLY when THIS EXACT number is 
 
 Step 2 — Determine scam/spam/suspicious/legitimate evidence only from exact-number sources you actually verified. Generic articles about spoofing a company do not make the company's real number suspicious. Spam/telemarketing is not automatically a scam.
 
+CRITICAL IDENTITY VS. CALL-BEHAVIOR RULE:
+A phone number can be a real, verified business number AND also be frequently spoofed by scammers. Those are two different facts. If an official source proves that THIS EXACT number belongs to a real business, set verified_business=true. Do NOT turn the number itself into scam/spam/suspicious evidence merely because scammers have impersonated or spoofed it. Only set direct_negative_evidence=true when the exact number itself is documented as being used by the abusive actor, not when the number is the legitimate business's Caller ID being spoofed.
+
+CRITICAL UNKNOWN RULE:
+UNKNOWN is a valid and expected classification. If you cannot verify a real business identity and cannot verify exact-number scam, spam, suspicious, or safe evidence, return zero counts for all four evidence categories and do not invent a safe classification. Absence of reports is NOT safe evidence.
+
+CRITICAL VERIFIED-BUSINESS RULE:
+For a verified business, prefer risk 0-30 and SAFE at the application layer when there is no direct negative evidence. Never output a high risk score for a verified business solely because of spoofing/impersonation reports.
+
 Do not invent data. Return the URLs of every source that actually contained evidence about THIS EXACT number. If a source was searched but did not contain the number, do not include it in sources.
 
 reputation_score (0-100, HIGHER = more dangerous; provisional only — the application recalculates the final score from verified evidence):
@@ -835,13 +844,16 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
     // status must not overwrite a fresh contradictory research result. This is
     // especially important when an old high-risk record is superseded by a
     // newly verified business identity with no current exact-number negatives.
-    const currentEvidence = {
-      scam: Number(fullResult.scam_report_count) || 0,
-      spam: Number(fullResult.spam_report_count) || 0,
-      suspicious: Number(fullResult.suspicious_report_count) || 0,
-      safe: Number(fullResult.safe_report_count) || 0,
-      verified: fullResult.verified_business === true,
-    };
+    const isReservedFictional = /^1?\d{3}55501\d{2}$/.test(canonicalDigits);
+    const currentEvidence = isReservedFictional
+      ? { scam: 0, spam: 0, suspicious: 0, safe: 0, verified: false }
+      : {
+          scam: Number(fullResult.scam_report_count) || 0,
+          spam: Number(fullResult.spam_report_count) || 0,
+          suspicious: Number(fullResult.suspicious_report_count) || 0,
+          safe: Number(fullResult.safe_report_count) || 0,
+          verified: fullResult.verified_business === true,
+        };
     const responseConsistency = enforceConsistency(fullResult.reputation_score, fullResult.risk_level, currentEvidence);
     fullResult.reputation_score = responseConsistency.score;
     fullResult.risk_level = responseConsistency.risk;
@@ -854,9 +866,21 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       safe_report_count: currentEvidence.safe,
       verified_business: currentEvidence.verified,
     });
-    fullResult.caller_id_status = currentStatus;
-    fullResult.caller_id_label = computeLabel(currentStatus, DEFAULT_CONFIG);
-    fullResult.confidence_score = Math.max(fullResult.confidence_score, rep?.confidence_score || 0);
+    fullResult.caller_id_status = isReservedFictional ? 'UNKNOWN' : currentStatus;
+    fullResult.caller_id_label = computeLabel(fullResult.caller_id_status, DEFAULT_CONFIG);
+    if (isReservedFictional) {
+      fullResult.reputation_score = 0;
+      fullResult.risk_level = 'low';
+      fullResult.scam_report_count = 0;
+      fullResult.spam_report_count = 0;
+      fullResult.suspicious_report_count = 0;
+      fullResult.safe_report_count = 0;
+      fullResult.verified_business = false;
+      fullResult.business_name = '';
+      fullResult.confidence_score = 100;
+    } else {
+      fullResult.confidence_score = Math.max(fullResult.confidence_score, rep?.confidence_score || 0);
+    }
 
     let lookup: any = null;
     try {
