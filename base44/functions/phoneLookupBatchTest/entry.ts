@@ -76,7 +76,8 @@ function scoreCase(expected: Expected, actual: any) {
   if (status === 'UNKNOWN' && (scam > 0 || spam > 0 || suspicious > 0 || safe > 0 || verified)) failures.push('UNKNOWN status despite classification evidence');
   if (scam > 0 && score < 75) failures.push(`scam evidence requires risk >= 75, got ${score}`);
   if (verified && scam === 0 && spam === 0 && suspicious === 0 && score > 30) failures.push(`verified business without negative evidence must have risk <= 30, got ${score}`);
-  if (status === 'SAFE' && score >= 71) failures.push(`SAFE status cannot have high risk score ${score}`);
+  if (status === 'SAFE' && score > 30) failures.push(`SAFE status cannot have risk score above 30, got ${score}`);
+  if (status === 'UNKNOWN' && score !== 0) failures.push(`UNKNOWN status must have risk score 0, got ${score}`);
 
   return failures;
 }
