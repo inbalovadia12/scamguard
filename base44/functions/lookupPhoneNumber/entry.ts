@@ -127,11 +127,12 @@ function parseJsonFromText(text: string): any {
 
 // Quick check for known fictional/reserved number ranges
 function checkKnownFictional(cleaned: string): any {
-  // 555-0100 to 555-0199 are reserved
-  if (cleaned.length >= 10) {
-    const last4 = cleaned.slice(-4);
-    const exchanges = cleaned.slice(-7, -4);
-    if (exchanges === '555' && last4.startsWith('01')) {
+  // NANP 555-0100 through 555-0199 are reserved for fictional use.
+  // Match the normalized country-code form so formatting and country hints
+  // cannot bypass this generic reserved-range rule.
+  const digits = String(cleaned || '').replace(/\D/g, '');
+  const nanp = digits.startsWith('1') && digits.length === 11 ? digits.slice(1) : digits;
+  if (/^\d{3}55501\d{2}$/.test(nanp)) {
       return {
         country: 'USA',
         carrier: 'None (Fictional Number)',
@@ -511,7 +512,7 @@ Deno.serve(async (req) => {
     } catch {}
 
     // ---- Quick check for known fictional numbers (instant) ----
-    const knownFictional = checkKnownFictional(rawDigits);
+    const knownFictional = checkKnownFictional(canonicalDigits);
     if (knownFictional) {
       const fullResult = {
         ...knownFictional,
@@ -612,6 +613,8 @@ risk_level:
 
 confidence_score (0-100) = confidence based ONLY on verified exact-number evidence. No evidence means UNKNOWN/insufficient evidence, never SAFE.
 
+direct_negative_evidence = true ONLY when the verified exact-number evidence shows that the number itself is being used for scam/spam/suspicious activity. Set it to false when negative reports are about scammers spoofing/impersonating this legitimate number, generic articles, or incidents where the number was merely displayed as a spoofed caller ID. A legitimate business number must not be classified as a scam merely because it is frequently spoofed.
+
 verified_business = true ONLY when an official/verified source contains THIS EXACT number and its source URL is included.
 
 summary (max 300 chars): State what exact-number evidence was actually found, naming the source(s) and type of report. If nothing was found, say that no exact-number evidence was found; do not imply the number is safe.
@@ -628,6 +631,10 @@ Respond in ${languageName}.`;
         reputation_score: { type: 'number' },
         risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
         confidence_score: { type: 'number' },
+        // Distinguish direct evidence that the exact number itself is abusive
+        // from reports describing spoofing/impersonation where scammers merely
+        // displayed a legitimate business number.
+        direct_negative_evidence: { type: 'boolean' },
         user_reports: { type: 'array', items: { type: 'string' } },
         scam_categories: { type: 'array', items: { type: 'string' } },
         summary: { type: 'string' },
@@ -688,6 +695,7 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
           mergedRecovery[key] = Math.max(Number(mergedRecovery[key]) || 0, Number(recovery[key]) || 0);
         }
         mergedRecovery.verified_business = !!mergedRecovery.verified_business || !!recovery.verified_business;
+        mergedRecovery.direct_negative_evidence = !!mergedRecovery.direct_negative_evidence || !!recovery.direct_negative_evidence;
         mergedRecovery.user_reports = [...(Array.isArray(mergedRecovery.user_reports) ? mergedRecovery.user_reports : []), ...(Array.isArray(recovery.user_reports) ? recovery.user_reports : [])].slice(0, 6);
         mergedRecovery.scam_categories = [...new Set([...(Array.isArray(mergedRecovery.scam_categories) ? mergedRecovery.scam_categories : []), ...(Array.isArray(recovery.scam_categories) ? recovery.scam_categories : [])])];
         mergedRecovery.sources = [...new Set([...(Array.isArray(mergedRecovery.sources) ? mergedRecovery.sources : []), ...(Array.isArray(recovery.sources) ? recovery.sources : [])])];
@@ -698,6 +706,15 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       return Response.json({ error: 'Phone lookup service temporarily unavailable. Please try again.' }, { status: 502 });
     }
     result = normalizeBusinessResult(result);
+    // Do not let spoofing/impersonation reports turn a verified business's
+    // real number into a scam classification. Only direct negative evidence about
+    // the exact number itself is classification evidence. Community/Reddit reports
+    // remain direct evidence and are merged below.
+    if (result.verified_business === true && result.direct_negative_evidence !== true) {
+      result.scam_report_count = 0;
+      result.spam_report_count = 0;
+      result.suspicious_report_count = 0;
+    }
     const rawEvidence = {
       scam: Number(result.scam_report_count) || 0,
       spam: Number(result.spam_report_count) || 0,
@@ -768,6 +785,7 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       confidence_score: Math.max(0, Math.min(100, Number(result.confidence_score) || 0)),
       verified_business: !!merged.verified_business,
       business_name: merged.business_name || '',
+      direct_negative_evidence: merged.direct_negative_evidence === true,
       caller_id_label: '',
       last_checked_at: new Date().toISOString(),
       community: communityEvidence,
