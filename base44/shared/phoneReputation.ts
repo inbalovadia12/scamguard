@@ -81,13 +81,27 @@ export function computeConfidence(input: any): number {
     (input.spam_report_count || 0) +
     (input.suspicious_report_count || 0) +
     (input.safe_report_count || 0);
-  if (input.verified_business) return 100;
-  if (total >= 10) return 95;
-  if (total >= 5) return 85;
-  if (total >= 3) return 75;
-  if (total >= 1) return 65;
-  const score = input.reputation_score ?? 0;
-  if (score > 0) return 45; // LLM-only, lower confidence
+  // Negative exact-number evidence must never receive 100% confidence merely
+  // because the displayed number is also a verified business. Spoofing and
+  // impersonation are possible, so the threat classification needs to remain
+  // visible alongside the identity match.
+  if (input.scam_report_count > 0) {
+    if (total >= 10) return 95;
+    if (total >= 5) return 90;
+    if (total >= 3) return 85;
+    return 75;
+  }
+  if (input.suspicious_report_count > 0) {
+    if (total >= 5) return 85;
+    if (total >= 3) return 75;
+    return 65;
+  }
+  if (input.spam_report_count > 0) {
+    if (total >= 5) return 80;
+    if (total >= 3) return 70;
+    return 65;
+  }
+  if (input.safe_report_count > 0 || input.verified_business) return 100;
   return 0;
 }
 
@@ -149,8 +163,14 @@ export async function upsertPhoneReputation(base44: any, data: any): Promise<any
     if (data.risk_level) patch.risk_level = data.risk_level;
     if (data.scam_categories) patch.scam_categories = data.scam_categories;
     if (data.summary) patch.summary = data.summary;
-    if (data.sources) patch.sources = data.sources;
-    if (data.verified_business != null) patch.verified_business = data.verified_business;
+    if (data.sources) {
+      const incomingSources = Array.isArray(data.sources) ? data.sources : [];
+      const existingSources = Array.isArray(rep.sources) ? rep.sources : [];
+      patch.sources = Array.from(new Set([...existingSources, ...incomingSources])).filter(Boolean);
+    }
+    // Identity evidence is also monotonic: a fresh LLM pass that fails to
+    // rediscover an official page must not erase a previously verified business.
+    if (data.verified_business === true) patch.verified_business = true;
     if (data.business_name) patch.business_name = data.business_name;
     if (data.lookup_country != null) patch.lookup_country = data.lookup_country;
 
@@ -163,16 +183,17 @@ export async function upsertPhoneReputation(base44: any, data: any): Promise<any
       else if (data.report.type === "safe") patch.safe_report_count = (rep.safe_report_count || 0) + inc;
     }
 
-    // Web-research counts from the deep lookup: SET (replace) the estimated totals,
-    // since the research re-scans all public sources from scratch. User-submitted
-    // reports that were already counted are included in the web findings.
+    // Deep research can rediscover only a subset of previously known reports.
+    // Never let a later search erase stronger historical evidence. Counts therefore
+    // move monotonically upward; a future verified source can add evidence but
+    // cannot make an existing scam/spam/suspicious report disappear.
     if (data.report_counts) {
       const rc = data.report_counts;
-      patch.scam_report_count = rc.scam || 0;
-      patch.spam_report_count = rc.spam || 0;
-      patch.suspicious_report_count = rc.suspicious || 0;
-      patch.safe_report_count = rc.safe || 0;
-      patch.report_count = (rc.scam || 0) + (rc.spam || 0) + (rc.suspicious || 0) + (rc.safe || 0);
+      patch.scam_report_count = Math.max(rep.scam_report_count || 0, Number(rc.scam) || 0);
+      patch.spam_report_count = Math.max(rep.spam_report_count || 0, Number(rc.spam) || 0);
+      patch.suspicious_report_count = Math.max(rep.suspicious_report_count || 0, Number(rc.suspicious) || 0);
+      patch.safe_report_count = Math.max(rep.safe_report_count || 0, Number(rc.safe) || 0);
+      patch.report_count = patch.scam_report_count + patch.spam_report_count + patch.suspicious_report_count + patch.safe_report_count;
     }
 
     const next: any = {
