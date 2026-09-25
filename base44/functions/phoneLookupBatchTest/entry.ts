@@ -63,11 +63,19 @@ Deno.serve(async (req) => {
     for (const testCase of cases) {
       const started = Date.now();
       try {
-        const result = await base44.functions.invoke('lookupPhoneNumber', {
+        const response = await base44.functions.invoke('lookupPhoneNumber', {
           phone_number: testCase.number,
           country_hint: testCase.country || '',
           language: 'en',
         });
+        // Base44 function invocation returns an envelope; lookupPhoneNumber
+        // puts the actual lookup under data.result.
+        const payload = response?.data ?? response;
+        const result = payload?.result ?? payload;
+        const lookup = payload?.lookup;
+        if (!result || typeof result !== 'object') {
+          throw new Error('lookupPhoneNumber returned no result payload');
+        }
         const failures = scoreCase(testCase, result);
         results.push({
           number: testCase.number,
@@ -75,6 +83,7 @@ Deno.serve(async (req) => {
           failures,
           elapsed_ms: Date.now() - started,
           actual: {
+            phone_number: lookup?.phone_number || result.phone_number || result.normalized_number || '',
             country: result.country,
             business_name: result.business_name,
             caller_id_status: result.caller_id_status,
