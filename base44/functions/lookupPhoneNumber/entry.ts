@@ -516,6 +516,8 @@ Deno.serve(async (req) => {
     if (knownFictional) {
       const fullResult = {
         ...knownFictional,
+        // Reserved fictional numbers are structurally UNKNOWN. Persisting a
+        // prior PhoneReputation record must never promote them to SAFE/SCAM.
         caller_id_status: 'UNKNOWN',
         caller_id_label: '',
         last_checked_at: new Date().toISOString(),
@@ -558,6 +560,16 @@ Deno.serve(async (req) => {
       } catch (saveError) {
         console.error('PhoneLookup save failed', saveError);
       }
+
+      // Explicitly re-assert the reserved-range invariant after persistence.
+      // upsertPhoneReputation is intentionally historical/monotonic and may
+      // return an older record, so it must never be allowed to change this
+      // response.
+      fullResult.reputation_score = 0;
+      fullResult.risk_level = 'low';
+      fullResult.caller_id_status = 'UNKNOWN';
+      fullResult.caller_id_label = '';
+      fullResult.confidence_score = 100;
 
       const creditsRemaining = await chargeCredits();
       return Response.json({
@@ -695,7 +707,12 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
           mergedRecovery[key] = Math.max(Number(mergedRecovery[key]) || 0, Number(recovery[key]) || 0);
         }
         mergedRecovery.verified_business = !!mergedRecovery.verified_business || !!recovery.verified_business;
-        mergedRecovery.direct_negative_evidence = !!mergedRecovery.direct_negative_evidence || !!recovery.direct_negative_evidence;
+        // A single LLM pass must not turn a verified business number into a
+        // scam classification based only on a vague spoofing/impersonation
+        // finding. Require independent confirmation of direct negative use
+        // before carrying that flag through the two-pass merge.
+        mergedRecovery.direct_negative_evidence =
+          !!mergedRecovery.direct_negative_evidence && !!recovery.direct_negative_evidence;
         mergedRecovery.user_reports = [...(Array.isArray(mergedRecovery.user_reports) ? mergedRecovery.user_reports : []), ...(Array.isArray(recovery.user_reports) ? recovery.user_reports : [])].slice(0, 6);
         mergedRecovery.scam_categories = [...new Set([...(Array.isArray(mergedRecovery.scam_categories) ? mergedRecovery.scam_categories : []), ...(Array.isArray(recovery.scam_categories) ? recovery.scam_categories : [])])];
         mergedRecovery.sources = [...new Set([...(Array.isArray(mergedRecovery.sources) ? mergedRecovery.sources : []), ...(Array.isArray(recovery.sources) ? recovery.sources : [])])];
