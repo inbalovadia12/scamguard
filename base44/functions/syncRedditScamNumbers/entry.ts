@@ -79,7 +79,23 @@ Deno.serve(async (req) => {
           post_id: postId,
           normalized_number: normalized,
         });
-        if (existing.length > 0) continue;
+        if (existing.length > 0) {
+          // Refresh source metadata instead of permanently freezing the first
+          // version seen by the sync job.
+          await base44.asServiceRole.entities.RedditScamNumber.update(existing[0].id, {
+            title: String(post?.title || existing[0].title || '').slice(0, 500),
+            summary: String(post?.summary || existing[0].summary || '').slice(0, 4000),
+            scam_category: classify(String(post?.title || ''), String(post?.summary || '')),
+            post_url: postUrl,
+            posted_at: (() => {
+              const parsed = new Date(String(post?.posted_at || ''));
+              return Number.isNaN(parsed.getTime()) ? (existing[0].posted_at || new Date().toISOString()) : parsed.toISOString();
+            })(),
+            synced_at: new Date().toISOString(),
+            source_confidence: Math.max(Number(existing[0].source_confidence) || 0, 85),
+          });
+          continue;
+        }
 
         await base44.asServiceRole.entities.RedditScamNumber.create({
           normalized_number: normalized,
@@ -91,7 +107,11 @@ Deno.serve(async (req) => {
           post_url: postUrl,
           post_id: postId,
           author: '',
-          posted_at: new Date().toISOString(),
+          // Preserve the Reddit post's publication time when supplied.
+          posted_at: (() => {
+            const parsed = new Date(String(post?.posted_at || ''));
+            return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+          })(),
           synced_at: new Date().toISOString(),
           source_confidence: 85,
         });
