@@ -36,7 +36,7 @@ function enforceConsistency(score: number, risk: string, evidence?: { scam: numb
   else if (e.verified) s = Math.min(s || 10, 30);
   else if (e.spam > 0 && e.suspicious === 0) s = Math.max(50, Math.min(s, 60));
   else if (e.suspicious > 0) s = Math.max(41, Math.min(s, 70));
-  else if (s === 0 && e.safe > 0) s = 10;
+  else if (e.safe > 0 || e.verified) s = Math.min(s || 10, 30);
   let r: 'low' | 'medium' | 'high';
   if (s >= 71 || e.scam > 0) r = 'high';
   else if (s >= 41 || e.spam > 0 || e.suspicious > 0) r = 'medium';
@@ -45,10 +45,9 @@ function enforceConsistency(score: number, risk: string, evidence?: { scam: numb
 }
 
 // The LLM is inconsistent about verified_business even when it found the business
-// name. Normalize any result (fresh or cached) so a found business is consistently
-// classified as a verified, SAFE number with a clear summary. A scam that happens
-// to carry a business name (impersonation) is NOT promoted — the scam classification
-// is preserved when there is scam/spam/suspicious evidence.
+// name. Normalize any result so business identity is only treated as verified when
+// the research pass explicitly verified it. A business match is identity evidence,
+// not proof that every call is safe; exact negative evidence always wins.
 function normalizeBusinessResult(result: any): any {
   if (!result) return result;
   const bn = String(result.business_name || '').trim();
