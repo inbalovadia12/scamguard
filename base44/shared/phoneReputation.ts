@@ -219,7 +219,7 @@ export async function upsertPhoneReputation(base44: any, data: any): Promise<any
     if (!Number.isFinite(canonicalScore)) canonicalScore = 0;
     canonicalScore = Math.max(0, Math.min(100, canonicalScore));
     if (scam > 0) canonicalScore = Math.max(75, canonicalScore);
-    else if (verifiedOrSafe(next)) canonicalScore = Math.min(canonicalScore || 10, 30);
+    else if (next.verified_business === true || safe > 0) canonicalScore = Math.min(canonicalScore || 10, 30);
     else if (spam > 0 && suspicious === 0) canonicalScore = Math.max(50, Math.min(canonicalScore, 60));
     else if (suspicious > 0) canonicalScore = Math.max(41, Math.min(canonicalScore, 70));
     next.reputation_score = canonicalScore;
