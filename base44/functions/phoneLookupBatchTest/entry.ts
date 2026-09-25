@@ -23,7 +23,7 @@ const DEFAULT_CASES: Expected[] = [
 ];
 
 function digits(value: unknown) {
-  return String(value || '').replace(/\\D/g, '');
+  return String(value || '').replace(/\D/g, '');
 }
 
 function scoreCase(expected: Expected, actual: any) {
