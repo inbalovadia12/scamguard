@@ -205,6 +205,27 @@ export async function upsertPhoneReputation(base44: any, data: any): Promise<any
       safe_report_count: patch.safe_report_count ?? rep.safe_report_count,
       verified_business: patch.verified_business ?? rep.verified_business,
     };
+
+    // The canonical reputation record must not preserve a stale numeric score
+    // that contradicts the evidence/status. Re-derive the score from the final
+    // merged evidence every time an existing record is updated. Negative exact
+    // evidence remains authoritative; verified businesses without negative
+    // evidence are capped at low risk.
+    const scam = Number(next.scam_report_count) || 0;
+    const spam = Number(next.spam_report_count) || 0;
+    const suspicious = Number(next.suspicious_report_count) || 0;
+    const safe = Number(next.safe_report_count) || 0;
+    let canonicalScore = Number(next.reputation_score);
+    if (!Number.isFinite(canonicalScore)) canonicalScore = 0;
+    canonicalScore = Math.max(0, Math.min(100, canonicalScore));
+    if (scam > 0) canonicalScore = Math.max(75, canonicalScore);
+    else if (verifiedOrSafe(next)) canonicalScore = Math.min(canonicalScore || 10, 30);
+    else if (spam > 0 && suspicious === 0) canonicalScore = Math.max(50, Math.min(canonicalScore, 60));
+    else if (suspicious > 0) canonicalScore = Math.max(41, Math.min(canonicalScore, 70));
+    next.reputation_score = canonicalScore;
+    next.risk_level = canonicalScore >= 71 || scam > 0 ? 'high' : canonicalScore >= 41 || spam > 0 || suspicious > 0 ? 'medium' : 'low';
+    patch.reputation_score = canonicalScore;
+    patch.risk_level = next.risk_level;
     patch.caller_id_status = statusFromReputation(next);
     patch.caller_id_label = computeLabel(patch.caller_id_status, config);
     patch.confidence_score = computeConfidence(next);
