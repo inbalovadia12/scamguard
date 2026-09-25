@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Lock, Loader2, MessageSquare, Users, ShieldCheck, Star, Trash2,
   Mail, AlertTriangle, CheckCircle2, Crown, TrendingUp, Activity, Megaphone,
-  Download, PhoneCall, Zap,
+  Download, PhoneCall, Zap, FlaskConical, Play, CheckCircle, XCircle,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -477,6 +477,32 @@ function OverviewTab() {
   );
 }
 
+function PhoneLookupBatchTab() {
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState(null);
+  const runBatch = async () => {
+    setRunning(true); setResult(null);
+    try {
+      const response = await base44.functions.invoke("phoneLookupBatchTest", {});
+      const data = response?.data || response;
+      if (data?.error) throw new Error(data.error);
+      setResult(data);
+      toast({ title: "Batch test complete", description: `${data.passed ?? 0}/${data.total ?? 0} checks passed.` });
+    } catch (e) { toast({ title: "Batch test failed", description: e.message, variant: "destructive" }); }
+    finally { setRunning(false); }
+  };
+  return <div className="space-y-4">
+    <div className="bg-card rounded-2xl border border-border/50 p-6 space-y-4">
+      <div className="flex items-start gap-3"><div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><FlaskConical className="w-5 h-5 text-primary" /></div><div><h3 className="font-semibold font-heading">Phone Lookup Batch Tester</h3><p className="text-sm text-muted-foreground mt-0.5">Run the live phone-lookup regression suite and inspect every result.</p></div></div>
+      <div className="rounded-xl border border-warning/30 bg-warning/5 p-3 text-sm text-muted-foreground"><strong className="text-foreground">Credit warning:</strong> this uses the real lookup function and consumes normal phone-lookup credits for each test number.</div>
+      <Button onClick={runBatch} disabled={running} className="gap-2">{running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}{running ? "Running batch..." : "Run Batch Test"}</Button>
+    </div>
+    {result && <div className="space-y-3"><div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <StatCard icon={Activity} label="Pass Rate" value={`${result.pass_rate ?? 0}%`} color="bg-primary/10 text-primary" /><StatCard icon={CheckCircle} label="Passed" value={result.passed ?? 0} color="bg-success/10 text-success" /><StatCard icon={XCircle} label="Failed" value={result.failed ?? 0} color="bg-destructive/10 text-destructive" /><StatCard icon={PhoneCall} label="Total" value={result.total ?? 0} color="bg-muted text-muted-foreground" />
+    </div>{(result.results || []).map((item, index) => <div key={item.number || index} className="bg-card rounded-2xl border border-border/50 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="font-medium break-all">{item.number}</p><p className="text-xs text-muted-foreground mt-1">{item.country || "Country unknown"}{item.business ? ` · ${item.business}` : ""}</p></div>{item.passed ? <Badge className="bg-success/10 text-success border-success/20">Pass</Badge> : <Badge variant="destructive">Fail</Badge>}</div><div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 text-xs"><div><span className="text-muted-foreground">Status</span><div className="font-medium">{item.status || "—"}</div></div><div><span className="text-muted-foreground">Risk score</span><div className="font-medium">{item.risk_score ?? "—"}</div></div><div><span className="text-muted-foreground">Returned number</span><div className="font-medium break-all">{item.returned_number || "—"}</div></div><div><span className="text-muted-foreground">Expected</span><div className="font-medium">{item.expected_status || "—"}</div></div></div>{item.failures?.length > 0 && <div className="mt-3 text-xs text-destructive">{item.failures.map((failure, i) => <div key={i}>{failure}</div>)}</div>}{item.error && <p className="mt-3 text-xs text-destructive">{item.error}</p>}</div>)}</div>}
+  </div>;
+}
+
 function CallerIdTab() {
   const [exporting, setExporting] = useState(false);
   const [lastExport, setLastExport] = useState(null);
@@ -605,6 +631,7 @@ export default function Admin() {
           <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" />Users</TabsTrigger>
           <TabsTrigger value="seniors" className="gap-1.5"><Crown className="w-4 h-4" />Seniors</TabsTrigger>
           <TabsTrigger value="broadcasts" className="gap-1.5"><Megaphone className="w-4 h-4" />Broadcasts</TabsTrigger>
+          <TabsTrigger value="phone-tests" className="gap-1.5"><FlaskConical className="w-4 h-4" />Phone Tests</TabsTrigger>
           <TabsTrigger value="caller-id" className="gap-1.5"><PhoneCall className="w-4 h-4" />Caller ID</TabsTrigger>
         </TabsList>
 
@@ -613,6 +640,7 @@ export default function Admin() {
         <TabsContent value="users" className="mt-4"><UsersTab /></TabsContent>
         <TabsContent value="seniors" className="mt-4"><SeniorsTab /></TabsContent>
         <TabsContent value="broadcasts" className="mt-4"><BroadcastsTab /></TabsContent>
+        <TabsContent value="phone-tests" className="mt-4"><PhoneLookupBatchTab /></TabsContent>
         <TabsContent value="caller-id" className="mt-4"><CallerIdTab /></TabsContent>
       </Tabs>
     </div>
