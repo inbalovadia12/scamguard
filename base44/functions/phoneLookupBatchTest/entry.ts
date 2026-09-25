@@ -48,7 +48,9 @@ function scoreCase(expected: Expected, actual: any) {
   const safe = Number(actual.safe_report_count) || 0;
   const verified = actual.verified_business === true;
   const status = String(actual.caller_id_status || '').toUpperCase();
-  if (expected.country && !String(actual.country || '').toLowerCase().includes(expected.country.toLowerCase())) {
+  const expectedCountry = normalizeCountry(expected.country).replace(/[^a-z]/g, '');
+  const actualCountry = normalizeCountry(actual.country).replace(/[^a-z]/g, '');
+  if (expectedCountry && expectedCountry !== actualCountry) {
     failures.push(`country expected ${expected.country}, got ${actual.country || 'empty'}`);
   }
   if (expected.business && !String(actual.business_name || '').toLowerCase().includes(expected.business.toLowerCase())) {
