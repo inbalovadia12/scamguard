@@ -867,6 +867,24 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       verified_business: currentEvidence.verified,
     });
     fullResult.caller_id_status = isReservedFictional ? 'UNKNOWN' : currentStatus;
+
+    // FINAL OUTPUT INVARIANT: status and numeric risk are one atomic classification.
+    if (fullResult.caller_id_status === 'UNKNOWN') {
+      fullResult.reputation_score = 0;
+      fullResult.risk_level = 'low';
+    } else if (fullResult.caller_id_status === 'SAFE') {
+      fullResult.reputation_score = Math.min(Number(fullResult.reputation_score) || 0, 30);
+      fullResult.risk_level = 'low';
+    } else if (fullResult.caller_id_status === 'SCAM') {
+      fullResult.reputation_score = Math.max(75, Number(fullResult.reputation_score) || 0);
+      fullResult.risk_level = 'high';
+    } else if (fullResult.caller_id_status === 'SPAM') {
+      fullResult.reputation_score = Math.max(50, Math.min(Number(fullResult.reputation_score) || 0, 60));
+      fullResult.risk_level = 'medium';
+    } else if (fullResult.caller_id_status === 'SUSPICIOUS') {
+      fullResult.reputation_score = Math.max(41, Math.min(Number(fullResult.reputation_score) || 0, 70));
+      fullResult.risk_level = 'medium';
+    }
     fullResult.caller_id_label = computeLabel(fullResult.caller_id_status, DEFAULT_CONFIG);
     if (isReservedFictional) {
       fullResult.reputation_score = 0;
