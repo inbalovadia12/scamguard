@@ -20,6 +20,14 @@ const DEFAULT_CASES: Expected[] = [
   { number: '+971 8000 444 1849', country: 'United Arab Emirates' },
   { number: '+90 850 390 2777', country: 'Turkey' },
   { number: '+27 800 167 344', country: 'South Africa' },
+  // Formatting regression cases: the same underlying numbers must resolve
+  // consistently regardless of common international formatting differences.
+  { number: '+18006927753', country: 'United States', business: 'Apple', status: 'SAFE' },
+  { number: '+448000260329', country: 'United Kingdom', business: 'Microsoft', status: 'SAFE' },
+  { number: '+447700178674', country: 'United Kingdom', status: 'SCAM' },
+  // Reserved fictional range: should never be promoted to SAFE merely because
+  // there is no negative evidence; the canonical caller-id state is UNKNOWN.
+  { number: '+1 202 555 0101', country: 'United States', status: 'UNKNOWN' },
 ];
 
 function digits(value: unknown) {
