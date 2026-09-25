@@ -153,7 +153,6 @@ function checkKnownFictional(cleaned: string): any {
         reddit: { matched: false, report_count: 0, sources: [] },
       };
     }
-  }
   return null;
 }
 
