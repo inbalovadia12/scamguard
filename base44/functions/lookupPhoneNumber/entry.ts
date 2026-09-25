@@ -801,14 +801,24 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
     // status must not overwrite a fresh contradictory research result. This is
     // especially important when an old high-risk record is superseded by a
     // newly verified business identity with no current exact-number negatives.
+    const currentEvidence = {
+      scam: Number(fullResult.scam_report_count) || 0,
+      spam: Number(fullResult.spam_report_count) || 0,
+      suspicious: Number(fullResult.suspicious_report_count) || 0,
+      safe: Number(fullResult.safe_report_count) || 0,
+      verified: fullResult.verified_business === true,
+    };
+    const responseConsistency = enforceConsistency(fullResult.reputation_score, fullResult.risk_level, currentEvidence);
+    fullResult.reputation_score = responseConsistency.score;
+    fullResult.risk_level = responseConsistency.risk;
     const currentStatus = statusFromReputation({
       reputation_score: fullResult.reputation_score,
       risk_level: fullResult.risk_level,
-      scam_report_count: fullResult.scam_report_count,
-      spam_report_count: fullResult.spam_report_count,
-      suspicious_report_count: fullResult.suspicious_report_count,
-      safe_report_count: fullResult.safe_report_count,
-      verified_business: fullResult.verified_business,
+      scam_report_count: currentEvidence.scam,
+      spam_report_count: currentEvidence.spam,
+      suspicious_report_count: currentEvidence.suspicious,
+      safe_report_count: currentEvidence.safe,
+      verified_business: currentEvidence.verified,
     });
     fullResult.caller_id_status = currentStatus;
     fullResult.caller_id_label = computeLabel(currentStatus, DEFAULT_CONFIG);
