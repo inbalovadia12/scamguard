@@ -34,6 +34,12 @@ function digits(value: unknown) {
   return String(value || '').replace(/\D/g, '');
 }
 
+function normalizeCountry(value: unknown): string {
+  const raw = String(value || '').trim().toLowerCase();
+  const aliases: Record<string, string> = { 'usa': 'united states', 'us': 'united states', 'u.s.': 'united states', 'uk': 'united kingdom', 'u.k.': 'united kingdom', 'uae': 'united arab emirates', 'u.a.e.': 'united arab emirates' };
+  return aliases[raw] || raw;
+}
+
 function scoreCase(expected: Expected, actual: any) {
   const failures: string[] = [];
   const scam = Number(actual.scam_report_count) || 0;
