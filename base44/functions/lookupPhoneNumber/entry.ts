@@ -869,6 +869,27 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
     fullResult.caller_id_status = isReservedFictional ? 'UNKNOWN' : currentStatus;
 
     // FINAL OUTPUT INVARIANT: status and numeric risk are one atomic classification.
+    // Never infer SAFE from an LLM score alone: classification requires explicit evidence.
+    const finalScam = Number(fullResult.scam_report_count) || 0;
+    const finalSpam = Number(fullResult.spam_report_count) || 0;
+    const finalSuspicious = Number(fullResult.suspicious_report_count) || 0;
+    const finalSafe = Number(fullResult.safe_report_count) || 0;
+    const finalVerified = fullResult.verified_business === true;
+    const finalHasNegative = finalScam > 0 || finalSpam > 0 || finalSuspicious > 0;
+    const finalHasPositive = finalSafe > 0 || finalVerified;
+
+    if (isReservedFictional || (!finalHasNegative && !finalHasPositive)) {
+      fullResult.caller_id_status = 'UNKNOWN';
+    } else if (finalScam > 0) {
+      fullResult.caller_id_status = 'SCAM';
+    } else if (finalSpam > 0) {
+      fullResult.caller_id_status = 'SPAM';
+    } else if (finalSuspicious > 0) {
+      fullResult.caller_id_status = 'SUSPICIOUS';
+    } else {
+      fullResult.caller_id_status = 'SAFE';
+    }
+
     if (isReservedFictional) {
   fullResult.caller_id_status = 'UNKNOWN';
   fullResult.caller_id_label = '';
