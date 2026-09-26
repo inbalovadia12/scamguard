@@ -869,7 +869,19 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
     fullResult.caller_id_status = isReservedFictional ? 'UNKNOWN' : currentStatus;
 
     // FINAL OUTPUT INVARIANT: status and numeric risk are one atomic classification.
-    if (fullResult.caller_id_status === 'UNKNOWN') {
+    if (isReservedFictional) {
+  fullResult.caller_id_status = 'UNKNOWN';
+  fullResult.caller_id_label = '';
+  fullResult.reputation_score = 0;
+  fullResult.risk_level = 'low';
+  fullResult.scam_report_count = 0;
+  fullResult.spam_report_count = 0;
+  fullResult.suspicious_report_count = 0;
+  fullResult.safe_report_count = 0;
+  fullResult.verified_business = false;
+  fullResult.business_name = '';
+  fullResult.confidence_score = 100;
+} else if (fullResult.caller_id_status === 'UNKNOWN') {
       fullResult.reputation_score = 0;
       fullResult.risk_level = 'low';
     } else if (fullResult.caller_id_status === 'SAFE') {
