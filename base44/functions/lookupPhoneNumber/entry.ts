@@ -872,7 +872,10 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
     fullResult.caller_id_status = isReservedFictional ? 'UNKNOWN' : currentStatus;
 
     // FINAL OUTPUT INVARIANT: status and numeric risk are one atomic classification.
+    // This is the LAST classification guard before the response is serialized.
     // Never infer SAFE from an LLM score alone: classification requires explicit evidence.
+    const finalCanonicalDigits = String(canonicalDigits || '').replace(/\D/g, '');
+    const finalReservedFictional = /^1?\d{3}55501\d{2}$/.test(finalCanonicalDigits);
     const finalScam = Number(fullResult.scam_report_count) || 0;
     const finalSpam = Number(fullResult.spam_report_count) || 0;
     const finalSuspicious = Number(fullResult.suspicious_report_count) || 0;
