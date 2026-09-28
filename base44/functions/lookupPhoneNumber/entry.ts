@@ -444,6 +444,9 @@ Deno.serve(async (req) => {
       // Never cache an empty/UNKNOWN research result. A missed web result is exactly what this lookup must recover from.
       const MIN_RECHECK_MS = 0;
       const r = cached[0];
+      // Reserved fictional numbers must never be served from historical records.
+      // Their classification is structural: UNKNOWN with risk 0.
+      const cachedIsReservedFictional = checkKnownFictional(canonicalDigits) !== null;
       const ageMs = r?.last_external_check_at ? Date.now() - new Date(r.last_external_check_at).getTime() : Infinity;
       const hasClassification = !!r?.caller_id_status && r.caller_id_status !== 'UNKNOWN';
       const hasEvidence = (r?.scam_report_count || 0) > 0 || (r?.spam_report_count || 0) > 0 || (r?.suspicious_report_count || 0) > 0 || (r?.safe_report_count || 0) > 0 || !!r?.verified_business;
@@ -453,7 +456,7 @@ Deno.serve(async (req) => {
       // Every explicit phone scan must revalidate live evidence. A previous LLM
       // miss or misclassification must not be served unchanged for seven days.
       const serveCache = false;
-      if (serveCache) {
+      if (serveCache && !cachedIsReservedFictional) {
         const communityEvidence = await fetchCommunityEvidence();
         const redditEvidence = await fetchRedditEvidence();
         
