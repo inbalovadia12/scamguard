@@ -925,6 +925,11 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       fullResult.reputation_score = Math.max(41, Math.min(Number(fullResult.reputation_score) || 0, 70));
       fullResult.risk_level = 'medium';
     }
+    // Absolute final invariant: UNKNOWN never carries a nonzero risk score.
+    if (fullResult.caller_id_status === 'UNKNOWN') {
+      fullResult.reputation_score = 0;
+      fullResult.risk_level = 'low';
+    }
     fullResult.caller_id_label = computeLabel(fullResult.caller_id_status, DEFAULT_CONFIG);
     if (isReservedFictional) {
       fullResult.reputation_score = 0;
