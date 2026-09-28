@@ -972,6 +972,12 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       fullResult.confidence_score = Math.max(fullResult.confidence_score, rep?.confidence_score || 0);
     }
 
+    // Single final invariant: UNKNOWN means no established risk, so its risk score is always 0.
+    if (fullResult.caller_id_status === 'UNKNOWN') {
+      fullResult.reputation_score = 0;
+      fullResult.risk_level = 'low';
+    }
+
     let lookup: any = null;
     try {
       lookup = await base44.entities.PhoneLookup.create({
