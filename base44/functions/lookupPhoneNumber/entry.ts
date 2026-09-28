@@ -872,6 +872,7 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
     fullResult.caller_id_status = isReservedFictional ? 'UNKNOWN' : currentStatus;
 
     // FINAL OUTPUT INVARIANT: status and numeric risk are one atomic classification.
+    // UNKNOWN is always risk 0. This is enforced again immediately before serialization.
     // This is the LAST classification guard before the response is serialized.
     // Never infer SAFE from an LLM score alone: classification requires explicit evidence.
     const finalCanonicalDigits = String(canonicalDigits || '').replace(/\D/g, '');
