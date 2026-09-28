@@ -733,6 +733,33 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       console.error('LLM web search failed', llmError);
       return Response.json({ error: 'Phone lookup service temporarily unavailable. Please try again.' }, { status: 502 });
     }
+    // Restore strong identity/evidence already verified by Vardin's canonical phone index.
+    // This is not a hardcoded number list: PhoneReputation is the deduplicated evidence
+    // store populated by previous exact-number research and community ingestion.
+    try {
+      const canonicalRows = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
+      const canonical = canonicalRows?.[0];
+      if (canonical) {
+        if (!result.business_name && canonical.verified_business && canonical.business_name) {
+          result.business_name = canonical.business_name;
+          result.verified_business = true;
+          result.sources = [...new Set([...(Array.isArray(result.sources) ? result.sources : []), ...(Array.isArray(canonical.sources) ? canonical.sources : [])])];
+        }
+        // Exact-number negative evidence from the canonical index is authoritative
+        // for numbers that are not verified businesses. For verified businesses,
+        // retain the identity match without converting generic spoofing reports
+        // into a scam classification.
+        if (!result.verified_business) {
+          result.scam_report_count = Math.max(Number(result.scam_report_count) || 0, Number(canonical.scam_report_count) || 0);
+          result.spam_report_count = Math.max(Number(result.spam_report_count) || 0, Number(canonical.spam_report_count) || 0);
+          result.suspicious_report_count = Math.max(Number(result.suspicious_report_count) || 0, Number(canonical.suspicious_report_count) || 0);
+          result.safe_report_count = Math.max(Number(result.safe_report_count) || 0, Number(canonical.safe_report_count) || 0);
+        }
+      }
+    } catch (canonicalError) {
+      console.error('Canonical PhoneReputation fetch failed:', canonicalError);
+    }
+
     result = normalizeBusinessResult(result);
     // Do not let spoofing/impersonation reports turn a verified business's
     // real number into a scam classification. Only direct negative evidence about
