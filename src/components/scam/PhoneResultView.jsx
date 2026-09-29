@@ -64,13 +64,13 @@ export default function PhoneResultView({ data }) {
         </div>
       </div>
 
-      {/* Verified business badge */}
-      {data.verified_business && (
+      {/* Business match */}
+      {(data.verified_business || data.business_name) && (
         <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30">
           <BadgeCheck className="w-4 h-4 text-success flex-shrink-0" />
           <div>
             <p className="text-sm font-semibold text-success">
-              {data.business_name || "Business Match"}
+              Business Match{data.business_name ? ": " : ""}{data.business_name || "Verified business"}
             </p>
             <p className="text-xs text-muted-foreground">This number matches a business record in the available data. This does not guarantee the caller is legitimate.</p>
           </div>
