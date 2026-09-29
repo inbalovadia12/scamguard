@@ -6,15 +6,14 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
-    const [analyses, imageScans, phoneLookups, identityScans, localScans] = await Promise.all([
+    const [analyses, imageScans, identityScans, localScans] = await Promise.all([
       base44.entities.ScamAnalysis.filter({ created_by_id: user.id }, '-created_date', 500),
       base44.entities.ImageScan.filter({ created_by_id: user.id }, '-created_date', 500),
-      base44.entities.PhoneLookup.filter({ created_by_id: user.id }, '-created_date', 500),
       base44.entities.IdentityExposureScan.filter({ created_by_id: user.id }, '-created_date', 500),
       base44.entities.LocalScamScan.filter({ created_by_id: user.id }, '-created_date', 500),
     ]);
 
-    const totalScans = analyses.length + imageScans.length + phoneLookups.length + identityScans.length + localScans.length;
+    const totalScans = analyses.length + imageScans.length + identityScans.length + localScans.length;
 
     let highRisk = 0, mediumRisk = 0, lowRisk = 0;
     const scamTypes = {};
@@ -34,16 +33,10 @@ Deno.serve(async (req) => {
       else if (s.risk_level === 'low') lowRisk++;
     });
 
-    phoneLookups.forEach((p) => {
-      if (p.risk_level === 'high') highRisk++;
-      else if (p.risk_level === 'medium') mediumRisk++;
-      else if (p.risk_level === 'low') lowRisk++;
-    });
-
     const topScamTypeEntry = Object.entries(scamTypes).sort((a, b) => b[1] - a[1])[0];
     const topScamType = topScamTypeEntry ? topScamTypeEntry[0] : null;
 
-    const allDates = [...analyses, ...imageScans, ...phoneLookups, ...identityScans, ...localScans]
+    const allDates = [...analyses, ...imageScans, ...identityScans, ...localScans]
       .map((r) => r.created_date)
       .filter(Boolean)
       .sort();
@@ -54,7 +47,6 @@ Deno.serve(async (req) => {
     const scansByType = {
       message: analyses.length,
       image: imageScans.length,
-      phone: phoneLookups.length,
       identity: identityScans.length,
       local: localScans.length,
     };
