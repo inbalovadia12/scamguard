@@ -67,7 +67,7 @@ export default function Privacy() {
       </nav>
 
       <Section number={1} title="Introduction">
-        <p>Vardin is an AI-assisted scam-awareness and consumer-safety service. It is currently in beta, so features and data flows may change as the product is tested and improved. This Policy applies to the Vardin website, web application, browser-extension functionality, scam scanners, phone-reputation features, Live Guard, family-protection features, educational features, subscriptions, credit purchases, and related services.</p>
+        <p>Vardin is an AI-assisted scam-awareness and consumer-safety service. It is currently in beta, so features and data flows may change as the product is tested and improved. This Policy applies to the Vardin website, web application, browser-extension functionality, scam scanners, Live Guard, family-protection features, educational features, subscriptions, credit purchases, and related services.</p>
         <p>Because users can submit communications and media belonging to other people, Vardin may process information about people who do not have Vardin accounts. The person submitting that information is responsible for having the authority required to do so.</p>
       </Section>
 
@@ -88,7 +88,6 @@ export default function Privacy() {
           "Submitted content: messages, emails, chat transcripts, URLs, website text, marketplace content, screenshots, images, files, QR-code content, crypto-investment messages, phone numbers, and uploaded call recordings.",
           "Call information: live microphone or system-audio chunks, uploaded call recordings, transcripts, speaker labels such as 'you' and 'caller', detected tactics, warnings, risk levels, coaching/feedback, duration and segment counts.",
           "Analysis information: risk scores, classifications, explanations, detected tactics, recommended actions, false-positive flags, sources and other AI-generated results.",
-          "Phone information: phone numbers searched by users, country/carrier information, reputation results, community reports and caller-ID classifications. Vardin also maintains administrator-managed reputation and caller-ID datasets.",
           "Family information: names, email addresses, phone numbers, guardian/member identifiers, consent status, alert preferences, protection settings, notes and family-alert information.",
           "Community information: scam reports, community stories, display names, country, scam type, channel, likes and moderation status.",
           "Education and usage information: lesson progress, scores, XP, scan activity, credit usage, referrals and subscription-related activity.",
@@ -106,7 +105,7 @@ export default function Privacy() {
 
       <Section number={6} title="User-Provided Information and Submitted Content">
         <p>When you use a scanner, you choose what to submit. Vardin's scanners can receive text, URLs, screenshots, images, files, phone numbers, marketplace material, social-profile material, QR codes and other content. Uploaded files may be placed in Vardin/Base44-managed file storage so the requested analysis can be performed.</p>
-        <p>Some records are stored in Vardin's database. Examples include scam analyses, conversation analyses, image scans, phone lookups, local scam scans, community reports, family alerts, lesson progress and Live Guard sessions.</p>
+        <p>Some records are stored in Vardin's database. Examples include scam analyses, conversation analyses, image scans, local scam scans, community reports, family alerts, lesson progress and Live Guard sessions.</p>
         <p>Vardin has an optional automatic-redaction setting for certain stored messages. Redaction is not a guarantee that personal information will be removed, and it does not prevent the original content from being transmitted to a provider when transmission is required to perform the requested analysis.</p>
       </Section>
 
@@ -212,7 +211,7 @@ export default function Privacy() {
 
       <Section number={20} title="Data Retention">
         <p><strong>Current Vardin retention position:</strong> the codebase does not implement one universal, automated deletion schedule by data type. Stored records can remain until the user deletes the account/data, an administrator removes them, or another application process removes them. Vardin should not represent that all scan history, uploaded files or provider logs are automatically deleted after a particular number of days unless that control is actually configured.</p>
-        <p>Current database records include scan histories, conversation analyses, image scans, phone lookups, local scam scans, Live Guard sessions, family alerts, lesson progress, community stories/reports, feedback and referral information. Live Guard session records contain transcripts and analysis metadata.</p>
+        <p>Current database records include scan histories, conversation analyses, image scans, local scam scans, Live Guard sessions, family alerts, lesson progress, community stories/reports, feedback and referral information. Live Guard session records contain transcripts and analysis metadata.</p>
         <p>Third-party providers have their own retention rules. AssemblyAI's retention of submitted audio and transcript output is governed by its privacy policy and account settings, which Vardin does not control from the application code. Groq states that inference customer data is not retained by default, but may be retained for up to 30 days for reliability or abuse monitoring unless Zero Data Retention is enabled. Vardin does not treat any provider-side period as a promise about the separate Base44 file-storage or Vardin database retention of the same content.</p>
         <p>Backups may retain deleted information for a limited period under a provider's backup cycle. Vardin's application code does not expose a backup-deletion control.</p>
       </Section>
@@ -236,7 +235,7 @@ export default function Privacy() {
       </Section>
 
       <Section number={24} title="Account Deletion">
-        <p>Profile settings currently provide a “Delete Account &amp; Data” workflow. The backend deletion function attempts to delete user-owned records including scam analyses, image scans, phone lookups, Live Guard sessions, conversation analyses, lesson progress, feedback, community stories, story likes, local scam scans, scam reports and family-member records associated with the user. It also clears selected profile fields.</p>
+        <p>Profile settings currently provide a “Delete Account &amp; Data” workflow. The backend deletion function attempts to delete user-owned records including scam analyses, image scans, Live Guard sessions, conversation analyses, lesson progress, feedback, community stories, story likes, local scam scans, scam reports and family-member records associated with the user. It also clears selected profile fields.</p>
         <p><strong>Important implementation limitation:</strong> the current deletion function does not prove deletion of the underlying Vardin/Base44 authentication identity, uploaded files, every possible related family alert/referral record, administrator audit records, provider-side logs, or backups. Account deletion therefore should not currently be described as instant erasure from every system.</p>
         <p>Vardin is expected to process a valid deletion request within the period required by applicable law, subject to verification and lawful exceptions. The operator should implement a complete deletion ledger and provider/file-storage deletion workflow before promising comprehensive erasure.</p>
       </Section>
