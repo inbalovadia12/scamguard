@@ -52,7 +52,6 @@ export const PLAN_FEATURES = {
     "350 AI checks per month — 10× more scanning power",
     "Crypto & investment scam scanning",
     "URL & link scanning with live web reputation checks",
-    "Phone number lookup & caller reputation",
     "Conversation Analyzer — catch scams that escalate over time",
     "Scam Exposer — turn the tables on marketplace scammers",
     "Marketplace listing analysis",
