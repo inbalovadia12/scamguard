@@ -656,7 +656,14 @@ confidence_score (0-100) = confidence based ONLY on verified exact-number eviden
 
 direct_negative_evidence = true ONLY when the verified exact-number evidence shows that the number itself is being used for scam/spam/suspicious activity. Set it to false when negative reports are about scammers spoofing/impersonating this legitimate number, generic articles, or incidents where the number was merely displayed as a spoofed caller ID. A legitimate business number must not be classified as a scam merely because it is frequently spoofed.
 
-verified_business = true ONLY when an official/verified source contains THIS EXACT number and its source URL is included.
+verified_business = true ONLY when an official/verified source contains THIS EXACT number and its source URL is included. When verified_business=true, business_name MUST be the exact business/organization name established by that source; never leave business_name empty.
+
+REPORT EVIDENCE RULE:
+Only populate user_reports, scam_categories, scam_report_count, spam_report_count, suspicious_report_count, or safe_report_count from reports/comments that are specifically about calls or messages involving THIS EXACT NUMBER. A page merely mentioning the business, company, brand, spoofing of the brand, or scams impersonating the brand is NOT a report about this number. Do not use aggregate page counters, site-wide totals, company-level complaint counts, or generic "community reports" as phone-number evidence. If a caller-report page contains this exact number but the individual comments are about other numbers or unrelated callers, do not count them. If you cannot verify that a report is about this exact number, leave it out.
+
+For user_reports, every item must describe an incident involving THIS EXACT NUMBER. Do not include generic Apple/company scam stories, impersonation stories where another number was used, or unrelated fraud reports.
+
+For safe_report_count, count only verified reports specifically describing THIS EXACT NUMBER as legitimate/safe. Never use a site's overall safe count, company-wide safe count, or an aggregate number shown elsewhere on the page.
 
 summary (max 300 chars): State what exact-number evidence was actually found, naming the source(s) and type of report. If nothing was found, say that no exact-number evidence was found; do not imply the number is safe.
 
@@ -678,6 +685,8 @@ Respond in ${languageName}.`;
         direct_negative_evidence: { type: 'boolean' },
         user_reports: { type: 'array', items: { type: 'string' } },
         scam_categories: { type: 'array', items: { type: 'string' } },
+        exact_number_report_evidence: { type: 'boolean' },
+        exact_number_safe_evidence: { type: 'boolean' },
         summary: { type: 'string' },
         sources: { type: 'array', items: { type: 'string' } },
         scam_report_count: { type: 'number' },
@@ -779,11 +788,31 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
     }
 
     result = normalizeBusinessResult(result);
-    // Do not let spoofing/impersonation reports turn a verified business's
-    // Remove any model-generated reports that are not direct evidence against the exact number before scoring/merging.
-    stripUnrelatedBusinessReports(result);
 
-    // real number into a scam classification. Only direct negative evidence about
+    // LLM report counts are accepted only as exact-number evidence. In particular,
+    // never carry aggregate/company-level "safe" counts into a phone-number result.
+    // A verified business with no direct negative evidence is identified as SAFE by
+    // the business identity itself; generic company/brand reports are not phone reports.
+    if (result.verified_business === true && result.direct_negative_evidence !== true) {
+      result.user_reports = [];
+      result.scam_categories = [];
+      result.scam_report_count = 0;
+      result.spam_report_count = 0;
+      result.suspicious_report_count = 0;
+      result.safe_report_count = result.exact_number_safe_evidence === true
+        ? Math.max(0, Number(result.safe_report_count) || 0)
+        : 0;
+      result.direct_negative_evidence = false;
+    } else if (result.exact_number_report_evidence !== true) {
+      result.user_reports = [];
+      result.scam_categories = [];
+      result.scam_report_count = 0;
+      result.spam_report_count = 0;
+      result.suspicious_report_count = 0;
+      result.safe_report_count = 0;
+    }
+
+    // Also keep the existing spoofing/business guard. Only direct negative evidence about
     // the exact number itself is classification evidence. Community/Reddit reports
     // remain direct evidence and are merged below.
     if (result.verified_business === true && result.direct_negative_evidence !== true) {
