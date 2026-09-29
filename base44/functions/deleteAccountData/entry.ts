@@ -16,7 +16,6 @@ export default async function(req: Request): Promise<Response> {
     // Delete all user-owned entity records (service role bypasses RLS)
     await safeDelete(svc.entities.ScamAnalysis, { created_by_id: userId });
     await safeDelete(svc.entities.ImageScan, { created_by_id: userId });
-    await safeDelete(svc.entities.PhoneLookup, { created_by_id: userId });
     await safeDelete(svc.entities.LiveGuardSession, { created_by_id: userId });
     await safeDelete(svc.entities.ConversationAnalysis, { created_by_id: userId });
     await safeDelete(svc.entities.LessonProgress, { created_by_id: userId });
@@ -35,8 +34,6 @@ export default async function(req: Request): Promise<Response> {
     await safeDelete(svc.entities.CreditPurchase, { created_by_id: userId });
     // Admin-granted credits to this user (audit records)
     await safeDelete(svc.entities.CreditGrant, { user_id: userId });
-    // Community phone reports the user submitted
-    await safeDelete(svc.entities.PhoneCommunityReport, { created_by_id: userId });
 
     // ProtectedSenior: delete where user is guardian or the protected senior
     await safeDelete(svc.entities.ProtectedSenior, { guardian_id: userId });
