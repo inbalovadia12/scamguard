@@ -730,7 +730,7 @@ Who Called Me / WhoCallsMe, Should I Answer, CallFilter, Clever Dialer, Tellows,
 
 Use exact-number + scam/spam/fraud/complaint/review/robocall/unsolicited queries. Open result pages and verify that the page itself contains this exact number before counting it.
 
-Do not count similar numbers, prefixes, area codes, generic articles, or search snippets that do not show this exact number. Do not invent owners, reports, classifications, or URLs. Return only verified exact-number evidence and the supplied JSON structure.`;
+Do not count similar numbers, prefixes, area codes, generic articles, aggregate site/company counters, or search snippets that do not show this exact number. A company-level scam story or impersonation story is not a report about this number. Every user report and every evidence count must describe this exact number. If the number is a verified business number, do not attach unrelated company/brand reports to it. business_name must be the exact business name whenever verified_business=true. Do not invent owners, reports, classifications, or URLs. Return only verified exact-number evidence and the supplied JSON structure.`;
         const recovery = await runPhoneResearch(recoveryPrompt);
 
         const mergedRecovery = { ...result };
@@ -751,6 +751,10 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
         // before carrying that flag through the two-pass merge.
         mergedRecovery.direct_negative_evidence =
           !!mergedRecovery.direct_negative_evidence && !!recovery.direct_negative_evidence;
+        mergedRecovery.exact_number_report_evidence =
+          !!mergedRecovery.exact_number_report_evidence || !!recovery.exact_number_report_evidence;
+        mergedRecovery.exact_number_safe_evidence =
+          !!mergedRecovery.exact_number_safe_evidence && !!recovery.exact_number_safe_evidence;
         mergedRecovery.user_reports = [...(Array.isArray(mergedRecovery.user_reports) ? mergedRecovery.user_reports : []), ...(Array.isArray(recovery.user_reports) ? recovery.user_reports : [])].slice(0, 6);
         mergedRecovery.scam_categories = [...new Set([...(Array.isArray(mergedRecovery.scam_categories) ? mergedRecovery.scam_categories : []), ...(Array.isArray(recovery.scam_categories) ? recovery.scam_categories : [])])];
         mergedRecovery.sources = [...new Set([...(Array.isArray(mergedRecovery.sources) ? mergedRecovery.sources : []), ...(Array.isArray(recovery.sources) ? recovery.sources : [])])];
