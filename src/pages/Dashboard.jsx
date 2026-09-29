@@ -23,7 +23,7 @@ export default function Dashboard() {
     { path: "/check", label: t("dash.quick_scan_url"), desc: t("dash.quick_scan_desc"), icon: Link2, color: "bg-chart-2/10 text-chart-2" },
     { path: "/agent", label: t("dash.quick_ask_ai"), desc: t("dash.quick_ask_desc"), icon: Bot, color: "bg-chart-5/10 text-chart-5" },
     { path: "/family", label: t("dash.quick_family"), desc: t("dash.quick_family_desc"), icon: Users, color: "bg-chart-3/10 text-chart-3" },
-    { path: "/phone-lookup?tab=live&mode=upload", label: "Analyze Past Call", desc: "Check a recording before calling back", icon: PhoneCall, color: "bg-chart-4/10 text-chart-4" },
+    { path: "/live-guard?mode=upload", label: "Analyze Past Call", desc: "Check a recording before calling back", icon: PhoneCall, color: "bg-chart-4/10 text-chart-4" },
   ];
   const [view, setView] = useState("overview");
   const [credits, setCredits] = useState(null);
