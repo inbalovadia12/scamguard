@@ -57,6 +57,7 @@ const Wrapped = lazy(() => import('@/pages/Wrapped'));
 const Community = lazy(() => import('@/pages/Community'));
 const Referral = lazy(() => import('@/pages/Referral'));
 const CallSimulator = lazy(() => import('@/pages/CallSimulator'));
+const LiveCallAnalyzer = lazy(() => import('@/pages/LiveCallAnalyzer'));
 const CryptoScanner = lazy(() => import('@/pages/CryptoScanner'));
 const MobileApp = lazy(() => import('@/pages/MobileApp'));
 const LocalScamFinder = lazy(() => import('@/pages/LocalScamFinder'));

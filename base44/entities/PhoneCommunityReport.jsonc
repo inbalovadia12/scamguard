@@ -1,0 +1,85 @@
+{
+  "name": "PhoneCommunityReport",
+  "type": "object",
+  "properties": {
+    "normalized_number": {
+      "type": "string",
+      "description": "Canonical phone number key (+digits)"
+    },
+    "phone_number": {
+      "type": "string",
+      "description": "Display phone number"
+    },
+    "report_type": {
+      "type": "string",
+      "enum": [
+        "scam",
+        "spam",
+        "suspicious",
+        "safe"
+      ],
+      "default": "scam"
+    },
+    "scam_category": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Redacted user report"
+    },
+    "country": {
+      "type": "string"
+    },
+    "created_by_user_id": {
+      "type": "string",
+      "description": "User who submitted the report"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "removed"
+      ],
+      "default": "active"
+    },
+    "created_date_label": {
+      "type": "string",
+      "description": "Display timestamp"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "Vardin Community"
+      ]
+    }
+  },
+  "required": [
+    "normalized_number",
+    "phone_number",
+    "report_type",
+    "summary"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
