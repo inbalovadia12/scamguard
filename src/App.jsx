@@ -48,7 +48,6 @@ const About = lazy(() => import('@/pages/About'));
 const Contact = lazy(() => import('@/pages/Contact'));
 const Extension = lazy(() => import('@/pages/Extension'));
 const ScamFeed = lazy(() => import('@/pages/ScamFeed'));
-const PhoneGuard = lazy(() => import('@/pages/PhoneGuard'));
 const ImageScanner = lazy(() => import('@/pages/ImageScanner'));
 const AINegotiator = lazy(() => import('@/pages/AINegotiator'));
 const SpotTheScam = lazy(() => import('@/pages/SpotTheScam'));
@@ -167,8 +166,7 @@ const AuthenticatedApp = () => {
           <Route path="/family-chat" element={<FamilyChat />} />
           <Route path="/guardian-dashboard" element={<GuardianDashboard />} />
           <Route path="/scam-feed" element={<ScamFeed />} />
-          <Route path="/phone-lookup" element={<PhoneGuard />} />
-          <Route path="/live-guard" element={<Navigate to="/phone-lookup?tab=live" replace />} />
+          <Route path="/live-guard" element={<LiveCallAnalyzer />} />
           <Route path="/call-simulator" element={<CallSimulator />} />
           <Route path="/crypto-scanner" element={<CryptoScanner />} />
           <Route path="/mobile-app" element={<MobileApp />} />
