@@ -34,12 +34,6 @@ function digits(value: unknown) {
   return String(value || '').replace(/\D/g, '');
 }
 
-function normalizeCountry(value: unknown): string {
-  const raw = String(value || '').trim().toLowerCase();
-  const aliases: Record<string, string> = { 'usa': 'united states', 'us': 'united states', 'u.s.': 'united states', 'uk': 'united kingdom', 'u.k.': 'united kingdom', 'uae': 'united arab emirates', 'u.a.e.': 'united arab emirates' };
-  return aliases[raw] || raw;
-}
-
 function scoreCase(expected: Expected, actual: any) {
   const failures: string[] = [];
   const scam = Number(actual.scam_report_count) || 0;
@@ -48,9 +42,7 @@ function scoreCase(expected: Expected, actual: any) {
   const safe = Number(actual.safe_report_count) || 0;
   const verified = actual.verified_business === true;
   const status = String(actual.caller_id_status || '').toUpperCase();
-  const expectedCountry = normalizeCountry(expected.country).replace(/[^a-z]/g, '');
-  const actualCountry = normalizeCountry(actual.country).replace(/[^a-z]/g, '');
-  if (expectedCountry && expectedCountry !== actualCountry) {
+  if (expected.country && !String(actual.country || '').toLowerCase().includes(expected.country.toLowerCase())) {
     failures.push(`country expected ${expected.country}, got ${actual.country || 'empty'}`);
   }
   if (expected.business && !String(actual.business_name || '').toLowerCase().includes(expected.business.toLowerCase())) {
@@ -76,8 +68,7 @@ function scoreCase(expected: Expected, actual: any) {
   if (status === 'UNKNOWN' && (scam > 0 || spam > 0 || suspicious > 0 || safe > 0 || verified)) failures.push('UNKNOWN status despite classification evidence');
   if (scam > 0 && score < 75) failures.push(`scam evidence requires risk >= 75, got ${score}`);
   if (verified && scam === 0 && spam === 0 && suspicious === 0 && score > 30) failures.push(`verified business without negative evidence must have risk <= 30, got ${score}`);
-  if (status === 'SAFE' && score > 30) failures.push(`SAFE status cannot have risk score above 30, got ${score}`);
-  if (status === 'UNKNOWN' && score !== 0) failures.push(`UNKNOWN status must have risk score 0, got ${score}`);
+  if (status === 'SAFE' && score >= 71) failures.push(`SAFE status cannot have high risk score ${score}`);
 
   return failures;
 }

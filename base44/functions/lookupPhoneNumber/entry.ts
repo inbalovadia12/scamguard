@@ -127,16 +127,15 @@ function parseJsonFromText(text: string): any {
 
 // Quick check for known fictional/reserved number ranges
 function checkKnownFictional(cleaned: string): any {
-  // NANP 555-0100 through 555-0199 are reserved for fictional use.
-  // Match the normalized country-code form so formatting and country hints
-  // cannot bypass this generic reserved-range rule.
-  const digits = String(cleaned || '').replace(/\D/g, '');
-  const nanp = digits.startsWith('1') && digits.length === 11 ? digits.slice(1) : digits;
-  if (/^\d{3}55501\d{2}$/.test(nanp)) {
+  // 555-0100 to 555-0199 are reserved
+  if (cleaned.length >= 10) {
+    const last4 = cleaned.slice(-4);
+    const exchanges = cleaned.slice(-7, -4);
+    if (exchanges === '555' && last4.startsWith('01')) {
       return {
         country: 'USA',
         carrier: 'None (Fictional Number)',
-        reputation_score: 0,
+        reputation_score: 15,
         risk_level: 'low',
         confidence_score: 100,
         user_reports: [],
@@ -153,6 +152,7 @@ function checkKnownFictional(cleaned: string): any {
         reddit: { matched: false, report_count: 0, sources: [] },
       };
     }
+  }
   return null;
 }
 
@@ -444,9 +444,6 @@ Deno.serve(async (req) => {
       // Never cache an empty/UNKNOWN research result. A missed web result is exactly what this lookup must recover from.
       const MIN_RECHECK_MS = 0;
       const r = cached[0];
-      // Reserved fictional numbers must never be served from historical records.
-      // Their classification is structural: UNKNOWN with risk 0.
-      const cachedIsReservedFictional = checkKnownFictional(canonicalDigits) !== null;
       const ageMs = r?.last_external_check_at ? Date.now() - new Date(r.last_external_check_at).getTime() : Infinity;
       const hasClassification = !!r?.caller_id_status && r.caller_id_status !== 'UNKNOWN';
       const hasEvidence = (r?.scam_report_count || 0) > 0 || (r?.spam_report_count || 0) > 0 || (r?.suspicious_report_count || 0) > 0 || (r?.safe_report_count || 0) > 0 || !!r?.verified_business;
@@ -456,7 +453,7 @@ Deno.serve(async (req) => {
       // Every explicit phone scan must revalidate live evidence. A previous LLM
       // miss or misclassification must not be served unchanged for seven days.
       const serveCache = false;
-      if (serveCache && !cachedIsReservedFictional) {
+      if (serveCache) {
         const communityEvidence = await fetchCommunityEvidence();
         const redditEvidence = await fetchRedditEvidence();
         
@@ -514,12 +511,10 @@ Deno.serve(async (req) => {
     } catch {}
 
     // ---- Quick check for known fictional numbers (instant) ----
-    const knownFictional = checkKnownFictional(canonicalDigits);
+    const knownFictional = checkKnownFictional(rawDigits);
     if (knownFictional) {
       const fullResult = {
         ...knownFictional,
-        // Reserved fictional numbers are structurally UNKNOWN. Persisting a
-        // prior PhoneReputation record must never promote them to SAFE/SCAM.
         caller_id_status: 'UNKNOWN',
         caller_id_label: '',
         last_checked_at: new Date().toISOString(),
@@ -563,16 +558,6 @@ Deno.serve(async (req) => {
         console.error('PhoneLookup save failed', saveError);
       }
 
-      // Explicitly re-assert the reserved-range invariant after persistence.
-      // upsertPhoneReputation is intentionally historical/monotonic and may
-      // return an older record, so it must never be allowed to change this
-      // response.
-      fullResult.reputation_score = 0;
-      fullResult.risk_level = 'low';
-      fullResult.caller_id_status = 'UNKNOWN';
-      fullResult.caller_id_label = '';
-      fullResult.confidence_score = 100;
-
       const creditsRemaining = await chargeCredits();
       return Response.json({
         result: fullResult,
@@ -615,15 +600,6 @@ Step 1 — Identify the owner. Set business_name ONLY when THIS EXACT number is 
 
 Step 2 — Determine scam/spam/suspicious/legitimate evidence only from exact-number sources you actually verified. Generic articles about spoofing a company do not make the company's real number suspicious. Spam/telemarketing is not automatically a scam.
 
-CRITICAL IDENTITY VS. CALL-BEHAVIOR RULE:
-A phone number can be a real, verified business number AND also be frequently spoofed by scammers. Those are two different facts. If an official source proves that THIS EXACT number belongs to a real business, set verified_business=true. Do NOT turn the number itself into scam/spam/suspicious evidence merely because scammers have impersonated or spoofed it. Only set direct_negative_evidence=true when the exact number itself is documented as being used by the abusive actor, not when the number is the legitimate business's Caller ID being spoofed.
-
-CRITICAL UNKNOWN RULE:
-UNKNOWN is a valid and expected classification. If you cannot verify a real business identity and cannot verify exact-number scam, spam, suspicious, or safe evidence, return zero counts for all four evidence categories and do not invent a safe classification. Absence of reports is NOT safe evidence.
-
-CRITICAL VERIFIED-BUSINESS RULE:
-For a verified business, prefer risk 0-30 and SAFE at the application layer when there is no direct negative evidence. Never output a high risk score for a verified business solely because of spoofing/impersonation reports.
-
 Do not invent data. Return the URLs of every source that actually contained evidence about THIS EXACT number. If a source was searched but did not contain the number, do not include it in sources.
 
 reputation_score (0-100, HIGHER = more dangerous; provisional only — the application recalculates the final score from verified evidence):
@@ -635,8 +611,6 @@ risk_level:
 - high = verified scam evidence
 
 confidence_score (0-100) = confidence based ONLY on verified exact-number evidence. No evidence means UNKNOWN/insufficient evidence, never SAFE.
-
-direct_negative_evidence = true ONLY when the verified exact-number evidence shows that the number itself is being used for scam/spam/suspicious activity. Set it to false when negative reports are about scammers spoofing/impersonating this legitimate number, generic articles, or incidents where the number was merely displayed as a spoofed caller ID. A legitimate business number must not be classified as a scam merely because it is frequently spoofed.
 
 verified_business = true ONLY when an official/verified source contains THIS EXACT number and its source URL is included.
 
@@ -654,10 +628,6 @@ Respond in ${languageName}.`;
         reputation_score: { type: 'number' },
         risk_level: { type: 'string', enum: ['low', 'medium', 'high'] },
         confidence_score: { type: 'number' },
-        // Distinguish direct evidence that the exact number itself is abusive
-        // from reports describing spoofing/impersonation where scammers merely
-        // displayed a legitimate business number.
-        direct_negative_evidence: { type: 'boolean' },
         user_reports: { type: 'array', items: { type: 'string' } },
         scam_categories: { type: 'array', items: { type: 'string' } },
         summary: { type: 'string' },
@@ -718,12 +688,6 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
           mergedRecovery[key] = Math.max(Number(mergedRecovery[key]) || 0, Number(recovery[key]) || 0);
         }
         mergedRecovery.verified_business = !!mergedRecovery.verified_business || !!recovery.verified_business;
-        // A single LLM pass must not turn a verified business number into a
-        // scam classification based only on a vague spoofing/impersonation
-        // finding. Require independent confirmation of direct negative use
-        // before carrying that flag through the two-pass merge.
-        mergedRecovery.direct_negative_evidence =
-          !!mergedRecovery.direct_negative_evidence && !!recovery.direct_negative_evidence;
         mergedRecovery.user_reports = [...(Array.isArray(mergedRecovery.user_reports) ? mergedRecovery.user_reports : []), ...(Array.isArray(recovery.user_reports) ? recovery.user_reports : [])].slice(0, 6);
         mergedRecovery.scam_categories = [...new Set([...(Array.isArray(mergedRecovery.scam_categories) ? mergedRecovery.scam_categories : []), ...(Array.isArray(recovery.scam_categories) ? recovery.scam_categories : [])])];
         mergedRecovery.sources = [...new Set([...(Array.isArray(mergedRecovery.sources) ? mergedRecovery.sources : []), ...(Array.isArray(recovery.sources) ? recovery.sources : [])])];
@@ -733,43 +697,7 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       console.error('LLM web search failed', llmError);
       return Response.json({ error: 'Phone lookup service temporarily unavailable. Please try again.' }, { status: 502 });
     }
-    // Restore strong identity/evidence already verified by Vardin's canonical phone index.
-    // This is not a hardcoded number list: PhoneReputation is the deduplicated evidence
-    // store populated by previous exact-number research and community ingestion.
-    try {
-      const canonicalRows = await base44.asServiceRole.entities.PhoneReputation.filter({ normalized_number: cacheKey });
-      const canonical = canonicalRows?.[0];
-      if (canonical) {
-        if (!result.business_name && canonical.verified_business && canonical.business_name) {
-          result.business_name = canonical.business_name;
-          result.verified_business = true;
-          result.sources = [...new Set([...(Array.isArray(result.sources) ? result.sources : []), ...(Array.isArray(canonical.sources) ? canonical.sources : [])])];
-        }
-        // Exact-number negative evidence from the canonical index is authoritative
-        // for numbers that are not verified businesses. For verified businesses,
-        // retain the identity match without converting generic spoofing reports
-        // into a scam classification.
-        if (!result.verified_business) {
-          result.scam_report_count = Math.max(Number(result.scam_report_count) || 0, Number(canonical.scam_report_count) || 0);
-          result.spam_report_count = Math.max(Number(result.spam_report_count) || 0, Number(canonical.spam_report_count) || 0);
-          result.suspicious_report_count = Math.max(Number(result.suspicious_report_count) || 0, Number(canonical.suspicious_report_count) || 0);
-          result.safe_report_count = Math.max(Number(result.safe_report_count) || 0, Number(canonical.safe_report_count) || 0);
-        }
-      }
-    } catch (canonicalError) {
-      console.error('Canonical PhoneReputation fetch failed:', canonicalError);
-    }
-
     result = normalizeBusinessResult(result);
-    // Do not let spoofing/impersonation reports turn a verified business's
-    // real number into a scam classification. Only direct negative evidence about
-    // the exact number itself is classification evidence. Community/Reddit reports
-    // remain direct evidence and are merged below.
-    if (result.verified_business === true && result.direct_negative_evidence !== true) {
-      result.scam_report_count = 0;
-      result.spam_report_count = 0;
-      result.suspicious_report_count = 0;
-    }
     const rawEvidence = {
       scam: Number(result.scam_report_count) || 0,
       spam: Number(result.spam_report_count) || 0,
@@ -840,7 +768,6 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       confidence_score: Math.max(0, Math.min(100, Number(result.confidence_score) || 0)),
       verified_business: !!merged.verified_business,
       business_name: merged.business_name || '',
-      direct_negative_evidence: merged.direct_negative_evidence === true,
       caller_id_label: '',
       last_checked_at: new Date().toISOString(),
       community: communityEvidence,
@@ -869,114 +796,9 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
       },
     });
 
-    // The response classification must describe the evidence from THIS scan.
-    // PhoneReputation is persisted for history/confidence, but its historical
-    // status must not overwrite a fresh contradictory research result. This is
-    // especially important when an old high-risk record is superseded by a
-    // newly verified business identity with no current exact-number negatives.
-    const isReservedFictional = /^1?\d{3}55501\d{2}$/.test(canonicalDigits);
-    const currentEvidence = isReservedFictional
-      ? { scam: 0, spam: 0, suspicious: 0, safe: 0, verified: false }
-      : {
-          scam: Number(fullResult.scam_report_count) || 0,
-          spam: Number(fullResult.spam_report_count) || 0,
-          suspicious: Number(fullResult.suspicious_report_count) || 0,
-          safe: Number(fullResult.safe_report_count) || 0,
-          verified: fullResult.verified_business === true,
-        };
-    const responseConsistency = enforceConsistency(fullResult.reputation_score, fullResult.risk_level, currentEvidence);
-    fullResult.reputation_score = responseConsistency.score;
-    fullResult.risk_level = responseConsistency.risk;
-    const currentStatus = statusFromReputation({
-      reputation_score: fullResult.reputation_score,
-      risk_level: fullResult.risk_level,
-      scam_report_count: currentEvidence.scam,
-      spam_report_count: currentEvidence.spam,
-      suspicious_report_count: currentEvidence.suspicious,
-      safe_report_count: currentEvidence.safe,
-      verified_business: currentEvidence.verified,
-    });
-    fullResult.caller_id_status = isReservedFictional ? 'UNKNOWN' : currentStatus;
-
-    // FINAL OUTPUT INVARIANT: status and numeric risk are one atomic classification.
-    // UNKNOWN is always risk 0. This is enforced again immediately before serialization.
-    // This is the LAST classification guard before the response is serialized.
-    // Never infer SAFE from an LLM score alone: classification requires explicit evidence.
-    const finalCanonicalDigits = String(canonicalDigits || '').replace(/\D/g, '');
-    const finalReservedFictional = /^1?\d{3}55501\d{2}$/.test(finalCanonicalDigits);
-    const finalScam = Number(fullResult.scam_report_count) || 0;
-    const finalSpam = Number(fullResult.spam_report_count) || 0;
-    const finalSuspicious = Number(fullResult.suspicious_report_count) || 0;
-    const finalSafe = Number(fullResult.safe_report_count) || 0;
-    const finalVerified = fullResult.verified_business === true;
-    const finalHasNegative = finalScam > 0 || finalSpam > 0 || finalSuspicious > 0;
-    const finalHasPositive = finalSafe > 0 || finalVerified;
-
-    if (isReservedFictional || (!finalHasNegative && !finalHasPositive)) {
-      fullResult.caller_id_status = 'UNKNOWN';
-    } else if (finalScam > 0) {
-      fullResult.caller_id_status = 'SCAM';
-    } else if (finalSpam > 0) {
-      fullResult.caller_id_status = 'SPAM';
-    } else if (finalSuspicious > 0) {
-      fullResult.caller_id_status = 'SUSPICIOUS';
-    } else {
-      fullResult.caller_id_status = 'SAFE';
-    }
-
-    if (isReservedFictional) {
-  fullResult.caller_id_status = 'UNKNOWN';
-  fullResult.caller_id_label = '';
-  fullResult.reputation_score = 0;
-  fullResult.risk_level = 'low';
-  fullResult.scam_report_count = 0;
-  fullResult.spam_report_count = 0;
-  fullResult.suspicious_report_count = 0;
-  fullResult.safe_report_count = 0;
-  fullResult.verified_business = false;
-  fullResult.business_name = '';
-  fullResult.confidence_score = 100;
-} else if (fullResult.caller_id_status === 'UNKNOWN') {
-      fullResult.reputation_score = 0;
-      fullResult.risk_level = 'low';
-    } else if (fullResult.caller_id_status === 'SAFE') {
-      fullResult.reputation_score = Math.min(Number(fullResult.reputation_score) || 0, 30);
-      fullResult.risk_level = 'low';
-    } else if (fullResult.caller_id_status === 'SCAM') {
-      fullResult.reputation_score = Math.max(75, Number(fullResult.reputation_score) || 0);
-      fullResult.risk_level = 'high';
-    } else if (fullResult.caller_id_status === 'SPAM') {
-      fullResult.reputation_score = Math.max(50, Math.min(Number(fullResult.reputation_score) || 0, 60));
-      fullResult.risk_level = 'medium';
-    } else if (fullResult.caller_id_status === 'SUSPICIOUS') {
-      fullResult.reputation_score = Math.max(41, Math.min(Number(fullResult.reputation_score) || 0, 70));
-      fullResult.risk_level = 'medium';
-    }
-    // Absolute final invariant: UNKNOWN never carries a nonzero risk score.
-    if (fullResult.caller_id_status === 'UNKNOWN') {
-      fullResult.reputation_score = 0;
-      fullResult.risk_level = 'low';
-    }
-    fullResult.caller_id_label = computeLabel(fullResult.caller_id_status, DEFAULT_CONFIG);
-    if (isReservedFictional) {
-      fullResult.reputation_score = 0;
-      fullResult.risk_level = 'low';
-      fullResult.scam_report_count = 0;
-      fullResult.spam_report_count = 0;
-      fullResult.suspicious_report_count = 0;
-      fullResult.safe_report_count = 0;
-      fullResult.verified_business = false;
-      fullResult.business_name = '';
-      fullResult.confidence_score = 100;
-    } else {
-      fullResult.confidence_score = Math.max(fullResult.confidence_score, rep?.confidence_score || 0);
-    }
-
-    // Single final invariant: UNKNOWN means no established risk, so its risk score is always 0.
-    if (fullResult.caller_id_status === 'UNKNOWN') {
-      fullResult.reputation_score = 0;
-      fullResult.risk_level = 'low';
-    }
+    fullResult.caller_id_status = rep?.caller_id_status || 'UNKNOWN';
+    fullResult.confidence_score = Math.max(fullResult.confidence_score, rep?.confidence_score || 0);
+    fullResult.caller_id_label = rep?.caller_id_label || '';
 
     let lookup: any = null;
     try {
