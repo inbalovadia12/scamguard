@@ -28,6 +28,24 @@ function sanitizeSummary(raw: string): string {
   return cleaned || 'No scam reports found for this number.';
 }
 
+// Negative evidence must be about the queried number itself. A verified business
+// may be impersonated/spoofed, but reports about those impersonators are not reports
+// against the legitimate number. Keep that distinction at the application boundary.
+function stripUnrelatedBusinessReports(result: any): void {
+  if (result?.verified_business === true && result?.direct_negative_evidence !== true) {
+    result.user_reports = [];
+    result.scam_categories = [];
+    result.scam_report_count = 0;
+    result.spam_report_count = 0;
+    result.suspicious_report_count = 0;
+    result.direct_negative_evidence = false;
+    const business = String(result.business_name || '').trim();
+    if (business) {
+      result.summary = `This number is a verified business number for ${business}. Reports about impersonators, spoofing, or unrelated callers are not evidence against this number.`;
+    }
+  }
+}
+
 function enforceConsistency(score: number, risk: string, evidence?: { scam: number; spam: number; suspicious: number; safe: number; verified: boolean }): { score: number; risk: 'low' | 'medium' | 'high' } {
   let s = Number.isFinite(Number(score)) ? Math.max(0, Math.min(100, Number(score))) : 0;
   const e = evidence || { scam: 0, spam: 0, suspicious: 0, safe: 0, verified: false };
@@ -762,6 +780,9 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
 
     result = normalizeBusinessResult(result);
     // Do not let spoofing/impersonation reports turn a verified business's
+    // Remove any model-generated reports that are not direct evidence against the exact number before scoring/merging.
+    stripUnrelatedBusinessReports(result);
+
     // real number into a scam classification. Only direct negative evidence about
     // the exact number itself is classification evidence. Community/Reddit reports
     // remain direct evidence and are merged below.
