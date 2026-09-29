@@ -21,7 +21,6 @@ const NAV_SECTIONS = [
       { path: "/agent", labelKey: "nav.ai_chat", icon: Bot },
       { path: "/scam-exposer", labelKey: "nav.ai_negotiator", icon: MessageCircle },
       { path: "/extension", labelKey: "nav.extension", icon: Puzzle },
-      { path: "/phone-lookup", labelKey: "nav.phone_guard", icon: Phone },
       { path: "/emergency-response", labelKey: "nav.emergency_response", icon: Siren },
     ],
   },
