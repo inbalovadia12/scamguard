@@ -797,6 +797,7 @@ Do not count similar numbers, prefixes, area codes, generic articles, or search 
         suspicious_report_count: result.suspicious_report_count || 0,
         safe_report_count: result.safe_report_count || 0,
         verified_business: !!result.verified_business,
+        business_name: result.business_name || '',
       },
       communityEvidence,
       redditEvidence,
