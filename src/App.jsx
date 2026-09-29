@@ -58,6 +58,7 @@ const Community = lazy(() => import('@/pages/Community'));
 const Referral = lazy(() => import('@/pages/Referral'));
 const CallSimulator = lazy(() => import('@/pages/CallSimulator'));
 const LiveCallAnalyzer = lazy(() => import('@/pages/LiveCallAnalyzer'));
+const PhoneGuard = lazy(() => import('@/pages/PhoneGuard'));
 const CryptoScanner = lazy(() => import('@/pages/CryptoScanner'));
 const MobileApp = lazy(() => import('@/pages/MobileApp'));
 const LocalScamFinder = lazy(() => import('@/pages/LocalScamFinder'));
@@ -167,6 +168,7 @@ const AuthenticatedApp = () => {
           <Route path="/family-chat" element={<FamilyChat />} />
           <Route path="/guardian-dashboard" element={<GuardianDashboard />} />
           <Route path="/scam-feed" element={<ScamFeed />} />
+          <Route path="/phone-guard" element={<PhoneGuard />} />
           <Route path="/live-guard" element={<LiveCallAnalyzer />} />
           <Route path="/call-simulator" element={<CallSimulator />} />
           <Route path="/crypto-scanner" element={<CryptoScanner />} />
