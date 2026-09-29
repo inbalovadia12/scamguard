@@ -70,7 +70,7 @@ export default function PhoneResultView({ data }) {
           <BadgeCheck className="w-4 h-4 text-success flex-shrink-0" />
           <div>
             <p className="text-sm font-semibold text-success">
-              Business Match{data.business_name ? `: ${data.business_name}` : ""}
+              {data.business_name || "Business Match"}
             </p>
             <p className="text-xs text-muted-foreground">This number matches a business record in the available data. This does not guarantee the caller is legitimate.</p>
           </div>
@@ -133,7 +133,7 @@ export default function PhoneResultView({ data }) {
       )}
 
       {/* Scam categories */}
-      {data.scam_categories?.length > 0 && (
+      {effectiveStatus !== "SAFE" && data.scam_categories?.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <Tag className="w-3.5 h-3.5" /> Known Scam Categories
@@ -226,7 +226,7 @@ export default function PhoneResultView({ data }) {
 
       {/* Community Intel */}
       <div className="border-t border-border/50 pt-4">
-        <CommunityIntel scamTypes={matchCategoriesToEnum(data.scam_categories)} title="Community Reports" />
+        <CommunityIntel scamTypes={effectiveStatus === "SAFE" ? [] : matchCategoriesToEnum(data.scam_categories)} title="Community Reports" />
       </div>
     </div>
   );
