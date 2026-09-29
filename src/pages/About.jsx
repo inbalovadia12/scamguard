@@ -28,7 +28,7 @@ export default function About() {
             are becoming increasingly sophisticated, and anyone can fall victim. Phishing emails,
             smishing texts, romance scams, fake job offers, crypto investment fraud, marketplace
             scams, and tech support impostors cost ordinary people billions every year. Vardin uses
-            artificial intelligence to analyze suspicious messages, URLs, phone numbers, images,
+            artificial intelligence to analyze suspicious messages, URLs, images,
             and entire web pages in real time, giving users an instant risk assessment before they
             engage.
           </p>
@@ -37,7 +37,7 @@ export default function About() {
             vulnerable. Seniors and their families can use Vardin's family protection features to
             monitor for high-risk scam encounters and receive guardian alerts when something
             dangerous is detected. Everyday internet users benefit from the Chrome extension, the
-            scam feed, local scam intelligence maps, phone number lookups, identity exposure scans,
+            scam feed, local scam intelligence maps, identity exposure scans,
             and interactive lessons that teach the warning signs of fraud in plain language. Whether
             you are a digital native helping an elderly parent, a cautious shopper checking a
             marketplace listing, or someone who just received a suspicious text, Vardin gives you
