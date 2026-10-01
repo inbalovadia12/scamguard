@@ -170,7 +170,8 @@ Deno.serve(async (req) => {
 
     const businessCandidates = [
       numbersOnline?.caller_name,
-    ].filter(Boolean);
+      usaCallerLookup?.caller_name,
+    ].filter((value, index, list) => Boolean(value) && list.indexOf(value) === index);
 
     const providerErrors = Array.isArray(phoneSources.source_errors)
       ? phoneSources.source_errors
@@ -191,7 +192,9 @@ Deno.serve(async (req) => {
         carrier: numbersOnline?.carrier ?? usaCallerLookup?.carrier ?? null,
         line_type: numbersOnline?.line_type ?? null,
         caller_name: businessCandidates[0] ?? null,
-        caller_name_source: businessCandidates[0] ? "numbers_online" : null,
+        caller_name_source: businessCandidates[0]
+          ? (numbersOnline?.caller_name === businessCandidates[0] ? "numbers_online" : "usa_caller_lookup")
+          : null,
         usa_location: usaCallerLookup?.location ?? null,
         toll_free: usaCallerLookup?.toll_free ?? null,
       },
