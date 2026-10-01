@@ -159,7 +159,9 @@ Deno.serve(async (req) => {
       first(scamCallCheck?.community_report_count, usaCallerLookup?.community_reports?.length, 0)
     ) || 0;
 
-    const exactEvidenceCount = reports.filter((r) => r.text || r.url).length;
+    const exactEvidenceCount = reports.filter((r) =>
+      r.source !== "web_search" ? Boolean(r.text || r.url) : r.verified_exact_number === true
+    ).length;
 
     const businessCandidates = [
       numbersOnline?.caller_name,
@@ -201,11 +203,13 @@ Deno.serve(async (req) => {
         community_report_count: communityReportCount,
         exact_evidence_count: exactEvidenceCount,
         web_result_count: webResults.length,
+        verified_web_result_count: webResults.filter((r) => r.verified_exact_number).length,
       },
       reports,
       web_search: {
         searched: Boolean(web?.results),
         result_count: webResults.length,
+        verified_result_count: webResults.filter((r) => r.verified_exact_number).length,
         results_require_exact_number_verification: true,
         queries: Array.isArray(web?.searches) ? web.searches : [],
       },
@@ -218,9 +222,11 @@ Deno.serve(async (req) => {
       evidence_state: exactEvidenceCount > 0 || complaintCount > 0
         ? "evidence_found"
         : "insufficient_evidence",
-      web_evidence_state: webResults.length > 0
-        ? "discovered_unverified"
-        : "no_web_results",
+      web_evidence_state: webResults.some((r) => r.verified_exact_number)
+        ? "verified_evidence_found"
+        : webResults.length > 0
+          ? "discovered_unverified"
+          : "no_web_results",
       safety_note: "Provider signals and complaints are evidence about reported behaviour, not proof of identity or wrongdoing. No-evidence results must not be treated as proof of safety.",
     });
   } catch (error: any) {
