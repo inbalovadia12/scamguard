@@ -78,6 +78,11 @@ function extractUsaCallerLookup(data: AnyRecord) {
   return {
     location: data?.location ?? null,
     carrier: normalizeText(first(data?.carrier, data?.location?.carrier)),
+    caller_name: normalizeText(first(
+      data?.caller_name, data?.callerName, data?.name, data?.business_name,
+      data?.businessName, data?.organization, data?.organization_name,
+      data?.location?.caller_name, data?.location?.business_name
+    )),
     toll_free: Boolean(data?.toll_free),
     complaint_count: first(data?.complaints?.total, data?.complaint_count),
     robocall_flag: first(data?.complaints?.robocall_flag, data?.robocall_flag),
