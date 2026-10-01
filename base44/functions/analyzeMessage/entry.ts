@@ -188,8 +188,17 @@ Deno.serve(async (req) => {
         return Response.json({ error: phoneSources?.error || "Phone source lookup failed" }, { status: 502 });
       }
 
+      const webResponse = await base44.functions.invoke("searchPhoneWebEvidence", {
+        phone: text,
+      });
+      const phoneWebEvidence = webResponse?.data || webResponse;
+      if (!phoneWebEvidence || phoneWebEvidence.error) {
+        return Response.json({ error: phoneWebEvidence?.error || "Web phone evidence search failed" }, { status: 502 });
+      }
+
       const evidenceResponse = await base44.functions.invoke("normalizePhoneEvidence", {
         phone_sources: phoneSources,
+        web_evidence: phoneWebEvidence,
         phone: text,
       });
       phoneEvidence = evidenceResponse?.data || evidenceResponse;
