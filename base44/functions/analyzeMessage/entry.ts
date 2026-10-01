@@ -72,7 +72,7 @@ function planRank(plan: string) {
   return plan === "premium" ? 2 : plan === "plus" ? 1 : 0;
 }
 
-function buildPrompt(mode: string, text: string, messageType?: string, language?: string, senderContext?: string) {
+function buildPrompt(mode: string, text: string, messageType?: string, language?: string, senderContext?: string, phoneSources?: any) {
   const languageName = ({ en: "English", he: "Hebrew", es: "Spanish" } as Record<string, string>)[language || "en"] || "English";
   const senderContextBlock = senderContext === "known"
     ? "\nSENDER CONTEXT: The user marked this as a message from a KNOWN sender (a contact or business they recognize). Do not inflate the risk just because it mentions money, links, or verification — a recognized sender with normal content is not a scam. Still flag concrete scam indicators if present.\n"
@@ -84,7 +84,14 @@ function buildPrompt(mode: string, text: string, messageType?: string, language?
   }
 
   if (mode === "incognito_phone") {
-    return `You are a phone number reputation analyst. Research this phone number: ${text.slice(0, 100)}. Check scam reports, robocall/spam reports, and other high-signal public sources. Do not invent reports or URLs. Return country, carrier, reputation_score (0-100, higher = more phone risk, 0 = lowest risk), risk_level, user_reports, scam_categories, summary, and sources. Respond in ${languageName}.`;
+    return `You are a phone number reputation analyst. Analyze this exact phone number: ${text.slice(0, 100)}.
+
+AUTHORITATIVE SOURCE DATA ALREADY RETRIEVED BY VARDIN:
+${JSON.stringify(phoneSources || {}, null, 2)}
+
+Use the supplied source data as evidence. Do not invent reports, businesses, carriers, complaint counts, URLs, or locations. Distinguish an exact-number report from a generic discussion about a country, carrier, brand, or similar-looking number. If a source did not return evidence, say so. A missing report is NOT proof that the number is safe.
+
+For this stage, return the normalized source facts and an evidence-based summary. Do not treat any individual provider's risk score as Vardin's final risk score. Return country, carrier, business/caller name when directly supported, reputation_score only as the provider/source signal if available, risk_level only as a provisional source-derived value, user_reports, scam_categories, summary, sources, and a phone_sources object preserving the relevant provider evidence. Respond in ${languageName}.`;
   }
 
   if (mode === "incognito_image") {
@@ -172,12 +179,21 @@ Deno.serve(async (req) => {
       }
     }
 
+    let phoneSources: any = null;
+    if (mode === "incognito_phone") {
+      const sourceResponse = await base44.functions.invoke("lookupPhoneSources", { phone_number: text });
+      phoneSources = sourceResponse?.data || sourceResponse;
+      if (!phoneSources || phoneSources.error) {
+        return Response.json({ error: phoneSources?.error || "Phone source lookup failed" }, { status: 502 });
+      }
+    }
+
     const responseSchema = body.response_json_schema && typeof body.response_json_schema === "object"
       ? body.response_json_schema
       : DEFAULT_SCHEMA;
 
     const llmOptions: any = {
-      prompt: buildPrompt(mode, text, messageType, language, senderContext),
+      prompt: buildPrompt(mode, text, messageType, language, senderContext, phoneSources),
       response_json_schema: responseSchema,
       model: "gemini_3_flash",
     };
@@ -203,7 +219,9 @@ Deno.serve(async (req) => {
     await base44.auth.updateMe(usage);
 
     const remaining = getAvailableCredits({ ...user, ...usage }).remaining;
-    return Response.json({ result, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(user) });
+    const responseBody: any = { result, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(user) };
+    if (mode === "incognito_phone") responseBody.phone_sources = phoneSources;
+    return Response.json(responseBody);
   } catch (error: any) {
     return Response.json({ error: error?.message || "Analysis failed" }, { status: 500 });
   }
