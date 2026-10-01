@@ -122,15 +122,29 @@ Deno.serve(async (req) => {
     const no = phoneSources.sources?.numbers_online?.data;
     const scc = phoneSources.sources?.scamcallcheck?.data;
     const ucl = phoneSources.sources?.usa_caller_lookup?.data;
+    const web = body?.web_evidence ?? {};
 
     const numbersOnline = no ? extractNumbersOnline(no) : null;
     const scamCallCheck = scc ? extractScamCallCheck(scc) : null;
     const usaCallerLookup = ucl ? extractUsaCallerLookup(ucl) : null;
 
+    const webResults = Array.isArray(web?.results) ? web.results.map((r: AnyRecord, i: number) => ({
+      source: "web_search",
+      id: `web-${i + 1}`,
+      category: null,
+      text: normalizeText(r.title),
+      date: null,
+      url: normalizeText(r.url),
+      exact_match_required: true,
+      verified_exact_number: false,
+      raw: r,
+    })) : [];
+
     const reports = uniqueReports([
       ...(scamCallCheck?.reports ?? []),
       ...(usaCallerLookup?.community_reports ?? []),
       ...(usaCallerLookup?.agency_reports ?? []),
+      ...webResults,
     ]);
 
     const complaintCount = Number(
@@ -186,8 +200,15 @@ Deno.serve(async (req) => {
         complaint_count: complaintCount,
         community_report_count: communityReportCount,
         exact_evidence_count: exactEvidenceCount,
+        web_result_count: webResults.length,
       },
       reports,
+      web_search: {
+        searched: Boolean(web?.results),
+        result_count: webResults.length,
+        results_require_exact_number_verification: true,
+        queries: Array.isArray(web?.searches) ? web.searches : [],
+      },
       sources: [
         phoneSources.sources?.numbers_online?.source_url,
         scamCallCheck?.canonical_url,
@@ -197,6 +218,9 @@ Deno.serve(async (req) => {
       evidence_state: exactEvidenceCount > 0 || complaintCount > 0
         ? "evidence_found"
         : "insufficient_evidence",
+      web_evidence_state: webResults.length > 0
+        ? "discovered_unverified"
+        : "no_web_results",
       safety_note: "Provider signals and complaints are evidence about reported behaviour, not proof of identity or wrongdoing. No-evidence results must not be treated as proof of safety.",
     });
   } catch (error: any) {
