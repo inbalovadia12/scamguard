@@ -181,6 +181,7 @@ Deno.serve(async (req) => {
 
     let phoneSources: any = null;
     let phoneEvidence: any = null;
+    let phoneRisk: any = null;
     if (mode === "incognito_phone") {
       const sourceResponse = await base44.functions.invoke("lookupPhoneSources", { phone_number: text });
       phoneSources = sourceResponse?.data || sourceResponse;
@@ -205,6 +206,15 @@ Deno.serve(async (req) => {
       if (!phoneEvidence || phoneEvidence.error) {
         return Response.json({ error: phoneEvidence?.error || "Phone evidence normalization failed" }, { status: 502 });
       }
+
+      const riskResponse = await base44.functions.invoke("scorePhoneRisk", {
+        phone: text,
+        phone_evidence: phoneEvidence,
+      });
+      phoneRisk = riskResponse?.data || riskResponse;
+      if (!phoneRisk || phoneRisk.error || !phoneRisk.result) {
+        return Response.json({ error: phoneRisk?.error || "Phone risk scoring failed" }, { status: 502 });
+      }
     }
 
     const responseSchema = body.response_json_schema && typeof body.response_json_schema === "object"
@@ -212,14 +222,23 @@ Deno.serve(async (req) => {
       : DEFAULT_SCHEMA;
 
     const llmOptions: any = {
-      prompt: buildPrompt(mode, text, messageType, language, senderContext, phoneEvidence),
+      prompt: buildPrompt(mode, text, messageType, language, senderContext, mode === "incognito_phone"
+        ? { evidence: phoneEvidence, deterministic_risk_engine: phoneRisk?.result }
+        : phoneEvidence),
       response_json_schema: responseSchema,
       model: "gemini_3_flash",
     };
     if (fileUrls.length > 0) llmOptions.file_urls = fileUrls;
     if (["crypto_investment", "conversation", "incognito_conversation", "incognito_phone", "incognito_image"].includes(mode)) llmOptions.add_context_from_internet = true;
 
-    const result = await base44.integrations.Core.InvokeLLM(llmOptions);
+    const llmResult = await base44.integrations.Core.InvokeLLM(llmOptions);
+    const result: any = mode === "incognito_phone"
+      ? {
+          ...llmResult,
+          ...phoneRisk.result,
+          summary: llmResult?.summary || llmResult?.explanation || "",
+        }
+      : llmResult;
 
     // Guard against fabricated scam narratives on benign messages. Only fires
     // on a clear "NOT A SCAM" verdict — scam/uncertain detections are untouched.
@@ -242,6 +261,7 @@ Deno.serve(async (req) => {
     if (mode === "incognito_phone") {
       responseBody.phone_sources = phoneSources;
       responseBody.phone_evidence = phoneEvidence;
+      responseBody.phone_risk_engine = phoneRisk;
     }
     return Response.json(responseBody);
   } catch (error: any) {
