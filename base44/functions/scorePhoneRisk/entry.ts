@@ -89,6 +89,7 @@ function scorePhone(evidence: AnyRecord) {
     Boolean(signals.scamcallcheck_risk_level && /safe|legitimate|verified/i.test(String(signals.scamcallcheck_risk_level)));
 
   if (!hasNegativeEvidence && !hasLegitimateEvidence) score = 50;
+  if (!hasNegativeEvidence && hasLegitimateEvidence) score = Math.min(score, 25);
 
   let status: "SCAM" | "SUSPICIOUS" | "SAFE" | "UNKNOWN";
   if (!hasNegativeEvidence && !hasLegitimateEvidence) status = "UNKNOWN";
