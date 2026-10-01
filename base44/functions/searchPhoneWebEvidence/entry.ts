@@ -62,14 +62,42 @@ Deno.serve(async (req) => {
     const settled = await Promise.allSettled(searches.map((q) => searchWeb(q)));
     const results = settled.flatMap((r) => r.status === "fulfilled" ? r.value : []);
     const unique = Array.from(new Map(results.map((r) => [r.url, r])).values()).slice(0, 30);
+    const targetDigits = phone.replace(/\D/g, "");
+    const targetWithoutCountry = targetDigits.startsWith("1") ? targetDigits.slice(1) : targetDigits;
+
+    const verified = await Promise.all(unique.map(async (r) => {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 6000);
+        try {
+          const page = await fetch(r.url, {
+            signal: controller.signal,
+            headers: {
+              "User-Agent": "Mozilla/5.0 (compatible; VardinScamGuard/1.0)",
+              "Accept-Language": "en-US,en;q=0.9",
+            },
+          });
+          const html = await page.text();
+          const bodyDigits = html.replace(/\D/g, "");
+          const exact = bodyDigits.includes(targetDigits) ||
+            (targetWithoutCountry.length >= 7 && bodyDigits.includes(targetWithoutCountry));
+          return { ...r, verified_exact_number: exact, verification_status: exact ? "verified" : "not_verified" };
+        } finally {
+          clearTimeout(timer);
+        }
+      } catch (error: any) {
+        return { ...r, verified_exact_number: false, verification_status: "verification_failed", verification_error: error?.message || "Page fetch failed" };
+      }
+    }));
 
     return Response.json({
       phone,
       query_variants: variants,
       searches,
-      results: unique,
-      result_count: unique.length,
-      note: "Search results are discovery evidence only. Exact-number verification is required before treating a page as evidence about this phone number.",
+      results: verified,
+      result_count: verified.length,
+      verified_result_count: verified.filter((r) => r.verified_exact_number).length,
+      note: "Web results are counted as evidence only when the fetched page contains the exact normalized phone number (or its national digits for NANP numbers). Search-result titles alone never establish evidence.",
     });
   } catch (error: any) {
     return Response.json({ error: error?.message || "Web phone evidence search failed" }, { status: 500 });
