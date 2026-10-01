@@ -180,11 +180,21 @@ Deno.serve(async (req) => {
     }
 
     let phoneSources: any = null;
+    let phoneEvidence: any = null;
     if (mode === "incognito_phone") {
       const sourceResponse = await base44.functions.invoke("lookupPhoneSources", { phone_number: text });
       phoneSources = sourceResponse?.data || sourceResponse;
       if (!phoneSources || phoneSources.error) {
         return Response.json({ error: phoneSources?.error || "Phone source lookup failed" }, { status: 502 });
+      }
+
+      const evidenceResponse = await base44.functions.invoke("normalizePhoneEvidence", {
+        phone_sources: phoneSources,
+        phone: text,
+      });
+      phoneEvidence = evidenceResponse?.data || evidenceResponse;
+      if (!phoneEvidence || phoneEvidence.error) {
+        return Response.json({ error: phoneEvidence?.error || "Phone evidence normalization failed" }, { status: 502 });
       }
     }
 
@@ -193,7 +203,7 @@ Deno.serve(async (req) => {
       : DEFAULT_SCHEMA;
 
     const llmOptions: any = {
-      prompt: buildPrompt(mode, text, messageType, language, senderContext, phoneSources),
+      prompt: buildPrompt(mode, text, messageType, language, senderContext, phoneEvidence),
       response_json_schema: responseSchema,
       model: "gemini_3_flash",
     };
@@ -220,7 +230,10 @@ Deno.serve(async (req) => {
 
     const remaining = getAvailableCredits({ ...user, ...usage }).remaining;
     const responseBody: any = { result, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(user) };
-    if (mode === "incognito_phone") responseBody.phone_sources = phoneSources;
+    if (mode === "incognito_phone") {
+      responseBody.phone_sources = phoneSources;
+      responseBody.phone_evidence = phoneEvidence;
+    }
     return Response.json(responseBody);
   } catch (error: any) {
     return Response.json({ error: error?.message || "Analysis failed" }, { status: 500 });
