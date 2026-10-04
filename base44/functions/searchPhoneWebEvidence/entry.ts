@@ -11,7 +11,7 @@ function digitsVariants(phone: string) {
 }
 
 async function searchWeb(query: string, timeoutMs = 9000) {
-  const url = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=10`;
+  const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&count=10`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -26,13 +26,12 @@ async function searchWeb(query: string, timeoutMs = 9000) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const results: any[] = [];
-    const blocks = html.split(/<div[^>]*>/i);
-    for (const block of blocks) {
-      const link = block.match(/href="(https?:\/\/[^"]+)"/i)?.[1];
-      const title = block.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300);
-      if (!link || !title) continue;
-      if (/google\./i.test(link) || link.startsWith("/")) continue;
-      results.push({ title, url: link });
+    const matches = html.matchAll(/<li[^>]+class=["']b_algo["'][^>]*>[\\s\\S]*?<h2[^>]*>\\s*<a[^>]+href=["'](https?:\\/\\/[^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>/gi);
+    for (const match of matches) {
+      const link = match[1];
+      const title = match[2].replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\\s+/g, " ").trim();
+      if (!link || !title || /bing\\.com/i.test(link)) continue;
+      results.push({ title: title.slice(0, 300), url: link });
       if (results.length >= 10) break;
     }
     return results;
@@ -54,9 +53,11 @@ Deno.serve(async (req) => {
     const variants = digitsVariants(phone);
     const searches = [
       `"${variants[0]}" scam OR fraud OR spam OR robocall`,
+      `"${variants[1]}" scam OR fraud OR spam OR robocall`,
       `"${variants[0]}" review OR "who called"`,
-      `"${variants[0]}" Reddit scam`,
-      `"${variants[1]}" scam OR fraud OR spam`,
+      `site:who-called.co.uk/Number "${variants[1]}"`,
+      `site:truecaller.com/who-called-me "${variants[1].replace(/^\\+/, "")}"`,
+      `"${variants[1]}" Reddit scam`,
     ];
 
     const settled = await Promise.allSettled(searches.map((q) => searchWeb(q)));
