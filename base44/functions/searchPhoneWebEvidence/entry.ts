@@ -26,12 +26,26 @@ async function searchWeb(query: string, timeoutMs = 9000) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const results: any[] = [];
-    const blocks = html.split(/<li[^>]*class=["']b_algo["'][^>]*>/i).slice(1);
+    const blocks = html.split('<li class="b_algo">').slice(1);
     for (const block of blocks) {
-      const link = block.match(/<h2[^>]*>\\s*<a[^>]+href=["'](https?:\\/\\/[^"']+)["']/i)?.[1];
-      const rawTitle = block.match(/<h2[^>]*>\\s*<a[^>]*>([\\s\\S]*?)<\\/a>/i)?.[1] || "";
-      const title = rawTitle.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\\s+/g, " ").trim();
-      if (!link || !title || /bing\\.com/i.test(link)) continue;
+      const hrefPos = block.indexOf('href="');
+      if (hrefPos < 0) continue;
+      const hrefStart = hrefPos + 6;
+      const hrefEnd = block.indexOf('"', hrefStart);
+      const link = hrefEnd > hrefStart ? block.slice(hrefStart, hrefEnd) : "";
+      const h2Start = block.indexOf("<h2");
+      const anchorStart = h2Start >= 0 ? block.indexOf(">", h2Start) + 1 : -1;
+      const titleEnd = anchorStart > 0 ? block.indexOf("</a>", anchorStart) : -1;
+      const title = titleEnd > anchorStart
+        ? block.slice(anchorStart, titleEnd)
+            .replace(/<[^>]+>/g, " ")
+            .replace(/&amp;/g, "&")
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/\s+/g, " ")
+            .trim()
+        : "";
+      if (!link || !title || link.includes("bing.com")) continue;
       results.push({ title: title.slice(0, 300), url: link });
       if (results.length >= 10) break;
     }
@@ -57,15 +71,17 @@ Deno.serve(async (req) => {
       `"${variants[1]}" scam OR fraud OR spam OR robocall`,
       `"${variants[0]}" review OR "who called"`,
       `site:who-called.co.uk/Number "${variants[1]}"`,
-      `site:truecaller.com/who-called-me "${variants[1].replace(/^\\+/, "")}"`,
+      `site:truecaller.com/who-called-me "${variants[1].replace(/^\+/, "")}"`,
       `"${variants[1]}" Reddit scam`,
     ];
 
     const settled = await Promise.allSettled(searches.map((q) => searchWeb(q)));
     const results = settled.flatMap((r) => r.status === "fulfilled" ? r.value : []);
     const unique = Array.from(new Map(results.map((r) => [r.url, r])).values()).slice(0, 30);
+
     const targetDigits = phone.replace(/\D/g, "");
     const targetWithoutCountry = targetDigits.startsWith("1") ? targetDigits.slice(1) : targetDigits;
+    const targetForms = Array.from(new Set([targetDigits, targetWithoutCountry].filter((v) => v.length >= 7)));
 
     const verified = await Promise.all(unique.map(async (r) => {
       try {
@@ -81,8 +97,7 @@ Deno.serve(async (req) => {
           });
           const html = await page.text();
           const bodyDigits = html.replace(/\D/g, "");
-          const exact = bodyDigits.includes(targetDigits) ||
-            (targetWithoutCountry.length >= 7 && bodyDigits.includes(targetWithoutCountry));
+          const exact = targetForms.some((form) => bodyDigits.includes(form));
           return { ...r, verified_exact_number: exact, verification_status: exact ? "verified" : "not_verified" };
         } finally {
           clearTimeout(timer);
@@ -99,7 +114,7 @@ Deno.serve(async (req) => {
       results: verified,
       result_count: verified.length,
       verified_result_count: verified.filter((r) => r.verified_exact_number).length,
-      note: "Web results are counted as evidence only when the fetched page contains the exact normalized phone number (or its national digits for NANP numbers). Search-result titles alone never establish evidence.",
+      note: "Web results count as evidence only when the fetched page contains an exact normalized form of the phone number. Search-result titles alone never establish evidence.",
     });
   } catch (error: any) {
     return Response.json({ error: error?.message || "Web phone evidence search failed" }, { status: 500 });
