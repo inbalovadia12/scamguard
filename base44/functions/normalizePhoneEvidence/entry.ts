@@ -11,6 +11,7 @@ function arr(value: any): any[] {
   if (Array.isArray(value?.reports)) return value.reports;
   if (Array.isArray(value?.results)) return value.results;
   if (Array.isArray(value?.complaints)) return value.complaints;
+  if (Array.isArray(value?.records)) return value.records;
   return [];
 }
 
@@ -59,21 +60,40 @@ function extractNumbersOnline(data: AnyRecord) {
 }
 
 function extractScamCallCheck(data: AnyRecord) {
-  const reports = arr(data).map((r, i) => normalizeReport(r, "scamcallcheck", i));
+  const reports = arr(data?.community?.reports ?? data?.community_reports ?? data?.reports).map((r, i) => normalizeReport(r, "scamcallcheck", i));
+  const communityCount = first(
+    data?.community?.reportCount,
+    data?.communityReportCount,
+    data?.community_report_count,
+    data?.community_reports?.total,
+    reports.length
+  );
+  const agencyCount = first(
+    data?.publicAgencyComplaints?.count,
+    data?.agencyComplaintCount,
+    data?.agency_complaint_count,
+    data?.complaintCount,
+    data?.complaint_count
+  );
   return {
-    found: data?.found ?? data?.exists ?? reports.length > 0,
-    risk_score: first(data?.riskScore, data?.risk_score, data?.score),
-    complaint_count: first(data?.complaintCount, data?.complaint_count, data?.complaints?.total),
-    community_report_count: first(data?.communityReportCount, data?.community_report_count, data?.community_reports?.total),
-    agency_complaint_count: first(data?.agencyComplaintCount, data?.agency_complaint_count),
-    risk_level: normalizeText(first(data?.riskLevel, data?.risk_level, data?.verdict)),
+    found: data?.found ?? data?.exists ?? Number(communityCount || 0) > 0 || Number(agencyCount || 0) > 0,
+    risk_score: first(data?.risk?.score, data?.riskScore, data?.risk_score, data?.score),
+    complaint_count: agencyCount ?? 0,
+    community_report_count: communityCount ?? 0,
+    agency_complaint_count: agencyCount ?? 0,
+    risk_level: normalizeText(first(data?.risk?.level, data?.riskLevel, data?.risk_level, data?.verdict)),
     reports,
-    canonical_url: normalizeText(first(data?.links?.detail, data?.url, data?.canonical_url)),
+    canonical_url: normalizeText(first(data?.links?.canonical, data?.links?.detail, data?.url, data?.canonical_url)),
   };
 }
 
 function extractUsaCallerLookup(data: AnyRecord) {
-  const reports = arr(data?.community_reports ?? data?.reports).map((r, i) => normalizeReport(r, "usa_caller_lookup", i));
+  const communityReports = Array.isArray(data?.community_reports)
+    ? data.community_reports
+    : Array.isArray(data?.community_reports?.reports)
+      ? data.community_reports.reports
+      : [];
+  const reports = communityReports.map((r: AnyRecord, i: number) => normalizeReport(r, "usa_caller_lookup", i));
   const complaints = arr(data?.complaints?.records ?? data?.complaints).map((r, i) => normalizeReport(r, "usa_caller_lookup_ftc", i));
   return {
     location: data?.location ?? null,
