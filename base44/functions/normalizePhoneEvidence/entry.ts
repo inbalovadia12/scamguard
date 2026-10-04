@@ -168,7 +168,8 @@ Deno.serve(async (req) => {
       date: null,
       url: normalizeText(r.url),
       exact_match_required: true,
-      verified_exact_number: false,
+      verified_exact_number: r.verified_exact_number === true,
+      verification_status: r.verification_status ?? null,
       raw: r,
     })) : [];
 
