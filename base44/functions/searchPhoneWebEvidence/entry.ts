@@ -26,28 +26,34 @@ async function searchWeb(query: string, timeoutMs = 9000) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const results: any[] = [];
-    const blocks = html.split('<li class="b_algo">').slice(1);
-    for (const block of blocks) {
+    let cursor = 0;
+    while (results.length < 10) {
+      const marker = html.indexOf("b_algo", cursor);
+      if (marker < 0) break;
+      const blockEnd = html.indexOf("b_algo", marker + 6);
+      const block = html.slice(marker, blockEnd > marker ? blockEnd : marker + 12000);
       const hrefPos = block.indexOf('href="');
-      if (hrefPos < 0) continue;
-      const hrefStart = hrefPos + 6;
-      const hrefEnd = block.indexOf('"', hrefStart);
-      const link = hrefEnd > hrefStart ? block.slice(hrefStart, hrefEnd) : "";
-      const h2Start = block.indexOf("<h2");
-      const anchorStart = h2Start >= 0 ? block.indexOf(">", h2Start) + 1 : -1;
-      const titleEnd = anchorStart > 0 ? block.indexOf("</a>", anchorStart) : -1;
-      const title = titleEnd > anchorStart
-        ? block.slice(anchorStart, titleEnd)
-            .replace(/<[^>]+>/g, " ")
-            .replace(/&amp;/g, "&")
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'")
-            .replace(/\s+/g, " ")
-            .trim()
-        : "";
-      if (!link || !title || link.includes("bing.com")) continue;
-      results.push({ title: title.slice(0, 300), url: link });
-      if (results.length >= 10) break;
+      if (hrefPos >= 0) {
+        const hrefStart = hrefPos + 6;
+        const hrefEnd = block.indexOf('"', hrefStart);
+        const link = hrefEnd > hrefStart ? block.slice(hrefStart, hrefEnd) : "";
+        const h2Start = block.indexOf("<h2");
+        const anchorStart = h2Start >= 0 ? block.indexOf(">", h2Start) + 1 : -1;
+        const titleEnd = anchorStart > 0 ? block.indexOf("</a>", anchorStart) : -1;
+        const title = titleEnd > anchorStart
+          ? block.slice(anchorStart, titleEnd)
+              .replace(/<[^>]+>/g, " ")
+              .replace(/&amp;/g, "&")
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/\s+/g, " ")
+              .trim()
+          : "";
+        if (link && title && !link.includes("bing.com")) {
+          results.push({ title: title.slice(0, 300), url: link });
+        }
+      }
+      cursor = marker + 6;
     }
     return results;
   } finally {
