@@ -76,7 +76,7 @@ function extractScamCallCheck(data: AnyRecord) {
     data?.complaint_count
   );
   return {
-    found: data?.found ?? data?.exists ?? Number(communityCount || 0) > 0 || Number(agencyCount || 0) > 0,
+    found: data?.found ?? data?.exists ?? (Number(communityCount || 0) > 0 || Number(agencyCount || 0) > 0),
     risk_score: first(data?.risk?.score, data?.riskScore, data?.risk_score, data?.score),
     complaint_count: agencyCount ?? 0,
     community_report_count: communityCount ?? 0,
