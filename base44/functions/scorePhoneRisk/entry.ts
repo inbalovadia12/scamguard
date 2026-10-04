@@ -44,7 +44,7 @@ function scorePhone(evidence: AnyRecord) {
   const complaintCount = num(counts.complaint_count) ?? 0;
   const communityCount = num(counts.community_report_count) ?? 0;
   if (complaintCount > 0) {
-    score += Math.min(20, 5 + Math.log10(complaintCount + 1) * 7);
+    score += Math.min(14, Math.log10(complaintCount + 1) * 5);
     reasons.push(String(complaintCount) + " complaint" + (complaintCount === 1 ? "" : "s") + " returned by an available complaint source.");
   }
   if (communityCount > 0) {
@@ -81,7 +81,9 @@ function scorePhone(evidence: AnyRecord) {
   }
 
   const hasNegativeEvidence =
-    negativeReports > 0 || webNegative > 0 || complaintCount > 0 || communityCount > 0 ||
+    negativeReports > 0 || webNegative > 0 ||
+    (complaintCount >= 3 && !identity.caller_name) ||
+    (communityCount > 0 && !identity.caller_name) ||
     (providerRisk !== null && providerRisk >= 70) ||
     (numbersSpam !== null && (numbersSpam > 1 ? numbersSpam >= 70 : numbersSpam >= 0.7));
 
@@ -90,6 +92,9 @@ function scorePhone(evidence: AnyRecord) {
 
   if (!hasNegativeEvidence && !hasLegitimateEvidence) score = 50;
   if (!hasNegativeEvidence && hasLegitimateEvidence) score = Math.min(score, 25);
+  if (identity.caller_name && negativeReports === 0 && webNegative === 0 && providerRisk !== null && providerRisk < 70) {
+    score = Math.min(score, 25);
+  }
 
   let status: "SCAM" | "SUSPICIOUS" | "SAFE" | "UNKNOWN";
   if (!hasNegativeEvidence && !hasLegitimateEvidence) status = "UNKNOWN";
