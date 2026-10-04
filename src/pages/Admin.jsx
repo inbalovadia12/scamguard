@@ -778,6 +778,7 @@ export default function Admin() {
           <TabsTrigger value="seniors" className="gap-1.5"><Crown className="w-4 h-4" />Seniors</TabsTrigger>
           <TabsTrigger value="broadcasts" className="gap-1.5"><Megaphone className="w-4 h-4" />Broadcasts</TabsTrigger>
           <TabsTrigger value="caller-id" className="gap-1.5"><PhoneCall className="w-4 h-4" />Caller ID</TabsTrigger>
+          <TabsTrigger value="phone-tests" className="gap-1.5"><Activity className="w-4 h-4" />Phone Tests</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4"><OverviewTab /></TabsContent>
@@ -786,6 +787,7 @@ export default function Admin() {
         <TabsContent value="seniors" className="mt-4"><SeniorsTab /></TabsContent>
         <TabsContent value="broadcasts" className="mt-4"><BroadcastsTab /></TabsContent>
         <TabsContent value="caller-id" className="mt-4"><CallerIdTab /></TabsContent>
+        <TabsContent value="phone-tests" className="mt-4"><PhoneBatchTab /></TabsContent>
       </Tabs>
     </div>
   );
