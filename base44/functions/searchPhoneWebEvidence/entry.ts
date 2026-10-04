@@ -49,7 +49,7 @@ async function searchWeb(query: string, timeoutMs = 9000) {
               .replace(/\s+/g, " ")
               .trim()
           : "";
-        if (link && title && !link.includes("bing.com")) {
+        if (link && title) {
           results.push({ title: title.slice(0, 300), url: link });
         }
       }
