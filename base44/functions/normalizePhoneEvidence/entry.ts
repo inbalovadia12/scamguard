@@ -49,11 +49,18 @@ function normalizeReport(report: AnyRecord, source: string, index: number) {
 function extractNumbersOnline(data: AnyRecord) {
   return {
     valid: first(data.valid, data.is_valid, data.phone?.valid),
-    country: normalizeText(first(data.country, data.country_name, data.countryName)),
-    country_code: normalizeText(first(data.country_code, data.countryCode)),
-    carrier: normalizeText(first(data.carrier, data.carrier_name, data.network)),
+    country: normalizeText(first(data.country, data.country_name, data.countryName, data.country?.name, data.country?.code)),
+    country_code: normalizeText(first(data.country_code, data.countryCode, data.country?.code)),
+    
+    carrier: normalizeText(first(data.carrier, data.carrier_name, data.network, data.range_carrier, data.rangeCarrier)),
     line_type: normalizeText(first(data.line_type, data.lineType, data.type)),
-    caller_name: normalizeText(first(data.cnam, data.caller_name, data.callerName, data.name)),
+    caller_name: normalizeText(first(
+      typeof data.cnam === "string" ? data.cnam : null,
+      data.cnam?.name, data.cnam?.display_name, data.cnam?.displayName, data.cnam?.value,
+      data.caller_name, data.callerName, data.name,
+      data.caller?.name, data.identity?.name, data.display_name, data.displayName
+    )),
+
     spam_signal: first(data.spam, data.spam_score, data.spamScore, data.risk_score, data.riskScore),
     source_risk_level: normalizeText(first(data.risk_level, data.riskLevel)),
   };
