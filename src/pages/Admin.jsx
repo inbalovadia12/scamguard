@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Lock, Loader2, MessageSquare, Users, ShieldCheck, Star, Trash2,
   Mail, AlertTriangle, CheckCircle2, Crown, TrendingUp, Activity, Megaphone,
-  Download, PhoneCall, Zap,
+  Download, PhoneCall, Zap, Play, XCircle, RefreshCw, X,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -473,6 +473,178 @@ function OverviewTab() {
       <StatCard icon={Users} label="Total Users" value={stats.users} color="bg-chart-5/10 text-chart-5" />
       <StatCard icon={Crown} label="Protected Seniors" value={stats.seniors} color="bg-success/10 text-success" />
       <StatCard icon={Activity} label="Active Users" value={stats.users} color="bg-chart-2/10 text-chart-2" />
+    </div>
+  );
+}
+
+const PHONE_REGRESSION_NUMBERS = [
+  { phone: "+1 800 692 7753", label: "Known legitimate / Apple", expectation: "legitimate" },
+  { phone: "+44 800 048 0408", label: "Known legitimate / Embargo Lifestyle", expectation: "legitimate" },
+  { phone: "+1 800 642 7676", label: "Known legitimate / Microsoft", expectation: "legitimate" },
+  { phone: "+44 800 026 0329", label: "Known legitimate / Microsoft", expectation: "legitimate" },
+  { phone: "+1 800 442 4000", label: "Known legitimate / Beats by Apple", expectation: "legitimate" },
+  { phone: "+44 1256306995", label: "Known scam regression", expectation: "scam" },
+  { phone: "+44 7700178674", label: "Known scam regression", expectation: "scam" },
+  { phone: "+81 120435500", label: "Unknown / Japan", expectation: "unknown" },
+  { phone: "+61 1300365083", label: "Unknown / Australia", expectation: "unknown" },
+  { phone: "+971 80004441849", label: "Unknown / UAE", expectation: "unknown" },
+];
+
+function PhoneBatchTab() {
+  const [cases, setCases] = useState(PHONE_REGRESSION_NUMBERS);
+  const [running, setRunning] = useState(false);
+  const [results, setResults] = useState(null);
+  const [error, setError] = useState("");
+
+  const updateCase = (index, field, value) => {
+    setCases((prev) => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+  };
+
+  const addCase = () => {
+    if (cases.length >= 25) return;
+    setCases((prev) => [...prev, { phone: "", label: "Custom", expectation: "unknown" }]);
+  };
+
+  const removeCase = (index) => {
+    setCases((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const runBatch = async () => {
+    const valid = cases.filter((item) => item.phone.trim());
+    if (!valid.length) {
+      setError("Add at least one phone number.");
+      return;
+    }
+    setRunning(true);
+    setError("");
+    setResults(null);
+    try {
+      const response = await base44.functions.invoke("adminPhoneBatchTest", { numbers: valid });
+      const data = response?.data || response;
+      if (data?.error) throw new Error(data.error);
+      setResults(data);
+    } catch (e) {
+      setError(e.message || "Batch test failed.");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const passed = results?.passed || 0;
+  const failed = results?.failed || 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-card rounded-2xl border border-border/50 p-5 sm:p-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <PhoneCall className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold font-heading">Phone Scanner Regression</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Runs the same source lookup → web evidence → normalization → deterministic risk engine used by the phone scanner. It does not consume user AI credits.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={runBatch} disabled={running} className="gap-2">
+            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            {running ? "Running scanner..." : "Run Phone Regression"}
+          </Button>
+          <Button variant="outline" onClick={() => setCases(PHONE_REGRESSION_NUMBERS)} disabled={running} className="gap-2">
+            <RefreshCw className="w-4 h-4" /> Reset regression set
+          </Button>
+          <Button variant="outline" onClick={addCase} disabled={running || cases.length >= 25}>
+            Add number
+          </Button>
+        </div>
+
+        <div className="rounded-xl border border-border/50 overflow-hidden">
+          <div className="grid grid-cols-[minmax(150px,1.4fr)_minmax(110px,1fr)_100px_36px] gap-2 p-3 bg-muted/30 text-xs font-semibold text-muted-foreground">
+            <span>Phone</span><span>Label</span><span>Expected</span><span />
+          </div>
+          <div className="divide-y divide-border/40">
+            {cases.map((item, index) => (
+              <div key={index} className="grid grid-cols-[minmax(150px,1.4fr)_minmax(110px,1fr)_100px_36px] gap-2 p-3 items-center">
+                <Input value={item.phone} onChange={(e) => updateCase(index, "phone", e.target.value)} disabled={running} className="h-9 text-sm font-mono" />
+                <Input value={item.label} onChange={(e) => updateCase(index, "label", e.target.value)} disabled={running} className="h-9 text-sm" />
+                <select value={item.expectation} onChange={(e) => updateCase(index, "expectation", e.target.value)} disabled={running} className="h-9 rounded-md border border-input bg-background px-2 text-xs">
+                  <option value="legitimate">Legitimate</option>
+                  <option value="scam">Scam</option>
+                  <option value="unknown">Unknown</option>
+                </select>
+                <Button size="icon" variant="ghost" onClick={() => removeCase(index)} disabled={running || cases.length <= 1} className="h-9 w-9 text-muted-foreground hover:text-destructive">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {error && <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</div>}
+      </div>
+
+      {results && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatCard icon={Activity} label="Numbers Tested" value={results.count} color="bg-primary/10 text-primary" />
+            <StatCard icon={CheckCircle2} label="Passed" value={passed} color="bg-success/10 text-success" />
+            <StatCard icon={XCircle} label="Failed" value={failed} color="bg-destructive/10 text-destructive" />
+            <StatCard icon={Zap} label="Pass Rate" value={results.count ? Math.round((passed / results.count) * 100) + "%" : "0%"} color="bg-chart-5/10 text-chart-5" />
+          </div>
+
+          <div className="space-y-2">
+            {results.results?.map((item, index) => {
+              const r = item.result;
+              return (
+                <div key={index} className={`bg-card rounded-2xl border p-4 ${item.pass ? "border-success/30" : "border-destructive/30"}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {item.pass ? <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" /> : <XCircle className="w-4 h-4 text-destructive flex-shrink-0" />}
+                        <span className="font-mono text-sm font-semibold">{item.phone}</span>
+                        <Badge variant="secondary" className="text-xs">{item.expectation}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{item.label}</p>
+                    </div>
+                    {r && (
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-lg font-bold">{r.reputation_score}/100</div>
+                        <div className="text-xs text-muted-foreground">{r.caller_id_status} · {r.confidence_score}% confidence</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {r && (
+                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                      <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Business</span><p className="font-medium mt-0.5 truncate">{r.business_name || "None"}</p></div>
+                      <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Country</span><p className="font-medium mt-0.5">{r.country || "Unknown"}</p></div>
+                      <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Carrier</span><p className="font-medium mt-0.5 truncate">{r.carrier || "Unknown"}</p></div>
+                      <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Evidence</span><p className="font-medium mt-0.5">{r.report_count || 0} exact · {item.evidence?.verified_web_result_count || 0} web</p></div>
+                    </div>
+                  )}
+
+                  {item.error && <p className="mt-3 text-sm text-destructive">{item.error}</p>}
+                  {item.checks?.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {item.checks.map((check, i) => (
+                        <span key={i} className={`text-[11px] px-2 py-1 rounded-full ${check.pass ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                          {check.pass ? "✓" : "✕"} {check.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {item.evidence?.provider_errors?.length > 0 && (
+                    <p className="mt-2 text-xs text-warning">Provider issues: {item.evidence.provider_errors.map((e) => e.source).join(", ")}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
