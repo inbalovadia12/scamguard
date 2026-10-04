@@ -76,6 +76,7 @@ Deno.serve(async (req) => {
       `"${variants[0]}" scam OR fraud OR spam OR robocall`,
       `"${variants[1]}" scam OR fraud OR spam OR robocall`,
       `"${variants[0]}" review OR "who called"`,
+      `"${variants[0]}" "customer service" OR business OR company`,
       `site:who-called.co.uk/Number "${variants[1]}"`,
       `site:truecaller.com/who-called-me "${variants[1].replace(/^\+/, "")}"`,
       `"${variants[1]}" Reddit scam`,
