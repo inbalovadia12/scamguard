@@ -26,10 +26,11 @@ async function searchWeb(query: string, timeoutMs = 9000) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const results: any[] = [];
-    const matches = html.matchAll(/<li[^>]+class=["']b_algo["'][^>]*>[\\s\\S]*?<h2[^>]*>\\s*<a[^>]+href=["'](https?:\\/\\/[^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>/gi);
-    for (const match of matches) {
-      const link = match[1];
-      const title = match[2].replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\\s+/g, " ").trim();
+    const blocks = html.split(/<li[^>]*class=["']b_algo["'][^>]*>/i).slice(1);
+    for (const block of blocks) {
+      const link = block.match(/<h2[^>]*>\\s*<a[^>]+href=["'](https?:\\/\\/[^"']+)["']/i)?.[1];
+      const rawTitle = block.match(/<h2[^>]*>\\s*<a[^>]*>([\\s\\S]*?)<\\/a>/i)?.[1] || "";
+      const title = rawTitle.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\\s+/g, " ").trim();
       if (!link || !title || /bing\\.com/i.test(link)) continue;
       results.push({ title: title.slice(0, 300), url: link });
       if (results.length >= 10) break;
