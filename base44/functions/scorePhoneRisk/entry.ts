@@ -80,6 +80,7 @@ function scorePhone(evidence: AnyRecord) {
     legitimacy.push(String(positiveReports) + " report" + (positiveReports === 1 ? "" : "s") + " contain legitimate/official context.");
   }
 
+  const verifiedBusiness = Boolean(identity.verified_business);
   const hasNegativeEvidence =
     negativeReports > 0 || webNegative > 0 ||
     (complaintCount >= 3 && !identity.caller_name) ||
@@ -87,13 +88,14 @@ function scorePhone(evidence: AnyRecord) {
     (providerRisk !== null && providerRisk >= 70) ||
     (numbersSpam !== null && (numbersSpam > 1 ? numbersSpam >= 70 : numbersSpam >= 0.7));
 
-  const hasLegitimateEvidence = Boolean(identity.caller_name) || positiveReports > 0 ||
+  const hasLegitimateEvidence = verifiedBusiness || Boolean(identity.caller_name) || positiveReports > 0 ||
     Boolean(signals.scamcallcheck_risk_level && /safe|legitimate|verified/i.test(String(signals.scamcallcheck_risk_level)));
 
   if (!hasNegativeEvidence && !hasLegitimateEvidence) score = 50;
-  if (!hasNegativeEvidence && hasLegitimateEvidence) score = Math.min(score, 25);
+  if (!hasNegativeEvidence && verifiedBusiness) score = Math.min(score, 15);
+  else if (!hasNegativeEvidence && hasLegitimateEvidence) score = Math.min(score, 25);
   if (identity.caller_name && negativeReports === 0 && webNegative === 0 && providerRisk !== null && providerRisk < 70) {
-    score = Math.min(score, 25);
+    score = Math.min(score, verifiedBusiness ? 15 : 25);
   }
 
   let status: "SCAM" | "SUSPICIOUS" | "SAFE" | "UNKNOWN";
@@ -106,7 +108,14 @@ function scorePhone(evidence: AnyRecord) {
   const evidenceCount = Number(counts.exact_evidence_count || 0);
   const providerSuccesses = Object.values(evidence?.source_status || {}).filter((v) => v === "ok").length;
   const providerErrors = Array.isArray(evidence?.provider_errors) ? evidence.provider_errors.length : 0;
-  const confidence = clamp(35 + Math.min(35, evidenceCount * 7) + Math.min(20, providerSuccesses * 7) - Math.min(20, providerErrors * 5) + (verifiedWeb.length > 0 ? 8 : 0));
+  const confidence = clamp(
+    35 +
+    Math.min(35, evidenceCount * 7) +
+    Math.min(20, providerSuccesses * 7) -
+    Math.min(20, providerErrors * 5) +
+    (verifiedWeb.length > 0 ? 8 : 0) +
+    (verifiedBusiness ? 15 : 0)
+  );
 
   const categories = uniqueStrings(
     reports.map((r: AnyRecord) => [r.category, r.raw?.category, r.raw?.scam_type, r.raw?.type]).flat()
@@ -118,9 +127,10 @@ function scorePhone(evidence: AnyRecord) {
     risk_level: riskLevel,
     caller_id_status: status,
     confidence_score: confidence,
-    verified_business: Boolean(identity.caller_name),
+    verified_business: Boolean(identity.verified_business),
     business_name: identity.caller_name || null,
     business_name_source: identity.caller_name_source || null,
+    business_verification_url: identity.business_verification_url || null,
     country: identity.country || null,
     carrier: identity.carrier || null,
     line_type: identity.line_type || null,
