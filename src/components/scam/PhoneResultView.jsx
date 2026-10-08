@@ -28,6 +28,8 @@ export default function PhoneResultView({ data }) {
   const status = STATUS_META[effectiveStatus] || STATUS_META.UNKNOWN;
   const totalReports = data.report_count || (data.user_reports?.length || 0);
   const hasReportCounts = (data.scam_report_count || 0) + (data.spam_report_count || 0) + (data.suspicious_report_count || 0) + (data.safe_report_count || 0) > 0;
+  const businessName = data.business_name || null;
+  const verifiedBusiness = data.verified_business === true;
 
   return (
     <div className="space-y-5">
@@ -65,15 +67,19 @@ export default function PhoneResultView({ data }) {
         </div>
       </div>
 
-      {/* Business match */}
-      {(data.verified_business || data.business_name) && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success/30">
-          <BadgeCheck className="w-4 h-4 text-success flex-shrink-0" />
+      {/* Business / caller identity */}
+      {businessName && (
+        <div className={`flex items-center gap-2 p-3 rounded-xl border ${verifiedBusiness ? "bg-success/10 border-success/30" : "bg-muted/30 border-border/50"}`}>
+          <BadgeCheck className={`w-4 h-4 flex-shrink-0 ${verifiedBusiness ? "text-success" : "text-muted-foreground"}`} />
           <div>
-            <p className="text-sm font-semibold text-success">
-              Business Match{data.business_name ? ": " : ""}{data.business_name || "Verified business"}
+            <p className={`text-sm font-semibold ${verifiedBusiness ? "text-success" : ""}`}>
+              {verifiedBusiness ? "Business Match: " : "Caller ID Name: "}{businessName}
             </p>
-            <p className="text-xs text-muted-foreground">This number matches a business record in the available data. This does not guarantee the caller is legitimate.</p>
+            <p className="text-xs text-muted-foreground">
+              {verifiedBusiness
+                ? "The exact number was found on a web page whose domain matches the returned business identity. This still does not guarantee the caller is legitimate."
+                : "A caller-name provider returned this identity, but Vardin could not independently verify the exact number on an official business website."}
+            </p>
           </div>
         </div>
       )}
