@@ -478,16 +478,16 @@ function OverviewTab() {
 }
 
 const PHONE_REGRESSION_NUMBERS = [
-  { phone: "+1 800 692 7753", label: "Known legitimate / Apple", expectation: "legitimate" },
-  { phone: "+44 800 048 0408", label: "Known legitimate / Embargo Lifestyle", expectation: "legitimate" },
-  { phone: "+1 800 642 7676", label: "Known legitimate / Microsoft", expectation: "legitimate" },
-  { phone: "+44 800 026 0329", label: "Known legitimate / Microsoft", expectation: "legitimate" },
-  { phone: "+1 800 442 4000", label: "Known legitimate / Beats by Apple", expectation: "legitimate" },
-  { phone: "+44 1256306995", label: "Known scam regression", expectation: "scam" },
-  { phone: "+44 7700178674", label: "Known scam regression", expectation: "scam" },
-  { phone: "+81 120435500", label: "Unknown / Japan", expectation: "unknown" },
-  { phone: "+61 1300365083", label: "Unknown / Australia", expectation: "unknown" },
-  { phone: "+971 80004441849", label: "Unknown / UAE", expectation: "unknown" },
+  { phone: "+1 800 692 7753", label: "Known legitimate / Apple", expectation: "legitimate", expected_business: "Apple", expected_country: "US" },
+  { phone: "+44 800 048 0408", label: "Known legitimate / Embargo Lifestyle", expectation: "legitimate", expected_business: "Embargo", expected_country: "GB" },
+  { phone: "+1 800 642 7676", label: "Known legitimate / Microsoft", expectation: "legitimate", expected_business: "Microsoft", expected_country: "US" },
+  { phone: "+44 800 026 0329", label: "Known legitimate / Microsoft", expectation: "legitimate", expected_business: "Microsoft", expected_country: "GB" },
+  { phone: "+1 800 442 4000", label: "Known legitimate / Beats by Apple", expectation: "legitimate", expected_business: "Beats", expected_country: "US" },
+  { phone: "+44 1256306995", label: "Known scam regression", expectation: "scam", expected_country: "GB" },
+  { phone: "+44 7700178674", label: "Known scam regression", expectation: "scam", expected_country: "GB" },
+  { phone: "+81 120435500", label: "Unknown / Japan", expectation: "unknown", expected_country: "JP" },
+  { phone: "+61 1300365083", label: "Unknown / Australia", expectation: "unknown", expected_country: "AU" },
+  { phone: "+971 80004441849", label: "Unknown / UAE", expectation: "unknown", expected_country: "AE" },
 ];
 
 function PhoneBatchTab() {
@@ -619,10 +619,14 @@ function PhoneBatchTab() {
 
                   {r && (
                     <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                      <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Business</span><p className="font-medium mt-0.5 truncate">{r.business_name || "None"}</p></div>
+                      <div className="rounded-lg bg-muted/30 p-2">
+                        <span className="text-muted-foreground">Business</span>
+                        <p className="font-medium mt-0.5 truncate">{r.business_name || "None"}</p>
+                        {r.verified_business && <span className="text-[10px] text-success">official match verified</span>}
+                      </div>
                       <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Country</span><p className="font-medium mt-0.5">{r.country || "Unknown"}</p></div>
                       <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Carrier</span><p className="font-medium mt-0.5 truncate">{r.carrier || "Unknown"}</p></div>
-                      <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Evidence</span><p className="font-medium mt-0.5">{r.report_count || 0} exact · {item.evidence?.verified_web_result_count || 0} web</p></div>
+                      <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Evidence</span><p className="font-medium mt-0.5">{r.report_count || 0} exact · {item.evidence?.verified_web_result_count || 0} web · {item.evidence?.reddit_db_report_count || 0} Reddit DB</p></div>
                     </div>
                   )}
 
