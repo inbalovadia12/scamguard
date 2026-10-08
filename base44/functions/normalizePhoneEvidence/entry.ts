@@ -155,26 +155,70 @@ function normalizeBusinessKey(value: any): string {
     .trim();
 }
 
+function registeredDomain(hostname: string) {
+  const parts = String(hostname || "").toLowerCase().replace(/^www\./i, "").split(".");
+  if (parts.length < 2) return parts[0] || "";
+  const secondLast = parts[parts.length - 2];
+  const thirdLast = parts[parts.length - 3];
+  if (["co", "com", "net", "org", "gov", "ac"].includes(secondLast) && thirdLast) {
+    return thirdLast;
+  }
+  return secondLast;
+}
+
+const GENERIC_WEB_HOSTS = new Set([
+  "who-called", "truecaller", "scamcallcheck", "phonely", "everycaller",
+  "connection-technologies", "who-calls", "cleverdialer", "tellows",
+  "180", "reddit", "quora", "facebook", "bing", "duckduckgo",
+]);
+
+function candidateFromWebResult(result: AnyRecord) {
+  if (result?.verified_exact_number !== true || !result?.url) return null;
+  try {
+    const url = new URL(result.url);
+    const host = url.hostname.toLowerCase();
+    const domain = registeredDomain(host);
+    if (!domain || GENERIC_WEB_HOSTS.has(domain)) return null;
+    const text = normalizeBusinessKey([result.title, result.snippet].filter(Boolean).join(" "));
+    const domainKey = normalizeBusinessKey(domain);
+    const titleSupportsDomain = text.includes(domainKey) || domainKey.includes(text.split(" ").find((word) => word.length >= 5) || "__none__");
+    if (!titleSupportsDomain) return null;
+    const businessName = domain.length <= 4
+      ? domain.toUpperCase()
+      : domain.charAt(0).toUpperCase() + domain.slice(1);
+    return { businessName, url: result.url, host };
+  } catch {}
+  return null;
+}
+
 function officialBusinessMatch(callerName: string | null, webResults: AnyRecord[]) {
-  if (!callerName) return { verified: false, url: null, host: null };
-  const words = normalizeBusinessKey(callerName)
-    .split(/\s+/)
-    .filter((word) => word.length >= 4)
-    .filter((word) => !/^(inc|corp|llc|ltd|limited|company|co|the|group|services|service)$/i.test(word));
+  const words = callerName
+    ? normalizeBusinessKey(callerName)
+        .split(/\s+/)
+        .filter((word) => word.length >= 4)
+        .filter((word) => !/^(inc|corp|llc|ltd|limited|company|co|the|group|services|service)$/i.test(word))
+    : [];
 
-  if (!words.length) return { verified: false, url: null, host: null };
-
-  for (const result of webResults) {
-    if (result?.verified_exact_number !== true || !result?.url) continue;
-    try {
-      const host = new URL(result.url).hostname.replace(/^www\./i, "").toLowerCase();
-      const hostKey = normalizeBusinessKey(host);
-      const matchedWord = words.find((word) => hostKey.includes(word));
-      if (matchedWord) return { verified: true, url: result.url, host };
-    } catch {}
+  if (words.length) {
+    for (const result of webResults) {
+      if (result?.verified_exact_number !== true || !result?.url) continue;
+      try {
+        const host = new URL(result.url).hostname.replace(/^www\./i, "").toLowerCase();
+        const hostKey = normalizeBusinessKey(host);
+        const matchedWord = words.find((word) => hostKey.includes(word));
+        if (matchedWord) return { verified: true, business_name: callerName, url: result.url, host, source: "provider_and_web" };
+      } catch {}
+    }
   }
 
-  return { verified: false, url: null, host: null };
+  for (const result of webResults) {
+    const candidate = candidateFromWebResult(result);
+    if (candidate) {
+      return { verified: true, business_name: candidate.businessName, url: candidate.url, host: candidate.host, source: "official_web" };
+    }
+  }
+
+  return { verified: false, business_name: callerName || null, url: null, host: null, source: null };
 }
 
 function extractScamCallCheck(data: AnyRecord) {
@@ -275,11 +319,14 @@ Deno.serve(async (req) => {
       source: "web_search",
       id: `web-${i + 1}`,
       category: null,
-      text: normalizeText(r.title),
+      text: normalizeText([r.title, r.snippet].filter(Boolean).join(" — ")),
+      title: normalizeText(r.title),
+      snippet: normalizeText(r.snippet),
       date: null,
       url: normalizeText(r.url),
       exact_match_required: true,
       verified_exact_number: r.verified_exact_number === true,
+      verification_method: r.verification_method ?? null,
       verification_status: r.verification_status ?? null,
       raw: r,
     })) : [];
@@ -335,6 +382,7 @@ Deno.serve(async (req) => {
     ].filter((value, index, list) => Boolean(value) && list.indexOf(value) === index);
 
     const businessMatch = officialBusinessMatch(businessCandidates[0] ?? null, webResults);
+    const resolvedBusinessName = businessMatch.business_name || businessCandidates[0] || null;
 
     const providerErrors = Array.isArray(phoneSources.source_errors)
       ? phoneSources.source_errors
@@ -354,10 +402,11 @@ Deno.serve(async (req) => {
         country_code: numbersOnline?.country_code ?? null,
         carrier: numbersOnline?.carrier ?? usaCallerLookup?.carrier ?? null,
         line_type: numbersOnline?.line_type ?? null,
-        caller_name: businessCandidates[0] ?? null,
-        caller_name_source: businessCandidates[0]
-          ? (numbersOnline?.caller_name === businessCandidates[0] ? "numbers_online" : "usa_caller_lookup")
-          : null,
+        caller_name: resolvedBusinessName,
+        caller_name_source: businessMatch.source
+          || (businessCandidates[0]
+            ? (numbersOnline?.caller_name === businessCandidates[0] ? "numbers_online" : "usa_caller_lookup")
+            : null),
         verified_business: businessMatch.verified,
         business_verification_url: businessMatch.url,
         business_verification_host: businessMatch.host,
@@ -379,12 +428,15 @@ Deno.serve(async (req) => {
         exact_evidence_count: exactEvidenceCount,
         web_result_count: webResults.length,
         verified_web_result_count: webResults.filter((r) => r.verified_exact_number).length,
+        page_verified_web_result_count: webResults.filter((r) => r.verified_exact_number && r.verification_method === "page").length,
       },
       reports,
       web_search: {
         searched: Boolean(web?.results),
         result_count: webResults.length,
         verified_result_count: webResults.filter((r) => r.verified_exact_number).length,
+        page_verified_result_count: webResults.filter((r) => r.verified_exact_number && r.verification_method === "page").length,
+        search_result_verified_count: webResults.filter((r) => r.verified_exact_number && r.verification_method === "search_result").length,
         results_require_exact_number_verification: true,
         queries: Array.isArray(web?.searches) ? web.searches : [],
       },
