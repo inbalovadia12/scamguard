@@ -2,15 +2,15 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 
 const REGRESSION_CASES = [
   { phone: "+1 800 692 7753", label: "Known legitimate / Apple", expectation: "legitimate", expected_business: "Apple", expected_country: "US" },
-  { phone: "+44 800 048 0408", label: "Known legitimate / Embargo Lifestyle", expectation: "legitimate", expected_business: "Embargo", expected_country: "GB" },
+  { phone: "+44 800 048 0408", label: "Known legitimate / Apple UK", expectation: "legitimate", expected_business: "Apple", expected_country: "GB" },
   { phone: "+1 800 642 7676", label: "Known legitimate / Microsoft", expectation: "legitimate", expected_business: "Microsoft", expected_country: "US" },
   { phone: "+44 800 026 0329", label: "Known legitimate / Microsoft", expectation: "legitimate", expected_business: "Microsoft", expected_country: "GB" },
-  { phone: "+1 800 442 4000", label: "Known legitimate / Beats by Apple", expectation: "legitimate", expected_business: "Beats", expected_country: "US" },
-  { phone: "+44 1256306995", label: "Known scam regression", expectation: "scam", expected_country: "GB" },
-  { phone: "+44 7700178674", label: "Known scam regression", expectation: "scam", expected_country: "GB" },
-  { phone: "+81 120435500", label: "Unknown / Japan", expectation: "unknown", expected_country: "JP" },
-  { phone: "+61 1300365083", label: "Unknown / Australia", expectation: "unknown", expected_country: "AU" },
-  { phone: "+971 80004441849", label: "Unknown / UAE", expectation: "unknown", expected_country: "AE" },
+  { phone: "+1 800 442 4000", label: "Known legitimate / Beats", expectation: "legitimate", expected_business: "Beats", expected_country: "US" },
+  { phone: "+44 1256306995", label: "Known scam / debt collection reports", expectation: "scam", expected_country: "GB" },
+  { phone: "+44 7700178674", label: "Known scam / phone contract reports", expectation: "scam", expected_country: "GB" },
+  { phone: "+81 120435500", label: "Known legitimate / Beats Japan", expectation: "legitimate", expected_business: "Beats", expected_country: "JP" },
+  { phone: "+61 1300365083", label: "Known legitimate / Apple Australia", expectation: "legitimate", expected_business: "Apple", expected_country: "AU" },
+  { phone: "+971 80004441849", label: "Known legitimate / Beats UAE", expectation: "legitimate", expected_business: "Beats", expected_country: "AE" },
 ];
 
 function checkResult(result: any, expectation: string) {
