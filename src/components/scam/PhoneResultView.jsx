@@ -20,9 +20,10 @@ export default function PhoneResultView({ data }) {
   // The backend is the single source of truth for the numeric phone-risk score.
   // Never recalculate it here from community/Reddit evidence, because doing so
   // can produce a second score that disagrees with the result returned by lookup.
-  const score = Math.max(0, Math.min(100, Number(data.reputation_score) || 0));
-  const scoreColor = score >= 71 ? "text-destructive" : score >= 31 ? "text-warning" : "text-success";
-  const barColor = score >= 71 ? "bg-destructive" : score >= 31 ? "bg-warning" : "bg-success";
+  const rawScore = Number(data.reputation_score);
+  const score = Number.isFinite(rawScore) ? Math.max(0, Math.min(100, rawScore)) : null;
+  const scoreColor = score === null ? "text-muted-foreground" : score >= 71 ? "text-destructive" : score >= 31 ? "text-warning" : "text-success";
+  const barColor = score === null ? "bg-muted" : score >= 71 ? "bg-destructive" : score >= 31 ? "bg-warning" : "bg-success";
   const effectiveStatus = data.caller_id_status || (data.risk_level === "high" ? "SCAM" : data.risk_level === "medium" ? "SUSPICIOUS" : "UNKNOWN");
   const status = STATUS_META[effectiveStatus] || STATUS_META.UNKNOWN;
   const totalReports = data.report_count || (data.user_reports?.length || 0);
