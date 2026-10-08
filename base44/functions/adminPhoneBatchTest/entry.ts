@@ -71,17 +71,28 @@ Deno.serve(async (req) => {
       .filter((item: any) => item?.phone)
       .slice(0, 25);
 
-    const results: any[] = [];
-    for (const testCase of cases) {
+    const results: any[] = new Array(cases.length);
+    let nextIndex = 0;
+    const workerCount = Math.min(3, cases.length);
+
+    const runCase = async (testCase: any, resultIndex: number) => {
       const started = Date.now();
       try {
-        const sourceResponse = await base44.functions.invoke("lookupPhoneSources", { phone_number: String(testCase.phone) });
+        const sourceResponse = await base44.functions.invoke("lookupPhoneSources", {
+          phone_number: String(testCase.phone),
+        });
         const phoneSources = sourceResponse?.data || sourceResponse;
-        if (!phoneSources || phoneSources.error) throw new Error(phoneSources?.error || "Source lookup failed");
+        if (!phoneSources || phoneSources.error) {
+          throw new Error(phoneSources?.error || "Source lookup failed");
+        }
 
-        const webResponse = await base44.functions.invoke("searchPhoneWebEvidence", { phone: String(testCase.phone) });
+        const webResponse = await base44.functions.invoke("searchPhoneWebEvidence", {
+          phone: String(testCase.phone),
+        });
         const webEvidence = webResponse?.data || webResponse;
-        if (!webEvidence || webEvidence.error) throw new Error(webEvidence?.error || "Web evidence search failed");
+        if (!webEvidence || webEvidence.error) {
+          throw new Error(webEvidence?.error || "Web evidence search failed");
+        }
 
         const evidenceResponse = await base44.functions.invoke("normalizePhoneEvidence", {
           phone_sources: phoneSources,
@@ -89,46 +100,57 @@ Deno.serve(async (req) => {
           phone: String(testCase.phone),
         });
         const evidence = evidenceResponse?.data || evidenceResponse;
-        if (!evidence || evidence.error) throw new Error(evidence?.error || "Evidence normalization failed");
+        if (!evidence || evidence.error) {
+          throw new Error(evidence?.error || "Evidence normalization failed");
+        }
 
         const riskResponse = await base44.functions.invoke("scorePhoneRisk", {
           phone: String(testCase.phone),
           phone_evidence: evidence,
         });
         const risk = riskResponse?.data?.result || riskResponse?.result;
-        if (!risk) throw new Error(riskResponse?.data?.error || riskResponse?.error || "Risk scoring failed");
+        if (!risk) {
+          throw new Error(riskResponse?.data?.error || riskResponse?.error || "Risk scoring failed");
+        }
 
         const validation = checkResult(risk, testCase.expectation || "unknown");
 
-      if (testCase.expected_business) {
-        const actualBusiness = String(risk?.business_name || "").toLowerCase();
-        const expectedBusiness = String(testCase.expected_business).toLowerCase();
-        validation.checks.push({
-          name: "expected_business_match",
-          pass: actualBusiness.includes(expectedBusiness) || String(risk?.business_verification_url || "").toLowerCase().includes(expectedBusiness),
-          detail: `${risk?.business_name || "None"}`,
-        });
-      }
+        if (testCase.expected_business) {
+          const actualBusiness = String(risk?.business_name || "").toLowerCase();
+          const expectedBusiness = String(testCase.expected_business).toLowerCase();
+          validation.checks.push({
+            name: "expected_business_match",
+            pass:
+              actualBusiness.includes(expectedBusiness) ||
+              String(risk?.business_verification_url || "").toLowerCase().includes(expectedBusiness),
+            detail: `${risk?.business_name || "None"}`,
+          });
+        }
 
-      if (testCase.expected_country) {
-        const actualCountry = String(risk?.country || "").toLowerCase();
-        const aliases: Record<string, string[]> = {
-          us: ["us", "usa", "united states", "america"],
-          gb: ["gb", "uk", "united kingdom", "great britain"],
-          jp: ["jp", "japan"],
-          au: ["au", "australia"],
-          ae: ["ae", "uae", "united arab emirates"],
-        };
-        const expectedAliases = aliases[String(testCase.expected_country).toLowerCase()] || [String(testCase.expected_country).toLowerCase()];
-        validation.checks.push({
-          name: "expected_country_match",
-          pass: expectedAliases.some((alias) => actualCountry === alias || actualCountry.includes(alias)),
-          detail: `${risk?.country || "Unknown"}`,
-        });
-      }
+        if (testCase.expected_country) {
+          const actualCountry = String(risk?.country || "").toLowerCase();
+          const aliases: Record<string, string[]> = {
+            us: ["us", "usa", "united states", "america"],
+            gb: ["gb", "uk", "united kingdom", "great britain"],
+            jp: ["jp", "japan"],
+            au: ["au", "australia"],
+            ae: ["ae", "uae", "united arab emirates"],
+          };
+          const expectedAliases =
+            aliases[String(testCase.expected_country).toLowerCase()] ||
+            [String(testCase.expected_country).toLowerCase()];
+          validation.checks.push({
+            name: "expected_country_match",
+            pass: expectedAliases.some(
+              (alias) => actualCountry === alias || actualCountry.includes(alias)
+            ),
+            detail: `${risk?.country || "Unknown"}`,
+          });
+        }
 
-      validation.pass = validation.checks.every((c) => c.pass);
-        results.push({
+        validation.pass = validation.checks.every((c) => c.pass);
+
+        results[resultIndex] = {
           phone: testCase.phone,
           label: testCase.label || "Custom",
           expectation: testCase.expectation || "unknown",
@@ -146,9 +168,9 @@ Deno.serve(async (req) => {
             reddit_db_report_count: evidence.counts?.reddit_db_report_count ?? 0,
           },
           duration_ms: Date.now() - started,
-        });
+        };
       } catch (error: any) {
-        results.push({
+        results[resultIndex] = {
           phone: testCase.phone,
           label: testCase.label || "Custom",
           expectation: testCase.expectation || "unknown",
@@ -156,9 +178,19 @@ Deno.serve(async (req) => {
           checks: [],
           error: error?.message || "Test failed",
           duration_ms: Date.now() - started,
-        });
+        };
       }
-    }
+    };
+
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= cases.length) return;
+        await runCase(cases[index], index);
+      }
+    });
+
+    await Promise.all(workers);
 
     return Response.json({
       suite: "vardin_phone_regression_v1",
