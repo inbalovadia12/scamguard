@@ -62,11 +62,11 @@ async function searchBingRss(query: string, timeoutMs = 7000) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const results: any[] = [];
-    const items = xml.match(/<item>[\\s\\S]*?<\\/item>/gi) || [];
+    const items = xml.match(/<item>[\s\S]*?<\/item>/gi) || [];
     for (const item of items.slice(0, 10)) {
-      const titleMatch = item.match(/<title>([\\s\\S]*?)<\\/title>/i);
-      const linkMatch = item.match(/<link>([\\s\\S]*?)<\\/link>/i);
-      const descMatch = item.match(/<description>([\\s\\S]*?)<\\/description>/i);
+      const titleMatch = item.match(/<title>([\s\S]*?)<\/title>/i);
+      const linkMatch = item.match(/<link>([\s\S]*?)<\/link>/i);
+      const descMatch = item.match(/<description>([\s\S]*?)<\/description>/i);
       const title = decodeHtml(titleMatch?.[1] || "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim();
       const urlValue = decodeHtml(linkMatch?.[1] || "").trim();
       const snippet = decodeHtml(descMatch?.[1] || "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim();
@@ -97,8 +97,8 @@ async function searchDuckDuckGo(query: string, timeoutMs = 7000) {
     const blocks = html.split(/<div[^>]+class="result[^"]*"[^>]*>/i).slice(1);
     for (const block of blocks.slice(0, 10)) {
       const hrefMatch = block.match(/class="result__a"[^>]+href="([^"]+)"/i);
-      const titleMatch = block.match(/class="result__a"[^>]*>([\\s\\S]*?)<\\/a>/i);
-      const snippetMatch = block.match(/class="result__snippet"[^>]*>([\\s\\S]*?)<\\/a>|class="result__snippet"[^>]*>([\\s\\S]*?)<\\/div>/i);
+      const titleMatch = block.match(/class="result__a"[^>]*>([\s\S]*?)<\/a>/i);
+      const snippetMatch = block.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>|class="result__snippet"[^>]*>([\s\S]*?)<\/div>/i);
       const title = decodeHtml(titleMatch?.[1] || "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim();
       const rawHref = decodeHtml(hrefMatch?.[1] || "").trim();
       const snippet = decodeHtml(snippetMatch?.[1] || snippetMatch?.[2] || "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim();
@@ -191,9 +191,8 @@ Deno.serve(async (req) => {
       results: verified,
       result_count: verified.length,
       verified_result_count: verified.filter((r) => r.verified_exact_number).length,
-      note: "Web results count as evidence only when the fetched page or the direct search result title/snippet contains an exact normalized phone-number token. Search-result-only evidence is retained with a lower verification method."
-    ",
-    
+      note: "Web results count as evidence only when the fetched page or the direct search result title/snippet contains an exact normalized phone-number token. Search-result-only evidence is retained with a lower verification method.",
+
     });
   } catch (error: any) {
     return Response.json({ error: error?.message || "Web phone evidence search failed" }, { status: 500 });
