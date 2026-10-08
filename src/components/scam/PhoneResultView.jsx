@@ -45,12 +45,12 @@ export default function PhoneResultView({ data }) {
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Risk Score</span>
           <span className={`text-2xl font-bold ${scoreColor}`}>
-            {score}
+            {score === null ? "—" : score}
             <span className="text-sm text-muted-foreground">/100</span>
           </span>
         </div>
         <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-          <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${score}%` }} />
+          <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${score ?? 0}%` }} />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${risk.color}`}>
