@@ -2,12 +2,37 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 
 function digitsVariants(phone: string) {
   const digits = phone.replace(/\D/g, "");
+  const withoutUsCountry = digits.startsWith("1") && digits.length === 11 ? digits.slice(1) : digits;
   return Array.from(new Set([
     phone,
     digits,
-    digits.startsWith("1") ? "+" + digits : "+" + digits,
-    digits.startsWith("1") ? digits.slice(1) : digits,
+    "+" + digits,
+    withoutUsCountry,
+    "+" + withoutUsCountry,
   ])).filter(Boolean);
+}
+
+function normalizePhoneDigits(value: string) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function extractPhoneLikeTokens(text: string) {
+  return String(text || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .match(/\+?\d[\d\s().-]{5,}\d/g) || [];
+}
+
+function containsExactPhone(text: string, targetForms: string[]) {
+  const tokens = extractPhoneLikeTokens(text);
+  return tokens.some((token) => {
+    const digits = normalizePhoneDigits(token);
+    return targetForms.some((target) => {
+      if (digits === target) return true;
+      return digits.startsWith("1") && digits.slice(1) === target;
+    });
+  });
 }
 
 async function searchWeb(query: string, timeoutMs = 9000) {
@@ -72,22 +97,27 @@ Deno.serve(async (req) => {
     if (!phone) return Response.json({ error: "Phone number is required." }, { status: 400 });
 
     const variants = digitsVariants(phone);
+    const digitsOnly = normalizePhoneDigits(phone);
     const searches = [
       `"${variants[0]}" scam OR fraud OR spam OR robocall`,
       `"${variants[1]}" scam OR fraud OR spam OR robocall`,
       `"${variants[0]}" review OR "who called"`,
       `"${variants[0]}" "customer service" OR business OR company`,
       `site:who-called.co.uk/Number "${variants[1]}"`,
-      `site:truecaller.com/who-called-me "${variants[1].replace(/^\+/, "")}"`,
-      `"${variants[1]}" Reddit scam`,
+      `site:truecaller.com/who-called-me "${digitsOnly}"`,
+      `site:reddit.com/r/ScamNumbers "${digitsOnly}"`,
+      `site:reddit.com/r/scams "${digitsOnly}" phone`,
     ];
 
     const settled = await Promise.allSettled(searches.map((q) => searchWeb(q)));
     const results = settled.flatMap((r) => r.status === "fulfilled" ? r.value : []);
+    const searchErrors = settled
+      .map((r, index) => r.status === "rejected" ? { query: searches[index], error: r.reason?.message || "Search failed" } : null)
+      .filter(Boolean);
     const unique = Array.from(new Map(results.map((r) => [r.url, r])).values()).slice(0, 30);
 
-    const targetDigits = phone.replace(/\D/g, "");
-    const targetWithoutCountry = targetDigits.startsWith("1") ? targetDigits.slice(1) : targetDigits;
+    const targetDigits = normalizePhoneDigits(phone);
+    const targetWithoutCountry = targetDigits.startsWith("1") && targetDigits.length === 11 ? targetDigits.slice(1) : targetDigits;
     const targetForms = Array.from(new Set([targetDigits, targetWithoutCountry].filter((v) => v.length >= 7)));
 
     const verified = await Promise.all(unique.map(async (r) => {
@@ -103,9 +133,12 @@ Deno.serve(async (req) => {
             },
           });
           const html = await page.text();
-          const bodyDigits = html.replace(/\D/g, "");
-          const exact = targetForms.some((form) => bodyDigits.includes(form));
-          return { ...r, verified_exact_number: exact, verification_status: exact ? "verified" : "not_verified" };
+          const exact = containsExactPhone(html, targetForms);
+          return {
+            ...r,
+            verified_exact_number: exact,
+            verification_status: exact ? "verified" : "not_verified",
+          };
         } finally {
           clearTimeout(timer);
         }
@@ -121,7 +154,9 @@ Deno.serve(async (req) => {
       results: verified,
       result_count: verified.length,
       verified_result_count: verified.filter((r) => r.verified_exact_number).length,
-      note: "Web results count as evidence only when the fetched page contains an exact normalized form of the phone number. Search-result titles alone never establish evidence.",
+      search_errors: searchErrors,
+      note: "Web results count as evidence only when the fetched page contains an exact normalized phone-number token. Search-result titles alone never establish evidence.",
+    
     });
   } catch (error: any) {
     return Response.json({ error: error?.message || "Web phone evidence search failed" }, { status: 500 });
