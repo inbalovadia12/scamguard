@@ -21,8 +21,19 @@ function scorePhone(evidence: AnyRecord) {
   const negativeReports = classified.filter((x) => x.negative && x.report.source !== "web_search").length;
   const positiveReports = classified.filter((x) => x.positive).length;
   const verifiedWeb = reports.filter((r: AnyRecord) => r.source === "web_search" && r.verified_exact_number === true);
-  const webNegative = verifiedWeb.filter((r: AnyRecord) => NEGATIVE.test([r.text, r.url].filter(Boolean).join(" "))).length;
-  const redditVerified = verifiedWeb.filter((r: AnyRecord) => /reddit\.com/i.test(String(r.url || ""))).length;
+  const webNegativeHosts = new Set(
+    verifiedWeb
+      .filter((r: AnyRecord) => NEGATIVE.test([r.text, r.url].filter(Boolean).join(" ")))
+      .map((r: AnyRecord) => {
+        try { return new URL(String(r.url)).hostname.toLowerCase(); } catch { return String(r.url || ""); }
+      })
+  );
+  const webNegative = webNegativeHosts.size;
+  const redditVerified = new Set(
+    verifiedWeb
+      .filter((r: AnyRecord) => /reddit\.com/i.test(String(r.url || "")))
+      .map((r: AnyRecord) => String(r.url || "").split("/").slice(0, 4).join("/"))
+  ).size;
 
   let score = 50;
   const reasons: string[] = [];
@@ -33,8 +44,8 @@ function scorePhone(evidence: AnyRecord) {
     reasons.push(negativeReports + " exact-number report" + (negativeReports === 1 ? "" : "s") + " contain scam/spam/fraud indicators.");
   }
   if (webNegative > 0) {
-    score += Math.min(24, webNegative * 8);
-    reasons.push(webNegative + " verified public web result" + (webNegative === 1 ? "" : "s") + " mention the exact number in a scam/spam/fraud context.");
+    score += Math.min(36, webNegative * 12);
+    reasons.push(webNegative + " independent public web source" + (webNegative === 1 ? "" : "s") + " mention the exact number in a scam/spam/fraud context.");
   }
   if (redditVerified > 0) {
     score += Math.min(12, redditVerified * 6);
@@ -88,14 +99,20 @@ function scorePhone(evidence: AnyRecord) {
     (providerRisk !== null && providerRisk >= 70) ||
     (numbersSpam !== null && (numbersSpam > 1 ? numbersSpam >= 70 : numbersSpam >= 0.7));
 
-  const hasLegitimateEvidence = verifiedBusiness || Boolean(identity.caller_name) || positiveReports > 0 ||
-    Boolean(signals.scamcallcheck_risk_level && /safe|legitimate|verified/i.test(String(signals.scamcallcheck_risk_level)));
+  const hasLegitimateEvidence = verifiedBusiness || positiveReports > 0;
 
   if (!hasNegativeEvidence && !hasLegitimateEvidence) score = 50;
   if (!hasNegativeEvidence && verifiedBusiness) score = Math.min(score, 15);
   else if (!hasNegativeEvidence && hasLegitimateEvidence) score = Math.min(score, 25);
-  if (identity.caller_name && negativeReports === 0 && webNegative === 0 && providerRisk !== null && providerRisk < 70) {
-    score = Math.min(score, verifiedBusiness ? 15 : 25);
+
+  // A verified business number is strong ownership evidence, but scam calls can
+  // spoof legitimate numbers. Keep the single risk score low unless the
+  // independent risk signals are strong enough to override that identity.
+  if (verifiedBusiness && providerRisk !== null && providerRisk < 70 && complaintCount < 3) {
+    score = Math.min(score, 30);
+  }
+  if (verifiedBusiness && negativeReports === 0 && webNegative === 0 && complaintCount < 3 && communityCount === 0) {
+    score = Math.min(score, 15);
   }
 
   let status: "SCAM" | "SUSPICIOUS" | "SAFE" | "UNKNOWN";
