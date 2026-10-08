@@ -56,56 +56,72 @@ Deno.serve(async (req) => {
       source_errors: [],
     };
 
-    // Source 1: Numbers Online. The key stays server-side.
+    // Run independent sources concurrently so one slow provider does not block the others.
+    const jobs: Promise<void>[] = [];
+
     if (numbersOnlineKey) {
+      jobs.push((async () => {
+        try {
+          const data = await fetchJson(
+            `https://numbers.online/api/v1/lookup/${encodeURIComponent(normalized)}`,
+            { headers: { "X-API-Key": numbersOnlineKey } },
+            7000
+          );
+          results.sources.numbers_online = {
+            status: "ok",
+            data,
+            source_url: "https://numbers.online"
+          };
+        } catch (error: any) {
+          const message = error?.message || "Lookup failed";
+          results.sources.numbers_online = { status: "error", error: message };
+          results.source_errors.push({ source: "numbers_online", error: message });
+        }
+      })());
+    }
+
+    jobs.push((async () => {
       try {
         const data = await fetchJson(
-          `https://numbers.online/api/v1/lookup/${encodeURIComponent(normalized)}`,
-          { headers: { "X-API-Key": numbersOnlineKey } }
+          `https://scamcallcheck.com/api/number/${encodeURIComponent(numberDigits(normalized))}`,
+          {},
+          7000
         );
-        results.sources.numbers_online = {
+        results.sources.scamcallcheck = {
           status: "ok",
           data,
-          source_url: "https://numbers.online"
+          source_url: `https://scamcallcheck.com/number/${encodeURIComponent(numberDigits(normalized))}`
         };
       } catch (error: any) {
-        results.sources.numbers_online = { status: "error", error: error?.message || "Lookup failed" };
-        results.source_errors.push({ source: "numbers_online", error: error?.message || "Lookup failed" });
+        const message = error?.message || "Lookup failed";
+        results.sources.scamcallcheck = { status: "error", error: message };
+        results.source_errors.push({ source: "scamcallcheck", error: message });
       }
-    }
+    })());
 
-    // Source 2: ScamCallCheck. Public single-number endpoint; no key.
-    try {
-      const data = await fetchJson(
-        `https://scamcallcheck.com/api/number/${encodeURIComponent(numberDigits(normalized))}`
-      );
-      results.sources.scamcallcheck = {
-        status: "ok",
-        data,
-        source_url: `https://scamcallcheck.com/number/${encodeURIComponent(numberDigits(normalized))}`
-      };
-    } catch (error: any) {
-      results.sources.scamcallcheck = { status: "error", error: error?.message || "Lookup failed" };
-      results.source_errors.push({ source: "scamcallcheck", error: error?.message || "Lookup failed" });
-    }
-
-    // Source 3: USACallerLookup. Only applicable to NANP +1 numbers.
     if (isUsNumber(normalized)) {
-      try {
-        const usDigits = normalized.slice(2);
-        const data = await fetchJson(
-          `https://www.usacallerlookup.com/wp-json/ucl/v1/number/${encodeURIComponent(usDigits)}`
-        );
-        results.sources.usa_caller_lookup = {
-          status: "ok",
-          data,
-          source_url: data?.page || `https://www.usacallerlookup.com/${usDigits}/`
-        };
-      } catch (error: any) {
-        results.sources.usa_caller_lookup = { status: "error", error: error?.message || "Lookup failed" };
-        results.source_errors.push({ source: "usa_caller_lookup", error: error?.message || "Lookup failed" });
-      }
+      jobs.push((async () => {
+        try {
+          const usDigits = normalized.slice(2);
+          const data = await fetchJson(
+            `https://www.usacallerlookup.com/wp-json/ucl/v1/number/${encodeURIComponent(usDigits)}`,
+            {},
+            7000
+          );
+          results.sources.usa_caller_lookup = {
+            status: "ok",
+            data,
+            source_url: data?.page || `https://www.usacallerlookup.com/${usDigits}/`
+          };
+        } catch (error: any) {
+          const message = error?.message || "Lookup failed";
+          results.sources.usa_caller_lookup = { status: "error", error: message };
+          results.source_errors.push({ source: "usa_caller_lookup", error: message });
+        }
+      })());
     }
+
+    await Promise.allSettled(jobs);
 
     // Return only source data. No Vardin verdict or score is generated here.
     return Response.json(results);
