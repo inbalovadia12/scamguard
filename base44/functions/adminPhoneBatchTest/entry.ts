@@ -143,6 +143,7 @@ Deno.serve(async (req) => {
             web_evidence_state: evidence.web_evidence_state,
             exact_evidence_count: evidence.counts?.exact_evidence_count ?? 0,
             verified_web_result_count: evidence.counts?.verified_web_result_count ?? 0,
+            reddit_db_report_count: evidence.counts?.reddit_db_report_count ?? 0,
           },
           duration_ms: Date.now() - started,
         });
