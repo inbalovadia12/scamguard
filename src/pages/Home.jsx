@@ -68,7 +68,6 @@ export default function Home() {
   const [incognito, setIncognito] = useState(false);
   const [senderContext, setSenderContext] = useState("");
   const [showPostScam, setShowPostScam] = useState(false);
-  const [scanError, setScanError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,7 +124,6 @@ export default function Home() {
 
     setAnalyzing(true);
     setResult(null);
-    setScanError(null);
 
     try {
       let fileUrls = [];
@@ -139,7 +137,6 @@ export default function Home() {
     let llmResult;
     if (mode === "url") {
       const response = await base44.functions.invoke("scanUrl", { url: effectiveInput });
-      if (response.data?.error) throw new Error(response.data.error);
       llmResult = response.data;
     } else {
       const response = await base44.functions.invoke("analyzeMessage", {
@@ -154,52 +151,29 @@ export default function Home() {
       llmResult = response.data?.result || response.data;
     }
 
-    // Show the scan result before any history write. Saving history is
-    // best-effort and must never turn a successful URL scan into a blank screen.
-    setResult(llmResult);
-
     if (!incognito) {
       const analysisType = mode === "url" ? "url" : messageType;
-      const persistedAnalysis = {
+      await base44.entities.ScamAnalysis.create({
         message_text: mode === "url" ? effectiveInput : redactMessage(effectiveInput),
         message_type: analysisType,
-        risk_level: llmResult?.risk_level || "medium",
-        risk_score: typeof llmResult?.risk_score === "number" ? llmResult.risk_score : undefined,
-        explanation: llmResult?.explanation || "",
-        tactics_detected: Array.isArray(llmResult?.tactics_detected) ? llmResult.tactics_detected : [],
-        next_steps: Array.isArray(llmResult?.next_steps) ? llmResult.next_steps : [],
-        why_scammers_do_this: llmResult?.why_scammers_do_this || "",
-        what_they_want: llmResult?.what_they_want || "",
-        what_to_say: llmResult?.what_to_say || "",
         submitted_by_senior: !!seniorLink,
         senior_id: seniorLink?.id,
         guardian_id: seniorLink?.guardian_id,
-      };
-
-      try {
-        await base44.entities.ScamAnalysis.create(persistedAnalysis);
-      } catch (persistError) {
-        console.warn("Could not save scan history:", persistError);
-      }
-
+        ...llmResult,
+      });
       if (input) cacheAnalysis(input, llmResult);
       const remainingFromScan = llmResult?.credits_remaining;
       setCredits((prev) => prev
         ? { ...prev, remaining: typeof remainingFromScan === "number" ? remainingFromScan : prev.remaining }
         : prev);
       if (typeof remainingFromScan !== "number") {
-        try {
-          setCredits(await getCreditStatus());
-        } catch (creditError) {
-          console.warn("Could not refresh credit status:", creditError);
-        }
+        setCredits(await getCreditStatus());
       }
     }
+      setResult(llmResult);
     } catch (error) {
       console.error("Scam analysis failed:", error);
       setResult(null);
-      const apiError = error?.response?.data?.error || error?.message;
-      setScanError(apiError || "The scan could not be completed. Please try again.");
     } finally {
       setAnalyzing(false);
     }
@@ -277,16 +251,6 @@ export default function Home() {
               Upgrade
             </Button>
           </Link>
-        </div>
-      )}
-
-      {scanError && !result && (
-        <div className="mb-4 sm:mb-6 flex items-start gap-3 px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-xl animate-fade-in">
-          <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-destructive">Scan failed</p>
-            <p className="text-xs text-muted-foreground mt-0.5 break-words">{scanError}</p>
-          </div>
         </div>
       )}
 
