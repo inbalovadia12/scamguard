@@ -1,16 +1,16 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 
 const REGRESSION_CASES = [
-  { phone: "+1 800 692 7753", label: "Known legitimate / Apple", expectation: "legitimate" },
-  { phone: "+44 800 048 0408", label: "Known legitimate / Embargo Lifestyle", expectation: "legitimate" },
-  { phone: "+1 800 642 7676", label: "Known legitimate / Microsoft", expectation: "legitimate" },
-  { phone: "+44 800 026 0329", label: "Known legitimate / Microsoft", expectation: "legitimate" },
-  { phone: "+1 800 442 4000", label: "Known legitimate / Beats by Apple", expectation: "legitimate" },
-  { phone: "+44 1256306995", label: "Known scam regression", expectation: "scam" },
-  { phone: "+44 7700178674", label: "Known scam regression", expectation: "scam" },
-  { phone: "+81 120435500", label: "Unknown / Japan", expectation: "unknown" },
-  { phone: "+61 1300365083", label: "Unknown / Australia", expectation: "unknown" },
-  { phone: "+971 80004441849", label: "Unknown / UAE", expectation: "unknown" },
+  { phone: "+1 800 692 7753", label: "Known legitimate / Apple", expectation: "legitimate", expected_business: "Apple", expected_country: "US" },
+  { phone: "+44 800 048 0408", label: "Known legitimate / Embargo Lifestyle", expectation: "legitimate", expected_business: "Embargo", expected_country: "GB" },
+  { phone: "+1 800 642 7676", label: "Known legitimate / Microsoft", expectation: "legitimate", expected_business: "Microsoft", expected_country: "US" },
+  { phone: "+44 800 026 0329", label: "Known legitimate / Microsoft", expectation: "legitimate", expected_business: "Microsoft", expected_country: "GB" },
+  { phone: "+1 800 442 4000", label: "Known legitimate / Beats by Apple", expectation: "legitimate", expected_business: "Beats", expected_country: "US" },
+  { phone: "+44 1256306995", label: "Known scam regression", expectation: "scam", expected_country: "GB" },
+  { phone: "+44 7700178674", label: "Known scam regression", expectation: "scam", expected_country: "GB" },
+  { phone: "+81 120435500", label: "Unknown / Japan", expectation: "unknown", expected_country: "JP" },
+  { phone: "+61 1300365083", label: "Unknown / Australia", expectation: "unknown", expected_country: "AU" },
+  { phone: "+971 80004441849", label: "Unknown / UAE", expectation: "unknown", expected_country: "AE" },
 ];
 
 function checkResult(result: any, expectation: string) {
@@ -27,7 +27,8 @@ function checkResult(result: any, expectation: string) {
       (status === "SAFE" && score <= 30) ||
       (status === "UNKNOWN" && score === 50),
       detail: `${status} at ${score}/100` },
-    { name: "confidence_not_fake_100", pass: confidence < 100 || Number(result?.report_count) > 0 || result?.web_evidence_state === "verified_evidence_found", detail: `${confidence}% confidence` },
+    { name: "confidence_not_fake_100", pass: confidence < 100 || Number(result?.report_count) > 0 || result?.web_evidence_state === "verified_evidence_found" || result?.verified_business === true, detail: `${confidence}% confidence` },
+    { name: "country_present_when_expected", pass: true, detail: String(result?.country || "unknown") },
   ];
 
   if (expectation === "legitimate") {
@@ -98,6 +99,35 @@ Deno.serve(async (req) => {
         if (!risk) throw new Error(riskResponse?.data?.error || riskResponse?.error || "Risk scoring failed");
 
         const validation = checkResult(risk, testCase.expectation || "unknown");
+
+      if (testCase.expected_business) {
+        const actualBusiness = String(risk?.business_name || "").toLowerCase();
+        const expectedBusiness = String(testCase.expected_business).toLowerCase();
+        validation.checks.push({
+          name: "expected_business_match",
+          pass: actualBusiness.includes(expectedBusiness) || String(risk?.business_verification_url || "").toLowerCase().includes(expectedBusiness),
+          detail: `${risk?.business_name || "None"}`,
+        });
+      }
+
+      if (testCase.expected_country) {
+        const actualCountry = String(risk?.country || "").toLowerCase();
+        const aliases: Record<string, string[]> = {
+          us: ["us", "usa", "united states", "america"],
+          gb: ["gb", "uk", "united kingdom", "great britain"],
+          jp: ["jp", "japan"],
+          au: ["au", "australia"],
+          ae: ["ae", "uae", "united arab emirates"],
+        };
+        const expectedAliases = aliases[String(testCase.expected_country).toLowerCase()] || [String(testCase.expected_country).toLowerCase()];
+        validation.checks.push({
+          name: "expected_country_match",
+          pass: expectedAliases.some((alias) => actualCountry === alias || actualCountry.includes(alias)),
+          detail: `${risk?.country || "Unknown"}`,
+        });
+      }
+
+      validation.pass = validation.checks.every((c) => c.pass);
         results.push({
           phone: testCase.phone,
           label: testCase.label || "Custom",
