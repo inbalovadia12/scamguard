@@ -108,7 +108,7 @@ function scorePhone(evidence: AnyRecord) {
   // A verified business number is strong ownership evidence, but scam calls can
   // spoof legitimate numbers. Keep the single risk score low unless the
   // independent risk signals are strong enough to override that identity.
-  if (verifiedBusiness && providerRisk !== null && providerRisk < 70 && complaintCount < 3) {
+  if (verifiedBusiness && (providerRisk === null || providerRisk < 70) && complaintCount < 3) {
     score = Math.min(score, 30);
   }
   if (verifiedBusiness && negativeReports === 0 && webNegative === 0 && complaintCount < 3 && communityCount === 0) {
