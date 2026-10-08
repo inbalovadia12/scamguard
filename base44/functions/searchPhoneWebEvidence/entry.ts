@@ -3,13 +3,17 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 function digitsVariants(phone: string) {
   const digits = phone.replace(/\D/g, "");
   const withoutUsCountry = digits.startsWith("1") && digits.length === 11 ? digits.slice(1) : digits;
+  const countryNational = digits.startsWith("44") || digits.startsWith("61") || digits.startsWith("81") || digits.startsWith("971")
+    ? "0" + digits.slice(digits.startsWith("971") ? 3 : 2)
+    : null;
   return Array.from(new Set([
     phone,
     digits,
     "+" + digits,
     withoutUsCountry,
     "+" + withoutUsCountry,
-  ])).filter(Boolean);
+    countryNational,
+  ].filter(Boolean))).filter(Boolean);
 }
 
 function normalizePhoneDigits(value: string) {
@@ -141,7 +145,11 @@ Deno.serve(async (req) => {
       `"${variants[1]}" scam OR fraud OR spam OR robocall`,
       `"${variants[0]}" review OR "who called"`,
       `"${variants[0]}" "customer service" OR business OR company`,
-      `site:who-called.co.uk/Number "${variants[1]}"`,
+      `"${variants[variants.length - 1]}" scam OR fraud OR spam`,
+      `site:who-called.co.uk/Number "${digitsOnly}"`,
+      `site:who-calls.co.uk/Number "${digitsOnly}"`,
+      `site:phonely.co.uk/who-called-me "${digitsOnly}"`,
+      `site:connection-technologies.co.uk/number "${digitsOnly}"`,
       `site:truecaller.com/who-called-me "${digitsOnly}"`,
       `site:reddit.com/r/ScamNumbers "${digitsOnly}"`,
       `site:reddit.com/r/scams "${digitsOnly}" phone`,
@@ -149,7 +157,7 @@ Deno.serve(async (req) => {
 
     const searchResults = await Promise.all(searches.map((q) => searchWeb(q).catch(() => [])));
     const results = searchResults.flat();
-    const unique = Array.from(new Map(results.map((r) => [r.url, r])).values()).slice(0, 16);
+    const unique = Array.from(new Map(results.map((r) => [r.url, r])).values()).slice(0, 12);
 
     const targetDigits = normalizePhoneDigits(phone);
     const targetWithoutCountry = targetDigits.startsWith("1") && targetDigits.length === 11 ? targetDigits.slice(1) : targetDigits;
