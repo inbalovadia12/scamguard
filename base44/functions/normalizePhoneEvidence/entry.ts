@@ -47,23 +47,134 @@ function normalizeReport(report: AnyRecord, source: string, index: number) {
 }
 
 function extractNumbersOnline(data: AnyRecord) {
-  return {
-    valid: first(data.valid, data.is_valid, data.phone?.valid),
-    country: normalizeText(first(data.country, data.country_name, data.countryName, data.country?.name, data.country?.code)),
-    country_code: normalizeText(first(data.country_code, data.countryCode, data.country?.code)),
-    
-    carrier: normalizeText(first(data.carrier, data.carrier_name, data.network, data.range_carrier, data.rangeCarrier)),
-    line_type: normalizeText(first(data.line_type, data.lineType, data.type)),
-    caller_name: normalizeText(first(
-      typeof data.cnam === "string" ? data.cnam : null,
-      data.cnam?.name, data.cnam?.display_name, data.cnam?.displayName, data.cnam?.value,
-      data.caller_name, data.callerName, data.name,
-      data.caller?.name, data.identity?.name, data.display_name, data.displayName
-    )),
+  const cnamObject = data.cnam && typeof data.cnam === "object" ? data.cnam : null;
+  const carrierObject = data.carrier && typeof data.carrier === "object" ? data.carrier : null;
+  const phoneObject = data.phone && typeof data.phone === "object" ? data.phone : null;
+  const numberObject = data.number && typeof data.number === "object" ? data.number : null;
+  const countryObject = data.country && typeof data.country === "object" ? data.country : null;
+  const rangeCarrier = data.range_carrier && typeof data.range_carrier === "object" ? data.range_carrier : null;
+  const riskObject = data.risk && typeof data.risk === "object" ? data.risk : null;
 
-    spam_signal: first(data.spam, data.spam_score, data.spamScore, data.risk_score, data.riskScore),
-    source_risk_level: normalizeText(first(data.risk_level, data.riskLevel)),
+  const callerName = normalizeText(first(
+    typeof data.cnam === "string" ? data.cnam : null,
+    cnamObject?.name,
+    cnamObject?.display_name,
+    cnamObject?.displayName,
+    cnamObject?.value,
+    cnamObject?.label,
+    data.caller_name,
+    data.callerName,
+    data.caller_id_name,
+    data.callerIdName,
+    data.name,
+    data.display_name,
+    data.displayName,
+    data.business_name,
+    data.businessName,
+    data.organization,
+    data.organization_name,
+    data.caller?.name,
+    data.caller?.display_name,
+    data.identity?.name,
+    data.identity?.display_name,
+    phoneObject?.caller_name,
+    phoneObject?.name,
+    numberObject?.caller_name,
+    numberObject?.name,
+  ));
+
+  return {
+    valid: first(data.valid, data.is_valid, phoneObject?.valid, numberObject?.valid),
+    country: normalizeText(first(
+      typeof data.country === "string" ? data.country : null,
+      data.country_name,
+      data.countryName,
+      countryObject?.name,
+      countryObject?.country,
+      phoneObject?.country,
+      numberObject?.country,
+    )),
+    country_code: normalizeText(first(
+      data.country_code,
+      data.countryCode,
+      countryObject?.code,
+      countryObject?.country_code,
+      phoneObject?.country_code,
+      numberObject?.country_code,
+      data.iso_country,
+    )),
+    carrier: normalizeText(first(
+      typeof data.carrier === "string" ? data.carrier : null,
+      data.carrier_name,
+      data.network,
+      data.range_carrier,
+      data.rangeCarrier,
+      carrierObject?.name,
+      carrierObject?.carrier,
+      rangeCarrier?.name,
+      rangeCarrier?.carrier,
+      phoneObject?.carrier,
+      numberObject?.carrier,
+    )),
+    line_type: normalizeText(first(
+      data.line_type,
+      data.lineType,
+      data.type,
+      phoneObject?.line_type,
+      phoneObject?.type,
+      numberObject?.line_type,
+      numberObject?.type,
+    )),
+    caller_name: callerName,
+    spam_signal: first(
+      data.spam,
+      data.spam_score,
+      data.spamScore,
+      data.spam_signal,
+      data.risk_score,
+      data.riskScore,
+      riskObject?.spam,
+      riskObject?.spam_score,
+      riskObject?.spamScore,
+      riskObject?.score,
+    ),
+    source_risk_level: normalizeText(first(
+      data.risk_level,
+      data.riskLevel,
+      riskObject?.level,
+      riskObject?.risk_level,
+    )),
   };
+}
+
+function normalizeBusinessKey(value: any): string {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function officialBusinessMatch(callerName: string | null, webResults: AnyRecord[]) {
+  if (!callerName) return { verified: false, url: null, host: null };
+  const words = normalizeBusinessKey(callerName)
+    .split(/\s+/)
+    .filter((word) => word.length >= 4)
+    .filter((word) => !/^(inc|corp|llc|ltd|limited|company|co|the|group|services|service)$/i.test(word));
+
+  if (!words.length) return { verified: false, url: null, host: null };
+
+  for (const result of webResults) {
+    if (result?.verified_exact_number !== true || !result?.url) continue;
+    try {
+      const host = new URL(result.url).hostname.replace(/^www\./i, "").toLowerCase();
+      const hostKey = normalizeBusinessKey(host);
+      const matchedWord = words.find((word) => hostKey.includes(word));
+      if (matchedWord) return { verified: true, url: result.url, host };
+    } catch {}
+  }
+
+  return { verified: false, url: null, host: null };
 }
 
 function extractScamCallCheck(data: AnyRecord) {
@@ -173,24 +284,46 @@ Deno.serve(async (req) => {
       raw: r,
     })) : [];
 
+    let redditDbReports: AnyRecord[] = [];
+    if (normalizedNumber) {
+      try {
+        const redditRows = await base44.asServiceRole.entities.RedditScamNumber.filter(
+          { normalized_number: normalizedNumber },
+          "-posted_at",
+          50
+        );
+        redditDbReports = (Array.isArray(redditRows) ? redditRows : []).map((row: AnyRecord, index: number) => ({
+          source: "reddit_db",
+          id: normalizeText(first(row.post_id, row.id)) || `reddit-db-${index + 1}`,
+          category: normalizeText(row.scam_category),
+          text: normalizeText(first(row.summary, row.title)),
+          date: normalizeText(row.posted_at),
+          url: normalizeText(row.post_url),
+          verified_exact_number: true,
+          verification_status: "verified",
+          raw: row,
+        }));
+      } catch {}
+    }
+
     const reports = uniqueReports([
       ...(scamCallCheck?.reports ?? []),
       ...(usaCallerLookup?.community_reports ?? []),
       ...(usaCallerLookup?.agency_reports ?? []),
+      ...redditDbReports,
       ...webResults,
     ]);
 
-    const complaintCount = Number(
-      first(
-        scamCallCheck?.complaint_count,
-        usaCallerLookup?.complaint_count,
-        0
-      )
-    ) || 0;
+    const complaintCount = Math.max(
+      Number(scamCallCheck?.complaint_count) || 0,
+      Number(usaCallerLookup?.complaint_count) || 0,
+    );
 
-    const communityReportCount = Number(
-      first(scamCallCheck?.community_report_count, usaCallerLookup?.community_reports?.length, 0)
-    ) || 0;
+    const communityReportCount = Math.max(
+      Number(scamCallCheck?.community_report_count) || 0,
+      Number(usaCallerLookup?.community_reports?.length) || 0,
+      redditDbReports.length,
+    );
 
     const exactEvidenceCount = reports.filter((r) =>
       r.source !== "web_search" ? Boolean(r.text || r.url) : r.verified_exact_number === true
@@ -200,6 +333,8 @@ Deno.serve(async (req) => {
       numbersOnline?.caller_name,
       usaCallerLookup?.caller_name,
     ].filter((value, index, list) => Boolean(value) && list.indexOf(value) === index);
+
+    const businessMatch = officialBusinessMatch(businessCandidates[0] ?? null, webResults);
 
     const providerErrors = Array.isArray(phoneSources.source_errors)
       ? phoneSources.source_errors
@@ -223,6 +358,9 @@ Deno.serve(async (req) => {
         caller_name_source: businessCandidates[0]
           ? (numbersOnline?.caller_name === businessCandidates[0] ? "numbers_online" : "usa_caller_lookup")
           : null,
+        verified_business: businessMatch.verified,
+        business_verification_url: businessMatch.url,
+        business_verification_host: businessMatch.host,
         usa_location: usaCallerLookup?.location ?? null,
         toll_free: usaCallerLookup?.toll_free ?? null,
       },
@@ -237,6 +375,7 @@ Deno.serve(async (req) => {
       counts: {
         complaint_count: complaintCount,
         community_report_count: communityReportCount,
+        reddit_db_report_count: redditDbReports.length,
         exact_evidence_count: exactEvidenceCount,
         web_result_count: webResults.length,
         verified_web_result_count: webResults.filter((r) => r.verified_exact_number).length,
@@ -253,6 +392,8 @@ Deno.serve(async (req) => {
         phoneSources.sources?.numbers_online?.source_url,
         scamCallCheck?.canonical_url,
         usaCallerLookup?.attribution_url,
+        ...redditDbReports.map((r) => r.url).filter(Boolean).slice(0, 10),
+        ...webResults.filter((r) => r.verified_exact_number).map((r) => r.url).filter(Boolean).slice(0, 10),
       ].filter(Boolean),
       provider_errors: providerErrors,
       evidence_state: exactEvidenceCount > 0 || complaintCount > 0
