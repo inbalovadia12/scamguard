@@ -151,26 +151,47 @@ export default function Home() {
       llmResult = response.data?.result || response.data;
     }
 
+    // Show the scan result before any history write. Saving history is
+    // best-effort and must never turn a successful URL scan into a blank screen.
+    setResult(llmResult);
+
     if (!incognito) {
       const analysisType = mode === "url" ? "url" : messageType;
-      await base44.entities.ScamAnalysis.create({
+      const persistedAnalysis = {
         message_text: mode === "url" ? effectiveInput : redactMessage(effectiveInput),
         message_type: analysisType,
+        risk_level: llmResult?.risk_level || "medium",
+        risk_score: typeof llmResult?.risk_score === "number" ? llmResult.risk_score : undefined,
+        explanation: llmResult?.explanation || "",
+        tactics_detected: Array.isArray(llmResult?.tactics_detected) ? llmResult.tactics_detected : [],
+        next_steps: Array.isArray(llmResult?.next_steps) ? llmResult.next_steps : [],
+        why_scammers_do_this: llmResult?.why_scammers_do_this || "",
+        what_they_want: llmResult?.what_they_want || "",
+        what_to_say: llmResult?.what_to_say || "",
         submitted_by_senior: !!seniorLink,
         senior_id: seniorLink?.id,
         guardian_id: seniorLink?.guardian_id,
-        ...llmResult,
-      });
+      };
+
+      try {
+        await base44.entities.ScamAnalysis.create(persistedAnalysis);
+      } catch (persistError) {
+        console.warn("Could not save scan history:", persistError);
+      }
+
       if (input) cacheAnalysis(input, llmResult);
       const remainingFromScan = llmResult?.credits_remaining;
       setCredits((prev) => prev
         ? { ...prev, remaining: typeof remainingFromScan === "number" ? remainingFromScan : prev.remaining }
         : prev);
       if (typeof remainingFromScan !== "number") {
-        setCredits(await getCreditStatus());
+        try {
+          setCredits(await getCreditStatus());
+        } catch (creditError) {
+          console.warn("Could not refresh credit status:", creditError);
+        }
       }
     }
-      setResult(llmResult);
     } catch (error) {
       console.error("Scam analysis failed:", error);
       setResult(null);
