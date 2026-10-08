@@ -68,6 +68,7 @@ export default function Home() {
   const [incognito, setIncognito] = useState(false);
   const [senderContext, setSenderContext] = useState("");
   const [showPostScam, setShowPostScam] = useState(false);
+  const [scanError, setScanError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,6 +125,7 @@ export default function Home() {
 
     setAnalyzing(true);
     setResult(null);
+    setScanError(null);
 
     try {
       let fileUrls = [];
@@ -137,6 +139,7 @@ export default function Home() {
     let llmResult;
     if (mode === "url") {
       const response = await base44.functions.invoke("scanUrl", { url: effectiveInput });
+      if (response.data?.error) throw new Error(response.data.error);
       llmResult = response.data;
     } else {
       const response = await base44.functions.invoke("analyzeMessage", {
@@ -195,6 +198,8 @@ export default function Home() {
     } catch (error) {
       console.error("Scam analysis failed:", error);
       setResult(null);
+      const apiError = error?.response?.data?.error || error?.message;
+      setScanError(apiError || "The scan could not be completed. Please try again.");
     } finally {
       setAnalyzing(false);
     }
@@ -272,6 +277,16 @@ export default function Home() {
               Upgrade
             </Button>
           </Link>
+        </div>
+      )}
+
+      {scanError && !result && (
+        <div className="mb-4 sm:mb-6 flex items-start gap-3 px-4 py-3 bg-destructive/10 border border-destructive/20 rounded-xl animate-fade-in">
+          <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-destructive">Scan failed</p>
+            <p className="text-xs text-muted-foreground mt-0.5 break-words">{scanError}</p>
+          </div>
         </div>
       )}
 
