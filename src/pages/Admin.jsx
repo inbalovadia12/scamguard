@@ -653,7 +653,7 @@ function PhoneBatchTab() {
                       <p className="text-muted-foreground">
                         Bing: {item.evidence.search_engine_diagnostics.bing?.successful_queries || 0}/{item.evidence.search_engine_diagnostics.bing?.attempted_queries || 0} queries succeeded, {item.evidence.search_engine_diagnostics.bing?.results_returned || 0} hits ·
                         DuckDuckGo: {item.evidence.search_engine_diagnostics.duckduckgo?.successful_queries || 0}/{item.evidence.search_engine_diagnostics.duckduckgo?.attempted_queries || 0} queries succeeded, {item.evidence.search_engine_diagnostics.duckduckgo?.results_returned || 0} hits.
-                        {" "}Checked {item.evidence.page_checked_count || 0} pages; {item.evidence.verified_web_result_count || 0} passed exact-number verification.
+                        {" "}Collected {item.evidence.raw_search_result_count || 0} unique candidate URLs; checked {item.evidence.page_checked_count || 0} pages; {item.evidence.verified_web_result_count || 0} passed exact-number verification.
                       </p>
                       {(item.evidence.search_engine_diagnostics.bing?.errors?.length > 0 || item.evidence.search_engine_diagnostics.duckduckgo?.errors?.length > 0) && (
                         <p className="text-warning">

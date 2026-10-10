@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
         roundRobin.push({ ...candidate, matched_query: run.query });
       }
     }
-    const unique = roundRobin.slice(0, 18);
+    const unique = roundRobin.slice(0, 14);
 
     const verified = await Promise.all(unique.map(async (r) => {
       try {
