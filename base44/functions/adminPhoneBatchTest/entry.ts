@@ -165,7 +165,23 @@ Deno.serve(async (req) => {
             web_evidence_state: evidence.web_evidence_state,
             exact_evidence_count: evidence.counts?.exact_evidence_count ?? 0,
             verified_web_result_count: evidence.counts?.verified_web_result_count ?? 0,
-            reddit_db_report_count: evidence.counts?.reddit_db_report_count ?? 0,
+            page_verified_web_result_count: evidence.counts?.page_verified_web_result_count ?? 0,
+            web_result_count: evidence.counts?.web_result_count ?? 0,
+            raw_search_result_count: evidence.counts?.raw_search_result_count ?? 0,
+            page_checked_count: evidence.counts?.page_checked_count ?? 0,
+            search_query_count: evidence.counts?.search_query_count ?? 0,
+            verification_failure_count: evidence.counts?.verification_failure_count ?? 0,
+            search_engine_diagnostics: evidence.web_search?.search_engine_diagnostics ?? null,
+            web_samples: (Array.isArray(evidence.reports) ? evidence.reports : [])
+              .filter((report: any) => report?.source === "web_search")
+              .slice(0, 4)
+              .map((report: any) => ({
+                title: report.title || report.text || report.url || "Untitled result",
+                url: report.url || null,
+                verified_exact_number: report.verified_exact_number === true,
+                verification_method: report.verification_method || "none",
+              })),
+            source_status: evidence.source_status || {},
           },
           duration_ms: Date.now() - started,
         };
