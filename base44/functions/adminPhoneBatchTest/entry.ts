@@ -181,7 +181,6 @@ Deno.serve(async (req) => {
                 verified_exact_number: report.verified_exact_number === true,
                 verification_method: report.verification_method || "none",
               })),
-            source_status: evidence.source_status || {},
           },
           duration_ms: Date.now() - started,
         };
