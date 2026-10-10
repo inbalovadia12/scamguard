@@ -594,6 +594,9 @@ function PhoneBatchTab() {
             <StatCard icon={XCircle} label="Failed" value={failed} color="bg-destructive/10 text-destructive" />
             <StatCard icon={Zap} label="Pass Rate" value={results.count ? Math.round((passed / results.count) * 100) + "%" : "0%"} color="bg-chart-5/10 text-chart-5" />
           </div>
+          <p className="text-xs text-muted-foreground">
+            Fresh run: {results.ran_at ? new Date(results.ran_at).toLocaleString() : "timestamp unavailable"} · {results.suite || "phone regression suite"}
+          </p>
 
           <div className="space-y-2">
             {results.results?.map((item, index) => {
