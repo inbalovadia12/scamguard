@@ -626,7 +626,7 @@ function PhoneBatchTab() {
                       </div>
                       <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Country</span><p className="font-medium mt-0.5">{r.country || "Unknown"}</p></div>
                       <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Carrier</span><p className="font-medium mt-0.5 truncate">{r.carrier || "Unknown"}</p></div>
-                      <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Evidence</span><p className="font-medium mt-0.5">{r.report_count || 0} exact · {item.evidence?.verified_web_result_count || 0} web · {item.evidence?.reddit_db_report_count || 0} Reddit DB</p></div>
+                      <div className="rounded-lg bg-muted/30 p-2"><span className="text-muted-foreground">Evidence</span><p className="font-medium mt-0.5">{r.report_count || 0} exact · {item.evidence?.verified_web_result_count || 0} verified web / {item.evidence?.web_result_count || 0} found · {item.evidence?.reddit_db_report_count || 0} Reddit DB</p></div>
                     </div>
                   )}
 
@@ -641,7 +641,37 @@ function PhoneBatchTab() {
                     </div>
                   )}
                   {item.evidence?.provider_errors?.length > 0 && (
-                    <p className="mt-2 text-xs text-warning">Provider issues: {item.evidence.provider_errors.map((e) => e.source).join(", ")}</p>
+                    <p className="mt-2 text-xs text-warning">Provider issues: {item.evidence.provider_errors.map((e) => e.source + ": " + e.error).join(" · ")}</p>
+                  )}
+
+                  {item.evidence?.search_engine_diagnostics && (
+                    <div className="mt-3 rounded-lg border border-border/40 bg-muted/15 p-3 space-y-2 text-xs">
+                      <p className="font-medium">Live web-search diagnostics</p>
+                      <p className="text-muted-foreground">
+                        Bing: {item.evidence.search_engine_diagnostics.bing?.successful_queries || 0}/{item.evidence.search_engine_diagnostics.bing?.attempted_queries || 0} queries succeeded, {item.evidence.search_engine_diagnostics.bing?.results_returned || 0} hits ·
+                        DuckDuckGo: {item.evidence.search_engine_diagnostics.duckduckgo?.successful_queries || 0}/{item.evidence.search_engine_diagnostics.duckduckgo?.attempted_queries || 0} queries succeeded, {item.evidence.search_engine_diagnostics.duckduckgo?.results_returned || 0} hits.
+                        {" "}Checked {item.evidence.page_checked_count || 0} pages; {item.evidence.verified_web_result_count || 0} passed exact-number verification.
+                      </p>
+                      {(item.evidence.search_engine_diagnostics.bing?.errors?.length > 0 || item.evidence.search_engine_diagnostics.duckduckgo?.errors?.length > 0) && (
+                        <p className="text-warning">
+                          Search errors: {[...(item.evidence.search_engine_diagnostics.bing?.errors || []).map((e) => "Bing: " + e), ...(item.evidence.search_engine_diagnostics.duckduckgo?.errors || []).map((e) => "DuckDuckGo: " + e)].join(" · ")}
+                        </p>
+                      )}
+                      {item.evidence.web_samples?.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-muted-foreground">Sample results:</p>
+                          {item.evidence.web_samples.slice(0, 4).map((sample, sampleIndex) => (
+                            <div key={sample.url || sampleIndex} className="flex flex-wrap items-start gap-x-2">
+                              <span className={sample.verified_exact_number ? "text-success" : "text-warning"}>
+                                {sample.verified_exact_number ? "Exact match" : "Not counted"}
+                              </span>
+                              <span className="min-w-0 break-words">{sample.title}</span>
+                              {sample.url && <a className="text-primary underline break-all" href={sample.url} target="_blank" rel="noreferrer">source</a>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               );
