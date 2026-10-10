@@ -30,15 +30,24 @@ function extractPhoneLikeTokens(text: string) {
 
 function containsExactPhone(text: string, targetForms: string[]) {
   const tokens = extractPhoneLikeTokens(text);
+  const targets = new Set(targetForms.map(normalizePhoneDigits).filter(Boolean));
   return tokens.some((token) => {
-    const digits = normalizePhoneDigits(token);
-    return targetForms.some((target) => {
-      if (digits === target) return true;
-      return digits.startsWith("1") && digits.slice(1) === target;
-    });
+    let digits = normalizePhoneDigits(token);
+    if (digits.startsWith("00")) digits = digits.slice(2);
+    if (targets.has(digits)) return true;
+    for (const code of ["971", "44", "61", "81", "1"]) {
+      for (const target of targets) {
+        if (!target.startsWith(code) || target.length <= code.length + 6) continue;
+        const national = target.slice(code.length);
+        if (digits === code + "0" + national) return true;
+        if (digits === "0" + national || digits === national) return true;
+      }
+    }
+    return Array.from(targets).some((target) =>
+      target.startsWith("1") && digits === target.slice(1)
+    );
   });
 }
-
 function decodeHtml(value: string) {
   return String(value || "")
     .replace(/&amp;/g, "&")
@@ -71,9 +80,9 @@ async function searchBingRss(query: string, timeoutMs = 7000) {
       const titleMatch = item.match(/<title>([\s\S]*?)<\/title>/i);
       const linkMatch = item.match(/<link>([\s\S]*?)<\/link>/i);
       const descMatch = item.match(/<description>([\s\S]*?)<\/description>/i);
-      const title = decodeHtml(titleMatch?.[1] || "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim();
+      const title = decodeHtml(titleMatch?.[1] || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
       const urlValue = decodeHtml(linkMatch?.[1] || "").trim();
-      const snippet = decodeHtml(descMatch?.[1] || "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim();
+      const snippet = decodeHtml(descMatch?.[1] || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
       if (title && urlValue) results.push({ title: title.slice(0, 300), snippet: snippet.slice(0, 500), url: urlValue, engine: "bing" });
     }
     return results;
@@ -103,9 +112,9 @@ async function searchDuckDuckGo(query: string, timeoutMs = 7000) {
       const hrefMatch = block.match(/class="result__a"[^>]+href="([^"]+)"/i);
       const titleMatch = block.match(/class="result__a"[^>]*>([\s\S]*?)<\/a>/i);
       const snippetMatch = block.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>|class="result__snippet"[^>]*>([\s\S]*?)<\/div>/i);
-      const title = decodeHtml(titleMatch?.[1] || "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim();
+      const title = decodeHtml(titleMatch?.[1] || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
       const rawHref = decodeHtml(hrefMatch?.[1] || "").trim();
-      const snippet = decodeHtml(snippetMatch?.[1] || snippetMatch?.[2] || "").replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim();
+      const snippet = decodeHtml(snippetMatch?.[1] || snippetMatch?.[2] || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
       let resultUrl = rawHref;
       try {
         const parsed = new URL(rawHref, "https://html.duckduckgo.com");
@@ -125,9 +134,19 @@ async function searchWeb(query: string) {
     searchBingRss(query),
     searchDuckDuckGo(query),
   ]);
-  return settled.flatMap((item) => item.status === "fulfilled" ? item.value : []);
+  const describe = (item: PromiseSettledResult<any[]>) => item.status === "fulfilled"
+    ? { ok: true, result_count: item.value.length, error: null, results: item.value }
+    : { ok: false, result_count: 0, error: (item.reason as any)?.message || String(item.reason || "Search failed"), results: [] as any[] };
+  const bing = describe(settled[0]);
+  const duckduckgo = describe(settled[1]);
+  return {
+    results: [...bing.results, ...duckduckgo.results],
+    engines: {
+      bing: { ok: bing.ok, result_count: bing.result_count, error: bing.error },
+      duckduckgo: { ok: duckduckgo.ok, result_count: duckduckgo.result_count, error: duckduckgo.error },
+    },
+  };
 }
-
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -140,28 +159,67 @@ Deno.serve(async (req) => {
 
     const variants = digitsVariants(phone);
     const digitsOnly = normalizePhoneDigits(phone);
+    const targetDigits = normalizePhoneDigits(phone);
+    const callingCode = ["971", "44", "61", "81", "1"].find((code) => targetDigits.startsWith(code)) || "";
+    const targetNational = callingCode ? targetDigits.slice(callingCode.length) : targetDigits;
+    const targetWithoutCountry = targetDigits.startsWith("1") && targetDigits.length == 11 ? targetDigits.slice(1) : targetDigits;
+    const nationalFormatted = callingCode ? "0" + targetNational : null;
+    const targetForms = Array.from(new Set([
+      targetDigits,
+      targetWithoutCountry,
+      "00" + targetDigits,
+      targetNational,
+      nationalFormatted,
+      callingCode ? callingCode + "0" + targetNational : null,
+    ].filter((value) => Boolean(value) && value.length >= 7)));
+
     const searches = [
-      `"${variants[0]}" scam OR fraud OR spam OR robocall`,
-      `"${variants[1]}" scam OR fraud OR spam OR robocall`,
-      `"${variants[0]}" review OR "who called"`,
-      `"${variants[0]}" "customer service" OR business OR company`,
-      `"${variants[variants.length - 1]}" scam OR fraud OR spam`,
-      `site:who-called.co.uk/Number "${digitsOnly}"`,
-      `site:who-calls.co.uk/Number "${digitsOnly}"`,
-      `site:phonely.co.uk/who-called-me "${digitsOnly}"`,
-      `site:connection-technologies.co.uk/number "${digitsOnly}"`,
-      `site:truecaller.com/who-called-me "${digitsOnly}"`,
-      `site:reddit.com/r/ScamNumbers "${digitsOnly}"`,
-      `site:reddit.com/r/scams "${digitsOnly}" phone`,
+      '"' + variants[0] + '" scam OR fraud OR spam OR robocall',
+      '"' + variants[1] + '" scam OR fraud OR spam OR robocall',
+      '"' + (nationalFormatted || variants[variants.length - 1]) + '" scam OR fraud OR spam',
+      '"' + variants[0] + '" review OR "who called" OR "customer service" OR support',
+      'site:who-called.co.uk OR site:who-calls.co.uk OR site:phonely.co.uk "' + digitsOnly + '"',
+      'site:reddit.com/r/ScamNumbers OR site:reddit.com/r/scams "' + digitsOnly + '" phone',
+      '"' + variants[0] + '" official OR support OR company',
     ];
 
-    const searchResults = await Promise.all(searches.map((q) => searchWeb(q).catch(() => [])));
-    const results = searchResults.flat();
-    const unique = Array.from(new Map(results.map((r) => [r.url, r])).values()).slice(0, 12);
+    const searchRuns = await Promise.all(searches.map(async (query) => {
+      try {
+        const outcome = await searchWeb(query);
+        return { query, results: outcome.results, engines: outcome.engines };
+      } catch (error: any) {
+        const message = error?.message || "Search failed";
+        return { query, results: [], engines: {
+          bing: { ok: false, result_count: 0, error: message },
+          duckduckgo: { ok: false, result_count: 0, error: message },
+        }};
+      }
+    }));
 
-    const targetDigits = normalizePhoneDigits(phone);
-    const targetWithoutCountry = targetDigits.startsWith("1") && targetDigits.length === 11 ? targetDigits.slice(1) : targetDigits;
-    const targetForms = Array.from(new Set([targetDigits, targetWithoutCountry].filter((v) => v.length >= 7)));
+    const engineDiagnostics: any = {
+      bing: { attempted_queries: searches.length, successful_queries: 0, results_returned: 0, errors: [] as string[] },
+      duckduckgo: { attempted_queries: searches.length, successful_queries: 0, results_returned: 0, errors: [] as string[] },
+    };
+    for (const run of searchRuns) {
+      for (const engine of ["bing", "duckduckgo"] as const) {
+        const detail = run.engines[engine];
+        if (detail?.ok) engineDiagnostics[engine].successful_queries += 1;
+        engineDiagnostics[engine].results_returned += Number(detail?.result_count || 0);
+        if (detail?.error && engineDiagnostics[engine].errors.length < 5) engineDiagnostics[engine].errors.push(detail.error);
+      }
+    }
+
+    const roundRobin: any[] = [];
+    const seenUrls = new Set<string>();
+    for (let rank = 0; rank < 12; rank += 1) {
+      for (const run of searchRuns) {
+        const candidate = run.results[rank];
+        if (!candidate?.url || seenUrls.has(candidate.url)) continue;
+        seenUrls.add(candidate.url);
+        roundRobin.push({ ...candidate, matched_query: run.query });
+      }
+    }
+    const unique = roundRobin.slice(0, 18);
 
     const verified = await Promise.all(unique.map(async (r) => {
       try {
@@ -176,7 +234,7 @@ Deno.serve(async (req) => {
             },
           });
           const html = await page.text();
-          const pageExact = containsExactPhone(html, targetForms);
+          const pageExact = page.ok && containsExactPhone(html, targetForms);
           const searchExact = containsExactPhone([r.title, r.snippet].filter(Boolean).join(" "), targetForms);
           return {
             ...r,
@@ -198,8 +256,13 @@ Deno.serve(async (req) => {
       searches,
       results: verified,
       result_count: verified.length,
+      raw_search_result_count: roundRobin.length,
+      page_checked_count: verified.length,
       verified_result_count: verified.filter((r) => r.verified_exact_number).length,
-      note: "Web results count as evidence only when the fetched page or the direct search result title/snippet contains an exact normalized phone-number token. Search-result-only evidence is retained with a lower verification method.",
+      search_query_count: searches.length,
+      search_engine_diagnostics: engineDiagnostics,
+      verification_failure_count: verified.filter((r) => r.verification_status === "verification_failed" || r.verification_status === "not_verified").length,
+      note: "Web results count as evidence only when the fetched page or the direct search result title/snippet contains an exact normalized phone-number token. International, national-trunk, and optional-trunk formats are normalized before comparing; search-result-only evidence is retained with a lower verification method.",
 
     });
   } catch (error: any) {
