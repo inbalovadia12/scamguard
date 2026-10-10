@@ -35,7 +35,7 @@ function containsExactPhone(text: string, targetForms: string[]) {
     let digits = normalizePhoneDigits(token);
     if (digits.startsWith("00")) digits = digits.slice(2);
     if (targets.has(digits)) return true;
-    for (const code of ["971", "44", "61", "81", "1"]) {
+    for (const code of ["971", "44", "61", "81"]) {
       for (const target of targets) {
         if (!target.startsWith(code) || target.length <= code.length + 6) continue;
         const national = target.slice(code.length);
@@ -139,8 +139,13 @@ async function searchWeb(query: string) {
     : { ok: false, result_count: 0, error: (item.reason as any)?.message || String(item.reason || "Search failed"), results: [] as any[] };
   const bing = describe(settled[0]);
   const duckduckgo = describe(settled[1]);
+  const results: any[] = [];
+  for (let index = 0; index < Math.max(bing.results.length, duckduckgo.results.length); index += 1) {
+    if (bing.results[index]) results.push(bing.results[index]);
+    if (duckduckgo.results[index]) results.push(duckduckgo.results[index]);
+  }
   return {
-    results: [...bing.results, ...duckduckgo.results],
+    results,
     engines: {
       bing: { ok: bing.ok, result_count: bing.result_count, error: bing.error },
       duckduckgo: { ok: duckduckgo.ok, result_count: duckduckgo.result_count, error: duckduckgo.error },
@@ -163,7 +168,7 @@ Deno.serve(async (req) => {
     const callingCode = ["971", "44", "61", "81", "1"].find((code) => targetDigits.startsWith(code)) || "";
     const targetNational = callingCode ? targetDigits.slice(callingCode.length) : targetDigits;
     const targetWithoutCountry = targetDigits.startsWith("1") && targetDigits.length == 11 ? targetDigits.slice(1) : targetDigits;
-    const nationalFormatted = callingCode ? "0" + targetNational : null;
+    const nationalFormatted = callingCode && callingCode !== "1" ? "0" + targetNational : null;
     const targetForms = Array.from(new Set([
       targetDigits,
       targetWithoutCountry,
