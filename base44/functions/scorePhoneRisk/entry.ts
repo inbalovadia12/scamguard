@@ -131,7 +131,8 @@ function scorePhone(evidence: AnyRecord) {
     Math.min(20, providerSuccesses * 7) -
     Math.min(20, providerErrors * 5) +
     (verifiedWeb.length > 0 ? 8 : 0) +
-    (verifiedBusiness ? 15 : 0)
+    (verifiedBusiness ? 15 : 0),
+    0, 95
   );
 
   const categories = uniqueStrings(

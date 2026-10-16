@@ -372,9 +372,10 @@ Deno.serve(async (req) => {
       redditDbReports.length,
     );
 
-    const exactEvidenceCount = reports.filter((r) =>
-      r.source !== "web_search" ? Boolean(r.text || r.url) : r.verified_exact_number === true
-    ).length;
+    const exactEvidenceCount = reports.filter((r) => {
+      if (r.source === "web_search") return r.verified_exact_number === true;
+      return Boolean(r.text || r.url || r.raw || r.category);
+    }).length;
 
     const businessCandidates = [
       numbersOnline?.caller_name,
