@@ -234,12 +234,20 @@ const GENERIC_WEB_HOSTS = new Set([
 // reveals that it's a community-reporting platform rather than an official
 // business page. This prevents deriving a business identity from a site
 // that merely hosts discussions about phone numbers.
-const REPORTING_SITE_INDICATORS = /\b(who called|reverse (phone|lookup)|report (this|a) (number|scam|call)|reported by \d|community reports?|user reports?|spam calls?|scam calls?|nuisance calls?|callers? reported|yabb|phpbb|vbulletin|saynoto0870)\b/i;
+const REPORTING_SITE_INDICATORS = /\b(who called|who called me|reverse (phone|lookup)|report (this|a|the) (number|scam|call)|reported by \d|community reports?|user reports?|spam calls?|scam calls?|nuisance calls?|callers? reported|yabb|phpbb|vbulletin|saynoto0870|called you|block this number|is this (number|caller) (safe|spam|scam)|phone (number )?(lookup|search)|caller id|spam score|spam level|risk score|fraud score|spam index|robocall|telemarketer|unwanted call|dangerous number|harassing call|phone (fraud|scam|spam) alert)\b/i;
+
+// URL path patterns that strongly indicate a phone-reporting / community site.
+const REPORTING_URL_PATTERNS = /\/(num\/\d|number\/\d|phone\/\d|who-called|report|complaint|spam-check|scam-check|lookup\/|reverse-phone|caller-id\/)/i;
 
 function looksLikeReportingSite(result: AnyRecord): boolean {
+  // Content-based detection
   const text = String([result?.title, result?.snippet, result?.page_content].filter(Boolean).join(" "));
-  if (!text || text.length < 20) return false;
-  return REPORTING_SITE_INDICATORS.test(text);
+  if (text && text.length >= 20 && REPORTING_SITE_INDICATORS.test(text)) return true;
+  // URL-path-based detection — catches reporting sites even when the page
+  // content is minimal or blocked (e.g., JS-rendered pages with empty content).
+  const url = String(result?.url || "");
+  if (url && REPORTING_URL_PATTERNS.test(url)) return true;
+  return false;
 }
 
 function candidateFromWebResult(result: AnyRecord) {

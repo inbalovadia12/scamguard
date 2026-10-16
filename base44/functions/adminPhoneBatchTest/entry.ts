@@ -22,6 +22,15 @@ const REGRESSION_CASES = [
   // Reproduction cases for business-identification and missing-evidence bugs
   { phone: "+44 161 931 9070", label: "Case A - reporting site (called.co.uk/saynoto0870) must not become business identity", expectation: "scam", expected_country: "GB" },
   { phone: "+44 7359 140063", label: "Case B - missing evidence / community reports must surface", expectation: "suspicious", expected_country: "GB" },
+  // Additional diverse test cases
+  { phone: "+1 888 280 4331", label: "Known legitimate / Amazon US customer service", expectation: "legitimate", expected_business: "Amazon", expected_country: "US" },
+  { phone: "+44 800 085 4408", label: "Verified business / Formatank Ltd (toll-free UK)", expectation: "legitimate", expected_country: "GB" },
+  { phone: "+44 7418 360486", label: "Unknown / no web evidence found (flaky search)", expectation: "unknown", expected_country: "GB" },
+  { phone: "+1 855 738 0610", label: "Unknown / no web evidence found (flaky search)", expectation: "unknown", expected_country: "US" },
+  { phone: "+44 800 011 9735", label: "Unknown / no web evidence found (HMRC toll-free)", expectation: "unknown", expected_country: "GB" },
+  { phone: "+61 1300 729 729", label: "Unknown / no web evidence found (Australian 1300)", expectation: "unknown", expected_country: "AU" },
+  { phone: "+1 800 555 1234", label: "Fictional / insufficient evidence", expectation: "unknown", expected_country: "US" },
+  { phone: "+44 800 023 4853", label: "Known legitimate / Amazon UK", expectation: "legitimate", expected_business: "Amazon", expected_country: "GB" },
 ];
 
 function checkResult(result: any, expectation: string) {

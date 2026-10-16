@@ -246,26 +246,64 @@ async function searchDuckDuckGo(query: string, timeoutMs = 8000) {
   }
 }
 
+async function searchGoogleHtml(query: string, timeoutMs = 8000) {
+  const url = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=10&hl=en`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": BROWSER_UA,
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,*/*",
+      },
+    });
+    const html = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const results: any[] = [];
+    // Google wraps result links in <a href="/url?q=ACTUAL_URL&..."> or <a href="ACTUAL_URL">
+    // and titles in <h3> tags. Extract /url?q= links first, then plain https links.
+    const linkRegex = /<a[^>]+href="(?:\/url\?q=|)(https?:\/\/(?!www\.google\.|google\.|gstatic\.|youtube\.com\/results|maps\.google\.|support\.google\.|accounts\.google\.|policies\.google\.)[^"&]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let match;
+    while ((match = linkRegex.exec(html)) !== null) {
+      const rawUrl = decodeHtml(match[1]).split("&")[0];
+      const title = decodeHtml(match[2]).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      if (title && rawUrl && title.length > 10) {
+        results.push({ title: title.slice(0, 300), snippet: "", url: rawUrl, engine: "google" });
+      }
+    }
+    return results.slice(0, 10);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function searchWeb(query: string) {
   const settled = await Promise.allSettled([
     searchBingRss(query),
     searchDuckDuckGo(query),
+    searchGoogleHtml(query),
   ]);
   const describe = (item: PromiseSettledResult<any[]>) => item.status === "fulfilled"
     ? { ok: true, result_count: item.value.length, error: null, results: item.value }
     : { ok: false, result_count: 0, error: (item.reason as any)?.message || String(item.reason || "Search failed"), results: [] as any[] };
   const bing = describe(settled[0]);
   const duckduckgo = describe(settled[1]);
+  const google = describe(settled[2]);
   const results: any[] = [];
-  for (let index = 0; index < Math.max(bing.results.length, duckduckgo.results.length); index += 1) {
+  for (let index = 0; index < Math.max(bing.results.length, duckduckgo.results.length, google.results.length); index += 1) {
     if (bing.results[index]) results.push(bing.results[index]);
     if (duckduckgo.results[index]) results.push(duckduckgo.results[index]);
+    if (google.results[index]) results.push(google.results[index]);
   }
   return {
     results,
     engines: {
       bing: { ok: bing.ok, result_count: bing.result_count, error: bing.error },
       duckduckgo: { ok: duckduckgo.ok, result_count: duckduckgo.result_count, error: duckduckgo.error },
+      google: { ok: google.ok, result_count: google.result_count, error: google.error },
     },
   };
 }
@@ -390,6 +428,10 @@ Deno.serve(async (req) => {
       nationalWithTrunk + " harassment",           // "8006927753 harassment" — harassment reports
       nationalWithTrunk + " phone number lookup",  // "8006927753 phone number lookup" — lookup sites
       nationalWithTrunk + " support",              // "8006927753 support" — official support pages
+      nationalWithTrunk + " reviews",              // "8006927753 reviews" — business reviews
+      nationalWithTrunk + " safe or scam",         // "8006927753 safe or scam" — scam question format
+      nationalWithTrunk + " fraud",                // "8006927753 fraud" — fraud reports
+      nationalWithTrunk + " legitimate",           // "8006927753 legitimate" — legitimacy discussions
       "site:reddit.com " + nationalWithTrunk,     // "site:reddit.com 8006927753" — Reddit
     ];
 
@@ -409,9 +451,10 @@ Deno.serve(async (req) => {
     const engineDiagnostics: any = {
       bing: { attempted_queries: searches.length, successful_queries: 0, results_returned: 0, errors: [] as string[] },
       duckduckgo: { attempted_queries: searches.length, successful_queries: 0, results_returned: 0, errors: [] as string[] },
+      google: { attempted_queries: searches.length, successful_queries: 0, results_returned: 0, errors: [] as string[] },
     };
     for (const run of searchRuns) {
-      for (const engine of ["bing", "duckduckgo"] as const) {
+      for (const engine of ["bing", "duckduckgo", "google"] as const) {
         const detail = run.engines[engine];
         if (detail?.ok) engineDiagnostics[engine].successful_queries += 1;
         engineDiagnostics[engine].results_returned += Number(detail?.result_count || 0);
@@ -479,11 +522,11 @@ Deno.serve(async (req) => {
     const directVerifiedResults = verified.filter((r) => r.verified_exact_number);
     const directVerifiedCount = directVerifiedResults.length;
     // Trigger LLM supplementary search when:
-    // 1. Few verified results at all (< 2), OR
+    // 1. Few verified results at all (< 3), OR
     // 2. All verified results are from phone directory sites (no official business page found)
     const allVerifiedFromDirectories = directVerifiedCount > 0 &&
       directVerifiedResults.every((r) => isDirectoryUrl(r.url));
-    if (directVerifiedCount < 2 || allVerifiedFromDirectories) {
+    if (directVerifiedCount < 3 || allVerifiedFromDirectories) {
       try {
         // Generate common hyphenated formats so Gemini can find pages that
         // list the number with hyphens (e.g., "0120-435-500" for Japan 0120).
@@ -502,29 +545,48 @@ Deno.serve(async (req) => {
           ? { "971": "United Arab Emirates (UAE)", "44": "United Kingdom", "61": "Australia", "81": "Japan", "1": "United States" }[callingCode] || ""
           : "";
         const countryLine = countryHint ? `This phone number is from ${countryHint}. ` : "";
-        const llmResult = await base44.integrations.Core.InvokeLLM({
-          prompt: `${countryLine}Who does the phone number "${phone}" belong to? Search the web for this number (it may appear as ${formatList.join(", ")}). Tell me:\n1. The business or organization name associated with this number\n2. The URL of the official support or contact page where this number is listed (e.g., on apple.com, beatsbydre.com, microsoft.com, google.com, amazon.com)\n3. Any scam report or community discussion pages about this number (e.g., on tellows.co.uk, who-called.co.uk, truecaller.com, 800notes.com, everycaller.com)\n\nReturn the business name, the official page URL, and any scam report URLs you found. Only include pages where you actually found the exact phone number. If you can identify the business but cannot find the exact URL, still return the business name.`,
-          add_context_from_internet: true,
-          model: "gemini_3_flash",
-          response_json_schema: {
-            type: "object",
-            properties: {
-              business_name: { type: "string" },
-              official_url: { type: "string" },
-              official_title: { type: "string" },
-              scam_reports: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    url: { type: "string" },
-                    title: { type: "string" },
-                  },
+        const llmPrompt = `${countryLine}Who does the phone number "${phone}" belong to? Search the web for this number (it may appear as ${formatList.join(", ")}). Tell me:\n1. The business or organization name associated with this number\n2. The URL of the official support or contact page where this number is listed (e.g., on apple.com, beatsbydre.com, microsoft.com, google.com, amazon.com)\n3. Any scam report or community discussion pages about this number (e.g., on tellows.co.uk, who-called.co.uk, truecaller.com, 800notes.com, everycaller.com)\n\nReturn the business name, the official page URL, and any scam report URLs you found. Only include pages where you actually found the exact phone number. If you can identify the business but cannot find the exact URL, still return the business name.`;
+        const llmSchema = {
+          type: "object",
+          properties: {
+            business_name: { type: "string" },
+            official_url: { type: "string" },
+            official_title: { type: "string" },
+            scam_reports: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  url: { type: "string" },
+                  title: { type: "string" },
                 },
               },
             },
           },
-        });
+        };
+        // Model fallback chain: gemini_3_flash (fast, cheap) → gemini_3_1_pro
+        // (more capable, still supports web search). This handles transient
+        // unavailability of the primary model.
+        let llmResult: any = null;
+        try {
+          llmResult = await base44.integrations.Core.InvokeLLM({
+            prompt: llmPrompt,
+            add_context_from_internet: true,
+            model: "gemini_3_flash",
+            response_json_schema: llmSchema,
+          });
+        } catch (primaryError) {
+          try {
+            llmResult = await base44.integrations.Core.InvokeLLM({
+              prompt: llmPrompt,
+              add_context_from_internet: true,
+              model: "gemini_3_1_pro",
+              response_json_schema: llmSchema,
+            });
+          } catch (fallbackError) {
+            throw fallbackError;
+          }
+        }
 
         // Build a unified candidate list from Gemini's structured response.
         // Filter out placeholder values like "Not found", "N/A", "Unknown".

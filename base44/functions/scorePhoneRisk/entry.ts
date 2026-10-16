@@ -145,19 +145,24 @@ function scorePhone(evidence: AnyRecord) {
   if (!hasNegativeEvidence && verifiedBusiness) score = Math.min(score, 15);
   else if (!hasNegativeEvidence && hasLegitimateEvidence) score = Math.min(score, 25);
 
-  // For genuinely verified businesses (on official domains like apple.com),
-  // community reports from phone-reporting sites are often false positives —
-  // people report legitimate numbers as spam because they received an unwanted
-  // call, not because the number is a scam. Cap the score at suspicious (40)
-  // rather than letting community reports push it to scam territory.
-  // But if strong independent risk signals (high ScamCallCheck score, many
-  // complaints) are present, don't cap — those are more reliable than
-  // community site reports.
-  if (isOfficiallyVerified && (providerRisk === null || providerRisk < 70) && complaintCount < 3) {
+  // For genuinely verified businesses (on official domains like apple.com,
+  // amazon.com), community reports from phone-reporting sites are often false
+  // positives — people report legitimate numbers as spam because they received
+  // an unwanted call, not because the number is a scam. Cap the score at
+  // suspicious (40) rather than letting community noise push it to scam
+  // territory. Only strong independent provider risk signals (ScamCallCheck
+  // or Numbers Online reporting high risk) can override this cap — community
+  // complaint counts and web-search noise cannot.
+  const hasStrongProviderRisk =
+    (providerRisk !== null && providerRisk >= 70) ||
+    (numbersSpam !== null && (numbersSpam > 1 ? numbersSpam >= 70 : numbersSpam >= 0.7));
+  if (isOfficiallyVerified && !hasStrongProviderRisk) {
     score = Math.min(score, 40);
   }
-  if (isOfficiallyVerified && negativeReports === 0 && webNegative === 0 && complaintCount < 3 && communityCount === 0) {
-    score = Math.min(score, 15);
+  // If no exact-match negative reports and no provider complaints at all,
+  // the number is very likely legitimate — cap even lower.
+  if (isOfficiallyVerified && negativeReports === 0 && complaintCount === 0) {
+    score = Math.min(score, 20);
   }
 
   let status: "SCAM" | "SUSPICIOUS" | "SAFE" | "UNKNOWN";
