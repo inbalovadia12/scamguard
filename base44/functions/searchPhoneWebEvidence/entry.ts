@@ -57,6 +57,23 @@ function decodeHtml(value: string) {
 
 const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
+// Phone directory / scam-report sites that aggregate numbers but are NOT
+// official business sources. If all verified results come from these, the
+// LLM supplementary search is triggered to find official support pages.
+const DIRECTORY_DOMAINS = [
+  "jpnumber", "800notes", "whocalls", "whocallsme", "callercomplaints",
+  "whocalledus", "callcontrol", "nomorobo", "robocaller", "robokiller",
+  "truecaller", "sync.me", "shouldianswer", "phoneowner", "reversephone",
+  "yellowpages", "whitepages", "who-called", "callercheck", "numlookup",
+  "411.com", "scamadviser", "scamchecker", "bizapedia", "whocall",
+  "phonebook", "tel-directory", "numberguru", "spydialer", "usphonebook",
+];
+
+function isDirectoryUrl(url: string): boolean {
+  const host = String(url || "").toLowerCase();
+  return DIRECTORY_DOMAINS.some((d) => host.includes(d));
+}
+
 // === Search engines ===
 
 async function searchBingRss(query: string, timeoutMs = 8000) {
@@ -327,24 +344,45 @@ Deno.serve(async (req) => {
     // Gemini has access to Google Search, which indexes pages far more
     // effectively than the Bing RSS endpoint for specific phone numbers.
     let llmSupplementary: any = { used: false, candidates_found: 0, candidates_verified: 0, error: null };
-    const directVerifiedCount = verified.filter((r) => r.verified_exact_number).length;
-    if (directVerifiedCount < 2) {
+    const directVerifiedResults = verified.filter((r) => r.verified_exact_number);
+    const directVerifiedCount = directVerifiedResults.length;
+    // Trigger LLM supplementary search when:
+    // 1. Few verified results at all (< 2), OR
+    // 2. All verified results are from phone directory sites (no official business page found)
+    const allVerifiedFromDirectories = directVerifiedCount > 0 &&
+      directVerifiedResults.every((r) => isDirectoryUrl(r.url));
+    if (directVerifiedCount < 2 || allVerifiedFromDirectories) {
       try {
+        // Generate common hyphenated formats so Gemini can find pages that
+        // list the number with hyphens (e.g., "0120-435-500" for Japan 0120).
+        // Use nationalWithTrunk (includes trunk zero) as it's the standard
+        // national format that appears on official pages.
+        const nd = nationalWithTrunk;
+        const hyphenatedFormats = nd.length === 10
+          ? [`${nd.slice(0, 4)}-${nd.slice(4, 7)}-${nd.slice(7)}`, `${nd.slice(0, 3)}-${nd.slice(3, 6)}-${nd.slice(6)}`]
+          : nd.length === 11
+            ? [`${nd.slice(0, 4)}-${nd.slice(4, 7)}-${nd.slice(7)}`, `${nd.slice(0, 3)}-${nd.slice(3, 7)}-${nd.slice(7)}`]
+            : nd.length === 9
+              ? [`${nd.slice(0, 3)}-${nd.slice(3, 6)}-${nd.slice(6)}`, `${nd.slice(0, 4)}-${nd.slice(4, 7)}-${nd.slice(7)}`]
+              : [];
+        const formatList = [phone, ...targetForms, ...hyphenatedFormats].filter((v, i, a) => v && a.indexOf(v) === i);
         const llmResult = await base44.integrations.Core.InvokeLLM({
-          prompt: `Search the web for the exact phone number "${phone}" (digits: ${digits}). Find pages that contain this exact phone number:\n1. Official support or contact pages (e.g., Apple, Microsoft, Beats support pages)\n2. Scam report or "who called" pages that mention this exact number\n3. Reddit or community discussions about this number\n\nFor each page you found that contains the exact phone number, return the full URL, a brief title, and the business name if it is an official support page. Only include pages where you actually found the exact phone number on the page.`,
+          prompt: `Who does the phone number "${phone}" belong to? Search the web for this number (it may appear as ${formatList.join(", ")}). Tell me:\n1. The business or organization name associated with this number\n2. The URL of the official support or contact page where this number is listed (e.g., on apple.com, beatsbydre.com, microsoft.com, google.com, amazon.com)\n3. Any scam report or community discussion pages about this number\n\nReturn the business name, the official page URL, and any scam report URLs you found. Only include pages where you actually found the exact phone number.`,
           add_context_from_internet: true,
           model: "gemini_3_flash",
           response_json_schema: {
             type: "object",
             properties: {
-              candidates: {
+              business_name: { type: "string" },
+              official_url: { type: "string" },
+              official_title: { type: "string" },
+              scam_reports: {
                 type: "array",
                 items: {
                   type: "object",
                   properties: {
                     url: { type: "string" },
                     title: { type: "string" },
-                    business_name: { type: "string" },
                   },
                 },
               },
@@ -352,7 +390,26 @@ Deno.serve(async (req) => {
           },
         });
 
-        const llmCandidates = Array.isArray(llmResult?.candidates) ? llmResult.candidates : [];
+        // Build a unified candidate list from Gemini's structured response.
+        // Filter out placeholder values like "Not found", "N/A", "Unknown".
+        const INVALID_URL_VALUES = ["not found", "n/a", "na", "unknown", "none", "null", ""];
+        function isValidLlmUrl(url: string): boolean {
+          const u = String(url || "").trim().toLowerCase();
+          return u.startsWith("http") && !INVALID_URL_VALUES.includes(u);
+        }
+        const llmCandidates: any[] = [];
+        if (isValidLlmUrl(llmResult?.official_url)) {
+          llmCandidates.push({
+            url: llmResult.official_url,
+            title: llmResult.official_title || "",
+            business_name: llmResult.business_name || "",
+          });
+        }
+        if (Array.isArray(llmResult?.scam_reports)) {
+          for (const sr of llmResult.scam_reports) {
+            if (isValidLlmUrl(sr?.url)) llmCandidates.push({ url: sr.url, title: sr.title || "", business_name: "" });
+          }
+        }
         llmSupplementary.used = true;
         llmSupplementary.candidates_found = llmCandidates.length;
 
