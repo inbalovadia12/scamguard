@@ -344,6 +344,9 @@ Deno.serve(async (req) => {
       nationalWithTrunk + " scam",                 // "8006927753 scam" — scam reports
       digits + " scam",                            // "18006927753 scam" — full international digits + scam
       nationalWithTrunk + " who called",           // "8006927753 who called" — who-called sites
+      nationalWithTrunk + " who called me",        // "8006927753 who called me" — who-called sites
+      nationalWithTrunk + " harassment",           // "8006927753 harassment" — harassment reports
+      nationalWithTrunk + " phone number lookup",  // "8006927753 phone number lookup" — lookup sites
       nationalWithTrunk + " support",              // "8006927753 support" — official support pages
       "site:reddit.com " + nationalWithTrunk,     // "site:reddit.com 8006927753" — Reddit
     ];
@@ -401,13 +404,21 @@ Deno.serve(async (req) => {
             },
           });
           const html = await page.text();
+          const pageContent = page.ok ? extractPageContent(html) : "";
           const pageExact = page.ok && containsExactPhone(html, targetForms);
           const searchExact = containsExactPhone([r.title, r.snippet].filter(Boolean).join(" "), targetForms);
+          // For community-reporting sites, accept URL-based verification when
+          // the page is inaccessible (geo-blocked, JS-required) but the URL
+          // path itself contains the exact phone number.
+          const urlExact = isCommunityReportSite(r.url) && urlPathContainsTargetNumber(r.url, targetForms);
+          const isVerified = pageExact || searchExact || urlExact;
           return {
             ...r,
-            verified_exact_number: pageExact || searchExact,
-            verification_method: pageExact ? "page" : searchExact ? "search_result" : "none",
-            verification_status: pageExact || searchExact ? "verified" : "not_verified",
+            verified_exact_number: isVerified,
+            verification_method: pageExact ? "page" : searchExact ? "search_result" : urlExact ? "community_url" : "none",
+            verification_status: isVerified ? "verified" : "not_verified",
+            page_content: pageContent,
+            is_community_report: isCommunityReportSite(r.url),
           };
         } finally {
           clearTimeout(timer);
@@ -450,7 +461,7 @@ Deno.serve(async (req) => {
           : "";
         const countryLine = countryHint ? `This phone number is from ${countryHint}. ` : "";
         const llmResult = await base44.integrations.Core.InvokeLLM({
-          prompt: `${countryLine}Who does the phone number "${phone}" belong to? Search the web for this number (it may appear as ${formatList.join(", ")}). Tell me:\n1. The business or organization name associated with this number\n2. The URL of the official support or contact page where this number is listed (e.g., on apple.com, beatsbydre.com, microsoft.com, google.com, amazon.com)\n3. Any scam report or community discussion pages about this number\n\nReturn the business name, the official page URL, and any scam report URLs you found. Only include pages where you actually found the exact phone number. If you can identify the business but cannot find the exact URL, still return the business name.`,
+          prompt: `${countryLine}Who does the phone number "${phone}" belong to? Search the web for this number (it may appear as ${formatList.join(", ")}). Tell me:\n1. The business or organization name associated with this number\n2. The URL of the official support or contact page where this number is listed (e.g., on apple.com, beatsbydre.com, microsoft.com, google.com, amazon.com)\n3. Any scam report or community discussion pages about this number (e.g., on tellows.co.uk, who-called.co.uk, truecaller.com, 800notes.com, everycaller.com)\n\nReturn the business name, the official page URL, and any scam report URLs you found. Only include pages where you actually found the exact phone number. If you can identify the business but cannot find the exact URL, still return the business name.`,
           add_context_from_internet: true,
           model: "gemini_3_flash",
           response_json_schema: {
@@ -514,8 +525,11 @@ Deno.serve(async (req) => {
                 },
               });
               const html = await page.text();
+              const pageContent = page.ok ? extractPageContent(html) : "";
               const pageExact = page.ok && containsExactPhone(html, targetForms);
               const searchExact = containsExactPhone(String(c?.title || ""), targetForms);
+              const urlExact = isCommunityReportSite(url) && urlPathContainsTargetNumber(url, targetForms);
+              const isVerified = pageExact || searchExact || urlExact;
               return {
                 title: String(c?.title || "").slice(0, 300),
                 snippet: "",
@@ -523,9 +537,11 @@ Deno.serve(async (req) => {
                 engine: "llm_supplementary",
                 matched_query: "llm_web_search",
                 business_name_hint: c?.business_name || null,
-                verified_exact_number: pageExact || searchExact,
-                verification_method: pageExact ? "page" : searchExact ? "search_result" : "none",
-                verification_status: pageExact || searchExact ? "verified" : "not_verified",
+                verified_exact_number: isVerified,
+                verification_method: pageExact ? "page" : searchExact ? "search_result" : urlExact ? "community_url" : "none",
+                verification_status: isVerified ? "verified" : "not_verified",
+                page_content: pageContent,
+                is_community_report: isCommunityReportSite(url),
               };
             } finally {
               clearTimeout(timer);

@@ -177,6 +177,30 @@ export default function PhoneResultView({ data }) {
         </div>
       )}
 
+      {/* External Reputation Evidence */}
+      {data.external_reports?.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <ExternalLink className="w-3.5 h-3.5" /> External Reputation Evidence
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Reports from third-party public phone-reporting sites. These are not Vardin user submissions.
+          </p>
+          <div className="space-y-2">
+            {data.external_reports.map((report, i) => (
+              <div key={i} className="rounded-xl border border-border/50 bg-muted/20 p-3 space-y-1">
+                <a href={report.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate block">
+                  {report.url}
+                </a>
+                {report.text && (
+                  <p className="text-xs text-muted-foreground line-clamp-3">{report.text}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Sources */}
       {data.sources?.length > 0 && (
         <div className="space-y-2">

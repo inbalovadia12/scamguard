@@ -23,7 +23,7 @@ function scorePhone(evidence: AnyRecord) {
   const verifiedWeb = reports.filter((r: AnyRecord) => r.source === "web_search" && r.verified_exact_number === true);
   const webNegativeHosts = new Set(
     verifiedWeb
-      .filter((r: AnyRecord) => NEGATIVE.test([r.text, r.url].filter(Boolean).join(" ")))
+      .filter((r: AnyRecord) => NEGATIVE.test([r.text, r.page_content, r.url].filter(Boolean).join(" ")))
       .map((r: AnyRecord) => {
         try { return new URL(String(r.url)).hostname.toLowerCase(); } catch { return String(r.url || ""); }
       })
@@ -47,6 +47,11 @@ function scorePhone(evidence: AnyRecord) {
     score += Math.min(36, webNegative * 12);
     reasons.push(webNegative + " independent public web source" + (webNegative === 1 ? "" : "s") + " mention the exact number in a scam/spam/fraud context.");
   }
+  const externalCount = Number(counts.external_report_count || 0);
+  if (externalCount > 0) {
+    score += Math.min(10, externalCount * 3);
+    reasons.push(externalCount + " external community-reporting site" + (externalCount === 1 ? "" : "s") + " (tellows, who-called, truecaller, etc.) ha" + (externalCount === 1 ? "s" : "ve") + " reports about this number.");
+  }
   if (redditVerified > 0) {
     score += Math.min(12, redditVerified * 6);
     reasons.push(redditVerified + " verified Reddit result" + (redditVerified === 1 ? "" : "s") + " contain the exact number.");
@@ -65,15 +70,23 @@ function scorePhone(evidence: AnyRecord) {
 
   const providerRisk = num(signals.scamcallcheck_risk_score);
   if (providerRisk !== null) {
-    score += (providerRisk - 50) * 0.22;
-    if (providerRisk >= 70) reasons.push("ScamCallCheck reports a high risk signal (" + clamp(providerRisk) + "/100).");
+    // Only let ScamCallCheck risk_score increase risk, not decrease it.
+    // A risk score of 0 means "no reports on ScamCallCheck", not "confirmed safe".
+    if (providerRisk > 50) {
+      score += (providerRisk - 50) * 0.22;
+      if (providerRisk >= 70) reasons.push("ScamCallCheck reports a high risk signal (" + clamp(providerRisk) + "/100).");
+    }
   }
 
   const numbersSpam = num(signals.numbers_online_spam_signal);
   if (numbersSpam !== null) {
     const normalizedSpam = numbersSpam > 1 ? numbersSpam : numbersSpam * 100;
-    score += (normalizedSpam - 50) * 0.12;
-    if (normalizedSpam >= 70) reasons.push("Numbers Online reports a high spam signal (" + clamp(normalizedSpam) + "/100).");
+    // Only let Numbers Online spam_signal increase risk, not decrease it.
+    // A low spam score means "no evidence of spam", not "evidence of safety".
+    if (normalizedSpam > 50) {
+      score += (normalizedSpam - 50) * 0.12;
+      if (normalizedSpam >= 70) reasons.push("Numbers Online reports a high spam signal (" + clamp(normalizedSpam) + "/100).");
+    }
   }
 
   const robocall = String(signals.us_robocall_flag ?? "").toLowerCase();
@@ -93,7 +106,7 @@ function scorePhone(evidence: AnyRecord) {
 
   const verifiedBusiness = Boolean(identity.verified_business);
   const hasNegativeEvidence =
-    negativeReports > 0 || webNegative > 0 ||
+    negativeReports > 0 || webNegative > 0 || externalCount > 0 ||
     (complaintCount >= 3 && !identity.caller_name) ||
     (communityCount > 0 && !identity.caller_name) ||
     (providerRisk !== null && providerRisk >= 70) ||
@@ -153,6 +166,7 @@ function scorePhone(evidence: AnyRecord) {
     carrier: identity.carrier || null,
     line_type: identity.line_type || null,
     report_count: evidenceCount,
+    external_report_count: Number(counts.external_report_count || 0),
     scam_report_count: negativeReports,
     spam_report_count: reports.filter((r: AnyRecord) => /spam|robocall/i.test([r.category, r.text].filter(Boolean).join(" "))).length,
     suspicious_report_count: Math.max(0, negativeReports - reports.filter((r: AnyRecord) => /scam|fraud|phishing|impersonat/i.test([r.category, r.text].filter(Boolean).join(" "))).length),

@@ -83,6 +83,7 @@ export default function PhoneLookupTab() {
         ...risk,
         phone_number: phone,
         sources: Array.isArray(evidence.sources) ? evidence.sources : [],
+        external_reports: Array.isArray(evidence.external_reports) ? evidence.external_reports : [],
         user_reports: evidenceReasons,
         summary,
       });

@@ -371,17 +371,36 @@ Deno.serve(async (req) => {
       source: "web_search",
       id: `web-${i + 1}`,
       category: null,
-      text: normalizeText([r.title, r.snippet].filter(Boolean).join(" — ")),
+      text: normalizeText([r.title, r.snippet, r.page_content].filter(Boolean).join(" — ")),
       title: normalizeText(r.title),
       snippet: normalizeText(r.snippet),
+      page_content: normalizeText(r.page_content),
       date: null,
       url: normalizeText(r.url),
       exact_match_required: true,
       verified_exact_number: r.verified_exact_number === true,
       verification_method: r.verification_method ?? null,
       verification_status: r.verification_status ?? null,
+      is_community_report: r.is_community_report === true,
       raw: r,
     })) : [];
+
+    // External community reports: third-party public phone-reporting sites
+    // (tellows, who-called, truecaller, etc.) that have verified the exact
+    // number. These are NOT Vardin user submissions — they are independent
+    // reputation evidence from public community-reporting platforms.
+    const externalReports = webResults
+      .filter((r) => r.is_community_report && r.verified_exact_number)
+      .map((r, i) => ({
+        source: "external_community",
+        id: `ext-${i + 1}`,
+        category: null,
+        text: r.page_content || r.text,
+        url: r.url,
+        verified_exact_number: true,
+        is_community_report: true,
+        raw: r.raw,
+      }));
 
     let redditDbReports: AnyRecord[] = [];
     if (normalizedNumber) {
@@ -502,6 +521,7 @@ Deno.serve(async (req) => {
       counts: {
         complaint_count: complaintCount,
         community_report_count: communityReportCount,
+        external_report_count: externalReports.length,
         reddit_db_report_count: redditDbReports.length,
         exact_evidence_count: exactEvidenceCount,
         web_result_count: webResults.length,
@@ -514,6 +534,7 @@ Deno.serve(async (req) => {
         verification_failure_count: Number(web?.verification_failure_count || 0),
       },
       reports,
+      external_reports: externalReports,
       web_search: {
         searched: Boolean(web?.results),
         result_count: webResults.length,

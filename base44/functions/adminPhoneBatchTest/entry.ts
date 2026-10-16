@@ -11,6 +11,8 @@ const REGRESSION_CASES = [
   { phone: "+81 120435500", label: "Known legitimate / Beats Japan", expectation: "legitimate", expected_business: "Beats", expected_country: "JP" },
   { phone: "+61 1300365083", label: "Known legitimate / Apple Australia", expectation: "legitimate", expected_business: "Apple", expected_country: "AU" },
   { phone: "+971 80004441849", label: "Known legitimate / Beats UAE", expectation: "legitimate", expected_business: "Beats", expected_country: "AE" },
+  { phone: "+44 7480 726506", label: "Known scam / HMRC impersonation, debt scam (tellows, who-called, truecaller)", expectation: "scam", expected_country: "GB" },
+  { phone: "+1 555 0199", label: "Unknown / fictional 555 number, no evidence expected", expectation: "unknown", expected_country: "US" },
 ];
 
 function checkResult(result: any, expectation: string) {
@@ -40,14 +42,24 @@ function checkResult(result: any, expectation: string) {
   } else if (expectation === "scam") {
     checks.push({
       name: "scam_signal_present",
-      pass: status === "SCAM" || score >= 60 || Number(result?.scam_report_count) > 0 || result?.web_evidence_state === "verified_evidence_found",
-      detail: `${status} at ${score}/100; scam reports=${result?.scam_report_count ?? 0}`,
+      pass: status === "SCAM" || status === "SUSPICIOUS" || score >= 60 || Number(result?.scam_report_count) > 0 || result?.web_evidence_state === "verified_evidence_found" || Number(result?.external_report_count) > 0,
+      detail: `${status} at ${score}/100; scam reports=${result?.scam_report_count ?? 0}; external=${result?.external_report_count ?? 0}`,
+    });
+    checks.push({
+      name: "external_evidence_found",
+      pass: Number(result?.external_report_count || 0) > 0 || result?.web_evidence_state === "verified_evidence_found",
+      detail: `${result?.external_report_count || 0} external community reports; web_state=${result?.web_evidence_state}`,
     });
   } else if (expectation === "unknown") {
     checks.push({
       name: "unknown_not_marked_safe_without_evidence",
       pass: status === "UNKNOWN" || Number(result?.report_count) > 0 || Number(result?.confidence_score) < 70,
       detail: `${status} at ${score}/100; evidence=${result?.report_count ?? 0}`,
+    });
+    checks.push({
+      name: "no_external_reports",
+      pass: Number(result?.external_report_count || 0) === 0,
+      detail: `${result?.external_report_count || 0} external reports`,
     });
   }
 
@@ -172,6 +184,7 @@ Deno.serve(async (req) => {
             evidence_state: evidence.evidence_state,
             web_evidence_state: evidence.web_evidence_state,
             exact_evidence_count: evidence.counts?.exact_evidence_count ?? 0,
+            external_report_count: evidence.counts?.external_report_count ?? 0,
             verified_web_result_count: evidence.counts?.verified_web_result_count ?? 0,
             page_verified_web_result_count: evidence.counts?.page_verified_web_result_count ?? 0,
             web_result_count: evidence.counts?.web_result_count ?? 0,
@@ -188,6 +201,13 @@ Deno.serve(async (req) => {
                 url: report.url || null,
                 verified_exact_number: report.verified_exact_number === true,
                 verification_method: report.verification_method || "none",
+                is_community_report: report.is_community_report === true,
+              })),
+            external_samples: (Array.isArray(evidence.external_reports) ? evidence.external_reports : [])
+              .slice(0, 4)
+              .map((report: any) => ({
+                url: report.url || null,
+                text: String(report.text || "").slice(0, 200),
               })),
           },
           duration_ms: Date.now() - started,
