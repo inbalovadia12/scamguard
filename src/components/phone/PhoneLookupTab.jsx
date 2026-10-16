@@ -168,7 +168,7 @@ export default function PhoneLookupTab() {
             value={phoneInput}
             onChange={(e) => setPhoneInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && phoneInput.trim() && handleLookup()}
-            placeholder="enter phone number here"
+            placeholder="Enter phone number here"
             className="h-11 sm:h-12 text-base rounded-xl"
             disabled={loading}
           />
