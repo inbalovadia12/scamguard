@@ -321,6 +321,98 @@ Deno.serve(async (req) => {
       }
     }));
 
+    // LLM-based supplementary search: if direct search found too few verified
+    // results, use Gemini's web search (add_context_from_internet) to find
+    // official support pages and scam reports that Bing RSS missed.
+    // Gemini has access to Google Search, which indexes pages far more
+    // effectively than the Bing RSS endpoint for specific phone numbers.
+    let llmSupplementary: any = { used: false, candidates_found: 0, candidates_verified: 0, error: null };
+    const directVerifiedCount = verified.filter((r) => r.verified_exact_number).length;
+    if (directVerifiedCount < 2) {
+      try {
+        const llmResult = await base44.integrations.Core.InvokeLLM({
+          prompt: `Search the web for the exact phone number "${phone}" (digits: ${digits}). Find pages that contain this exact phone number:\n1. Official support or contact pages (e.g., Apple, Microsoft, Beats support pages)\n2. Scam report or "who called" pages that mention this exact number\n3. Reddit or community discussions about this number\n\nFor each page you found that contains the exact phone number, return the full URL, a brief title, and the business name if it is an official support page. Only include pages where you actually found the exact phone number on the page.`,
+          add_context_from_internet: true,
+          model: "gemini_3_flash",
+          response_json_schema: {
+            type: "object",
+            properties: {
+              candidates: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    url: { type: "string" },
+                    title: { type: "string" },
+                    business_name: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        const llmCandidates = Array.isArray(llmResult?.candidates) ? llmResult.candidates : [];
+        llmSupplementary.used = true;
+        llmSupplementary.candidates_found = llmCandidates.length;
+
+        // Verify each LLM-returned URL by fetching the page and checking for the exact number
+        const llmVerified = await Promise.all(llmCandidates.slice(0, 6).map(async (c: any) => {
+          const url = String(c?.url || "").trim();
+          if (!url || seenUrls.has(url)) return null;
+          seenUrls.add(url);
+          try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 6000);
+            try {
+              const page = await fetch(url, {
+                signal: controller.signal,
+                headers: {
+                  "User-Agent": BROWSER_UA,
+                  "Accept-Language": "en-US,en;q=0.9",
+                  "Accept": "text/html,application/xhtml+xml,*/*",
+                },
+              });
+              const html = await page.text();
+              const pageExact = page.ok && containsExactPhone(html, targetForms);
+              const searchExact = containsExactPhone(String(c?.title || ""), targetForms);
+              return {
+                title: String(c?.title || "").slice(0, 300),
+                snippet: "",
+                url,
+                engine: "llm_supplementary",
+                matched_query: "llm_web_search",
+                business_name_hint: c?.business_name || null,
+                verified_exact_number: pageExact || searchExact,
+                verification_method: pageExact ? "page" : searchExact ? "search_result" : "none",
+                verification_status: pageExact || searchExact ? "verified" : "not_verified",
+              };
+            } finally {
+              clearTimeout(timer);
+            }
+          } catch (error: any) {
+            return {
+              title: String(c?.title || "").slice(0, 300),
+              snippet: "",
+              url,
+              engine: "llm_supplementary",
+              matched_query: "llm_web_search",
+              business_name_hint: c?.business_name || null,
+              verified_exact_number: false,
+              verification_status: "verification_failed",
+              verification_error: error?.message || "Page fetch failed",
+            };
+          }
+        }));
+
+        const validLlmResults = llmVerified.filter((r) => r !== null);
+        llmSupplementary.candidates_verified = validLlmResults.filter((r) => r.verified_exact_number).length;
+        verified.push(...validLlmResults);
+      } catch (error: any) {
+        llmSupplementary.error = error?.message || "LLM supplementary search failed";
+      }
+    }
+
     return Response.json({
       phone,
       query_variants: [nationalSpaced, nationalHyphenated, nationalWithTrunk, digits],
@@ -332,8 +424,9 @@ Deno.serve(async (req) => {
       verified_result_count: verified.filter((r) => r.verified_exact_number).length,
       search_query_count: searches.length,
       search_engine_diagnostics: engineDiagnostics,
+      llm_supplementary_search: llmSupplementary,
       verification_failure_count: verified.filter((r) => r.verification_status === "verification_failed" || r.verification_status === "not_verified").length,
-      note: "Web results count as evidence only when the fetched page or the direct search result title/snippet contains an exact normalized phone-number token. Queries use plain digits (no quotes, no OR-suffix) so Bing applies AND semantics. International, national-trunk, and optional-trunk formats are normalized before comparing.",
+      note: "Web results count as evidence only when the fetched page or the direct search result title/snippet contains an exact normalized phone-number token. Queries use plain digits (no quotes, no OR-suffix) so Bing applies AND semantics. If direct search finds <2 verified results, an LLM-based supplementary web search (Gemini) is used to find official support pages and scam reports. International, national-trunk, and optional-trunk formats are normalized before comparing.",
     });
   } catch (error: any) {
     return Response.json({ error: error?.message || "Web phone evidence search failed" }, { status: 500 });

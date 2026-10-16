@@ -380,6 +380,10 @@ Deno.serve(async (req) => {
     const businessCandidates = [
       numbersOnline?.caller_name,
       usaCallerLookup?.caller_name,
+      // LLM supplementary search may provide a business_name_hint for verified results
+      ...webResults
+        .filter((r) => r.verified_exact_number && (r.raw as any)?.business_name_hint)
+        .map((r) => (r.raw as any).business_name_hint),
     ].filter((value, index, list) => Boolean(value) && list.indexOf(value) === index);
 
     const businessMatch = officialBusinessMatch(businessCandidates[0] ?? null, webResults);
