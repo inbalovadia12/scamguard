@@ -168,7 +168,7 @@ export default function PhoneLookupTab() {
             value={phoneInput}
             onChange={(e) => setPhoneInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && phoneInput.trim() && handleLookup()}
-            placeholder="+1 800 692 7753, +44 800 048 0408, +971 80004441849..."
+            placeholder="enter phone number here"
             className="h-11 sm:h-12 text-base rounded-xl"
             disabled={loading}
           />
