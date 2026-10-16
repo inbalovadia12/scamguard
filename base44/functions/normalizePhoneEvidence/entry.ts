@@ -155,6 +155,30 @@ function normalizeBusinessKey(value: any): string {
     .trim();
 }
 
+// Known brand names that may appear in directory page titles (e.g., jpnumber
+// shows "Beatsサポート" for the Beats Japan support number). When the LLM
+// can't find the official page, extracting the brand from a verified
+// directory title is a reliable fallback.
+const KNOWN_BRANDS = [
+  "apple", "beats", "beatsbydre", "microsoft", "google", "amazon",
+  "samsung", "netflix", "paypal", "ebay", "meta", "facebook",
+  "instagram", "whatsapp", "twitter", "linkedin", "tiktok",
+];
+
+function extractBrandFromTitles(webResults: AnyRecord[]): string | null {
+  for (const r of webResults) {
+    if (!r?.verified_exact_number) continue;
+    const text = normalizeBusinessKey([r.title, r.snippet].filter(Boolean).join(" "));
+    if (!text) continue;
+    for (const brand of KNOWN_BRANDS) {
+      if (text.includes(brand)) {
+        return brand.charAt(0).toUpperCase() + brand.slice(1);
+      }
+    }
+  }
+  return null;
+}
+
 function registeredDomain(hostname: string) {
   const parts = String(hostname || "").toLowerCase().replace(/^www\./i, "").split(".");
   if (parts.length < 2) return parts[0] || "";
@@ -167,9 +191,18 @@ function registeredDomain(hostname: string) {
 }
 
 const GENERIC_WEB_HOSTS = new Set([
+  // Phone directory / scam-report aggregators (not official business sources)
   "who-called", "truecaller", "scamcallcheck", "phonely", "everycaller",
   "connection-technologies", "who-calls", "cleverdialer", "tellows",
-  "180", "reddit", "quora", "facebook", "bing", "duckduckgo",
+  "shouldianswer", "800notes", "whocalls", "whocallsme", "callercomplaints",
+  "whocalledus", "callcontrol", "nomorobo", "robocaller", "robokiller",
+  "phoneowner", "reversephone", "yellowpages", "whitepages", "callercheck",
+  "numlookup", "411", "scamadviser", "scamchecker", "bizapedia", "whocall",
+  "phonebook", "tel-directory", "numberguru", "spydialer", "usphonebook",
+  "jpnumber", "sync", "who-called", "callfilter", "unknownphone",
+  // Social / search engines
+  "reddit", "quora", "facebook", "bing", "duckduckgo",
+  "180",
 ]);
 
 function candidateFromWebResult(result: AnyRecord) {
@@ -179,10 +212,10 @@ function candidateFromWebResult(result: AnyRecord) {
     const host = url.hostname.toLowerCase();
     const domain = registeredDomain(host);
     if (!domain || GENERIC_WEB_HOSTS.has(domain)) return null;
-    const text = normalizeBusinessKey([result.title, result.snippet].filter(Boolean).join(" "));
-    const domainKey = normalizeBusinessKey(domain);
-    const titleSupportsDomain = text.includes(domainKey) || domainKey.includes(text.split(" ").find((word) => word.length >= 5) || "__none__");
-    if (!titleSupportsDomain) return null;
+    // The verified_exact_number check already confirmed the page contains the
+    // exact phone number. Combined with a non-directory domain, that's strong
+    // enough evidence — the title doesn't also need to contain the domain name
+    // (e.g., Microsoft Learn Q&A titles often don't mention "Microsoft").
     const businessName = domain.length <= 4
       ? domain.toUpperCase()
       : domain.charAt(0).toUpperCase() + domain.slice(1);
@@ -191,7 +224,11 @@ function candidateFromWebResult(result: AnyRecord) {
   return null;
 }
 
-function officialBusinessMatch(callerName: string | null, webResults: AnyRecord[]) {
+function officialBusinessMatch(
+  callerName: string | null,
+  webResults: AnyRecord[],
+  llmHintResults: AnyRecord[] = [],
+) {
   const words = callerName
     ? normalizeBusinessKey(callerName)
         .split(/\s+/)
@@ -200,6 +237,7 @@ function officialBusinessMatch(callerName: string | null, webResults: AnyRecord[
     : [];
 
   if (words.length) {
+    // Check verified web results first
     for (const result of webResults) {
       if (result?.verified_exact_number !== true || !result?.url) continue;
       try {
@@ -207,6 +245,20 @@ function officialBusinessMatch(callerName: string | null, webResults: AnyRecord[
         const hostKey = normalizeBusinessKey(host);
         const matchedWord = words.find((word) => hostKey.includes(word));
         if (matchedWord) return { verified: true, business_name: callerName, url: result.url, host, source: "provider_and_web" };
+      } catch {}
+    }
+    // Also check unverified LLM hint results (e.g., Apple Community discussions
+    // page that identifies the business but doesn't contain the exact number)
+    for (const result of llmHintResults) {
+      if (result?.verified_exact_number === true || !result?.url) continue;
+      if ((result.raw as any)?.engine !== "llm_supplementary") continue;
+      try {
+        const host = new URL(result.url).hostname.replace(/^www\./i, "").toLowerCase();
+        const domain = registeredDomain(host);
+        if (!domain || GENERIC_WEB_HOSTS.has(domain)) continue;
+        const hostKey = normalizeBusinessKey(host);
+        const matchedWord = words.find((word) => hostKey.includes(word));
+        if (matchedWord) return { verified: true, business_name: callerName, url: result.url, host, source: "llm_web_search" };
       } catch {}
     }
   }
@@ -384,9 +436,24 @@ Deno.serve(async (req) => {
       ...webResults
         .filter((r) => r.verified_exact_number && (r.raw as any)?.business_name_hint)
         .map((r) => (r.raw as any).business_name_hint),
+      // Also use business_name_hint from unverified LLM results when the URL
+      // is from a legitimate (non-directory) domain. The LLM has web search
+      // context and can identify the business even if the specific page it
+      // found doesn't contain the exact phone number (e.g., an Apple Community
+      // discussions page about calling Apple Australia).
+      ...webResults
+        .filter((r) => !r.verified_exact_number && (r.raw as any)?.business_name_hint && (r.raw as any)?.engine === "llm_supplementary")
+        .filter((r) => {
+          try {
+            const host = new URL(r.url).hostname.toLowerCase();
+            const domain = registeredDomain(host);
+            return domain && !GENERIC_WEB_HOSTS.has(domain);
+          } catch { return false; }
+        })
+        .map((r) => (r.raw as any).business_name_hint),
     ].filter((value, index, list) => Boolean(value) && list.indexOf(value) === index);
 
-    const businessMatch = officialBusinessMatch(businessCandidates[0] ?? null, webResults);
+    const businessMatch = officialBusinessMatch(businessCandidates[0] ?? null, webResults, webResults);
     const resolvedBusinessName = businessMatch.business_name || businessCandidates[0] || null;
 
     const providerErrors = Array.isArray(phoneSources.source_errors)

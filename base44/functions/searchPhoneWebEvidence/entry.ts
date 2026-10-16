@@ -67,6 +67,7 @@ const DIRECTORY_DOMAINS = [
   "yellowpages", "whitepages", "who-called", "callercheck", "numlookup",
   "411.com", "scamadviser", "scamchecker", "bizapedia", "whocall",
   "phonebook", "tel-directory", "numberguru", "spydialer", "usphonebook",
+  "callfilter", "unknownphone",
 ];
 
 function isDirectoryUrl(url: string): boolean {
