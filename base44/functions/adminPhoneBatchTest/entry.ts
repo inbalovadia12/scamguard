@@ -19,6 +19,9 @@ const REGRESSION_CASES = [
   { phone: "999", label: "Emergency number / UK 999", expectation: "emergency", expected_country: "GB" },
   { phone: "112", label: "Emergency number / EU 112", expectation: "emergency", expected_country: "GB" },
   { phone: "+44 1632 960123", label: "Genuinely insufficient evidence / no reports found", expectation: "unknown", expected_country: "GB" },
+  // Reproduction cases for business-identification and missing-evidence bugs
+  { phone: "+44 161 931 9070", label: "Case A - reporting site (called.co.uk/saynoto0870) must not become business identity", expectation: "scam", expected_country: "GB" },
+  { phone: "+44 7359 140063", label: "Case B - missing evidence / community reports must surface", expectation: "suspicious", expected_country: "GB" },
 ];
 
 function checkResult(result: any, expectation: string) {
@@ -37,6 +40,20 @@ function checkResult(result: any, expectation: string) {
       detail: `${status} at ${score}/100` },
     { name: "confidence_not_fake_100", pass: confidence < 100 || Number(result?.report_count) > 0 || result?.web_evidence_state === "verified_evidence_found" || result?.verified_business === true, detail: `${confidence}% confidence` },
     { name: "country_present_when_expected", pass: true, detail: String(result?.country || "unknown") },
+    // Ensure no phone-reporting / forum / directory site is misidentified as
+    // the business that owns the number. A page hosting a phone-number
+    // discussion is evidence about the number, not proof of ownership.
+    { name: "no_reporting_site_as_business", pass: (function() {
+      const reportingSites = ["called", "saynoto0870", "tellows", "truecaller", "800notes", "whocallsme", "who-called", "whocalled", "scamcallcheck", "everycaller", "shouldianswer", "cleverdialer", "phonely", "nomorobo", "robokiller", "robocaller", "callcontrol", "callercomplaints", "sync.me", "usphonebook", "numberguru", "spydialer", "jpnumber", "callersmart", "phone-number", "phonenumber"];
+      const bizName = String(result?.business_name || "").toLowerCase();
+      const bizUrl = String(result?.business_verification_url || "").toLowerCase();
+      const bizSource = String(result?.business_name_source || "").toLowerCase();
+      // "official_web" source means the business was derived from a web domain,
+      // which is the bug we're testing for. It should never appear for a
+      // phone-reporting site.
+      const hasOfficialWebSource = bizSource === "official_web";
+      return !reportingSites.some((s) => bizName.includes(s) || bizUrl.includes(s)) && !hasOfficialWebSource;
+    })(), detail: `business=${result?.business_name || "null"}, url=${result?.business_verification_url || "null"}, source=${result?.business_name_source || "null"}` },
   ];
 
   if (expectation === "legitimate") {
