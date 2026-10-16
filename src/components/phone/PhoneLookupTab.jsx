@@ -63,8 +63,8 @@ export default function PhoneLookupTab() {
     if (!phone) return;
 
     const digits = phone.replace(/\D/g, "");
-    if (digits.length < 7 || digits.length > 15) {
-      setError("Enter a valid phone number with at least 7 digits, including the country code for international numbers.");
+    if (digits.length < 3 || digits.length > 15) {
+      setError("Enter a valid phone number (3-15 digits). Short codes like 911 or 100 are supported.");
       return;
     }
 
@@ -181,7 +181,7 @@ export default function PhoneLookupTab() {
             disabled={loading}
           />
           <p className="text-xs text-muted-foreground">
-            Include the country code for international numbers. The lookup verifies the exact number on official business pages and scam-report sites.
+            Include the country code for international numbers. Emergency short codes (911, 100, 999, 112, etc.) are also supported.
           </p>
         </div>
 

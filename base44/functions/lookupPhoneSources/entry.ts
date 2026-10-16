@@ -1,10 +1,14 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 import { secrets } from "base44:runtime";
+import { checkEmergencyFromRaw } from "../../shared/emergencyNumbers.ts";
 
 function normalizePhone(raw: unknown): string | null {
   const value = String(raw ?? "").trim();
   const digits = value.replace(/\D/g, "");
-  if (!digits || digits.length < 7 || digits.length > 15) return null;
+  // Allow short emergency/government numbers (3-6 digits) as well as standard
+  // phone numbers (7-15 digits). Emergency numbers are validated separately.
+  if (!digits) return null;
+  if (digits.length < 3 || digits.length > 15) return null;
   return "+" + digits;
 }
 
@@ -40,9 +44,31 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
 
     const body = await req.json().catch(() => ({}));
-    const normalized = normalizePhone(body?.phone_number ?? body?.phone);
+    const rawPhone = String(body?.phone_number ?? body?.phone ?? "").trim();
+    const normalized = normalizePhone(rawPhone);
     if (!normalized) {
       return Response.json({ error: "Enter a valid phone number." }, { status: 400 });
+    }
+
+    // Check for known emergency/government short codes (911, 100, 999, etc.)
+    const emergency = checkEmergencyFromRaw(rawPhone);
+    if (emergency) {
+      return Response.json({
+        normalized_number: normalized,
+        is_emergency_number: true,
+        emergency_info: {
+          number: emergency.number,
+          service: emergency.service,
+          type: emergency.type,
+          countries: emergency.countries,
+        },
+        sources: {
+          numbers_online: { status: "not_applicable" },
+          scamcallcheck: { status: "not_applicable" },
+          usa_caller_lookup: { status: "not_applicable" },
+        },
+        source_errors: [],
+      });
     }
 
     const numbersOnlineKey = secrets.get("Numbers_Online");

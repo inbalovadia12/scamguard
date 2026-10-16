@@ -2,6 +2,14 @@ import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 
 type AnyRecord = Record<string, any>;
 
+// Check if phone_sources indicates an emergency/government short code
+function isEmergencySource(phoneSources: AnyRecord): AnyRecord | null {
+  if (phoneSources?.is_emergency_number && phoneSources?.emergency_info) {
+    return phoneSources.emergency_info;
+  }
+  return null;
+}
+
 function first(...values: any[]) {
   return values.find((v) => v !== undefined && v !== null && v !== "");
 }
@@ -184,7 +192,8 @@ function registeredDomain(hostname: string) {
   if (parts.length < 2) return parts[0] || "";
   const secondLast = parts[parts.length - 2];
   const thirdLast = parts[parts.length - 3];
-  if (["co", "com", "net", "org", "gov", "ac"].includes(secondLast) && thirdLast) {
+  // UK second-level domains (.co.uk, .me.uk, .org.uk, .ac.uk, .gov.uk, .ltd.uk, .plc.uk)
+  if (["co", "com", "net", "org", "gov", "ac", "me", "ltd", "plc"].includes(secondLast) && thirdLast) {
     return thirdLast;
   }
   return secondLast;
@@ -192,14 +201,16 @@ function registeredDomain(hostname: string) {
 
 const GENERIC_WEB_HOSTS = new Set([
   // Phone directory / scam-report aggregators (not official business sources)
-  "who-called", "truecaller", "scamcallcheck", "phonely", "everycaller",
-  "connection-technologies", "who-calls", "cleverdialer", "tellows",
-  "shouldianswer", "800notes", "whocalls", "whocallsme", "callercomplaints",
-  "whocalledus", "callcontrol", "nomorobo", "robocaller", "robokiller",
-  "phoneowner", "reversephone", "yellowpages", "whitepages", "callercheck",
-  "numlookup", "411", "scamadviser", "scamchecker", "bizapedia", "whocall",
-  "phonebook", "tel-directory", "numberguru", "spydialer", "usphonebook",
-  "jpnumber", "sync", "who-called", "callfilter", "unknownphone",
+  "who-called", "whos-called", "whocalled", "whoscalled", "truecaller",
+  "scamcallcheck", "phonely", "everycaller", "connection-technologies",
+  "who-calls", "cleverdialer", "tellows", "shouldianswer", "800notes",
+  "whocalls", "whocallsme", "callercomplaints", "whocalledus", "callcontrol",
+  "nomorobo", "robocaller", "robokiller", "phoneowner", "reversephone",
+  "yellowpages", "whitepages", "callercheck", "numlookup", "411",
+  "scamadviser", "scamchecker", "bizapedia", "whocall", "phonebook",
+  "tel-directory", "numberguru", "spydialer", "usphonebook", "jpnumber",
+  "sync", "callfilter", "unknownphone", "findwhoiscalling", "numbercheck",
+  "checknumber", "who-is-calling", "whocalling", "who-calls",
   // Social / search engines
   "reddit", "quora", "facebook", "bing", "duckduckgo",
   "180",
@@ -354,6 +365,67 @@ Deno.serve(async (req) => {
       return Response.json({ error: "phone_sources is required" }, { status: 400 });
     }
 
+    // Handle emergency/government short codes — return a safe verdict immediately
+    const emergencyInfo = isEmergencySource(phoneSources);
+    if (emergencyInfo) {
+      return Response.json({
+        normalized_number: normalizeText(first(phoneSources.normalized_number, body?.normalized_number, body?.phone)),
+        is_emergency_number: true,
+        emergency_info: emergencyInfo,
+        evidence_version: "1.0",
+        source_status: {
+          numbers_online: "not_applicable",
+          scamcallcheck: "not_applicable",
+          usa_caller_lookup: "not_applicable",
+        },
+        identity_facts: {
+          valid: true,
+          country: emergencyInfo.countries?.[0] || null,
+          country_code: null,
+          carrier: null,
+          line_type: "emergency",
+          caller_name: emergencyInfo.service,
+          caller_name_source: "emergency_database",
+          verified_business: true,
+          business_verification_url: null,
+          business_verification_host: null,
+          usa_location: null,
+          toll_free: null,
+        },
+        reputation_signals: {
+          numbers_online_spam_signal: null,
+          numbers_online_source_risk_level: null,
+          scamcallcheck_risk_score: null,
+          scamcallcheck_risk_level: null,
+          us_ftc_complaint_count: null,
+          us_robocall_flag: null,
+        },
+        counts: {
+          complaint_count: 0,
+          community_report_count: 0,
+          external_report_count: 0,
+          reddit_db_report_count: 0,
+          exact_evidence_count: 0,
+          web_result_count: 0,
+          verified_web_result_count: 0,
+          page_verified_web_result_count: 0,
+          raw_search_result_count: 0,
+          page_checked_count: 0,
+          search_query_count: 0,
+          search_engine_diagnostics: null,
+          verification_failure_count: 0,
+        },
+        reports: [],
+        external_reports: [],
+        web_search: { searched: false, result_count: 0, verified_result_count: 0, results_require_exact_number_verification: true, queries: [] },
+        sources: [],
+        provider_errors: [],
+        evidence_state: "emergency_number",
+        web_evidence_state: "not_searched",
+        safety_note: "This is a known emergency or government service number. No web evidence search is needed.",
+      });
+    }
+
     const normalizedNumber = normalizeText(first(
       phoneSources.normalized_number, body?.normalized_number, body?.phone
     ));
@@ -481,6 +553,20 @@ Deno.serve(async (req) => {
     const businessMatch = officialBusinessMatch(businessCandidates[0] ?? null, webResults, webResults);
     const resolvedBusinessName = businessMatch.business_name || businessCandidates[0] || null;
 
+    // Determine if the business was verified on an official domain (not a
+    // community-reporting site). This distinction is critical for scoring:
+    // a business verified on apple.com is genuinely legitimate, while a
+    // "business" identified from whos-called.co.uk is actually a scam-reporting
+    // site being misidentified as the business owner.
+    let isOfficiallyVerified = false;
+    if (businessMatch.verified && businessMatch.url) {
+      try {
+        const host = new URL(businessMatch.url).hostname.toLowerCase();
+        const domain = registeredDomain(host);
+        isOfficiallyVerified = Boolean(domain) && !GENERIC_WEB_HOSTS.has(domain);
+      } catch {}
+    }
+
     const providerErrors = Array.isArray(phoneSources.source_errors)
       ? phoneSources.source_errors
       : [];
@@ -505,6 +591,7 @@ Deno.serve(async (req) => {
             ? (numbersOnline?.caller_name === businessCandidates[0] ? "numbers_online" : "usa_caller_lookup")
             : null),
         verified_business: businessMatch.verified,
+        is_officially_verified: isOfficiallyVerified,
         business_verification_url: businessMatch.url,
         business_verification_host: businessMatch.host,
         usa_location: usaCallerLookup?.location ?? null,

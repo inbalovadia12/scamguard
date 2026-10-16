@@ -1,6 +1,14 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 
 type AnyRecord = Record<string, any>;
+
+// Check if evidence indicates an emergency/government short code
+function isEmergencyEvidence(evidence: AnyRecord): AnyRecord | null {
+  if (evidence?.is_emergency_number && evidence?.emergency_info) {
+    return evidence.emergency_info;
+  }
+  return null;
+}
 const NEGATIVE = /scam|fraud|fraudulent|spam|robocall|robo[- ]?call|phishing|spoof|telemarketer|telemarketing|harass|threat|extortion|impersonat|fake|loan scam|refund scam|tech support|gift card|crypto scam|investment scam|payment scam/i;
 const POSITIVE = /legitimate|verified business|official|customer service|support line|government|bank|hospital|university|school|delivery|courier|utility|emergency|insurance/i;
 
@@ -112,6 +120,11 @@ function scorePhone(evidence: AnyRecord) {
   }
 
   const verifiedBusiness = Boolean(identity.verified_business);
+  // is_officially_verified means the business was verified on a real official
+  // domain (apple.com, microsoft.com), not a community-reporting site. This
+  // distinguishes genuine businesses from scam-reporting sites that were
+  // misidentified as the business owner.
+  const isOfficiallyVerified = Boolean(identity.is_officially_verified);
   const hasNegativeEvidence =
     negativeReports > 0 || webNegative > 0 || externalCount > 0 ||
     (complaintCount >= 3 && !identity.caller_name) ||
@@ -125,13 +138,18 @@ function scorePhone(evidence: AnyRecord) {
   if (!hasNegativeEvidence && verifiedBusiness) score = Math.min(score, 15);
   else if (!hasNegativeEvidence && hasLegitimateEvidence) score = Math.min(score, 25);
 
-  // A verified business number is strong ownership evidence, but scam calls can
-  // spoof legitimate numbers. Keep the single risk score low unless the
-  // independent risk signals are strong enough to override that identity.
-  if (verifiedBusiness && (providerRisk === null || providerRisk < 70) && complaintCount < 3) {
-    score = Math.min(score, 30);
+  // For genuinely verified businesses (on official domains like apple.com),
+  // community reports from phone-reporting sites are often false positives —
+  // people report legitimate numbers as spam because they received an unwanted
+  // call, not because the number is a scam. Cap the score at suspicious (40)
+  // rather than letting community reports push it to scam territory.
+  // But if strong independent risk signals (high ScamCallCheck score, many
+  // complaints) are present, don't cap — those are more reliable than
+  // community site reports.
+  if (isOfficiallyVerified && (providerRisk === null || providerRisk < 70) && complaintCount < 3) {
+    score = Math.min(score, 40);
   }
-  if (verifiedBusiness && negativeReports === 0 && webNegative === 0 && complaintCount < 3 && communityCount === 0) {
+  if (isOfficiallyVerified && negativeReports === 0 && webNegative === 0 && complaintCount < 3 && communityCount === 0) {
     score = Math.min(score, 15);
   }
 
@@ -195,6 +213,42 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const evidence = body?.phone_evidence;
     if (!evidence || typeof evidence !== "object") return Response.json({ error: "phone_evidence is required" }, { status: 400 });
+
+    // Handle emergency/government short codes — return a safe verdict immediately
+    const emergencyInfo = isEmergencyEvidence(evidence);
+    if (emergencyInfo) {
+      return Response.json({
+        engine: "vardin_phone_risk_v1",
+        normalized_number: evidence.normalized_number || body?.phone || null,
+        result: {
+          reputation_score: 0,
+          risk_score: 0,
+          risk_level: "low",
+          caller_id_status: "SAFE",
+          confidence_score: 100,
+          verified_business: true,
+          business_name: emergencyInfo.service,
+          business_name_source: "emergency_database",
+          business_verification_url: null,
+          country: emergencyInfo.countries?.[0] || null,
+          carrier: null,
+          line_type: "emergency",
+          report_count: 0,
+          external_report_count: 0,
+          scam_report_count: 0,
+          spam_report_count: 0,
+          suspicious_report_count: 0,
+          safe_report_count: 0,
+          scam_categories: [],
+          evidence_reasons: [],
+          legitimacy_reasons: ["This is a known " + emergencyInfo.type + " number: " + emergencyInfo.service + "."],
+          evidence_state: "emergency_number",
+          web_evidence_state: "not_searched",
+          provider_errors: [],
+        },
+      });
+    }
+
     return Response.json({ engine: "vardin_phone_risk_v1", normalized_number: evidence.normalized_number || body?.phone || null, result: scorePhone(evidence) });
   } catch (error: any) {
     return Response.json({ error: error?.message || "Phone risk engine failed" }, { status: 500 });

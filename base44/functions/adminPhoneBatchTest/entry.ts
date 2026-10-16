@@ -12,6 +12,13 @@ const REGRESSION_CASES = [
   { phone: "+61 1300365083", label: "Known legitimate / Apple Australia", expectation: "legitimate", expected_business: "Apple", expected_country: "AU" },
   { phone: "+971 80004441849", label: "Known legitimate / Beats UAE", expectation: "legitimate", expected_business: "Beats", expected_country: "AE" },
   { phone: "+44 7480 726506", label: "Known scam / HMRC impersonation, debt scam (tellows, who-called, truecaller)", expectation: "scam", expected_country: "GB" },
+  // New regression cases for pipeline fix
+  { phone: "+44 330 059 0011", label: "Known scam / Barclaycard impersonation (whos-called.co.uk community report)", expectation: "scam", expected_country: "GB" },
+  { phone: "911", label: "Emergency number / US 911", expectation: "emergency", expected_country: "US" },
+  { phone: "100", label: "Emergency number / India police 100", expectation: "emergency", expected_country: "IN" },
+  { phone: "999", label: "Emergency number / UK 999", expectation: "emergency", expected_country: "GB" },
+  { phone: "112", label: "Emergency number / EU 112", expectation: "emergency", expected_country: "GB" },
+  { phone: "+44 1632 960123", label: "Genuinely insufficient evidence / no reports found", expectation: "unknown", expected_country: "GB" },
 ];
 
 function checkResult(result: any, expectation: string) {
@@ -59,6 +66,27 @@ function checkResult(result: any, expectation: string) {
       name: "no_external_reports",
       pass: Number(result?.external_report_count || 0) === 0,
       detail: `${result?.external_report_count || 0} external reports`,
+    });
+  } else if (expectation === "emergency") {
+    checks.push({
+      name: "emergency_safe_status",
+      pass: status === "SAFE",
+      detail: `${status} at ${score}/100`,
+    });
+    checks.push({
+      name: "emergency_low_score",
+      pass: score <= 5,
+      detail: `${score}/100`,
+    });
+    checks.push({
+      name: "emergency_high_confidence",
+      pass: confidence >= 95,
+      detail: `${confidence}% confidence`,
+    });
+    checks.push({
+      name: "emergency_business_name_present",
+      pass: Boolean(result?.business_name),
+      detail: String(result?.business_name || "None"),
     });
   }
 

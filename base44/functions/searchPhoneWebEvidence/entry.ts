@@ -1,4 +1,5 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
+import { checkEmergencyFromRaw } from "../../shared/emergencyNumbers.ts";
 
 // === Phone format generation ===
 
@@ -102,13 +103,19 @@ function isDirectoryUrl(url: string): boolean {
 // even if the page can't be fetched (geo-blocked, JS-required, etc.), because the
 // URL itself is a reliable indicator that the page is about this specific number.
 const COMMUNITY_REPORT_HOSTS = [
-  "tellows.", "who-called.co.uk", "who-calledme", "whocalledme",
+  "tellows.", "who-called.co.uk", "whos-called.co.uk", "who-calledme", "whocalledme",
+  "whocalled.co.uk", "who-called.uk", "whoscalled.co.uk",
   "truecaller.com/who-called-me", "180.se/nummer", "callapp.com/search-result",
   "everycaller.com", "shouldianswer", "cleverdialer", "phonely",
   "callfilter.app", "connection-technologies", "800notes",
   "whocallsme", "whocalls", "nomorobo", "robokiller", "robocaller",
   "callcontrol", "callercomplaints", "sync.me", "unknownphone",
   "usphonebook", "numberguru", "spydialer", "scamcallcheck.com/number",
+  "whocallsme.com", "whocalledus", "phoneowner", "reversephone",
+  "callercheck", "scamadviser", "scamchecker", "bizapedia", "whocall",
+  "phonebook", "tel-directory", "findwhoiscalling", "numbercheck",
+  "checknumber", "phone-report", "who-is-calling", "whocalling",
+  "who-calls.me.uk", "who-calls", "whocallsme.co.uk",
 ];
 
 function isCommunityReportSite(url: string): boolean {
@@ -324,6 +331,33 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const phone = String(body?.phone ?? body?.phone_number ?? "").trim();
     if (!phone) return Response.json({ error: "Phone number is required." }, { status: 400 });
+
+    // Skip web search for known emergency/government short codes (911, 100, etc.)
+    const emergency = checkEmergencyFromRaw(phone);
+    if (emergency) {
+      return Response.json({
+        phone,
+        is_emergency_number: true,
+        emergency_info: {
+          number: emergency.number,
+          service: emergency.service,
+          type: emergency.type,
+          countries: emergency.countries,
+        },
+        query_variants: [],
+        searches: [],
+        results: [],
+        result_count: 0,
+        raw_search_result_count: 0,
+        page_checked_count: 0,
+        verified_result_count: 0,
+        search_query_count: 0,
+        search_engine_diagnostics: null,
+        llm_supplementary_search: { used: false, candidates_found: 0, candidates_verified: 0, error: null },
+        verification_failure_count: 0,
+        note: "Known emergency/government short code — web evidence search skipped.",
+      });
+    }
 
     const formats = generateFormats(phone);
     const { digits, callingCode, nationalDigits, nationalWithTrunk, nationalSpaced, nationalHyphenated, spacedVariants, hasTrunkZero } = formats;
