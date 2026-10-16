@@ -110,7 +110,14 @@ function scorePhone(evidence: AnyRecord) {
     reasons.push("The available US complaint source flags the number for robocall complaints.");
   }
 
-  if (identity.caller_name) {
+  const GENERIC_CALLER_NAMES = new Set([
+    "unknown", "not found", "n a", "na", "none", "null", "no name", "noname",
+    "no caller", "nocaller", "unavailable", "not available", "private",
+    "anonymous", "withheld", "no data", "nodata", "",
+  ]);
+  const callerNameKey = String(identity.caller_name || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const hasRealCallerName = Boolean(identity.caller_name) && !GENERIC_CALLER_NAMES.has(callerNameKey);
+  if (hasRealCallerName) {
     score -= 10;
     legitimacy.push("Business/caller identity returned: " + identity.caller_name + ".");
   }
@@ -127,8 +134,8 @@ function scorePhone(evidence: AnyRecord) {
   const isOfficiallyVerified = Boolean(identity.is_officially_verified);
   const hasNegativeEvidence =
     negativeReports > 0 || webNegative > 0 || externalCount > 0 ||
-    (complaintCount >= 3 && !identity.caller_name) ||
-    (communityCount > 0 && !identity.caller_name) ||
+    (complaintCount >= 3 && !hasRealCallerName) ||
+    (communityCount > 0 && !hasRealCallerName) ||
     (providerRisk !== null && providerRisk >= 70) ||
     (numbersSpam !== null && (numbersSpam > 1 ? numbersSpam >= 70 : numbersSpam >= 0.7));
 

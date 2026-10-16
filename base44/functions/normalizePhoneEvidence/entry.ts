@@ -199,6 +199,15 @@ function registeredDomain(hostname: string) {
   return secondLast;
 }
 
+// Generic placeholder names that providers return when they have no real
+// caller identity. These must not be treated as a business name or trigger
+// legitimacy adjustments in scoring.
+const GENERIC_CALLER_NAMES = new Set([
+  "unknown", "not found", "n a", "na", "none", "null", "no name", "noname",
+  "no caller", "nocaller", "unavailable", "not available", "private",
+  "anonymous", "withheld", "no data", "nodata", "",
+]);
+
 const GENERIC_WEB_HOSTS = new Set([
   // Phone directory / scam-report aggregators (not official business sources)
   "who-called", "whos-called", "whocalled", "whoscalled", "truecaller",
@@ -571,11 +580,14 @@ Deno.serve(async (req) => {
         .map((r) => (r.raw as any).business_name_hint),
     ].filter((value, index, list) => {
       if (!Boolean(value) || list.indexOf(value) !== index) return false;
+      const key = normalizeBusinessKey(value);
       // Filter out business names that are obviously from phone-reporting
       // sites (e.g., "Called" from called.co.uk, "Tellows" from tellows.de).
-      // A reporting-site name is not a business identity.
-      const key = normalizeBusinessKey(value);
-      return !GENERIC_WEB_HOSTS.has(key);
+      if (GENERIC_WEB_HOSTS.has(key)) return false;
+      // Filter out generic placeholder names returned by providers when
+      // they have no real caller identity (e.g., "Unknown", "N/A", "Not Found").
+      if (GENERIC_CALLER_NAMES.has(key)) return false;
+      return true;
     });
 
     const businessMatch = officialBusinessMatch(businessCandidates[0] ?? null, webResults, webResults);
