@@ -211,10 +211,27 @@ const GENERIC_WEB_HOSTS = new Set([
   "tel-directory", "numberguru", "spydialer", "usphonebook", "jpnumber",
   "sync", "callfilter", "unknownphone", "findwhoiscalling", "numbercheck",
   "checknumber", "who-is-calling", "whocalling", "who-calls",
+  // Phone-reporting / forum / discussion sites
+  "called", "saynoto0870", "callersmart", "phonepay", "phone-number",
+  "phonenumber", "reverse-lookup", "reverselookup", "who-calledme",
+  "whocalledme", "phone-report", "phonereport",
   // Social / search engines
   "reddit", "quora", "facebook", "bing", "duckduckgo",
   "180",
 ]);
+
+// Content-based detection of phone-reporting / forum / discussion sites.
+// Even when a site isn't in GENERIC_WEB_HOSTS, its page content often
+// reveals that it's a community-reporting platform rather than an official
+// business page. This prevents deriving a business identity from a site
+// that merely hosts discussions about phone numbers.
+const REPORTING_SITE_INDICATORS = /\b(who called|reverse (phone|lookup)|report (this|a) (number|scam|call)|reported by \d|community reports?|user reports?|spam calls?|scam calls?|nuisance calls?|callers? reported|yabb|phpbb|vbulletin|saynoto0870)\b/i;
+
+function looksLikeReportingSite(result: AnyRecord): boolean {
+  const text = String([result?.title, result?.snippet, result?.page_content].filter(Boolean).join(" "));
+  if (!text || text.length < 20) return false;
+  return REPORTING_SITE_INDICATORS.test(text);
+}
 
 function candidateFromWebResult(result: AnyRecord) {
   if (result?.verified_exact_number !== true || !result?.url) return null;
@@ -248,11 +265,16 @@ function officialBusinessMatch(
     : [];
 
   if (words.length) {
-    // Check verified web results first
+    // Check verified web results first — only on official (non-directory,
+    // non-reporting) domains. A phone-reporting site like called.co.uk must
+    // never be treated as the business that owns a number.
     for (const result of webResults) {
       if (result?.verified_exact_number !== true || !result?.url) continue;
+      if (looksLikeReportingSite(result)) continue;
       try {
         const host = new URL(result.url).hostname.replace(/^www\./i, "").toLowerCase();
+        const domain = registeredDomain(host);
+        if (!domain || GENERIC_WEB_HOSTS.has(domain)) continue;
         const hostKey = normalizeBusinessKey(host);
         const matchedWord = words.find((word) => hostKey.includes(word));
         if (matchedWord) return { verified: true, business_name: callerName, url: result.url, host, source: "provider_and_web" };
@@ -262,6 +284,7 @@ function officialBusinessMatch(
     // page that identifies the business but doesn't contain the exact number)
     for (const result of llmHintResults) {
       if (result?.verified_exact_number === true || !result?.url) continue;
+      if (looksLikeReportingSite(result)) continue;
       if ((result.raw as any)?.engine !== "llm_supplementary") continue;
       try {
         const host = new URL(result.url).hostname.replace(/^www\./i, "").toLowerCase();
@@ -274,13 +297,11 @@ function officialBusinessMatch(
     }
   }
 
-  for (const result of webResults) {
-    const candidate = candidateFromWebResult(result);
-    if (candidate) {
-      return { verified: true, business_name: candidate.businessName, url: candidate.url, host: candidate.host, source: "official_web" };
-    }
-  }
-
+  // No domain-based fallback: a web page containing a phone number does not
+  // prove that the page's domain owner operates that number. If no provider
+  // or LLM business name can be verified against an official domain, the
+  // business identity is UNKNOWN. Risk is evaluated separately from
+  // available reputation evidence.
   return { verified: false, business_name: callerName || null, url: null, host: null, source: null };
 }
 
@@ -548,7 +569,14 @@ Deno.serve(async (req) => {
           } catch { return false; }
         })
         .map((r) => (r.raw as any).business_name_hint),
-    ].filter((value, index, list) => Boolean(value) && list.indexOf(value) === index);
+    ].filter((value, index, list) => {
+      if (!Boolean(value) || list.indexOf(value) !== index) return false;
+      // Filter out business names that are obviously from phone-reporting
+      // sites (e.g., "Called" from called.co.uk, "Tellows" from tellows.de).
+      // A reporting-site name is not a business identity.
+      const key = normalizeBusinessKey(value);
+      return !GENERIC_WEB_HOSTS.has(key);
+    });
 
     const businessMatch = officialBusinessMatch(businessCandidates[0] ?? null, webResults, webResults);
     const resolvedBusinessName = businessMatch.business_name || businessCandidates[0] || null;

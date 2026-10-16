@@ -90,6 +90,8 @@ const DIRECTORY_DOMAINS = [
   "411.com", "scamadviser", "scamchecker", "bizapedia", "whocall",
   "phonebook", "tel-directory", "numberguru", "spydialer", "usphonebook",
   "callfilter", "unknownphone",
+  "called", "saynoto0870", "callersmart", "phone-number",
+  "phonenumber", "reverse-lookup", "reverselookup",
 ];
 
 function isDirectoryUrl(url: string): boolean {
@@ -116,6 +118,8 @@ const COMMUNITY_REPORT_HOSTS = [
   "phonebook", "tel-directory", "findwhoiscalling", "numbercheck",
   "checknumber", "phone-report", "who-is-calling", "whocalling",
   "who-calls.me.uk", "who-calls", "whocallsme.co.uk",
+  "called.co.uk", "called.", "saynoto0870", "callersmart",
+  "phone-number.", "phonenumber.", "reverse-lookup.", "reverselookup.",
 ];
 
 function isCommunityReportSite(url: string): boolean {
