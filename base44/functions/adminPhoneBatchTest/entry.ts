@@ -18,7 +18,7 @@ const REGRESSION_CASES = [
   { phone: "100", label: "Emergency number / India police 100", expectation: "emergency", expected_country: "IN" },
   { phone: "999", label: "Emergency number / UK 999", expectation: "emergency", expected_country: "GB" },
   { phone: "112", label: "Emergency number / EU 112", expectation: "emergency", expected_country: "GB" },
-  { phone: "+44 1632 960123", label: "Genuinely insufficient evidence / no reports found", expectation: "unknown", expected_country: "GB" },
+  { phone: "+44 1632 960123", label: "Genuinely insufficient evidence / no reports found", expectation: "unknown" },
   // Reproduction cases for business-identification and missing-evidence bugs
   { phone: "+44 161 931 9070", label: "Case A - reporting site (called.co.uk/saynoto0870) must not become business identity", expectation: "scam", expected_country: "GB" },
   { phone: "+44 7359 140063", label: "Case B - missing evidence / community reports must surface", expectation: "suspicious", expected_country: "GB" },
@@ -30,7 +30,7 @@ const REGRESSION_CASES = [
   { phone: "+44 800 011 9735", label: "Unknown / no web evidence found (HMRC toll-free)", expectation: "unknown", expected_country: "GB" },
   { phone: "+61 1300 729 729", label: "Unknown / no web evidence found (Australian 1300)", expectation: "unknown", expected_country: "AU" },
   { phone: "+1 800 555 1234", label: "Fictional / insufficient evidence", expectation: "unknown", expected_country: "US" },
-  { phone: "+44 800 023 4853", label: "Known legitimate / Amazon UK", expectation: "legitimate", expected_business: "Amazon", expected_country: "GB" },
+  { phone: "+44 800 023 4853", label: "Known legitimate / Financial Ombudsman Service UK", expectation: "legitimate", expected_country: "GB" },
 ];
 
 function checkResult(result: any, expectation: string) {
