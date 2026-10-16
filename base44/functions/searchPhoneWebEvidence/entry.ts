@@ -96,6 +96,62 @@ function isDirectoryUrl(url: string): boolean {
   return DIRECTORY_DOMAINS.some((d) => host.includes(d));
 }
 
+// === Community-reporting site recognition ===
+// These sites list phone numbers in their URL path (e.g., tellows.co.uk/num/07480726506).
+// When the URL contains the exact target number, we accept the result as evidence
+// even if the page can't be fetched (geo-blocked, JS-required, etc.), because the
+// URL itself is a reliable indicator that the page is about this specific number.
+const COMMUNITY_REPORT_HOSTS = [
+  "tellows.", "who-called.co.uk", "who-calledme", "whocalledme",
+  "truecaller.com/who-called-me", "180.se/nummer", "callapp.com/search-result",
+  "everycaller.com", "shouldianswer", "cleverdialer", "phonely",
+];
+
+function isCommunityReportSite(url: string): boolean {
+  const lower = String(url || "").toLowerCase();
+  return COMMUNITY_REPORT_HOSTS.some((p) => lower.includes(p));
+}
+
+function urlPathContainsTargetNumber(url: string, targetForms: string[]): boolean {
+  try {
+    const u = new URL(url);
+    const pathDigits = normalizePhoneDigits(u.pathname + u.search);
+    if (pathDigits.length < 7) return false;
+    return targetForms.some((tf) => {
+      const tfDigits = normalizePhoneDigits(tf);
+      return tfDigits.length >= 7 && pathDigits.includes(tfDigits);
+    });
+  } catch {
+    return false;
+  }
+}
+
+// === Page content extraction ===
+// When we fetch a page to verify the phone number, also extract the visible text
+// content so the scoring engine can check for scam/spam keywords in the actual
+// page body — not just the search result snippet, which is often just a generic
+// "Details about this number" header with no scam keywords.
+function extractPageContent(html: string): string {
+  return String(html || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<header[\s\S]*?<\/header>/gi, " ")
+    .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
+    .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
+    .replace(/<form[\s\S]*?<\/form>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 6000);
+}
+
 // === Search engines ===
 
 async function searchBingRss(query: string, timeoutMs = 8000) {
