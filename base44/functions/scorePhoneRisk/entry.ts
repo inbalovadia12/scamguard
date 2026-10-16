@@ -19,7 +19,14 @@ function scorePhone(evidence: AnyRecord) {
     return { report: r, negative: NEGATIVE.test(text), positive: POSITIVE.test(text), text };
   });
   const negativeReports = classified.filter((x) => x.negative && x.report.source !== "web_search").length;
-  const positiveReports = classified.filter((x) => x.positive).length;
+  // Only count positive reports from verified sources — unverified web search
+  // results (like a random bank page that matched the search query) must not
+  // be treated as evidence of legitimacy. Also exclude reports that contain
+  // both positive and negative keywords (e.g., "HMRC (scam)" mentions a
+  // government agency but in a scam context — that's not a positive signal).
+  const positiveReports = classified.filter((x) =>
+    x.positive && !x.negative && (x.report.source !== "web_search" || x.report.verified_exact_number === true)
+  ).length;
   const verifiedWeb = reports.filter((r: AnyRecord) => r.source === "web_search" && r.verified_exact_number === true);
   const webNegativeHosts = new Set(
     verifiedWeb
