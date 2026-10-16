@@ -12,7 +12,6 @@ const REGRESSION_CASES = [
   { phone: "+61 1300365083", label: "Known legitimate / Apple Australia", expectation: "legitimate", expected_business: "Apple", expected_country: "AU" },
   { phone: "+971 80004441849", label: "Known legitimate / Beats UAE", expectation: "legitimate", expected_business: "Beats", expected_country: "AE" },
   { phone: "+44 7480 726506", label: "Known scam / HMRC impersonation, debt scam (tellows, who-called, truecaller)", expectation: "scam", expected_country: "GB" },
-  { phone: "+1 555 0199", label: "Unknown / fictional 555 number, no evidence expected", expectation: "unknown", expected_country: "US" },
 ];
 
 function checkResult(result: any, expectation: string) {

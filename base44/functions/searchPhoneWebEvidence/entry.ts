@@ -105,6 +105,10 @@ const COMMUNITY_REPORT_HOSTS = [
   "tellows.", "who-called.co.uk", "who-calledme", "whocalledme",
   "truecaller.com/who-called-me", "180.se/nummer", "callapp.com/search-result",
   "everycaller.com", "shouldianswer", "cleverdialer", "phonely",
+  "callfilter.app", "connection-technologies", "800notes",
+  "whocallsme", "whocalls", "nomorobo", "robokiller", "robocaller",
+  "callcontrol", "callercomplaints", "sync.me", "unknownphone",
+  "usphonebook", "numberguru", "spydialer", "scamcallcheck.com/number",
 ];
 
 function isCommunityReportSite(url: string): boolean {
