@@ -165,13 +165,17 @@ function scorePhone(evidence: AnyRecord) {
     score = Math.min(score, 20);
   }
 
+  // Clamp the score BEFORE determining status/risk level, so the displayed
+  // rounded score always matches the verdict (a raw 70.5 rounds to 71 and
+  // must be SCAM, not SUSPICIOUS).
+  const finalScore = clamp(score);
   let status: "SCAM" | "SUSPICIOUS" | "SAFE" | "UNKNOWN";
   if (!hasNegativeEvidence && !hasLegitimateEvidence) status = "UNKNOWN";
-  else if (score >= 71) status = "SCAM";
-  else if (score >= 31) status = "SUSPICIOUS";
+  else if (finalScore >= 71) status = "SCAM";
+  else if (finalScore >= 31) status = "SUSPICIOUS";
   else status = "SAFE";
 
-  const riskLevel = score >= 71 ? "high" : score >= 31 ? "medium" : "low";
+  const riskLevel = finalScore >= 71 ? "high" : finalScore >= 31 ? "medium" : "low";
   const evidenceCount = Number(counts.exact_evidence_count || 0);
   const providerSuccesses = Object.values(evidence?.source_status || {}).filter((v) => v === "ok").length;
   const providerErrors = Array.isArray(evidence?.provider_errors) ? evidence.provider_errors.length : 0;
@@ -190,8 +194,8 @@ function scorePhone(evidence: AnyRecord) {
   ).filter((v) => v.length < 80).slice(0, 8);
 
   return {
-    reputation_score: clamp(score),
-    risk_score: clamp(score),
+    reputation_score: finalScore,
+    risk_score: finalScore,
     risk_level: riskLevel,
     caller_id_status: status,
     confidence_score: confidence,

@@ -29,7 +29,7 @@ const REGRESSION_CASES = [
   { phone: "+1 855 738 0610", label: "Unknown / no web evidence found (flaky search)", expectation: "unknown", expected_country: "US" },
   { phone: "+44 800 011 9735", label: "Unknown / no web evidence found (HMRC toll-free)", expectation: "unknown", expected_country: "GB" },
   { phone: "+61 1300 729 729", label: "Unknown / no web evidence found (Australian 1300)", expectation: "unknown", expected_country: "AU" },
-  { phone: "+1 800 555 1234", label: "Fictional / insufficient evidence", expectation: "unknown", expected_country: "US" },
+  { phone: "+1 800 555 1234", label: "Fictional 555 number / community reports exist on spoofing sites", expectation: "scam", expected_country: "US" },
   { phone: "+44 800 023 4853", label: "Known legitimate / Financial Ombudsman Service UK", expectation: "legitimate", expected_country: "GB" },
 ];
 
@@ -57,11 +57,13 @@ function checkResult(result: any, expectation: string) {
       const bizName = String(result?.business_name || "").toLowerCase();
       const bizUrl = String(result?.business_verification_url || "").toLowerCase();
       const bizSource = String(result?.business_name_source || "").toLowerCase();
-      // "official_web" source means the business was derived from a web domain,
-      // which is the bug we're testing for. It should never appear for a
-      // phone-reporting site.
       const hasOfficialWebSource = bizSource === "official_web";
-      return !reportingSites.some((s) => bizName.includes(s) || bizUrl.includes(s)) && !hasOfficialWebSource;
+      // Only check the hostname (not the URL path) against reporting sites.
+      // A Microsoft Learn URL like ".../is-1-800-642-7676-a-legitimate-telephone-number"
+      // contains "phone-number" in the path but is on learn.microsoft.com.
+      let bizHost = "";
+      try { bizHost = new URL(result?.business_verification_url || "").hostname.toLowerCase(); } catch {}
+      return !reportingSites.some((s) => bizName.includes(s) || bizHost.includes(s)) && !hasOfficialWebSource;
     })(), detail: `business=${result?.business_name || "null"}, url=${result?.business_verification_url || "null"}, source=${result?.business_name_source || "null"}` },
   ];
 
