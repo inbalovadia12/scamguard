@@ -1,53 +1,49 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 
-function digitsVariants(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  const withoutUsCountry = digits.startsWith("1") && digits.length === 11 ? digits.slice(1) : digits;
-  const countryNational = digits.startsWith("44") || digits.startsWith("61") || digits.startsWith("81") || digits.startsWith("971")
-    ? "0" + digits.slice(digits.startsWith("971") ? 3 : 2)
-    : null;
-  return Array.from(new Set([
-    phone,
-    digits,
-    "+" + digits,
-    withoutUsCountry,
-    "+" + withoutUsCountry,
-    countryNational,
-  ].filter(Boolean))).filter(Boolean);
-}
+// === Phone format generation ===
 
 function normalizePhoneDigits(value: string) {
   return String(value || "").replace(/\D/g, "");
 }
 
-function extractPhoneLikeTokens(text: string) {
-  return String(text || "")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .match(/\+?\d[\d\s().-]{5,}\d/g) || [];
+function detectCallingCode(digits: string): string {
+  for (const code of ["971", "44", "61", "81", "1"]) {
+    if (digits.startsWith(code) && digits.length > code.length + 6) return code;
+  }
+  return "";
 }
 
-function containsExactPhone(text: string, targetForms: string[]) {
-  const tokens = extractPhoneLikeTokens(text);
-  const targets = new Set(targetForms.map(normalizePhoneDigits).filter(Boolean));
-  return tokens.some((token) => {
-    let digits = normalizePhoneDigits(token);
-    if (digits.startsWith("00")) digits = digits.slice(2);
-    if (targets.has(digits)) return true;
-    for (const code of ["971", "44", "61", "81"]) {
-      for (const target of targets) {
-        if (!target.startsWith(code) || target.length <= code.length + 6) continue;
-        const national = target.slice(code.length);
-        if (digits === code + "0" + national) return true;
-        if (digits === "0" + national || digits === national) return true;
-      }
-    }
-    return Array.from(targets).some((target) =>
-      target.startsWith("1") && digits === target.slice(1)
-    );
-  });
+function generateFormats(rawPhone: string) {
+  const digits = normalizePhoneDigits(rawPhone);
+  const callingCode = detectCallingCode(digits);
+  const nationalDigits = callingCode ? digits.slice(callingCode.length) : digits;
+  const hasTrunkZero = ["44", "61", "81", "971"].includes(callingCode);
+  const nationalWithTrunk = hasTrunkZero ? "0" + nationalDigits : nationalDigits;
+
+  // Extract the national format from the original phone string (preserves user spacing)
+  const originalNoCc = rawPhone.replace(/^\+?\d{1,3}\s*/, "").trim();
+  const nationalSpacedRaw = /\s/.test(originalNoCc) && originalNoCc.length >= 7
+    ? originalNoCc
+    : nationalWithTrunk;
+
+  // For countries with trunk zeros, ensure the spaced format starts with 0
+  const nationalSpaced = hasTrunkZero && !nationalSpacedRaw.startsWith("0")
+    ? "0" + nationalSpacedRaw
+    : nationalSpacedRaw;
+
+  const nationalHyphenated = nationalSpaced.replace(/\s/g, "-");
+
+  return {
+    digits,
+    callingCode,
+    nationalDigits,
+    nationalWithTrunk,
+    nationalSpaced,
+    nationalHyphenated,
+    hasTrunkZero,
+  };
 }
+
 function decodeHtml(value: string) {
   return String(value || "")
     .replace(/&amp;/g, "&")
@@ -59,7 +55,11 @@ function decodeHtml(value: string) {
     .replace(/&#x2F;/gi, "/");
 }
 
-async function searchBingRss(query: string, timeoutMs = 7000) {
+const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+// === Search engines ===
+
+async function searchBingRss(query: string, timeoutMs = 8000) {
   const url = `https://www.bing.com/search?format=rss&q=${encodeURIComponent(query)}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -67,8 +67,9 @@ async function searchBingRss(query: string, timeoutMs = 7000) {
     const res = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; VardinScamGuard/1.0)",
+        "User-Agent": BROWSER_UA,
         "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "application/rss+xml,text/xml,application/xml,*/*",
       },
     });
     const xml = await res.text();
@@ -91,37 +92,43 @@ async function searchBingRss(query: string, timeoutMs = 7000) {
   }
 }
 
-async function searchDuckDuckGo(query: string, timeoutMs = 7000) {
-  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+async function searchDuckDuckGo(query: string, timeoutMs = 8000) {
+  // Try the lite endpoint with a browser UA — the html endpoint returns HTTP 202 (CAPTCHA)
+  const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query)}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; VardinScamGuard/1.0)",
+        "User-Agent": BROWSER_UA,
         "Accept-Language": "en-US,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,*/*",
       },
     });
     const html = await res.text();
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const results: any[] = [];
-    const blocks = html.split(/<div[^>]+class="result[^"]*"[^>]*>/i).slice(1);
-    for (const block of blocks.slice(0, 10)) {
-      const hrefMatch = block.match(/class="result__a"[^>]+href="([^"]+)"/i);
-      const titleMatch = block.match(/class="result__a"[^>]*>([\s\S]*?)<\/a>/i);
-      const snippetMatch = block.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>|class="result__snippet"[^>]*>([\s\S]*?)<\/div>/i);
-      const title = decodeHtml(titleMatch?.[1] || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-      const rawHref = decodeHtml(hrefMatch?.[1] || "").trim();
-      const snippet = decodeHtml(snippetMatch?.[1] || snippetMatch?.[2] || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-      let resultUrl = rawHref;
-      try {
-        const parsed = new URL(rawHref, "https://html.duckduckgo.com");
-        const uddg = parsed.searchParams.get("uddg");
-        if (uddg) resultUrl = decodeURIComponent(uddg);
-      } catch {}
-      if (title && resultUrl) results.push({ title: title.slice(0, 300), snippet: snippet.slice(0, 500), url: resultUrl, engine: "duckduckgo" });
+    // DDG lite puts results in <a class="result-link" href="..."> tags
+    // and snippets in <td class="result-snippet"> tags
+    const linkRegex = /<a[^>]+class="result-link"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    const snippetRegex = /<td[^>]+class="result-snippet"[^>]*>([\s\S]*?)<\/td>/gi;
+
+    const links: RegExpExecArray[] = [];
+    let linkMatch;
+    while ((linkMatch = linkRegex.exec(html)) !== null) links.push(linkMatch);
+    const snippets: string[] = [];
+    let snippetMatch;
+    while ((snippetMatch = snippetRegex.exec(html)) !== null) {
+      snippets.push(decodeHtml(snippetMatch[1]).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+    }
+
+    for (let i = 0; i < Math.min(links.length, 10); i++) {
+      const rawHref = decodeHtml(links[i][1]).trim();
+      const title = decodeHtml(links[i][2]).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      const snippet = (snippets[i] || "").slice(0, 500);
+      if (title && rawHref) results.push({ title: title.slice(0, 300), snippet, url: rawHref, engine: "duckduckgo" });
     }
     return results;
   } finally {
@@ -152,6 +159,63 @@ async function searchWeb(query: string) {
     },
   };
 }
+
+// === Phone number verification ===
+
+function extractPhoneLikeTokens(text: string) {
+  const cleaned = String(text || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ");
+
+  const tokens: string[] = [];
+
+  // 1. Match phone numbers without spaces (hyphens, dots, parens only).
+  //    This cannot cross multiple space-separated numbers.
+  const noSpace = cleaned.match(/\+?\(?\d[\d().-]{5,}\d/g) || [];
+  for (const m of noSpace) {
+    const d = m.replace(/\D/g, "");
+    if (d.length >= 7 && d.length <= 15) tokens.push(m);
+  }
+
+  // 2. For spaced formats, split on double spaces (which typically separate
+  //    different content blocks on a page) and match within each chunk.
+  const chunks = cleaned.split(/\s{2,}/);
+  for (const chunk of chunks) {
+    const spaced = chunk.match(/\+?\(?\d[\d\s().-]{5,}\d/g) || [];
+    for (const m of spaced) {
+      const d = m.replace(/\D/g, "");
+      if (d.length >= 7 && d.length <= 15) tokens.push(m);
+    }
+  }
+
+  return tokens;
+}
+
+function containsExactPhone(text: string, targetForms: string[]) {
+  const tokens = extractPhoneLikeTokens(text);
+  const targets = new Set(targetForms.map(normalizePhoneDigits).filter(Boolean));
+  return tokens.some((token) => {
+    let digits = normalizePhoneDigits(token);
+    if (digits.startsWith("00")) digits = digits.slice(2);
+    if (targets.has(digits)) return true;
+    for (const code of ["971", "44", "61", "81"]) {
+      for (const target of targets) {
+        if (!target.startsWith(code) || target.length <= code.length + 6) continue;
+        const national = target.slice(code.length);
+        if (digits === code + "0" + national) return true;
+        if (digits === "0" + national || digits === national) return true;
+      }
+    }
+    return Array.from(targets).some((target) =>
+      target.startsWith("1") && digits === target.slice(1)
+    );
+  });
+}
+
+// === Main handler ===
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -162,30 +226,30 @@ Deno.serve(async (req) => {
     const phone = String(body?.phone ?? body?.phone_number ?? "").trim();
     if (!phone) return Response.json({ error: "Phone number is required." }, { status: 400 });
 
-    const variants = digitsVariants(phone);
-    const digitsOnly = normalizePhoneDigits(phone);
-    const targetDigits = normalizePhoneDigits(phone);
-    const callingCode = ["971", "44", "61", "81", "1"].find((code) => targetDigits.startsWith(code)) || "";
-    const targetNational = callingCode ? targetDigits.slice(callingCode.length) : targetDigits;
-    const targetWithoutCountry = targetDigits.startsWith("1") && targetDigits.length == 11 ? targetDigits.slice(1) : targetDigits;
-    const nationalFormatted = callingCode && callingCode !== "1" ? "0" + targetNational : null;
+    const formats = generateFormats(phone);
+    const { digits, callingCode, nationalDigits, nationalWithTrunk, nationalSpaced, nationalHyphenated, hasTrunkZero } = formats;
+
+    // Target forms for exact-number verification (digit-based)
     const targetForms = Array.from(new Set([
-      targetDigits,
-      targetWithoutCountry,
-      "00" + targetDigits,
-      targetNational,
-      nationalFormatted,
-      callingCode ? callingCode + "0" + targetNational : null,
+      digits,                                                    // "18006927753"
+      nationalDigits,                                            // "8006927753"
+      nationalWithTrunk,                                         // "08000480408" (UK) or "8006927753" (US)
+      "00" + digits,                                             // "0018006927753"
+      hasTrunkZero ? callingCode + nationalWithTrunk : null,    // "4408000480408" (UK, cc+trunk+national)
     ].filter((value) => Boolean(value) && value.length >= 7)));
 
+    // Search queries — NO quotes around digits, NO OR-suffix on primary queries.
+    // Bing RSS ignores quoted digit phrases and treats OR-suffix as the main query,
+    // returning irrelevant results. Using plain digits + single keyword gives
+    // AND semantics so Bing only returns pages that actually contain the number.
     const searches = [
-      '"' + variants[0] + '" scam OR fraud OR spam OR robocall',
-      '"' + variants[1] + '" scam OR fraud OR spam OR robocall',
-      '"' + (nationalFormatted || variants[variants.length - 1]) + '" scam OR fraud OR spam',
-      '"' + variants[0] + '" review OR "who called" OR "customer service" OR support',
-      'site:who-called.co.uk OR site:who-calls.co.uk OR site:phonely.co.uk "' + digitsOnly + '"',
-      'site:reddit.com/r/ScamNumbers OR site:reddit.com/r/scams "' + digitsOnly + '" phone',
-      '"' + variants[0] + '" official OR support OR company',
+      nationalSpaced,                              // "800 692 7753" or "0800 048 0408" — common written format
+      nationalHyphenated,                          // "800-692-7753" or "0800-048-0408" — hyphenated format
+      nationalWithTrunk + " scam",                 // "8006927753 scam" — scam reports
+      digits + " scam",                            // "18006927753 scam" — full international digits + scam
+      nationalWithTrunk + " who called",           // "8006927753 who called" — who-called sites
+      nationalWithTrunk + " support",              // "8006927753 support" — official support pages
+      "site:reddit.com " + nationalWithTrunk,     // "site:reddit.com 8006927753" — Reddit
     ];
 
     const searchRuns = await Promise.all(searches.map(async (query) => {
@@ -214,6 +278,7 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Round-robin across queries so one broad query cannot fill the limit
     const roundRobin: any[] = [];
     const seenUrls = new Set<string>();
     for (let rank = 0; rank < 12; rank += 1) {
@@ -224,7 +289,7 @@ Deno.serve(async (req) => {
         roundRobin.push({ ...candidate, matched_query: run.query });
       }
     }
-    const unique = roundRobin.slice(0, 14);
+    const unique = roundRobin.slice(0, 16);
 
     const verified = await Promise.all(unique.map(async (r) => {
       try {
@@ -234,8 +299,9 @@ Deno.serve(async (req) => {
           const page = await fetch(r.url, {
             signal: controller.signal,
             headers: {
-              "User-Agent": "Mozilla/5.0 (compatible; VardinScamGuard/1.0)",
+              "User-Agent": BROWSER_UA,
               "Accept-Language": "en-US,en;q=0.9",
+              "Accept": "text/html,application/xhtml+xml,*/*",
             },
           });
           const html = await page.text();
@@ -257,7 +323,7 @@ Deno.serve(async (req) => {
 
     return Response.json({
       phone,
-      query_variants: variants,
+      query_variants: [nationalSpaced, nationalHyphenated, nationalWithTrunk, digits],
       searches,
       results: verified,
       result_count: verified.length,
@@ -267,8 +333,7 @@ Deno.serve(async (req) => {
       search_query_count: searches.length,
       search_engine_diagnostics: engineDiagnostics,
       verification_failure_count: verified.filter((r) => r.verification_status === "verification_failed" || r.verification_status === "not_verified").length,
-      note: "Web results count as evidence only when the fetched page or the direct search result title/snippet contains an exact normalized phone-number token. International, national-trunk, and optional-trunk formats are normalized before comparing; search-result-only evidence is retained with a lower verification method.",
-
+      note: "Web results count as evidence only when the fetched page or the direct search result title/snippet contains an exact normalized phone-number token. Queries use plain digits (no quotes, no OR-suffix) so Bing applies AND semantics. International, national-trunk, and optional-trunk formats are normalized before comparing.",
     });
   } catch (error: any) {
     return Response.json({ error: error?.message || "Web phone evidence search failed" }, { status: 500 });
