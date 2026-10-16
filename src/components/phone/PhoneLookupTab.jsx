@@ -62,6 +62,12 @@ export default function PhoneLookupTab() {
     const phone = phoneInput.trim();
     if (!phone) return;
 
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 7 || digits.length > 15) {
+      setError("Enter a valid phone number with at least 7 digits, including the country code for international numbers.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setResult(null);
@@ -89,7 +95,8 @@ export default function PhoneLookupTab() {
       });
     } catch (err) {
       console.error("Phone lookup failed:", err);
-      setError(err?.message || "Phone lookup failed. Please try again.");
+      const apiError = err?.response?.data?.error || err?.data?.error || err?.message || "Phone lookup failed. Please try again.";
+      setError(apiError);
     } finally {
       setLoading(false);
     }
