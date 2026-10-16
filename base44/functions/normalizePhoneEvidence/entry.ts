@@ -429,9 +429,12 @@ Deno.serve(async (req) => {
       return Boolean(r.text || r.url || r.raw || r.category);
     }).length;
 
+    const brandFromTitles = extractBrandFromTitles(webResults);
     const businessCandidates = [
       numbersOnline?.caller_name,
       usaCallerLookup?.caller_name,
+      // Brand name extracted from verified directory page titles (e.g., "Beatsサポート")
+      brandFromTitles,
       // LLM supplementary search may provide a business_name_hint for verified results
       ...webResults
         .filter((r) => r.verified_exact_number && (r.raw as any)?.business_name_hint)

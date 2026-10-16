@@ -17,7 +17,9 @@ function generateFormats(rawPhone: string) {
   const digits = normalizePhoneDigits(rawPhone);
   const callingCode = detectCallingCode(digits);
   const nationalDigits = callingCode ? digits.slice(callingCode.length) : digits;
-  const hasTrunkZero = ["44", "61", "81", "971"].includes(callingCode);
+  // UAE (971) does not use a trunk zero — national format is the same as
+  // the digits after the country code (e.g., 800 444 1849, not 0800 444 1849).
+  const hasTrunkZero = ["44", "61", "81"].includes(callingCode);
   const nationalWithTrunk = hasTrunkZero ? "0" + nationalDigits : nationalDigits;
 
   // Extract the national format from the original phone string (preserves user spacing)
@@ -33,6 +35,24 @@ function generateFormats(rawPhone: string) {
 
   const nationalHyphenated = nationalSpaced.replace(/\s/g, "-");
 
+  // Generate additional spaced formats for numbers that don't have spaces in
+  // the original. Search engines often index phone numbers with specific
+  // spacing (e.g., Apple's support page shows "8000 444 1849"), and a plain
+  // digit query like "80004441849" won't match those pages.
+  const spacedVariants: string[] = [];
+  if (!/\s/.test(originalNoCc) && nationalWithTrunk.length >= 8) {
+    const nd = nationalWithTrunk;
+    if (nd.length === 11) {
+      spacedVariants.push(`${nd.slice(0, 4)} ${nd.slice(4, 7)} ${nd.slice(7)}`);  // 4-3-4
+      spacedVariants.push(`${nd.slice(0, 3)} ${nd.slice(3, 7)} ${nd.slice(7)}`);  // 3-4-4
+    } else if (nd.length === 10) {
+      spacedVariants.push(`${nd.slice(0, 3)} ${nd.slice(3, 6)} ${nd.slice(6)}`);  // 3-3-4
+      spacedVariants.push(`${nd.slice(0, 4)} ${nd.slice(4, 7)} ${nd.slice(7)}`);  // 4-3-3
+    } else if (nd.length === 9) {
+      spacedVariants.push(`${nd.slice(0, 3)} ${nd.slice(3, 6)} ${nd.slice(6)}`);  // 3-3-3
+    }
+  }
+
   return {
     digits,
     callingCode,
@@ -40,6 +60,7 @@ function generateFormats(rawPhone: string) {
     nationalWithTrunk,
     nationalSpaced,
     nationalHyphenated,
+    spacedVariants,
     hasTrunkZero,
   };
 }
@@ -245,7 +266,7 @@ Deno.serve(async (req) => {
     if (!phone) return Response.json({ error: "Phone number is required." }, { status: 400 });
 
     const formats = generateFormats(phone);
-    const { digits, callingCode, nationalDigits, nationalWithTrunk, nationalSpaced, nationalHyphenated, hasTrunkZero } = formats;
+    const { digits, callingCode, nationalDigits, nationalWithTrunk, nationalSpaced, nationalHyphenated, spacedVariants, hasTrunkZero } = formats;
 
     // Target forms for exact-number verification (digit-based)
     const targetForms = Array.from(new Set([
@@ -263,6 +284,7 @@ Deno.serve(async (req) => {
     const searches = [
       nationalSpaced,                              // "800 692 7753" or "0800 048 0408" — common written format
       nationalHyphenated,                          // "800-692-7753" or "0800-048-0408" — hyphenated format
+      ...spacedVariants,                           // "8000 444 1849" — alternative spacings for numbers without spaces
       nationalWithTrunk + " scam",                 // "8006927753 scam" — scam reports
       digits + " scam",                            // "18006927753 scam" — full international digits + scam
       nationalWithTrunk + " who called",           // "8006927753 who called" — who-called sites
