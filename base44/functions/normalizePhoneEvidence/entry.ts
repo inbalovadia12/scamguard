@@ -447,6 +447,9 @@ Deno.serve(async (req) => {
       ...webResults
         .filter((r) => !r.verified_exact_number && (r.raw as any)?.business_name_hint && (r.raw as any)?.engine === "llm_supplementary")
         .filter((r) => {
+          // Accept LLM hint results with no URL (synthetic result where the LLM
+          // identified the business but couldn't find the official page).
+          if (!r.url) return true;
           try {
             const host = new URL(r.url).hostname.toLowerCase();
             const domain = registeredDomain(host);

@@ -389,8 +389,12 @@ Deno.serve(async (req) => {
               ? [`${nd.slice(0, 3)}-${nd.slice(3, 6)}-${nd.slice(6)}`, `${nd.slice(0, 4)}-${nd.slice(4, 7)}-${nd.slice(7)}`]
               : [];
         const formatList = [phone, ...targetForms, ...hyphenatedFormats].filter((v, i, a) => v && a.indexOf(v) === i);
+        const countryHint = callingCode
+          ? { "971": "United Arab Emirates (UAE)", "44": "United Kingdom", "61": "Australia", "81": "Japan", "1": "United States" }[callingCode] || ""
+          : "";
+        const countryLine = countryHint ? `This phone number is from ${countryHint}. ` : "";
         const llmResult = await base44.integrations.Core.InvokeLLM({
-          prompt: `Who does the phone number "${phone}" belong to? Search the web for this number (it may appear as ${formatList.join(", ")}). Tell me:\n1. The business or organization name associated with this number\n2. The URL of the official support or contact page where this number is listed (e.g., on apple.com, beatsbydre.com, microsoft.com, google.com, amazon.com)\n3. Any scam report or community discussion pages about this number\n\nReturn the business name, the official page URL, and any scam report URLs you found. Only include pages where you actually found the exact phone number.`,
+          prompt: `${countryLine}Who does the phone number "${phone}" belong to? Search the web for this number (it may appear as ${formatList.join(", ")}). Tell me:\n1. The business or organization name associated with this number\n2. The URL of the official support or contact page where this number is listed (e.g., on apple.com, beatsbydre.com, microsoft.com, google.com, amazon.com)\n3. Any scam report or community discussion pages about this number\n\nReturn the business name, the official page URL, and any scam report URLs you found. Only include pages where you actually found the exact phone number. If you can identify the business but cannot find the exact URL, still return the business name.`,
           add_context_from_internet: true,
           model: "gemini_3_flash",
           response_json_schema: {
@@ -488,6 +492,28 @@ Deno.serve(async (req) => {
         const validLlmResults = llmVerified.filter((r) => r !== null);
         llmSupplementary.candidates_verified = validLlmResults.filter((r) => r.verified_exact_number).length;
         verified.push(...validLlmResults);
+
+        // If the LLM identified a business name but returned no valid URL (or
+        // the URL failed verification), still add a synthetic unverified result
+        // carrying the business_name_hint. normalizePhoneEvidence uses this hint
+        // as a fallback when no official page can be verified — the LLM has web
+        // search context and can correctly identify the business even when the
+        // exact phone number isn't on the page it found.
+        const llmBusinessName = String(llmResult?.business_name || "").trim();
+        const hasLlmHintResult = validLlmResults.some((r) => r.business_name_hint);
+        if (llmBusinessName && !hasLlmHintResult) {
+          verified.push({
+            title: "",
+            snippet: "",
+            url: "",
+            engine: "llm_supplementary",
+            matched_query: "llm_web_search",
+            business_name_hint: llmBusinessName,
+            verified_exact_number: false,
+            verification_method: "none",
+            verification_status: "not_verified",
+          });
+        }
       } catch (error: any) {
         llmSupplementary.error = error?.message || "LLM supplementary search failed";
       }
