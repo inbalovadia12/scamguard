@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity, Flag } from "lucide-react";
+import { MapPin, Signal, Users, Tag, ExternalLink, BadgeCheck, Activity, Flag, AlertTriangle } from "lucide-react";
 import { RISK_META } from "@/components/scam/ScamReportCard";
 import CommunityIntel, { matchCategoriesToEnum } from "@/components/community/CommunityIntel";
 import ReportScamDialog from "@/components/scam/ReportScamDialog";
@@ -65,6 +65,14 @@ export default function PhoneResultView({ data }) {
             </span>
           )}
         </div>
+      </div>
+
+      {/* Result interpretation disclaimer */}
+      <div className="flex items-start gap-2.5 p-3 rounded-xl border border-warning/30 bg-warning/5">
+        <AlertTriangle className="w-4 h-4 flex-shrink-0 text-warning mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          This assessment is based on community reports and public records, not a definitive verdict. A "safe" result does not guarantee the caller is legitimate — scammers can spoof trusted numbers. A "risky" result does not prove the caller is a scammer — legitimate businesses can be falsely reported. Always use your own judgment and verify independently before sharing information or sending money.
+        </p>
       </div>
 
       {/* Business / caller identity */}

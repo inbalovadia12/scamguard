@@ -204,6 +204,18 @@ function scorePhone(evidence: AnyRecord) {
     score = Math.min(score, 20);
   }
 
+  // Web-noise cap: when there are no exact scam reports from provider
+  // databases (negativeReports === 0) and no strong provider risk signal,
+  // cap at SUSPICIOUS (70). Community-reporting sites and web search results
+  // are noisy — legitimate numbers (banks, government, utilities) get
+  // reported as scams by people who received unwanted calls. Without exact
+  // scam reports or strong provider confirmation, web noise alone should not
+  // classify a number as SCAM. This prevents false positives on legitimate
+  // businesses that have community noise but no provider-side scam evidence.
+  if (negativeReports === 0 && !hasStrongProviderRisk) {
+    score = Math.min(score, 70);
+  }
+
   // Clamp the score BEFORE determining status/risk level, so the displayed
   // rounded score always matches the verdict (a raw 70.5 rounds to 71 and
   // must be SCAM, not SUSPICIOUS).
