@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { getGmailSenderEmail, sendGmail, buildMimeMessage } from "../../shared/gmailMime.ts";
+import { verifyFamilyEmail } from "../../shared/familyEmailGuard.ts";
 
 const DEFAULT_WARNING = "⚠️ Your guardian reviewed this and warns it's a scam — please do not engage or share any information.";
 const DEFAULT_ASSURANCE = "✅ Your guardian reviewed this and says it looks safe. No action needed.";
@@ -106,8 +107,9 @@ export default async function(req: Request): Promise<Response> {
     try {
       const recipientEmail = sender === 'guardian' ? senior.email : senior.guardian_email;
       const recipientName = sender === 'guardian' ? senior.name : senior.guardian_name;
+      const recipientId = sender === 'guardian' ? senior.senior_user_id : senior.guardian_id;
       const fromName = sender === 'guardian' ? (senior.guardian_name || 'Your Guardian') : (senior.name || 'Your Family Member');
-      if (recipientEmail) {
+      if (recipientEmail && await verifyFamilyEmail(base44, recipientId, recipientEmail)) {
         const { accessToken } = await base44.asServiceRole.connectors.getConnection('gmail');
         const senderEmail = await getGmailSenderEmail(accessToken);
         const subject = `Vardin family message from ${fromName}`;

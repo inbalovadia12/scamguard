@@ -10,6 +10,7 @@
 //   uint8_t  blind_sig[256]  = blinded_msg^d mod n
 //
 // No Vardin user authentication — anonymous Apple relay/PIR flow.
+// Rate-limited per client IP to prevent unlimited anonymous token minting.
 
 import { secrets } from "base44:runtime";
 import {
@@ -20,8 +21,36 @@ import {
   BLIND_RSA_NK,
 } from "../../shared/privacyPass.ts";
 
+// Simple in-memory rate limiter: caps token issuance per IP per minute.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 10;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || entry.resetAt < now) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
+function getClientIP(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim();
+  return req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip") || "unknown";
+}
+
 export default async function (req: Request): Promise<Response> {
   try {
+    // Rate limit anonymous token issuance to prevent abuse.
+    if (!checkRateLimit(getClientIP(req))) {
+      return Response.json({ error: "Rate limit exceeded" }, { status: 429 });
+    }
+
     const secretValue = secrets.get("LIVE_CALLER_ID_TOKEN_ISSUER_KEY");
     if (!secretValue) {
       return Response.json({ error: "Token issuer not configured" }, { status: 500 });

@@ -9,7 +9,7 @@ export default async function(req: Request): Promise<Response> {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const name = (body?.name || '').toString().trim();
+    const name = (body?.name || '').toString().trim().replace(/[\r\n]+/g, ' ');
     const email = (body?.email || '').toString().trim().toLowerCase();
     const alertPref = (body?.alert_preference || 'all').toString();
 

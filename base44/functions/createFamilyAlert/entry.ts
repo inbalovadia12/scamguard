@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { getGmailSenderEmail, sendGmail, buildMimeMessage } from "../../shared/gmailMime.ts";
+import { verifyFamilyEmail } from "../../shared/familyEmailGuard.ts";
 
 const DEFAULT_SETTINGS = {
   link_protection: true, message_protection: true, image_scanning: true,
@@ -51,7 +52,9 @@ export default async function(req: Request): Promise<Response> {
 
     // Always notify the guardian by email — the member explicitly asked for help,
     // so the guardian should see what was asked even if they miss the in-app badge.
-    if (senior.guardian_email) {
+    // Verify guardian_email matches the guardian's actual platform email to
+    // prevent email relay via user-created ProtectedSenior records.
+    if (senior.guardian_email && await verifyFamilyEmail(base44, senior.guardian_id, senior.guardian_email)) {
       try {
         const { accessToken } = await base44.asServiceRole.connectors.getConnection('gmail');
         const senderEmail = await getGmailSenderEmail(accessToken);

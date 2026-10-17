@@ -43,6 +43,16 @@ export default async function (req: Request): Promise<Response> {
       return Response.json({ error: "No evaluation keys in request" }, { status: 400 });
     }
 
+    // Cap stored keys per user_identifier to prevent storage pollution
+    // from anonymous callers minting unlimited tokens.
+    const MAX_KEYS_PER_USER = 10;
+    const existingKeys = await base44.asServiceRole.entities.LiveCallerIdKey.filter({ user_identifier: userIdentifier });
+    const existingHashes = new Set((Array.isArray(existingKeys) ? existingKeys : []).map((k) => k.key_config_hash));
+    const allNewKeys = keys.every((key) => !existingHashes.has(toBase64(key.identifier)));
+    if (existingKeys.length >= MAX_KEYS_PER_USER && allNewKeys) {
+      return Response.json({ error: "Key limit exceeded" }, { status: 429 });
+    }
+
     for (const key of keys) {
       const configHashB64 = toBase64(key.identifier);
       const evaluationKeyB64 = toBase64(key.evaluationKey);

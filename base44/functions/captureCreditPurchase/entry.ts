@@ -101,46 +101,62 @@ Deno.serve(async (req) => {
 
     const creditsToAdd = CREDIT_PACKS[packKey].credits;
 
-    // Race guard: a concurrent capture call may have already granted and marked
-    // this order. Re-read the purchase right before granting; if it is already
-    // captured, return the prior result instead of granting twice.
-    if (purchase) {
+    // --- Atomic idempotency: only one concurrent caller can transition a
+    // pending purchase to captured and grant credits. ---
+
+    // Ensure a pending record exists so the atomic transition has an anchor.
+    if (!purchase) {
       try {
-        const refetched = await base44.entities.CreditPurchase.filter({ paypal_order_id: orderId });
-        if (Array.isArray(refetched) && refetched[0] && refetched[0].status === "captured") {
-          return Response.json({ success: true, already_captured: true, credits_added: refetched[0].credits_to_grant });
-        }
-      } catch {}
-    }
-
-    // Grant purchased credits to the carry-over admin balance so they persist
-    // across monthly resets instead of vanishing at month end. This bucket is
-    // consumed first by applyCreditUsage and never auto-resets.
-    const adminBalance = Math.max(0, Number(user.admin_credit_balance) || 0);
-    await base44.auth.updateMe({
-      admin_credit_balance: adminBalance + creditsToAdd,
-    });
-
-    // Mark captured so a duplicate capture call is a no-op. If no pending
-    // record existed, create one now so retries are idempotent.
-    try {
-      if (purchase) {
-        await base44.entities.CreditPurchase.update(purchase.id, {
-          status: "captured",
-          captured_at: new Date().toISOString(),
-        });
-      } else {
         await base44.entities.CreditPurchase.create({
           user_id: user.id,
           paypal_order_id: orderId,
           pack: packKey,
           expected_amount: amount,
           credits_to_grant: creditsToAdd,
-          status: "captured",
-          captured_at: new Date().toISOString(),
+          status: "pending",
         });
+      } catch { /* another caller may have created it concurrently */ }
+    }
+
+    // Atomically transition pending → captured. The conditional updateMany
+    // ensures only the first caller to land the update matches the "pending"
+    // condition. A unique nonce in the description field lets us verify we
+    // won the transition after re-reading.
+    const captureNonce = crypto.randomUUID();
+    await base44.entities.CreditPurchase.updateMany(
+      { paypal_order_id: orderId, status: "pending" },
+      { $set: { status: "captured", captured_at: new Date().toISOString(), description: captureNonce } },
+    );
+
+    // Re-read to verify we won the transition.
+    const finalRecords = await base44.entities.CreditPurchase.filter({ paypal_order_id: orderId });
+    const capturedRecords = (Array.isArray(finalRecords) ? finalRecords : []).filter((r) => r.status === "captured");
+
+    if (capturedRecords.length === 0) {
+      return Response.json({ error: "Capture failed" }, { status: 500 });
+    }
+
+    // If our nonce is not in any captured record, another caller won.
+    const ourWin = capturedRecords.some((r) => r.description === captureNonce);
+    if (!ourWin) {
+      return Response.json({ success: true, already_captured: true, credits_added: capturedRecords[0].credits_to_grant });
+    }
+
+    // Handle duplicate records (two callers both created pending records):
+    // only the earliest created record grants credits.
+    if (capturedRecords.length > 1) {
+      const sorted = capturedRecords.sort((a, b) => String(a.created_date).localeCompare(String(b.created_date)));
+      if (sorted[0].description !== captureNonce) {
+        return Response.json({ success: true, already_captured: true, credits_added: sorted[0].credits_to_grant });
       }
-    } catch {}
+    }
+
+    // We won — grant purchased credits to the carry-over admin balance so
+    // they persist across monthly resets instead of vanishing at month end.
+    const adminBalance = Math.max(0, Number(user.admin_credit_balance) || 0);
+    await base44.auth.updateMe({
+      admin_credit_balance: adminBalance + creditsToAdd,
+    });
 
     return Response.json({
       success: true,

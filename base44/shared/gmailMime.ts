@@ -10,18 +10,28 @@ export function base64UrlEncode(str: string): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+// Strip CR/LF and trim to prevent header injection from user-controlled
+// names, subjects, and email addresses interpolated into MIME headers.
+function sanitizeHeader(s: string): string {
+  return String(s || '').replace(/[\r\n]+/g, ' ').trim();
+}
+
 export function encodeSubject(subject: string): string {
-  if (/^[\x00-\x7F]*$/.test(subject)) return subject;
-  const bytes = new TextEncoder().encode(subject);
+  const sanitized = sanitizeHeader(subject);
+  if (/^[\x00-\x7F]*$/.test(sanitized)) return sanitized;
+  const bytes = new TextEncoder().encode(sanitized);
   let binary = '';
   for (const b of bytes) binary += String.fromCharCode(b);
   return '=?UTF-8?B?' + btoa(binary) + '?=';
 }
 
 export function buildMimeMessage(senderEmail: string, toName: string, toEmail: string, subject: string, bodyText: string): string {
+  const safeName = sanitizeHeader(toName);
+  const safeEmail = sanitizeHeader(toEmail).replace(/\s+/g, '');
+  const safeSender = sanitizeHeader(senderEmail).replace(/\s+/g, '');
   return [
-    `From: Vardin Alerts <${senderEmail}>`,
-    `To: ${toName || ''} <${toEmail}>`,
+    `From: Vardin Alerts <${safeSender}>`,
+    `To: ${safeName} <${safeEmail}>`,
     `Subject: ${encodeSubject(subject)}`,
     `Content-Type: text/plain; charset=UTF-8`,
     `MIME-Version: 1.0`,

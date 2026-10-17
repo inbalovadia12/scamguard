@@ -143,16 +143,26 @@ async function processEvent(base44: any, event: any) {
           if (payer?.referred_by && !payer.referral_awarded) {
             const referrer = await base44.asServiceRole.entities.User.get(payer.referred_by);
             if (referrer && referrer.id !== userId) {
-              const newBonus = (referrer.referral_bonus_credits || 0) + REFERRAL_BONUS_CREDITS;
-              await base44.asServiceRole.entities.User.update(referrer.id, { referral_bonus_credits: newBonus });
-              try {
-                const existing = await base44.asServiceRole.entities.Referral.filter({ referred_user_id: userId, status: "pending" });
-                if (existing.length > 0) {
-                  await base44.asServiceRole.entities.Referral.update(existing[0].id, { status: "awarded", bonus_credits: REFERRAL_BONUS_CREDITS, plan: planKey, awarded_date: new Date().toISOString() });
-                } else {
-                  await base44.asServiceRole.entities.Referral.create({ referrer_id: referrer.id, referred_user_id: userId, referred_email: payer.email || "", referred_name: payer.full_name || "", status: "awarded", bonus_credits: REFERRAL_BONUS_CREDITS, plan: planKey, awarded_date: new Date().toISOString() });
-                }
-              } catch { /* referral record best-effort */ }
+              // Fraud control: cap total referral bonuses per referrer and add
+              // a daily velocity limit to prevent farming via colluding or
+              // self-controlled accounts.
+              const MAX_TOTAL_REFERRALS = 25;
+              const MAX_REFERRALS_PER_DAY = 5;
+              const awardedReferrals = await base44.asServiceRole.entities.Referral.filter({ referrer_id: referrer.id, status: "awarded" });
+              const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+              const recentCount = awardedReferrals.filter((r: any) => r.awarded_date && r.awarded_date >= oneDayAgo).length;
+              if (awardedReferrals.length < MAX_TOTAL_REFERRALS && recentCount < MAX_REFERRALS_PER_DAY) {
+                const newBonus = (referrer.referral_bonus_credits || 0) + REFERRAL_BONUS_CREDITS;
+                await base44.asServiceRole.entities.User.update(referrer.id, { referral_bonus_credits: newBonus });
+                try {
+                  const existing = await base44.asServiceRole.entities.Referral.filter({ referred_user_id: userId, status: "pending" });
+                  if (existing.length > 0) {
+                    await base44.asServiceRole.entities.Referral.update(existing[0].id, { status: "awarded", bonus_credits: REFERRAL_BONUS_CREDITS, plan: planKey, awarded_date: new Date().toISOString() });
+                  } else {
+                    await base44.asServiceRole.entities.Referral.create({ referrer_id: referrer.id, referred_user_id: userId, referred_email: payer.email || "", referred_name: payer.full_name || "", status: "awarded", bonus_credits: REFERRAL_BONUS_CREDITS, plan: planKey, awarded_date: new Date().toISOString() });
+                  }
+                } catch { /* referral record best-effort */ }
+              }
             }
             await base44.asServiceRole.entities.User.update(userId, { referral_awarded: true });
           }

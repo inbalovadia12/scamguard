@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 import { sendAnalysisAlertEmail, formatRiskLabel } from "../../shared/scamAlertEmail.ts";
+import { verifyFamilyEmail } from "../../shared/familyEmailGuard.ts";
 
 const FINANCIAL_TYPES = ["bank_government", "marketplace", "crypto_investment", "lottery_prize", "job_offer"];
 
@@ -49,6 +50,12 @@ Deno.serve(async (req) => {
     const senior = await base44.asServiceRole.entities.ProtectedSenior.get(analysis.senior_id);
     if (!senior || !senior.guardian_email) {
       return Response.json({ skipped: true, reason: 'No guardian email found' });
+    }
+
+    // Verify guardian_email matches the guardian's actual platform email to
+    // prevent email relay via user-created ProtectedSenior records.
+    if (!await verifyFamilyEmail(base44, senior.guardian_id, senior.guardian_email)) {
+      return Response.json({ skipped: true, reason: 'Guardian email not verified' });
     }
 
     // Check alert preference
