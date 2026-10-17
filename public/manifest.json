@@ -1,0 +1,18 @@
+{
+  "name": "Vardin Scamguard",
+  "short_name": "Vardin",
+  "description": "AI-powered scam detection and family protection. Check links, messages, phone numbers, emails, and images for scams.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7fbfa",
+  "theme_color": "#0f766e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
