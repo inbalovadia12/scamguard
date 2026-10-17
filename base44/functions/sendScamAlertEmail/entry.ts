@@ -5,6 +5,44 @@ import { sendAnalysisAlertEmail, formatRiskLabel } from "../../shared/scamAlertE
 // is created with risk_level === "high". Emails the user who ran the scan so
 // they don't have to keep checking the app. Service-role call (no user token);
 // if a user token IS present, require admin so arbitrary users can't fire it.
+
+// Rate limiting: caps anonymous calls per IP per minute.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 10;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || entry.resetAt < now) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
+function getClientIP(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim();
+  return req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip") || "unknown";
+}
+
+// Idempotency: prevent re-sending the same alert within the TTL window.
+const alertedAnalyses = new Map<string, number>();
+const ALERT_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function isRecentlyAlerted(analysisId: string): boolean {
+  const ts = alertedAnalyses.get(analysisId);
+  if (!ts) return false;
+  if (Date.now() - ts > ALERT_TTL_MS) {
+    alertedAnalyses.delete(analysisId);
+    return false;
+  }
+  return true;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -15,40 +53,56 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Rate limit anonymous (non-admin, non-workflow) calls to prevent spam
+    // and ID enumeration. Workflow calls fire once per entity creation and
+    // will never hit the limit.
+    if (!user && !checkRateLimit(getClientIP(req))) {
+      return Response.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+
     const body = await req.json();
     const { analysis_id } = body;
     if (!analysis_id) {
       return Response.json({ error: 'analysis_id is required' }, { status: 400 });
     }
 
+    // Idempotency: skip if this analysis was recently alerted.
+    if (isRecentlyAlerted(analysis_id)) {
+      return Response.json({ success: true, skipped: true });
+    }
+
+    // Generic response for all non-send cases to prevent enumeration of
+    // analysis IDs, risk levels, or user existence.
+    const SKIP = () => Response.json({ success: true, skipped: true });
+
     let analysis;
     try {
       analysis = await base44.asServiceRole.entities.ScamAnalysis.get(analysis_id);
     } catch {
-      return Response.json({ error: 'Analysis not found' }, { status: 404 });
+      return SKIP();
     }
     if (!analysis) {
-      return Response.json({ error: 'Analysis not found' }, { status: 404 });
+      return SKIP();
     }
 
     // Only email on high-risk detections.
     if (analysis.risk_level !== 'high') {
-      return Response.json({ skipped: true, reason: 'Not high risk' });
+      return SKIP();
     }
 
     const userId = analysis.created_by_id;
     if (!userId) {
-      return Response.json({ skipped: true, reason: 'No user on record' });
+      return SKIP();
     }
 
     let recipient: any;
     try {
       recipient = await base44.asServiceRole.entities.User.get(userId);
     } catch {
-      return Response.json({ skipped: true, reason: 'User not found' });
+      return SKIP();
     }
     if (!recipient || !recipient.email) {
-      return Response.json({ skipped: true, reason: 'No email on file' });
+      return SKIP();
     }
 
     const { accessToken } = await base44.asServiceRole.connectors.getConnection('gmail');
@@ -65,10 +119,13 @@ Deno.serve(async (req) => {
     });
 
     if (!sent) {
-      return Response.json({ error: 'Gmail send failed' }, { status: 500 });
+      return SKIP();
     }
 
-    return Response.json({ success: true, sent_to: recipient.email });
+    // Mark as alerted to prevent re-sends within the TTL window.
+    alertedAnalyses.set(analysis_id, Date.now());
+
+    return Response.json({ success: true, sent: true });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });
   }

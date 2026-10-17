@@ -1,4 +1,4 @@
-import { sendGmail, getGmailSenderEmail, encodeSubject } from "./gmailMime.ts";
+import { sendGmail, getGmailSenderEmail, buildMimeMessage } from "./gmailMime.ts";
 
 // Shared helpers for Gmail-based scam-alert emails (guardian alerts and the
 // user's own high-risk alert). Keeps the email-body formatting in one place.
@@ -59,15 +59,9 @@ export async function sendAnalysisAlertEmail(input: AlertEmailInput): Promise<bo
     `The Vardin Team`,
   ].join("\n");
 
-  const mimeMessage = [
-    `From: Vardin Alerts <${senderEmail}>`,
-    `To: ${input.recipientName || ""} <${input.recipientEmail}>`,
-    `Subject: ${encodeSubject(input.subject)}`,
-    `Content-Type: text/plain; charset=UTF-8`,
-    `MIME-Version: 1.0`,
-    ``,
-    bodyText,
-  ].join("\r\n");
+  // Route through buildMimeMessage so all header values (recipientName,
+  // recipientEmail, subject, sender) are sanitized against CRLF injection.
+  const mimeMessage = buildMimeMessage(senderEmail, input.recipientName || "", input.recipientEmail, input.subject, bodyText);
 
   return sendGmail(input.accessToken, mimeMessage);
 }
