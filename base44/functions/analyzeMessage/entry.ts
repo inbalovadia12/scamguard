@@ -130,7 +130,19 @@ Deno.serve(async (req) => {
     if (mode.startsWith("incognito_")) {
       try {
         const protectedMembers = await base44.entities.ProtectedSenior.filter({ senior_user_id: user.id });
-        incognitoAllowed = protectedMembers.some((member: any) => member.incognito_allowed === true);
+        // Verify the guardian's actual plan server-side — the incognito_allowed
+        // flag is guardian-intent data that the senior can self-edit, so it
+        // must not bypass the paywall unless the guardian genuinely holds a
+        // paid plan (verified via asServiceRole, not the client-writable field).
+        for (const member of protectedMembers) {
+          if (member.incognito_allowed === true && member.guardian_id) {
+            try {
+              const guardian = await base44.asServiceRole.entities.User.get(member.guardian_id);
+              const gPlan = normalizePlan(guardian?.subscription_plan);
+              if (gPlan === "plus" || gPlan === "premium") { incognitoAllowed = true; break; }
+            } catch {}
+          }
+        }
       } catch {}
     }
     if (!incognitoAllowed && planRank(plan) < planRank(REQUIRED_PLANS[mode])) {
@@ -173,7 +185,7 @@ Deno.serve(async (req) => {
         if (!usage) {
           return Response.json({ error: "Credit balance changed during analysis. Please try again." }, { status: 409 });
         }
-        await base44.auth.updateMe(usage);
+        await base44.asServiceRole.entities.User.update(user.id, usage);
         const remaining = getAvailableCredits({ ...user, ...usage }).remaining;
         return Response.json({ result: safeResult, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(user) });
       }
@@ -254,7 +266,7 @@ Deno.serve(async (req) => {
     if (!usage) {
       return Response.json({ error: "Credit balance changed during analysis. Please try again." }, { status: 409 });
     }
-    await base44.auth.updateMe(usage);
+    await base44.asServiceRole.entities.User.update(user.id, usage);
 
     const remaining = getAvailableCredits({ ...user, ...usage }).remaining;
     const responseBody: any = { result, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(user) };

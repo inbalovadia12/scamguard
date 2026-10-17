@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { getCreditStatus } from "@/lib/credits";
+import { isSafeUrl } from "@/lib/safeUrl";
 import LongLoadingScreen from "@/components/LongLoadingScreen";
 import CommunityIntel from "@/components/community/CommunityIntel";
 import AIDisclaimer from "@/components/AIDisclaimer";
@@ -319,11 +320,18 @@ function ImageScanResult({ data, previewUrl }) {
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sources</p>
         {data.sources?.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {data.sources.map((source, i) => (
-              <a key={i} href={source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-full sm:max-w-[200px] inline-flex items-center gap-1">
-                <ExternalLink className="w-3 h-3 flex-shrink-0" /> {source}
-              </a>
-            ))}
+            {data.sources.map((source, i) => {
+              const safe = isSafeUrl(source);
+              return safe ? (
+                <a key={i} href={source} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate max-w-full sm:max-w-[200px] inline-flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3 flex-shrink-0" /> {source}
+                </a>
+              ) : (
+                <span key={i} className="text-xs text-muted-foreground truncate max-w-full sm:max-w-[200px] inline-flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3 flex-shrink-0" /> {source}
+                </span>
+              );
+            })}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">No public appearances found via web search — nothing to cite.</p>

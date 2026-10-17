@@ -30,3 +30,22 @@ export function applyCreditUsage(user: any, amount: number) {
   creditsUsed += amount - fromAdmin;
   return { credits_used: creditsUsed, admin_credit_balance: adminBalance, credits_reset_month: currentMonth };
 }
+
+// Server-side authoritative credit check + charge. Reads the user via
+// asServiceRole to prevent client-side reset attacks (updateMe writing
+// credits_used: 0), and writes via asServiceRole so the user token cannot
+// interfere. Returns { ok, remaining?, limit?, error? }.
+export async function serverSideCreditCharge(base44: any, user: any, cost: number) {
+  const authUser = await base44.asServiceRole.entities.User.get(user.id);
+  const available = getAvailableCredits(authUser);
+  if (available.remaining < cost) {
+    return { ok: false, error: { error: 'Insufficient credits', credits_remaining: available.remaining, credits_limit: getMonthlyCreditLimit(authUser), credit_cost: cost } };
+  }
+  const usage = applyCreditUsage(authUser, cost);
+  if (!usage) {
+    return { ok: false, error: { error: 'Credit balance changed during analysis. Please try again.' } };
+  }
+  await base44.asServiceRole.entities.User.update(user.id, usage);
+  const remaining = getAvailableCredits({ ...authUser, ...usage }).remaining;
+  return { ok: true, remaining, limit: getMonthlyCreditLimit(authUser) };
+}

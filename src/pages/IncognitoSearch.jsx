@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
+import { isSafeUrl } from "@/lib/safeUrl";
 import {
   EyeOff, Loader2, AlertTriangle, ShieldCheck, ShieldX, MessageSquare, Globe,
   Image as ImageIcon, Phone, MessagesSquare, Sparkles, Upload, X, Crown,
@@ -421,11 +422,18 @@ export default function IncognitoSearch() {
                 <div className="bg-card rounded-2xl border border-border/50 p-4 sm:p-5">
                   <h3 className="text-sm font-semibold mb-2">Sources</h3>
                   <div className="space-y-1">
-                    {result.data.sources.slice(0, 5).map((src, i) => (
-                      <a key={i} href={src} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline block truncate">
-                        {src}
-                      </a>
-                    ))}
+                    {result.data.sources.slice(0, 5).map((src, i) => {
+                      const safe = isSafeUrl(src);
+                      return safe ? (
+                        <a key={i} href={src} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline block truncate">
+                          {src}
+                        </a>
+                      ) : (
+                        <span key={i} className="text-xs text-muted-foreground block truncate">
+                          {src}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}

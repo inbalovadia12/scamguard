@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
     // We won — grant purchased credits to the carry-over admin balance so
     // they persist across monthly resets instead of vanishing at month end.
     const adminBalance = Math.max(0, Number(user.admin_credit_balance) || 0);
-    await base44.auth.updateMe({
+    await base44.asServiceRole.entities.User.update(user.id, {
       admin_credit_balance: adminBalance + creditsToAdd,
     });
 

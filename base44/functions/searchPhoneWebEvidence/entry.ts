@@ -362,6 +362,24 @@ function containsExactPhone(text: string, targetForms: string[]) {
   });
 }
 
+// Rate limiting: caps phone-evidence searches per user per minute to prevent
+// unmetered abuse of the multi-engine search pipeline.
+const PHONE_RATE_LIMIT_WINDOW_MS = 60_000;
+const PHONE_RATE_LIMIT_MAX = 5;
+const phoneRateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkPhoneRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = phoneRateLimitMap.get(userId);
+  if (!entry || entry.resetAt < now) {
+    phoneRateLimitMap.set(userId, { count: 1, resetAt: now + PHONE_RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= PHONE_RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
 // === Main handler ===
 
 Deno.serve(async (req) => {
@@ -369,6 +387,10 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Authentication required" }, { status: 401 });
+
+    if (!checkPhoneRateLimit(user.id)) {
+      return Response.json({ error: "Rate limit exceeded. Please try again shortly." }, { status: 429 });
+    }
 
     const body = await req.json().catch(() => ({}));
     const phone = String(body?.phone ?? body?.phone_number ?? "").trim();

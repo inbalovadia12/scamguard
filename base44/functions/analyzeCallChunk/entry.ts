@@ -324,7 +324,7 @@ Deno.serve(async (req) => {
     const chargeCredits = async () => {
       const usage = applyCreditUsage(user, creditCost);
       if (!usage) throw new Error("Credit balance changed during analysis. Please try again.");
-      await base44.auth.updateMe(usage);
+      await base44.asServiceRole.entities.User.update(user.id, usage);
       return getAvailableCredits({ ...user, ...usage }).remaining;
     };
 

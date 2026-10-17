@@ -51,8 +51,15 @@ export default async function(req: Request): Promise<Response> {
     const currentPlan = normalizePlan(user.subscription_plan);
     let bestPlan = currentPlan;
     for (const m of toAccept) {
-      const gp = normalizePlan(m.guardian_plan);
-      if ((PLAN_RANK[gp] || 0) > (PLAN_RANK[bestPlan] || 0)) bestPlan = gp;
+      // Verify the guardian's actual plan server-side via the User record —
+      // never trust the client-writable guardian_plan field on the
+      // ProtectedSenior record, which any user can set to "premium".
+      if (!m.guardian_id) continue;
+      try {
+        const guardian = await base44.asServiceRole.entities.User.get(m.guardian_id);
+        const gp = normalizePlan(guardian?.subscription_plan);
+        if ((PLAN_RANK[gp] || 0) > (PLAN_RANK[bestPlan] || 0)) bestPlan = gp;
+      } catch {}
     }
     if (bestPlan !== currentPlan) {
       try {

@@ -65,7 +65,7 @@ export default async function(req: Request): Promise<Response> {
 
     // Charge credits only after a successful generation.
     const usage = applyCreditUsage(user, CREDIT_COST);
-    if (usage) await base44.auth.updateMe(usage);
+    if (usage) await base44.asServiceRole.entities.User.update(user.id, usage);
     const remaining = getAvailableCredits({ ...user, ...usage }).remaining;
 
     return Response.json({

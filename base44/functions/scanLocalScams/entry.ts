@@ -35,7 +35,7 @@ export default async function(req: Request): Promise<Response> {
     if (!charge) {
       return Response.json({ error: 'Not enough credits for this scan.' }, { status: 402 });
     }
-    await base44.auth.updateMe({
+    await base44.asServiceRole.entities.User.update(user.id, {
       credits_used: charge.credits_used,
       admin_credit_balance: charge.admin_credit_balance,
       credits_reset_month: charge.credits_reset_month,

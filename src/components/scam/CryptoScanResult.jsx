@@ -3,6 +3,7 @@ import RiskBadge, { getRiskLevelFromScore } from "@/components/scam/RiskBadge";
 import RiskScoreBar from "@/components/scam/RiskScoreBar";
 import ThreatExplanation from "@/components/scam/ThreatExplanation";
 import ResultActions from "@/components/scam/ResultActions";
+import { isSafeUrl } from "@/lib/safeUrl";
 import {
   ShieldCheck, ShieldAlert, AlertTriangle, FlaskConical, TrendingDown, Droplets, Link2,
 } from "lucide-react";
@@ -125,11 +126,18 @@ export default function CryptoScanResult({ result, mode }) {
       {result.sources?.length > 0 && (
         <div className="space-y-1.5">
           <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Sources</h3>
-          {result.sources.map((s, i) => (
-            <a key={i} href={s} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline truncate">
-              <Link2 className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{s}</span>
-            </a>
-          ))}
+          {result.sources.map((s, i) => {
+            const safe = isSafeUrl(s);
+            return safe ? (
+              <a key={i} href={s} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-primary hover:underline truncate">
+                <Link2 className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{s}</span>
+              </a>
+            ) : (
+              <span key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
+                <Link2 className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{s}</span>
+              </span>
+            );
+          })}
         </div>
       )}
 

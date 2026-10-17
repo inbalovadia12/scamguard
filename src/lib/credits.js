@@ -87,10 +87,6 @@ export async function getCreditStatus() {
 
   if (resetMonth !== currentMonth) {
     creditsUsed = 0;
-    await base44.auth.updateMe({
-      credits_used: 0,
-      credits_reset_month: currentMonth,
-    });
   }
 
   const limit = (PLAN_LIMITS[plan] || PLAN_LIMITS.starter) + (user.referral_bonus_credits || 0);
@@ -138,25 +134,12 @@ export async function getFamilyStatus() {
   };
 }
 
+// Credit mutations are server-side only — the client must not write
+// credits_used or admin_credit_balance, since backend credit gates trust
+// those fields. This function is kept for API compatibility but is a no-op;
+// backend functions charge credits via asServiceRole.
 export async function incrementCreditUsage(amount = 1) {
-  if (!Number.isInteger(amount) || amount <= 0) {
-    throw new Error("Credit usage amount must be a positive whole number");
-  }
-  const user = await base44.auth.me();
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const resetMonth = user.credits_reset_month;
-  let creditsUsed = resetMonth === currentMonth ? (user.credits_used || 0) : 0;
-
-  const adminBalance = Math.max(0, user.admin_credit_balance || 0);
-  const fromAdmin = Math.min(adminBalance, amount);
-  const fromMonthly = amount - fromAdmin;
-  await base44.auth.updateMe({
-    credits_used: creditsUsed + fromMonthly,
-    admin_credit_balance: adminBalance - fromAdmin,
-    credits_reset_month: currentMonth,
-  });
-
-  return creditsUsed;
+  return 0;
 }
 
 export function getCachedAnalysis(input) {

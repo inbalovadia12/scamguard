@@ -101,7 +101,19 @@ Deno.serve(async (req) => {
     let incognitoAllowed = false;
     try {
       const protectedMembers = await base44.entities.ProtectedSenior.filter({ senior_user_id: user.id });
-      incognitoAllowed = protectedMembers.some((member: any) => member.incognito_allowed === true);
+      // Verify the guardian's actual plan server-side — the incognito_allowed
+      // flag is self-editable by the senior, so it must not bypass the paywall
+      // unless the guardian genuinely holds a paid plan.
+      for (const member of protectedMembers) {
+        if (member.incognito_allowed === true && member.guardian_id) {
+          try {
+            const guardian = await base44.asServiceRole.entities.User.get(member.guardian_id);
+            const gPlan = guardian?.subscription_plan || 'starter';
+            const gNorm = gPlan === 'free' ? 'starter' : gPlan === 'elite' ? 'premium' : gPlan;
+            if (gNorm === 'plus' || gNorm === 'premium') { incognitoAllowed = true; break; }
+          } catch {}
+        }
+      }
     } catch {}
     const body = await req.json();
     const privateScan = body.private_scan === true;
@@ -125,7 +137,7 @@ Deno.serve(async (req) => {
     const chargeCredits = async () => {
       const usage = applyCreditUsage(user, CREDIT_COST);
       if (!usage) throw new Error('Credit balance changed during scan. Please try again.');
-      await base44.auth.updateMe(usage);
+      await base44.asServiceRole.entities.User.update(user.id, usage);
       return getAvailableCredits({ ...user, ...usage }).remaining;
     };
 

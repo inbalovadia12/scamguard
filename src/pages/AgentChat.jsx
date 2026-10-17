@@ -192,7 +192,7 @@ export default function AgentChat() {
         } catch {}
       }
 
-      await incrementCreditUsage(cost);
+      try { await base44.functions.invoke("chargeAgentChat", { cost }); } catch {}
       const updated = await getCreditStatus();
       setCredits(updated);
     } catch (e) {
