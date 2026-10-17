@@ -11,6 +11,14 @@ function isEmergencyEvidence(evidence: AnyRecord): AnyRecord | null {
 }
 const NEGATIVE = /scam|fraud|fraudulent|spam|robocall|robo[- ]?call|phishing|spoof|telemarketer|telemarketing|harass|threat|extortion|impersonat|fake|loan scam|refund scam|tech support|gift card|crypto scam|investment scam|payment scam/i;
 const POSITIVE = /legitimate|verified business|official|customer service|support line|government|bank|hospital|university|school|delivery|courier|utility|emergency|insurance/i;
+// Negation phrases — when present, negative keywords are in a "this is NOT a
+// scam" context and must not be counted as scam evidence. Community-reporting
+// sites (tellows, who-called, truecaller) often have pages that say "This
+// number is safe" or "No reports of scam" — those pages contain "scam" but
+// are actually positive/neutral evidence.
+const NEGATION = /\b(not a (scam|spam|fraud|robocall)|not (a )?(scam|spam|fraudulent|dangerous|harmful)|no (scam|spam|fraud|reports|complaints|issues|problems)|safe (number|caller|call|to answer)|not (reported|flagged) (as|for)|harmless|trustworthy|genuine (number|business|caller)|secure number|clean number|no (known )?issues|not (a )?(known )?(scam|spam))\b/i;
+// Explicit safe/positive classification from community-reporting sites.
+const SAFE_EXPLICIT = /\b(safe (number|caller|call|to answer|to call back)|not a scam|not spam|not a (known )?scam|legitimate (number|caller|business|call)|trustworthy (number|caller|business)|genuine (number|business|caller)|harmless|no (reports|complaints|issues|scam reports|spam reports)|no (known )?(scam|spam|fraud) (reports|activity|issues))\b/i;
 
 function clamp(n: number, min = 0, max = 100) { return Math.max(min, Math.min(max, Math.round(n))); }
 function num(v: any): number | null { const n = Number(v); return v === null || v === undefined || v === "" || !Number.isFinite(n) ? null : n; }
@@ -24,7 +32,14 @@ function scorePhone(evidence: AnyRecord) {
 
   const classified = reports.map((r: AnyRecord) => {
     const text = [r.category, r.text, r.raw?.reason, r.raw?.type, r.raw?.subject].filter(Boolean).join(" ");
-    return { report: r, negative: NEGATIVE.test(text), positive: POSITIVE.test(text), text };
+    const hasNegation = NEGATION.test(text);
+    // A report counts as negative only if it has scam keywords AND is not in
+    // a negation context ("not a scam", "safe number", "no reports").
+    const negative = NEGATIVE.test(text) && !hasNegation;
+    // A report counts as positive if it has positive keywords OR explicit
+    // safe classification — but not if it also has non-negated negative keywords.
+    const positive = (POSITIVE.test(text) || SAFE_EXPLICIT.test(text)) && !negative;
+    return { report: r, negative, positive, text, hasNegation };
   });
   const negativeReports = classified.filter((x) => x.negative && x.report.source !== "web_search").length;
   // Only count positive reports from verified sources — unverified web search
@@ -38,12 +53,27 @@ function scorePhone(evidence: AnyRecord) {
   const verifiedWeb = reports.filter((r: AnyRecord) => r.source === "web_search" && r.verified_exact_number === true);
   const webNegativeHosts = new Set(
     verifiedWeb
-      .filter((r: AnyRecord) => NEGATIVE.test([r.text, r.page_content, r.url].filter(Boolean).join(" ")))
+      .filter((r: AnyRecord) => {
+        const text = [r.text, r.page_content, r.url].filter(Boolean).join(" ");
+        // Don't count pages in negation context ("not a scam", "safe number")
+        // as negative web evidence.
+        return NEGATIVE.test(text) && !NEGATION.test(text);
+      })
       .map((r: AnyRecord) => {
         try { return new URL(String(r.url)).hostname.toLowerCase(); } catch { return String(r.url || ""); }
       })
   );
   const webNegative = webNegativeHosts.size;
+  // Explicit safe/positive web evidence: community-reporting sites that
+  // classify the number as safe ("not a scam", "safe number", "no reports").
+  const webSafeHosts = new Set(
+    verifiedWeb
+      .filter((r: AnyRecord) => SAFE_EXPLICIT.test([r.text, r.page_content].filter(Boolean).join(" ")))
+      .map((r: AnyRecord) => {
+        try { return new URL(String(r.url)).hostname.toLowerCase(); } catch { return String(r.url || ""); }
+      })
+  );
+  const webSafe = webSafeHosts.size;
   const redditVerified = new Set(
     verifiedWeb
       .filter((r: AnyRecord) => /reddit\.com/i.test(String(r.url || "")))
@@ -125,6 +155,15 @@ function scorePhone(evidence: AnyRecord) {
     score -= Math.min(12, positiveReports * 4);
     legitimacy.push(String(positiveReports) + " report" + (positiveReports === 1 ? "" : "s") + " contain legitimate/official context.");
   }
+  // Explicit safe classifications from community-reporting sites reduce risk.
+  // These are pages that say "safe number", "not a scam", "no reports" —
+  // the opposite of a scam report. Each independent safe-classification site
+  // provides a small downward push, capped so it can't override strong
+  // negative evidence on its own.
+  if (webSafe > 0) {
+    score -= Math.min(10, webSafe * 4);
+    legitimacy.push(String(webSafe) + " independent web source" + (webSafe === 1 ? "" : "s") + " classify the number as safe / not a scam.");
+  }
 
   const verifiedBusiness = Boolean(identity.verified_business);
   // is_officially_verified means the business was verified on a real official
@@ -139,7 +178,7 @@ function scorePhone(evidence: AnyRecord) {
     (providerRisk !== null && providerRisk >= 70) ||
     (numbersSpam !== null && (numbersSpam > 1 ? numbersSpam >= 70 : numbersSpam >= 0.7));
 
-  const hasLegitimateEvidence = verifiedBusiness || positiveReports > 0;
+  const hasLegitimateEvidence = verifiedBusiness || positiveReports > 0 || webSafe > 0;
 
   if (!hasNegativeEvidence && !hasLegitimateEvidence) score = 50;
   if (!hasNegativeEvidence && verifiedBusiness) score = Math.min(score, 15);
@@ -211,7 +250,7 @@ function scorePhone(evidence: AnyRecord) {
     scam_report_count: negativeReports,
     spam_report_count: reports.filter((r: AnyRecord) => /spam|robocall/i.test([r.category, r.text].filter(Boolean).join(" "))).length,
     suspicious_report_count: Math.max(0, negativeReports - reports.filter((r: AnyRecord) => /scam|fraud|phishing|impersonat/i.test([r.category, r.text].filter(Boolean).join(" "))).length),
-    safe_report_count: positiveReports,
+    safe_report_count: positiveReports + webSafe,
     scam_categories: categories,
     evidence_reasons: reasons,
     legitimacy_reasons: legitimacy,
