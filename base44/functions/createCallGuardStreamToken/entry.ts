@@ -17,7 +17,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Premium required' }, { status: 403 });
     }
 
-    const available = getAvailableCredits(user);
+    const authUser = await base44.asServiceRole.entities.User.get(user.id);
+    const available = getAvailableCredits(authUser);
     if (available.remaining < 1) {
       return Response.json({
         error: 'Insufficient credits',

@@ -150,12 +150,13 @@ Deno.serve(async (req) => {
     }
 
     const cost = CREDIT_COSTS[mode];
-    const available = getAvailableCredits(user);
+    const authUser = await base44.asServiceRole.entities.User.get(user.id);
+    const available = getAvailableCredits(authUser);
     if (available.remaining < cost) {
       return Response.json({
         error: "Insufficient credits",
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         credit_cost: cost,
       }, { status: 402 });
     }
@@ -181,13 +182,13 @@ Deno.serve(async (req) => {
           what_they_want: "",
           what_to_say: "",
         };
-        const usage = applyCreditUsage(user, cost);
+        const usage = applyCreditUsage(authUser, cost);
         if (!usage) {
           return Response.json({ error: "Credit balance changed during analysis. Please try again." }, { status: 409 });
         }
         await base44.asServiceRole.entities.User.update(user.id, usage);
-        const remaining = getAvailableCredits({ ...user, ...usage }).remaining;
-        return Response.json({ result: safeResult, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(user) });
+        const remaining = getAvailableCredits({ ...authUser, ...usage }).remaining;
+        return Response.json({ result: safeResult, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(authUser) });
       }
     }
 
@@ -262,14 +263,14 @@ Deno.serve(async (req) => {
       result.risk_level = "low";
     }
 
-    const usage = applyCreditUsage(user, cost);
+    const usage = applyCreditUsage(authUser, cost);
     if (!usage) {
       return Response.json({ error: "Credit balance changed during analysis. Please try again." }, { status: 409 });
     }
     await base44.asServiceRole.entities.User.update(user.id, usage);
 
-    const remaining = getAvailableCredits({ ...user, ...usage }).remaining;
-    const responseBody: any = { result, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(user) };
+    const remaining = getAvailableCredits({ ...authUser, ...usage }).remaining;
+    const responseBody: any = { result, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(authUser) };
     if (mode === "incognito_phone") {
       responseBody.phone_sources = phoneSources;
       responseBody.phone_evidence = phoneEvidence;

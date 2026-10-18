@@ -10,21 +10,22 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
     // Credit check (shared server-side helper)
-    const available = getAvailableCredits(user);
+    const authUser = await base44.asServiceRole.entities.User.get(user.id);
+    const available = getAvailableCredits(authUser);
     if (available.remaining < CREDIT_COST) {
       return Response.json({
         error: 'Insufficient credits',
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         credit_cost: CREDIT_COST,
         upgrade_url: '/pricing',
       }, { status: 402 });
     }
     const chargeCredits = async () => {
-      const usage = applyCreditUsage(user, CREDIT_COST);
+      const usage = applyCreditUsage(authUser, CREDIT_COST);
       if (!usage) throw new Error('Credit balance changed during analysis. Please try again.');
       await base44.asServiceRole.entities.User.update(user.id, usage);
-      return getAvailableCredits({ ...user, ...usage }).remaining;
+      return getAvailableCredits({ ...authUser, ...usage }).remaining;
     };
 
     const body = await req.json();
@@ -87,7 +88,7 @@ Respond entirely in ${languageName}.`;
       questions: result.questions || [],
       credits_used: CREDIT_COST,
       credits_remaining: creditsRemaining,
-      credits_limit: getMonthlyCreditLimit(user),
+      credits_limit: getMonthlyCreditLimit(authUser),
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

@@ -233,7 +233,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Premium required" }, { status: 403 });
     }
 
-    const available = getAvailableCredits(user);
+    const authUser = await base44.asServiceRole.entities.User.get(user.id);
+    const available = getAvailableCredits(authUser);
     // Pre-check the minimum cost so we don't waste a transcription call on a
     // user with zero credits. The actual (duration-based) cost is checked
     // after we know the recording length.
@@ -241,7 +242,7 @@ Deno.serve(async (req) => {
       return Response.json({
         error: "Insufficient credits",
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         credit_cost: MIN_CREDIT_COST,
       }, { status: 402 });
     }
@@ -315,17 +316,17 @@ Deno.serve(async (req) => {
       return Response.json({
         error: "Insufficient credits",
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         credit_cost: creditCost,
         audio_duration: audioDurationSeconds,
       }, { status: 402 });
     }
 
     const chargeCredits = async () => {
-      const usage = applyCreditUsage(user, creditCost);
+      const usage = applyCreditUsage(authUser, creditCost);
       if (!usage) throw new Error("Credit balance changed during analysis. Please try again.");
       await base44.asServiceRole.entities.User.update(user.id, usage);
-      return getAvailableCredits({ ...user, ...usage }).remaining;
+      return getAvailableCredits({ ...authUser, ...usage }).remaining;
     };
 
     // Empty transcript (silence or noise) — no credit charged
@@ -341,7 +342,7 @@ Deno.serve(async (req) => {
         provider: "assemblyai",
         credits_used: 0,
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         timing_ms: Date.now() - startTime,
       });
     }
@@ -387,7 +388,7 @@ Deno.serve(async (req) => {
           : "Speaker labels are estimated from speech gaps. Tap any message to correct.",
       credits_used: creditCost,
       credits_remaining: creditsRemaining,
-      credits_limit: getMonthlyCreditLimit(user),
+      credits_limit: getMonthlyCreditLimit(authUser),
       audio_duration: audioDurationSeconds,
       timing_ms: Date.now() - startTime,
     });

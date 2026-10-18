@@ -10,12 +10,13 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Auth required' }, { status: 401 });
 
     // Credit check — feedback uses the app owner's paid Groq quota.
-    const available = getAvailableCredits(user);
+    const authUser = await base44.asServiceRole.entities.User.get(user.id);
+    const available = getAvailableCredits(authUser);
     if (available.remaining < CREDIT_COST) {
       return Response.json({
         error: 'Insufficient credits',
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         credit_cost: CREDIT_COST,
       }, { status: 402 });
     }
@@ -62,7 +63,7 @@ Deno.serve(async (req) => {
     const output = JSON.parse(data.choices?.[0]?.message?.content || '{}');
 
     // Charge credits via service role.
-    const usage = applyCreditUsage(user, CREDIT_COST);
+    const usage = applyCreditUsage(authUser, CREDIT_COST);
     if (usage) {
       try { await base44.asServiceRole.entities.User.update(user.id, usage); } catch {}
     }

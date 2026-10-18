@@ -25,7 +25,8 @@
           "with": {
             "function_name": "sendGuardianGmailAlert",
             "args": {
-              "analysis_id": "${ .trigger.entity_id }"
+              "analysis_id": "${ .trigger.entity_id }",
+              "_workflow_secret": "REPLACE_WITH_WORKFLOW_SECRET"
             }
           },
           "then": "end",

@@ -41,12 +41,13 @@ Deno.serve(async (req) => {
     }
 
     // Credit check — TTS uses the app owner's paid ElevenLabs quota.
-    const available = getAvailableCredits(user);
+    const authUser = await base44.asServiceRole.entities.User.get(user.id);
+    const available = getAvailableCredits(authUser);
     if (available.remaining < CREDIT_COST) {
       return Response.json({
         error: 'Insufficient credits',
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         credit_cost: CREDIT_COST,
       }, { status: 402 });
     }
@@ -88,7 +89,7 @@ Deno.serve(async (req) => {
     }
 
     // Charge credits via service role (server-side authoritative write).
-    const usage = applyCreditUsage(user, CREDIT_COST);
+    const usage = applyCreditUsage(authUser, CREDIT_COST);
     if (usage) {
       try { await base44.asServiceRole.entities.User.update(user.id, usage); } catch {}
     }

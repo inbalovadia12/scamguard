@@ -23,15 +23,16 @@ export default async function(req: Request): Promise<Response> {
     }
 
     // Credit check (server-authoritative).
-    const avail = getAvailableCredits(user);
+    const authUser = await base44.asServiceRole.entities.User.get(user.id);
+    const avail = getAvailableCredits(authUser);
     if (avail.remaining < CREDIT_COST) {
       return Response.json({
         error: 'Not enough credits for this scan.',
         credits_remaining: avail.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
       }, { status: 402 });
     }
-    const charge = applyCreditUsage(user, CREDIT_COST);
+    const charge = applyCreditUsage(authUser, CREDIT_COST);
     if (!charge) {
       return Response.json({ error: 'Not enough credits for this scan.' }, { status: 402 });
     }
@@ -176,7 +177,7 @@ Respond in ${languageName}.`;
       scan_id: saved?.id || null,
       credits_used: CREDIT_COST,
       credits_remaining: availAfter.remaining,
-      credits_limit: getMonthlyCreditLimit(user),
+      credits_limit: getMonthlyCreditLimit(authUser),
     });
   } catch (error) {
     return Response.json({ error: error.message || 'Local scam scan failed.' }, { status: 500 });

@@ -124,21 +124,22 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Incognito Search requires Plus or Premium unless enabled by a guardian.' }, { status: 403 });
     }
 
-    const available = getAvailableCredits(user);
+    const authUser = await base44.asServiceRole.entities.User.get(user.id);
+    const available = getAvailableCredits(authUser);
     if (available.remaining < CREDIT_COST) {
       return Response.json({
         error: 'Insufficient credits',
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         credit_cost: CREDIT_COST,
       }, { status: 402 });
     }
 
     const chargeCredits = async () => {
-      const usage = applyCreditUsage(user, CREDIT_COST);
+      const usage = applyCreditUsage(authUser, CREDIT_COST);
       if (!usage) throw new Error('Credit balance changed during scan. Please try again.');
       await base44.asServiceRole.entities.User.update(user.id, usage);
-      return getAvailableCredits({ ...user, ...usage }).remaining;
+      return getAvailableCredits({ ...authUser, ...usage }).remaining;
     };
 
     const { url } = body;
@@ -203,7 +204,7 @@ Deno.serve(async (req) => {
         urlhaus: urlhausReport,
         credits_used: CREDIT_COST,
         credits_remaining: creditsRemaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         timing_ms: Date.now() - startTime,
       });
     }
@@ -224,7 +225,7 @@ Deno.serve(async (req) => {
         virustotal: vtReport,
         credits_used: CREDIT_COST,
         credits_remaining: creditsRemaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         timing_ms: Date.now() - startTime,
       });
     }
@@ -252,7 +253,7 @@ Deno.serve(async (req) => {
         urlhaus: urlhausReport,
         credits_used: CREDIT_COST,
         credits_remaining: creditsRemaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         timing_ms: Date.now() - startTime,
       });
     }
@@ -365,7 +366,7 @@ Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urge
     const creditsRemaining = await chargeCredits();
     (result as any).credits_used = CREDIT_COST;
     (result as any).credits_remaining = creditsRemaining;
-    (result as any).credits_limit = getMonthlyCreditLimit(user);
+    (result as any).credits_limit = getMonthlyCreditLimit(authUser);
     (result as any).timing_ms = Date.now() - startTime;
 
     return Response.json(result);

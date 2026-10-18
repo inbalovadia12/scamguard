@@ -24,12 +24,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Premium required' }, { status: 403 });
     }
 
-    const available = getAvailableCredits(user);
+    const authUser = await base44.asServiceRole.entities.User.get(user.id);
+    const available = getAvailableCredits(authUser);
     if (available.remaining < CREDIT_COST) {
       return Response.json({
         error: 'Insufficient credits',
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
       }, { status: 402 });
     }
 
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
         summary: '',
         credits_used: 0,
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
       });
     }
 
@@ -73,10 +74,10 @@ Deno.serve(async (req) => {
     );
 
     const chargeCredits = async () => {
-      const usage = applyCreditUsage(user, CREDIT_COST);
+      const usage = applyCreditUsage(authUser, CREDIT_COST);
       if (!usage) throw new Error('Credit balance changed during analysis. Please try again.');
       await base44.asServiceRole.entities.User.update(user.id, usage);
-      return getAvailableCredits({ ...user, ...usage }).remaining;
+      return getAvailableCredits({ ...authUser, ...usage }).remaining;
     };
     const creditsRemaining = await chargeCredits();
 
@@ -91,7 +92,7 @@ Deno.serve(async (req) => {
       summary: analysis.summary,
       credits_used: CREDIT_COST,
       credits_remaining: creditsRemaining,
-      credits_limit: getMonthlyCreditLimit(user),
+      credits_limit: getMonthlyCreditLimit(authUser),
     });
   } catch (error: any) {
     console.error('analyzeCallSegment error:', error?.message);

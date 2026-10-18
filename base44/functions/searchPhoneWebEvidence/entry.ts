@@ -1,5 +1,6 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 import { checkEmergencyFromRaw } from "../../shared/emergencyNumbers.ts";
+import { safeFetchText, isPrivateIp } from "../../shared/ssrf.ts";
 
 // === Phone format generation ===
 
@@ -499,20 +500,17 @@ Deno.serve(async (req) => {
 
     const verified = await Promise.all(unique.map(async (r) => {
       try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 6000);
-        try {
-          const page = await fetch(r.url, {
-            signal: controller.signal,
-            headers: {
-              "User-Agent": BROWSER_UA,
-              "Accept-Language": "en-US,en;q=0.9",
-              "Accept": "text/html,application/xhtml+xml,*/*",
-            },
-          });
-          const html = await page.text();
-          const pageContent = page.ok ? extractPageContent(html) : "";
-          const pageExact = page.ok && containsExactPhone(html, targetForms);
+        const result = await safeFetchText(r.url, {
+          timeoutMs: 6000,
+          headers: {
+            "User-Agent": BROWSER_UA,
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept": "text/html,application/xhtml+xml,*/*",
+          },
+        });
+        const html = result.ok ? result.text : "";
+        const pageContent = result.ok ? extractPageContent(html) : "";
+        const pageExact = result.ok && containsExactPhone(html, targetForms);
           const searchExact = containsExactPhone([r.title, r.snippet].filter(Boolean).join(" "), targetForms);
           // For community-reporting sites, accept URL-based verification when
           // the page is inaccessible (geo-blocked, JS-required) but the URL
@@ -527,9 +525,6 @@ Deno.serve(async (req) => {
             page_content: pageContent,
             is_community_report: isCommunityReportSite(r.url),
           };
-        } finally {
-          clearTimeout(timer);
-        }
       } catch (error: any) {
         return { ...r, verified_exact_number: false, verification_status: "verification_failed", verification_error: error?.message || "Page fetch failed" };
       }
@@ -567,7 +562,8 @@ Deno.serve(async (req) => {
           ? { "971": "United Arab Emirates (UAE)", "44": "United Kingdom", "61": "Australia", "81": "Japan", "1": "United States" }[callingCode] || ""
           : "";
         const countryLine = countryHint ? `This phone number is from ${countryHint}. ` : "";
-        const llmPrompt = `${countryLine}Who does the phone number "${phone}" belong to? Search the web for this number (it may appear as ${formatList.join(", ")}). Tell me:\n1. The business or organization name associated with this number\n2. The URL of the official support or contact page where this number is listed (e.g., on apple.com, beatsbydre.com, microsoft.com, google.com, amazon.com)\n3. Any scam report or community discussion pages about this number (e.g., on tellows.co.uk, who-called.co.uk, truecaller.com, 800notes.com, everycaller.com)\n\nReturn the business name, the official page URL, and any scam report URLs you found. Only include pages where you actually found the exact phone number. If you can identify the business but cannot find the exact URL, still return the business name.`;
+        const sanitizedPhone = String(phone).replace(/[^0-9+\-\s()]/g, "").slice(0, 30);
+        const llmPrompt = `${countryLine}Who does the phone number "${sanitizedPhone}" belong to? Search the web for this number (it may appear as ${formatList.join(", ")}). Tell me:\n1. The business or organization name associated with this number\n2. The URL of the official support or contact page where this number is listed (e.g., on apple.com, beatsbydre.com, microsoft.com, google.com, amazon.com)\n3. Any scam report or community discussion pages about this number (e.g., on tellows.co.uk, who-called.co.uk, truecaller.com, 800notes.com, everycaller.com)\n\nReturn the business name, the official page URL, and any scam report URLs you found. Only include pages where you actually found the exact phone number. Only return valid https:// URLs — do not include http:// URLs, internal IP addresses, localhost, or metadata endpoints. If you can identify the business but cannot find the exact URL, still return the business name.`;
         const llmSchema = {
           type: "object",
           properties: {
@@ -615,7 +611,13 @@ Deno.serve(async (req) => {
         const INVALID_URL_VALUES = ["not found", "n/a", "na", "unknown", "none", "null", ""];
         function isValidLlmUrl(url: string): boolean {
           const u = String(url || "").trim().toLowerCase();
-          return u.startsWith("http") && !INVALID_URL_VALUES.includes(u);
+          if (!u.startsWith("https://") || INVALID_URL_VALUES.includes(u)) return false;
+          try {
+            const parsed = new URL(u);
+            return !isPrivateIp(parsed.hostname);
+          } catch {
+            return false;
+          }
         }
         const llmCandidates: any[] = [];
         if (isValidLlmUrl(llmResult?.official_url)) {
@@ -639,20 +641,17 @@ Deno.serve(async (req) => {
           if (!url || seenUrls.has(url)) return null;
           seenUrls.add(url);
           try {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 6000);
-            try {
-              const page = await fetch(url, {
-                signal: controller.signal,
-                headers: {
-                  "User-Agent": BROWSER_UA,
-                  "Accept-Language": "en-US,en;q=0.9",
-                  "Accept": "text/html,application/xhtml+xml,*/*",
-                },
-              });
-              const html = await page.text();
-              const pageContent = page.ok ? extractPageContent(html) : "";
-              const pageExact = page.ok && containsExactPhone(html, targetForms);
+            const result = await safeFetchText(url, {
+              timeoutMs: 6000,
+              headers: {
+                "User-Agent": BROWSER_UA,
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept": "text/html,application/xhtml+xml,*/*",
+              },
+            });
+            const html = result.ok ? result.text : "";
+            const pageContent = result.ok ? extractPageContent(html) : "";
+            const pageExact = result.ok && containsExactPhone(html, targetForms);
               const searchExact = containsExactPhone(String(c?.title || ""), targetForms);
               const urlExact = isCommunityReportSite(url) && urlPathContainsTargetNumber(url, targetForms);
               const isVerified = pageExact || searchExact || urlExact;
@@ -669,9 +668,6 @@ Deno.serve(async (req) => {
                 page_content: pageContent,
                 is_community_report: isCommunityReportSite(url),
               };
-            } finally {
-              clearTimeout(timer);
-            }
           } catch (error: any) {
             return {
               title: String(c?.title || "").slice(0, 300),

@@ -34,12 +34,13 @@ export default async function(req: Request): Promise<Response> {
 
     if (!question) return Response.json({ error: 'No question provided.' }, { status: 400 });
 
-    const available = getAvailableCredits(user);
+    const authUser = await base44.asServiceRole.entities.User.get(user.id);
+    const available = getAvailableCredits(authUser);
     if (available.remaining < CREDIT_COST) {
       return Response.json({
         error: 'Insufficient credits',
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         credit_cost: CREDIT_COST,
         upgrade_url: '/pricing',
       }, { status: 402 });
@@ -64,15 +65,15 @@ export default async function(req: Request): Promise<Response> {
     const reply = typeof result === 'string' ? result : (result as any)?.reply || (result as any)?.text || JSON.stringify(result);
 
     // Charge credits only after a successful generation.
-    const usage = applyCreditUsage(user, CREDIT_COST);
+    const usage = applyCreditUsage(authUser, CREDIT_COST);
     if (usage) await base44.asServiceRole.entities.User.update(user.id, usage);
-    const remaining = getAvailableCredits({ ...user, ...usage }).remaining;
+    const remaining = getAvailableCredits({ ...authUser, ...usage }).remaining;
 
     return Response.json({
       reply,
       credits_used: CREDIT_COST,
       credits_remaining: remaining,
-      credits_limit: getMonthlyCreditLimit(user),
+      credits_limit: getMonthlyCreditLimit(authUser),
     });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });

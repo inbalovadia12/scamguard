@@ -65,20 +65,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    const available = getAvailableCredits(user);
+    const authUser = await base44.asServiceRole.entities.User.get(user.id);
+    const available = getAvailableCredits(authUser);
     if (available.remaining < creditCost) {
       return Response.json({
         error: 'Insufficient credits',
         credits_remaining: available.remaining,
-        credits_limit: getMonthlyCreditLimit(user),
+        credits_limit: getMonthlyCreditLimit(authUser),
         credit_cost: creditCost,
       }, { status: 402 });
     }
     const chargeCredits = async () => {
-      const usage = applyCreditUsage(user, creditCost);
+      const usage = applyCreditUsage(authUser, creditCost);
       if (!usage) throw new Error('Credit balance changed during screen analysis. Please try again.');
       await base44.asServiceRole.entities.User.update(user.id, usage);
-      return getAvailableCredits({ ...user, ...usage }).remaining;
+      return getAvailableCredits({ ...authUser, ...usage }).remaining;
     };
 
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
@@ -192,7 +193,7 @@ Respond in ${languageName}.`;
       analysis: analysis.analysis || '',
       credits_used: creditCost,
       credits_remaining: creditsRemaining,
-      credits_limit: getMonthlyCreditLimit(user),
+      credits_limit: getMonthlyCreditLimit(authUser),
       timing_ms: Date.now() - startTime,
     });
   } catch (error: any) {
