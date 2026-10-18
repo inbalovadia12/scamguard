@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 import { isPrivateIp } from '../../shared/ssrf.ts';
 
 // Server-authoritative cost for screen-capture analysis. The client never
@@ -76,10 +76,9 @@ Deno.serve(async (req) => {
       }, { status: 402 });
     }
     const chargeCredits = async () => {
-      const usage = applyCreditUsage(authUser, creditCost);
-      if (!usage) throw new Error('Credit balance changed during screen analysis. Please try again.');
-      await base44.asServiceRole.entities.User.update(user.id, usage);
-      return getAvailableCredits({ ...authUser, ...usage }).remaining;
+      const charge = await atomicCreditCharge(base44, user.id, creditCost);
+      if (!charge.ok) throw new Error(charge.error.error);
+      return charge.remaining;
     };
 
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };

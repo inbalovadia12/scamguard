@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
-import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 
 const DEFAULT_VOICE_ID = 'pNInz6obpgDQGcFmaJgB'; // Adam — deep male, good for scammer voices
 const CREDIT_COST = 1;
@@ -88,11 +88,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: `Eleven Labs TTS failed: ${response.status} ${errText}` }, { status: 502 });
     }
 
-    // Charge credits via service role (server-side authoritative write).
-    const usage = applyCreditUsage(authUser, CREDIT_COST);
-    if (usage) {
-      try { await base44.asServiceRole.entities.User.update(user.id, usage); } catch {}
-    }
+    // Charge credits atomically via CreditLedger (server-side authoritative).
+    try { await atomicCreditCharge(base44, user.id, CREDIT_COST); } catch {}
 
     // Stream binary audio directly — no base64 conversion, minimal latency
     return new Response(response.body, {

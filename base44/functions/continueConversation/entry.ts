@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.48';
-import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 
 // Each follow-up turn costs a small, fixed number of credits so the feature
 // stays consistent with the rest of the app's server-authoritative billing.
@@ -64,10 +64,9 @@ export default async function(req: Request): Promise<Response> {
     const result = await base44.integrations.Core.InvokeLLM({ prompt });
     const reply = typeof result === 'string' ? result : (result as any)?.reply || (result as any)?.text || JSON.stringify(result);
 
-    // Charge credits only after a successful generation.
-    const usage = applyCreditUsage(authUser, CREDIT_COST);
-    if (usage) await base44.asServiceRole.entities.User.update(user.id, usage);
-    const remaining = getAvailableCredits({ ...authUser, ...usage }).remaining;
+    // Charge credits atomically via CreditLedger after successful generation.
+    const charge = await atomicCreditCharge(base44, user.id, CREDIT_COST);
+    const remaining = charge.ok ? charge.remaining : 0;
 
     return Response.json({
       reply,

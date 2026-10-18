@@ -1,5 +1,5 @@
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
-import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from "../../shared/credits.ts";
+import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from "../../shared/credits.ts";
 import { matchKnownLegitimateDomain } from "../../shared/legitimateDomains.ts";
 
 const CREDIT_COSTS: Record<string, number> = {
@@ -182,13 +182,11 @@ Deno.serve(async (req) => {
           what_they_want: "",
           what_to_say: "",
         };
-        const usage = applyCreditUsage(authUser, cost);
-        if (!usage) {
+        const safeCharge = await atomicCreditCharge(base44, user.id, cost);
+        if (!safeCharge.ok) {
           return Response.json({ error: "Credit balance changed during analysis. Please try again." }, { status: 409 });
         }
-        await base44.asServiceRole.entities.User.update(user.id, usage);
-        const remaining = getAvailableCredits({ ...authUser, ...usage }).remaining;
-        return Response.json({ result: safeResult, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(authUser) });
+        return Response.json({ result: safeResult, credits_used: cost, credits_remaining: safeCharge.remaining, credits_limit: safeCharge.limit });
       }
     }
 
@@ -263,14 +261,12 @@ Deno.serve(async (req) => {
       result.risk_level = "low";
     }
 
-    const usage = applyCreditUsage(authUser, cost);
-    if (!usage) {
+    const charge = await atomicCreditCharge(base44, user.id, cost);
+    if (!charge.ok) {
       return Response.json({ error: "Credit balance changed during analysis. Please try again." }, { status: 409 });
     }
-    await base44.asServiceRole.entities.User.update(user.id, usage);
 
-    const remaining = getAvailableCredits({ ...authUser, ...usage }).remaining;
-    const responseBody: any = { result, credits_used: cost, credits_remaining: remaining, credits_limit: getMonthlyCreditLimit(authUser) };
+    const responseBody: any = { result, credits_used: cost, credits_remaining: charge.remaining, credits_limit: charge.limit };
     if (mode === "incognito_phone") {
       responseBody.phone_sources = phoneSources;
       responseBody.phone_evidence = phoneEvidence;

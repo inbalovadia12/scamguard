@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
-import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 
 // Charges credits for an agent-chat message. Reads and writes credit fields
 // via the service role so the client-writable updateMe channel cannot reset
@@ -29,14 +29,12 @@ Deno.serve(async (req) => {
       }, { status: 402 });
     }
 
-    const usage = applyCreditUsage(authUser, cost);
-    if (!usage) {
+    const charge = await atomicCreditCharge(base44, user.id, cost);
+    if (!charge.ok) {
       return Response.json({ error: 'Credit balance changed. Please try again.' }, { status: 409 });
     }
-    await base44.asServiceRole.entities.User.update(user.id, usage);
 
-    const remaining = getAvailableCredits({ ...authUser, ...usage }).remaining;
-    return Response.json({ success: true, credits_used: cost, credits_remaining: remaining });
+    return Response.json({ success: true, credits_used: cost, credits_remaining: charge.remaining });
   } catch (error: any) {
     return Response.json({ error: error?.message || 'Credit charge failed' }, { status: 500 });
   }

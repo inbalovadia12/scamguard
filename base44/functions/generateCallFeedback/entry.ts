@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 
 const CREDIT_COST = 1;
 
@@ -62,11 +62,8 @@ Deno.serve(async (req) => {
     const data = await response.json();
     const output = JSON.parse(data.choices?.[0]?.message?.content || '{}');
 
-    // Charge credits via service role.
-    const usage = applyCreditUsage(authUser, CREDIT_COST);
-    if (usage) {
-      try { await base44.asServiceRole.entities.User.update(user.id, usage); } catch {}
-    }
+    // Charge credits atomically via CreditLedger.
+    try { await atomicCreditCharge(base44, user.id, CREDIT_COST); } catch {}
 
     return Response.json({ feedback: typeof output.feedback === 'string' ? output.feedback : '' });
   } catch {

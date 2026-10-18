@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.49';
-import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 
 const CREDIT_COST = 5;
 
@@ -32,15 +32,10 @@ export default async function(req: Request): Promise<Response> {
         credits_limit: getMonthlyCreditLimit(authUser),
       }, { status: 402 });
     }
-    const charge = applyCreditUsage(authUser, CREDIT_COST);
-    if (!charge) {
+    const chargeResult = await atomicCreditCharge(base44, user.id, CREDIT_COST);
+    if (!chargeResult.ok) {
       return Response.json({ error: 'Not enough credits for this scan.' }, { status: 402 });
     }
-    await base44.asServiceRole.entities.User.update(user.id, {
-      credits_used: charge.credits_used,
-      admin_credit_balance: charge.admin_credit_balance,
-      credits_reset_month: charge.credits_reset_month,
-    });
 
     const LANGUAGE_NAMES: Record<string, string> = { en: 'English', he: 'Hebrew', es: 'Spanish' };
     const languageName = LANGUAGE_NAMES[language] || 'English';
@@ -158,7 +153,7 @@ Respond in ${languageName}.`;
       console.error('Failed to save LocalScamScan', e);
     }
 
-    const availAfter = getAvailableCredits({ ...user, ...charge });
+    const availAfter = { remaining: chargeResult.remaining };
 
     return Response.json({
       result: {

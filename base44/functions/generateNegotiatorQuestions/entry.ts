@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-import { getAvailableCredits, applyCreditUsage, getMonthlyCreditLimit } from '../../shared/credits.ts';
+import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 
 const CREDIT_COST = 3;
 
@@ -22,10 +22,9 @@ Deno.serve(async (req) => {
       }, { status: 402 });
     }
     const chargeCredits = async () => {
-      const usage = applyCreditUsage(authUser, CREDIT_COST);
-      if (!usage) throw new Error('Credit balance changed during analysis. Please try again.');
-      await base44.asServiceRole.entities.User.update(user.id, usage);
-      return getAvailableCredits({ ...authUser, ...usage }).remaining;
+      const charge = await atomicCreditCharge(base44, user.id, CREDIT_COST);
+      if (!charge.ok) throw new Error(charge.error.error);
+      return charge.remaining;
     };
 
     const body = await req.json();
