@@ -7,11 +7,15 @@
 //     "token-keys": [{ "token-type": 2, "token-key": "<base64url-SPKI>", "not-before": <timestamp> }]
 //   }
 
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 import { secrets } from "base44:runtime";
 import { loadRsaKey, toBase64Url } from "../../shared/privacyPass.ts";
 
 export default async function (req: Request): Promise<Response> {
   try {
+    // Establish request context (auth not required — public discovery endpoint).
+    createClientFromRequest(req);
+
     const secretValue = secrets.get("LIVE_CALLER_ID_TOKEN_ISSUER_KEY");
     if (!secretValue) {
       return Response.json({ error: "Token issuer not configured" }, { status: 500 });

@@ -12,6 +12,7 @@
 // No Vardin user authentication — anonymous Apple relay/PIR flow.
 // Rate-limited per client IP to prevent unlimited anonymous token minting.
 
+import { createClientFromRequest } from "npm:@base44/sdk@0.8.40";
 import { secrets } from "base44:runtime";
 import {
   loadRsaKey,
@@ -48,6 +49,9 @@ function getClientIP(req: Request): string {
 
 export default async function (req: Request): Promise<Response> {
   try {
+    // Establish request context (auth not required — anonymous Apple PIR flow).
+    createClientFromRequest(req);
+
     // Rate limit anonymous token issuance to prevent abuse.
     if (!checkRateLimit(getClientIP(req))) {
       return Response.json({ error: "Rate limit exceeded" }, { status: 429 });

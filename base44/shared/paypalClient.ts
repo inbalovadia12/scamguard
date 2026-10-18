@@ -8,31 +8,14 @@ import { secrets } from "base44:runtime";
 // secret set to "sandbox" — but it's not required for normal operation.
 const PAYPAL_API_BASE = (() => {
   try {
-    const env = readSecret("PAYPAL_ENV");
-    if (env === "sandbox") return "https://api-m.sandbox.paypal.com";
+    if (secrets?.get?.("PAYPAL_ENV") === "sandbox") return "https://api-m.sandbox.paypal.com";
   } catch {}
   return "https://api-m.paypal.com";
 })();
 
-function readSecret(name: string): string | undefined {
-  // Prefer the platform secrets API; fall back to env. Both are server-side
-  // only; the value is never returned or logged.
-  try {
-    const v = secrets?.get?.(name);
-    if (v) return v as string;
-  } catch {
-    /* fall through */
-  }
-  // @ts-ignore — Deno is available in function runtime
-  if (typeof Deno !== "undefined" && Deno.env) {
-    return Deno.env.get(name);
-  }
-  return undefined;
-}
-
 export function getPaypalCredentials(): { clientId: string; clientSecret: string } {
-  const clientId = readSecret("PAYPAL_CLIENT_ID");
-  const clientSecret = readSecret("PAYPAL_CLIENT_SECRET");
+  const clientId = secrets.get("PAYPAL_CLIENT_ID") as string | undefined;
+  const clientSecret = secrets.get("PAYPAL_CLIENT_SECRET") as string | undefined;
   if (!clientId || !clientSecret) {
     throw new Error("PayPal credentials not configured");
   }
@@ -40,7 +23,7 @@ export function getPaypalCredentials(): { clientId: string; clientSecret: string
 }
 
 export function getPaypalWebhookId(): string | null {
-  return readSecret("PAYPAL_WEBHOOK_ID") || null;
+  return (secrets.get("PAYPAL_WEBHOOK_ID") as string | undefined) || null;
 }
 
 export async function getPaypalAccessToken(): Promise<string> {
