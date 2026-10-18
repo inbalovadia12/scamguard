@@ -26,7 +26,7 @@
             "function_name": "sendScamAlertEmail",
             "args": {
               "analysis_id": "${ .trigger.entity_id }",
-              "_workflow_secret": "base44/workflows/ScamAlertEmail.jsonc"
+              "_workflow_secret": "K9vR4xT2mQ8pL7wN5zH3cB6yF1dJ0sXa"
             }
           },
           "then": "end",
