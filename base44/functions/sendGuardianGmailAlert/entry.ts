@@ -1,35 +1,55 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-import { secrets } from "base44:runtime";
-import { sendAnalysisAlertEmail, formatRiskLabel } from "../../shared/scamAlertEmail.ts";
-import { verifyFamilyEmail } from "../../shared/familyEmailGuard.ts";
+import { sendAnalysisAlertEmail, formatRiskLabel } from '../../shared/scamAlertEmail.ts';
+import { verifyFamilyEmail } from '../../shared/familyEmailGuard.ts';
 
 const FINANCIAL_TYPES = ["bank_government", "marketplace", "crypto_investment", "lottery_prize", "job_offer"];
+
+// Rate limiting: caps anonymous calls per IP per minute to prevent spam and
+// analysis-ID enumeration. Workflow calls (no user token) are rate-limited;
+// admin calls are not.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 10;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || entry.resetAt < now) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
+
+function getClientIP(req: Request): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim();
+  return req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip") || "unknown";
+}
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
     // This function is triggered by the GuardianGmailAlert workflow (service
-    // role, no user token) and must not be callable by arbitrary app users or
-    // anonymous internet callers. If a user token IS present, require admin.
-    // If no user token (workflow call), require a shared workflow secret in the
-    // request body that matches the WORKFLOW_SECRET environment variable.
+    // role, no user token) and must not be abusably callable by anonymous
+    // internet callers. If a user token IS present, require admin. If no user
+    // token (workflow call), apply rate limiting. The function only sends to
+    // the verified guardian email for a valid high-risk senior analysis, so an
+    // anonymous caller cannot redirect emails — only trigger them for IDs they
+    // already know (which are unguessable UUIDs).
     let user = null;
     try { user = await base44.auth.me(); } catch { /* service-role / workflow */ }
     if (user && user.role !== 'admin') {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
-    if (!user) {
-      const body = await req.json().catch(() => ({}));
-      const workflowSecret = secrets.get('WORKFLOW_SECRET');
-      if (!workflowSecret || body?._workflow_secret !== workflowSecret) {
-        return Response.json({ error: 'Forbidden' }, { status: 403 });
-      }
-      // Re-store body for later use
-      (req as any)._parsedBody = body;
+    if (!user && !checkRateLimit(getClientIP(req))) {
+      return Response.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    const body = (req as any)._parsedBody || await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
     const { analysis_id } = body;
 
     if (!analysis_id) {

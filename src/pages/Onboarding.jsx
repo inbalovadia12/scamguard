@@ -104,11 +104,11 @@ export default function Onboarding() {
           alert_preference: alertPref,
         });
         try {
-          await base44.integrations.Core.SendEmail({
+          const res = await base44.functions.invoke("sendFamilyInviteEmail", {
             to: email.trim(),
-            subject: `${user.full_name || "Someone"} invited you to join Vardin`,
-            body: `Hi,\n\n${user.full_name || "Your family member"} has invited you to join their Vardin family protection circle. Vardin is an AI-powered scam detection tool that helps you know what's real before you click.\n\nTo accept this invitation and start protecting each other from scams, create your free Vardin account at ${window.location.origin}/register\n\nStay safe,\nThe Vardin Team`,
+            inviter_name: user.full_name,
           });
+          if (res.data?.error) throw new Error(res.data.error);
         } catch (emailErr) {
           console.error("Failed to send invite to", email, emailErr);
         }

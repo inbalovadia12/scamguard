@@ -88,9 +88,15 @@ export default function FollowUpChat({
           onCreditsUsed(res.data.credits_remaining);
         }
       } else {
-        const prompt = buildPrompt(persona, context, nextMessages.slice(0, -1), q, langName);
-        const res = await base44.integrations.Core.InvokeLLM({ prompt });
-        reply = typeof res === "string" ? res : res?.reply || res?.text || JSON.stringify(res);
+        const res = await base44.functions.invoke("freeFollowUpChat", {
+          persona,
+          context,
+          history: nextMessages.slice(0, -1),
+          question: q,
+          language: lang,
+        });
+        if (res.data?.error) throw new Error(res.data.error);
+        reply = res.data?.reply || "";
       }
       if (!reply || !reply.trim()) reply = "I couldn't generate a response. Please try rephrasing.";
       setMessages([...nextMessages, { role: "assistant", content: reply }]);

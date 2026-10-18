@@ -76,11 +76,12 @@ export default function AlertDetail() {
       : "• Do not share personal info, passwords, or send money\n• Do not respond to the sender\n• Block and report the sender";
     const body = `Hi ${seniorName || "there"},\n\nI wanted to warn you about a ${riskLabel} RISK ${scamType} scam that was detected.\n\n${analysis.explanation || "This message shows signs of being a scam."}\n\nWhat you should do:\n${steps}\n\nPlease be careful. If you receive a similar message, don't respond and let me know right away.\n\nStay safe!`;
     try {
-      await base44.integrations.Core.SendEmail({
+      const res = await base44.functions.invoke("sendWarningEmail", {
         to: seniorEmail,
         subject: `⚠️ Scam Warning: ${riskLabel} risk ${scamType} detected`,
         body,
       });
+      if (res.data?.error) throw new Error(res.data.error);
       setWarningSent(true);
     } catch {
       setWarningError("Could not send — the family member must be a registered app user.");

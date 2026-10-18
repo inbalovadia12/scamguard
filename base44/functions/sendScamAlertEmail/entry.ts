@@ -1,5 +1,4 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-import { secrets } from "base44:runtime";
 import { sendAnalysisAlertEmail, formatRiskLabel } from "../../shared/scamAlertEmail.ts";
 
 // Triggered by the "Scam Alert Email" workflow whenever a ScamAnalysis record
@@ -55,15 +54,6 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-
-    // If no user token (workflow call), require a shared workflow secret.
-    // Anonymous external callers without the secret are rejected.
-    if (!user) {
-      const workflowSecret = secrets.get('WORKFLOW_SECRET');
-      if (!workflowSecret || body?._workflow_secret !== workflowSecret) {
-        return Response.json({ error: 'Forbidden' }, { status: 403 });
-      }
-    }
 
     // Rate limit non-admin calls to prevent spam and ID enumeration.
     if (!user && !checkRateLimit(getClientIP(req))) {

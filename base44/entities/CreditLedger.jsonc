@@ -1,0 +1,67 @@
+{
+  "name": "CreditLedger",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User ID whose credits were charged"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Credits charged (positive) or refunded (negative)"
+    },
+    "month": {
+      "type": "string",
+      "description": "YYYY-MM month key for aggregation"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "usage",
+        "refund"
+      ],
+      "default": "usage",
+      "description": "usage = credit charge; refund = credit returned after API failure"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Optional description for this record"
+    }
+  },
+  "required": [
+    "user_id",
+    "amount",
+    "month",
+    "type"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

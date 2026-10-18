@@ -163,41 +163,13 @@ export default function EmergencyResponse() {
 
     try {
       const scenario = SCENARIOS.find((s) => s.id === selected);
-      const prompt = `You are Vardin, an AI scam recovery assistant. A user may have already been scammed and needs immediate, personalized help.
-
-${scenario ? `Situation category: "${scenario.title}" — ${scenario.subtitle}` : "No specific category selected — infer the situation from their description."}
-
-The user described their exact situation:
-"${elaboration.trim()}"
-
-Analyze their specific situation and provide a tailored, step-by-step action plan. Be calm, practical, and actionable. Reference any specific services, banks, apps, websites, or phone numbers they mentioned by name. Prioritize steps that minimize immediate damage.
-
-Respond with:
-- situation_summary: a 1-2 sentence assessment of what happened and the potential impact
-- severity: "moderate", "serious", or "critical" based on the potential for financial loss or identity theft
-- do_now: 3-6 specific immediate steps tailored to THEIR situation (include estimated time for each, e.g. "Call your bank's fraud line (5 min)")
-- follow_up: 2-4 steps for the coming days
-- contacts: specific organizations, services, or hotlines to contact (with WHY they should contact each)
-- warning_signs: 2-4 signs to watch for in the coming days/weeks that indicate the scam is still affecting them
-- reassurance: a brief, calming 1-2 sentence message`;
-
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            situation_summary: { type: "string" },
-            severity: { type: "string", enum: ["moderate", "serious", "critical"] },
-            do_now: { type: "array", items: { type: "string" } },
-            follow_up: { type: "array", items: { type: "string" } },
-            contacts: { type: "array", items: { type: "string" } },
-            warning_signs: { type: "array", items: { type: "string" } },
-            reassurance: { type: "string" },
-          },
-        },
+      const res = await base44.functions.invoke("generateEmergencyResponse", {
+        elaboration: elaboration.trim(),
+        scenario_title: scenario?.title,
+        scenario_subtitle: scenario?.subtitle,
       });
-
-      setAiSteps(result);
+      if (res.data?.error) throw new Error(res.data.error);
+      setAiSteps(res.data?.result);
     } catch (e) {
       setAiError(e.message || "Could not generate personalized steps. Please try again.");
     } finally {
