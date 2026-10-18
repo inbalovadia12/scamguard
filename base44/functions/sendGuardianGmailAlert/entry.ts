@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { secrets } from "base44:runtime";
 import { sendAnalysisAlertEmail, formatRiskLabel } from "../../shared/scamAlertEmail.ts";
 import { verifyFamilyEmail } from "../../shared/familyEmailGuard.ts";
 
@@ -9,16 +10,26 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
 
     // This function is triggered by the GuardianGmailAlert workflow (service
-    // role, no user token) and must not be callable by arbitrary app users.
-    // If a user token IS present, require admin; allow anonymous service-role
-    // calls so the workflow can still fire.
+    // role, no user token) and must not be callable by arbitrary app users or
+    // anonymous internet callers. If a user token IS present, require admin.
+    // If no user token (workflow call), require a shared workflow secret in the
+    // request body that matches the WORKFLOW_SECRET environment variable.
     let user = null;
     try { user = await base44.auth.me(); } catch { /* service-role / workflow */ }
     if (user && user.role !== 'admin') {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
+    if (!user) {
+      const body = await req.json().catch(() => ({}));
+      const workflowSecret = secrets.get('WORKFLOW_SECRET');
+      if (!workflowSecret || body?._workflow_secret !== workflowSecret) {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      // Re-store body for later use
+      (req as any)._parsedBody = body;
+    }
 
-    const body = await req.json();
+    const body = (req as any)._parsedBody || await req.json().catch(() => ({}));
     const { analysis_id } = body;
 
     if (!analysis_id) {

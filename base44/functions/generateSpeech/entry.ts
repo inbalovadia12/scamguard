@@ -55,6 +55,11 @@ Deno.serve(async (req) => {
     if (!apiKey) return Response.json({ error: 'TTS service not configured' }, { status: 500 });
 
     const voiceId = voice_id || DEFAULT_VOICE_ID;
+    // Validate voice_id before interpolating into the URL path — prevents
+    // path traversal (../../v1/voices/...) and query-string injection (?).
+    if (!/^[A-Za-z0-9]{10,40}$/.test(voiceId)) {
+      return Response.json({ error: 'Invalid voice ID format' }, { status: 400 });
+    }
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
       method: 'POST',

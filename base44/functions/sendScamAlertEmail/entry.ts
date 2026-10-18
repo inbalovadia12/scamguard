@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { secrets } from "base44:runtime";
 import { sendAnalysisAlertEmail, formatRiskLabel } from "../../shared/scamAlertEmail.ts";
 
 // Triggered by the "Scam Alert Email" workflow whenever a ScamAnalysis record
@@ -53,14 +54,22 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Rate limit anonymous (non-admin, non-workflow) calls to prevent spam
-    // and ID enumeration. Workflow calls fire once per entity creation and
-    // will never hit the limit.
+    const body = await req.json().catch(() => ({}));
+
+    // If no user token (workflow call), require a shared workflow secret.
+    // Anonymous external callers without the secret are rejected.
+    if (!user) {
+      const workflowSecret = secrets.get('WORKFLOW_SECRET');
+      if (!workflowSecret || body?._workflow_secret !== workflowSecret) {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
+    // Rate limit non-admin calls to prevent spam and ID enumeration.
     if (!user && !checkRateLimit(getClientIP(req))) {
       return Response.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    const body = await req.json();
     const { analysis_id } = body;
     if (!analysis_id) {
       return Response.json({ error: 'analysis_id is required' }, { status: 400 });

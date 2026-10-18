@@ -39,8 +39,10 @@ function checkRateLimit(ip: string): boolean {
 }
 
 function getClientIP(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
+  // Prefer the trustworthy edge IP (cf-connecting-ip) over the client-spoofable
+  // X-Forwarded-For header. X-Forwarded-For's first value is attacker-supplied
+  // when proxies append rather than overwrite, so a caller can rotate a fresh
+  // fake IP per request to bypass the rate limiter.
   return req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip") || "unknown";
 }
 
