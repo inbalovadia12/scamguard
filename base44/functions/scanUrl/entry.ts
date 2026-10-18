@@ -105,7 +105,11 @@ Deno.serve(async (req) => {
       // flag is self-editable by the senior, so it must not bypass the paywall
       // unless the guardian genuinely holds a paid plan.
       for (const member of protectedMembers) {
-        if (member.incognito_allowed === true && member.guardian_id) {
+        // Only trust incognito_allowed if the guardian created this record
+        // through addFamilyMember (created_by_id === guardian_id). A senior
+        // self-creating a record with incognito_allowed=true must not bypass
+        // the paywall.
+        if (member.incognito_allowed === true && member.guardian_id && member.created_by_id === member.guardian_id) {
           try {
             const guardian = await base44.asServiceRole.entities.User.get(member.guardian_id);
             const gPlan = guardian?.subscription_plan || 'starter';

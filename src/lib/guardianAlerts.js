@@ -17,10 +17,8 @@ export function shouldNotifyGuardian(link, analysis) {
 }
 
 export async function notifyGuardian(link, analysis) {
-  const riskLabel = (analysis.risk_level || "unknown").toUpperCase();
-  await base44.integrations.Core.SendEmail({
-    to: link.guardian_email,
-    subject: `Vardin Alert: ${link.name} checked a ${riskLabel} risk message`,
-    body: `Hi ${link.guardian_name || "there"},\n\n${link.name} just checked a suspicious message on Vardin.\n\nRisk level: ${riskLabel} (${analysis.risk_score}/100)\nType: ${analysis.message_type || "other"}\n\nSummary: ${analysis.explanation || ""}\n\nView full details in your Guardian Alerts: ${window.location.origin}/alerts\n\nStay safe,\nThe Vardin Team`,
-  });
+  // Delegate to the backend function, which re-derives the recipient from the
+  // verified family relationship and builds the body from server-verified
+  // analysis data — never from client-supplied entity fields.
+  await base44.functions.invoke("sendGuardianScanAlert", { analysis_id: analysis.id });
 }

@@ -380,7 +380,17 @@ function escapeHtml(text) {
   if (text == null) return '';
   var div = document.createElement('div');
   div.textContent = String(text);
-  return div.innerHTML;
+  return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function isSafeUrl(url) {
+  if (typeof url !== 'string') return false;
+  try {
+    var parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch (e) {
+    return /^https?:\/\//i.test(url);
+  }
 }
 
 function showView(name) {
@@ -678,7 +688,11 @@ function displayResults(data, answerType) {
       }
       if (qrFinalUrl && qrFinalUrl !== qrDecoded) {
         html += '<p class="qr-label">' + t('final_destination') + '</p>';
-        html += '<p class="qr-value"><a href="' + escapeHtml(qrFinalUrl) + '" target="_blank" rel="noopener">' + escapeHtml(qrFinalUrl) + '</a></p>';
+        if (isSafeUrl(qrFinalUrl)) {
+          html += '<p class="qr-value"><a href="' + escapeHtml(qrFinalUrl) + '" target="_blank" rel="noopener">' + escapeHtml(qrFinalUrl) + '</a></p>';
+        } else {
+          html += '<p class="qr-value">' + escapeHtml(qrFinalUrl) + '</p>';
+        }
       }
       if (qrPageTitle) {
         html += '<p class="qr-label">' + t('page_title') + '</p>';

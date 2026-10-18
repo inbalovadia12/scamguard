@@ -30,6 +30,10 @@ export default async function(req: Request): Promise<Response> {
       if (seen.has(m.id)) continue;
       seen.add(m.id);
       if (m.senior_user_id && m.senior_user_id !== user.id) continue;
+      // Reject self-created records: a user cannot invite themselves. Only
+      // records created by the guardian (through addFamilyMember, where
+      // created_by_id === guardian_id) are valid invitations.
+      if (m.created_by_id !== m.guardian_id) continue;
       if (!m.consent_given) pending.push(m);
     }
     if (pending.length === 0) {
