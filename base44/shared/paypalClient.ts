@@ -4,9 +4,15 @@
 
 import { secrets } from "base44:runtime";
 
-const PAYPAL_API_BASE = readSecret("PAYPAL_ENV") === "sandbox"
-  ? "https://api-m.sandbox.paypal.com"
-  : "https://api-m.paypal.com";
+// Production PayPal API. If sandbox testing is needed, add a PAYPAL_ENV
+// secret set to "sandbox" — but it's not required for normal operation.
+const PAYPAL_API_BASE = (() => {
+  try {
+    const env = readSecret("PAYPAL_ENV");
+    if (env === "sandbox") return "https://api-m.sandbox.paypal.com";
+  } catch {}
+  return "https://api-m.paypal.com";
+})();
 
 function readSecret(name: string): string | undefined {
   // Prefer the platform secrets API; fall back to env. Both are server-side

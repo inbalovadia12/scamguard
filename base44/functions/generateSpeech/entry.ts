@@ -1,7 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 
-const DEFAULT_VOICE_ID = 'pNInz6obpgDQGcFmaJgB'; // Adam — deep male, good for scammer voices
 const CREDIT_COST = 1;
 const MAX_TEXT_LENGTH = 5000;
 
@@ -33,14 +32,14 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { text, voice_id, language } = body;
+    const { text, language } = body;
 
     if (!text) return Response.json({ error: 'Text is required' }, { status: 400 });
     if (text.length > MAX_TEXT_LENGTH) {
       return Response.json({ error: `Text exceeds the ${MAX_TEXT_LENGTH} character limit.` }, { status: 400 });
     }
 
-    // Credit check — TTS uses the app owner's paid ElevenLabs quota.
+    // Pre-authorize credits BEFORE the TTS call to prevent concurrent bypass.
     const authUser = await base44.asServiceRole.entities.User.get(user.id);
     const available = getAvailableCredits(authUser);
     if (available.remaining < CREDIT_COST) {
@@ -52,52 +51,36 @@ Deno.serve(async (req) => {
       }, { status: 402 });
     }
 
-    const apiKey = Deno.env.get('ELEVENLABS_API_KEY');
-    if (!apiKey) return Response.json({ error: 'TTS service not configured' }, { status: 500 });
-
-    const voiceId = voice_id || DEFAULT_VOICE_ID;
-    // Validate voice_id before interpolating into the URL path — prevents
-    // path traversal (../../v1/voices/...) and query-string injection (?).
-    if (!/^[A-Za-z0-9]{10,40}$/.test(voiceId)) {
-      return Response.json({ error: 'Invalid voice ID format' }, { status: 400 });
+    const charge = await atomicCreditCharge(base44, user.id, CREDIT_COST);
+    if (!charge.ok) {
+      return Response.json({ error: 'Credit balance changed. Please try again.' }, { status: 409 });
     }
 
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': apiKey,
-        'Content-Type': 'application/json',
-        'Accept': 'audio/mpeg',
-      },
-      body: JSON.stringify({
+    try {
+      // Use the built-in Core.GenerateSpeech integration (no external secret needed).
+      const result = await base44.integrations.Core.GenerateSpeech({
         text,
-        model_id: 'eleven_flash_v2_5',
         language_code: language || undefined,
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-          style: 0.0,
-          use_speaker_boost: true,
+      });
+
+      const audioUrl = result?.url;
+      if (!audioUrl) throw new Error('No audio URL returned');
+
+      // Fetch the generated audio and stream it back as binary.
+      const audioRes = await fetch(audioUrl, { signal: AbortSignal.timeout(15000) });
+      if (!audioRes.ok) throw new Error(`Audio fetch failed: ${audioRes.status}`);
+
+      return new Response(audioRes.body, {
+        headers: {
+          'Content-Type': 'audio/mpeg',
+          'Cache-Control': 'no-cache',
         },
-      }),
-      signal: AbortSignal.timeout(30000),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => 'unknown');
-      return Response.json({ error: `Eleven Labs TTS failed: ${response.status} ${errText}` }, { status: 502 });
+      });
+    } catch (ttsError) {
+      // Refund on failure — the TTS call didn't succeed.
+      try { await refundCreditCharge(base44, user.id, CREDIT_COST); } catch {}
+      return Response.json({ error: 'Text-to-speech is temporarily unavailable' }, { status: 502 });
     }
-
-    // Charge credits atomically via CreditLedger (server-side authoritative).
-    try { await atomicCreditCharge(base44, user.id, CREDIT_COST); } catch {}
-
-    // Stream binary audio directly — no base64 conversion, minimal latency
-    return new Response(response.body, {
-      headers: {
-        'Content-Type': 'audio/mpeg',
-        'Cache-Control': 'no-cache',
-      },
-    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
