@@ -43,6 +43,15 @@ export function matchKnownLegitimateDomain(url: string): string | null {
     const parsed = new URL(withProto);
     const hostname = (parsed.hostname || '').toLowerCase();
     if (!hostname) return null;
+
+    // Only short-circuit for the root domain (no meaningful path). Specific
+    // paths (e.g. youtube.com/watch?v=xxx, pinterest.com/pin/123) can point to
+    // user-generated content that needs actual analysis — a YouTube Rickroll
+    // or a Pinterest scam pin must not be auto-dismissed as "safe" just because
+    // the registrable domain is well-known.
+    const path = parsed.pathname;
+    if (path && path !== '/' && path.length > 1) return null;
+
     const apex = hostname.replace(/^www\./, '');
     if (LEGITIMATE_APEX_DOMAINS.has(apex)) return apex;
     for (const d of LEGITIMATE_APEX_DOMAINS) {
