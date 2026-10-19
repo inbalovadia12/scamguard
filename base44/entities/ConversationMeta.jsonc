@@ -1,0 +1,33 @@
+{
+  "name": "ConversationMeta",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "description": "The agent conversation ID this custom name belongs to"
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "Custom display name for the conversation"
+    }
+  },
+  "required": [
+    "conversation_id",
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

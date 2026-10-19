@@ -109,7 +109,7 @@ export default function AgentChat() {
         });
         const title = response?.data?.title || response?.title;
         if (title && title !== "New Chat") {
-          await base44.agents.updateConversation(conversation.id, { metadata: { name: title } });
+          await base44.functions.invoke("updateConversationName", { conversation_id: conversation.id, name: title });
           setConversation((prev) => prev?.id === conversation.id
             ? { ...prev, metadata: { ...prev.metadata, name: title } }
             : prev);
@@ -123,7 +123,7 @@ export default function AgentChat() {
 
   const handleRename = async (convId, newName) => {
     try {
-      await base44.agents.updateConversation(convId, { metadata: { name: newName } });
+      await base44.functions.invoke("updateConversationName", { conversation_id: convId, name: newName });
       setConversations((prev) => prev.map((c) => c.id === convId
         ? { ...c, metadata: { ...c.metadata, name: newName } }
         : c));
@@ -225,7 +225,7 @@ export default function AgentChat() {
       if (activeConversation?.metadata?.name === "New Chat" && messageContent) {
         const tempTitle = messageContent.slice(0, 40) + (messageContent.length > 40 ? "…" : "");
         try {
-          await base44.agents.updateConversation(activeConversation.id, { metadata: { name: tempTitle } });
+          await base44.functions.invoke("updateConversationName", { conversation_id: activeConversation.id, name: tempTitle });
           setConversation((prev) => prev?.id === activeConversation.id
             ? { ...prev, metadata: { ...prev.metadata, name: tempTitle } }
             : prev);
