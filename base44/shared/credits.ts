@@ -75,14 +75,18 @@ export async function atomicCreditCharge(base44: any, userId: string, cost: numb
     type: 'usage',
   });
 
-  // Aggregate the total usage for this user this month
-  const agg = await base44.asServiceRole.entities.CreditLedger.aggregate({
-    query: { user_id: userId, month: currentMonth, type: 'usage' },
-    groupBy: 'user_id',
-    sum: 'amount',
+  // Sum the total usage for this user this month. The backend runtime does not
+  // expose aggregate on either client, so we filter and sum in JS. The record
+  // count is bounded by the user's monthly credit limit (max ~500), so a single
+  // filter call is sufficient. filter without options returns an array, which
+  // is the pattern used elsewhere in the codebase for asServiceRole.entities.
+  const usageRecords = await base44.asServiceRole.entities.CreditLedger.filter({
+    user_id: userId,
+    month: currentMonth,
+    type: 'usage',
   });
-
-  const totalUsage = Number(agg?.rows?.[0]?.sum_amount) || 0;
+  const totalUsage = (Array.isArray(usageRecords) ? usageRecords : [])
+    .reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
 
   // Check if the total usage exceeds the limit
   if (totalUsage > monthlyLimit + adminBalance) {

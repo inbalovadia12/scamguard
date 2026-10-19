@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
       return Response.json({ feedback, credits_used: CREDIT_COST, credits_remaining: charge.remaining, credits_limit: charge.limit });
     } catch (llmError) {
       // Refund on failure — the LLM call didn't succeed.
-      try { await refundCreditCharge(base44, user.id, CREDIT_COST); } catch {}
+      try { await refundCreditCharge(base44, charge.ledger_id); } catch {}
       return Response.json({ error: 'Fast feedback is temporarily unavailable' }, { status: 502 });
     }
   } catch {

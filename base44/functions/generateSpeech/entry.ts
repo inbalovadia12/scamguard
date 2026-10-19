@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
       });
     } catch (ttsError) {
       // Refund on failure — the TTS call didn't succeed.
-      try { await refundCreditCharge(base44, user.id, CREDIT_COST); } catch {}
+      try { await refundCreditCharge(base44, charge.ledger_id); } catch {}
       return Response.json({ error: 'Text-to-speech is temporarily unavailable' }, { status: 502 });
     }
   } catch (error) {
