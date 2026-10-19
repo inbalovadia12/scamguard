@@ -299,7 +299,7 @@ CRITICAL EVIDENCE RULES:
 - "why_scammers_do_this" is for explaining an actual suspicious pattern. For a benign page, return an empty string.
 - "tactics_detected" must be an empty array when no manipulation tactic is actually present.
 - For an ordinary official/legitimate page with no concrete scam indicators, use a low risk score and keep all scam-specific fields empty.
-- If the URL is the official/primary domain of a well-known company (e.g. amazon.com, google.com, paypal.com, microsoft.com, apple.com) and the threat-intel results above show no malicious reports, you MUST return risk_level "low", a low risk_score, and leave tactics_detected, why_scammers_do_this, what_they_want, and what_to_say EMPTY. Do NOT produce generic educational content about how scammers impersonate that brand.
+- Only treat the ROOT of an official domain (e.g. amazon.com with NO path, google.com with NO path) as automatically safe when threat-intel is clean. If the URL has a specific path (e.g. youtube.com/watch?v=xxx, pinterest.com/pin/xxx), you MUST analyze the actual page content — do NOT auto-dismiss it as safe just because the domain is well-known. Scammers use legitimate platforms to host scam content.
 
 Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urgency tactics, payment method red flags. risk_score 0-100 integer only.`;
 

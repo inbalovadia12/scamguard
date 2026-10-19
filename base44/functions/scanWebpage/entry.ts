@@ -40,7 +40,7 @@ async function decodeQrServerSide(imageDataUrl: string): Promise<string> {
   }
 }
 
-async function followRedirects(url: string): Promise<{ finalUrl: string; pageTitle: string | null; contentType: string | null }> {
+async function followRedirects(url: string): Promise<{ finalUrl: string; pageTitle: string | null; contentType: string | null; pageText: string }> {
   // Uses the shared SSRF-safe fetch: validates every redirect destination
   // against private/internal IPs (DNS-pinning), caps response size, and
   // applies a timeout. Prevents the QR redirect path from acting as an SSRF
@@ -48,21 +48,35 @@ async function followRedirects(url: string): Promise<{ finalUrl: string; pageTit
   try {
     const result = await safeFetchText(url, {
       timeoutMs: 6000,
-      maxBytes: 1024 * 1024,
+      maxBytes: 2 * 1024 * 1024,
       maxRedirects: 4,
     });
     if (!result.ok) {
-      return { finalUrl: url, pageTitle: null, contentType: null };
+      return { finalUrl: url, pageTitle: null, contentType: null, pageText: '' };
     }
     const contentType = result.contentType;
     let pageTitle: string | null = null;
+    let pageText = '';
     if (contentType && contentType.includes('text/html')) {
       const titleMatch = result.text.match(/<title[^>]*>([^<]*)<\/title>/i);
       if (titleMatch) pageTitle = titleMatch[1].trim();
+      // Extract visible text so the LLM can analyze what the page actually
+      // shows — not just the domain. A YouTube video page, a Pinterest pin,
+      // or a phishing page on a legitimate-looking domain all need content
+      // analysis, not just "the domain is well-known so it's safe."
+      pageText = result.text
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .substring(0, 5000);
     }
-    return { finalUrl: result.finalUrl, pageTitle, contentType };
+    return { finalUrl: result.finalUrl, pageTitle, contentType, pageText };
   } catch {
-    return { finalUrl: url, pageTitle: null, contentType: null };
+    return { finalUrl: url, pageTitle: null, contentType: null, pageText: '' };
   }
 }
 
@@ -173,6 +187,7 @@ Deno.serve(async (req) => {
     let qrDecodedContent = '';
     let qrFinalUrl = '';
     let qrPageTitle = '';
+    let qrPageText = '';
 
     // VirusTotal + URLhaus only matter for URL-based scans. Running them for
     // screenshot / email / chat / marketplace / page-screenshot scans wastes time,
@@ -217,6 +232,7 @@ Deno.serve(async (req) => {
         const redirectResult = await followRedirects(qrDecodedContent);
         qrFinalUrl = redirectResult.finalUrl;
         qrPageTitle = redirectResult.pageTitle;
+        qrPageText = redirectResult.pageText || '';
 
         // Check the QR's actual destination (NOT the tab the user is on) against
         // both VirusTotal and URLhaus, in parallel.
@@ -367,7 +383,7 @@ Deno.serve(async (req) => {
     // === Build LLM prompt (only call if not obviously safe/dangerous) ===
     let prompt = 'You are Vardin, an expert scam and fraud detection AI.\n\n';
     prompt += 'IMPORTANT: Respond entirely in ' + languageName + '. All text must be in ' + languageName + '.\n\n';
-    prompt += 'CRITICAL EVIDENCE RULES: Only report scam indicators that are actually present in the supplied URL, page content, redirects, screenshot, QR destination, or threat-intelligence results. Never invent a scam scenario, attacker goal, credential request, payment request, urgency, manipulation tactic, or other evidence. A legitimate official domain is not made suspicious just because scammers sometimes impersonate that brand elsewhere. Only say the page asks for credentials, payment, personal information, or access when the supplied evidence actually shows that request. For benign content, tactics_detected, red_flags, and scam-specific educational fields must be empty. what_they_want must describe what THIS PAGE is actually requesting, not what scammers generally want. what_to_say is only for suspicious/scam situations. If the URL is the official/primary domain of a well-known company (e.g. amazon.com, google.com, paypal.com, microsoft.com, apple.com) and the threat-intel results show no malicious reports, you MUST return risk_level "low", a low risk_score, and leave tactics_detected, red_flags, what_they_want, and scam_category EMPTY. Do NOT produce generic educational content about how scammers impersonate that brand.\n\n';
+    prompt += 'CRITICAL EVIDENCE RULES: Only report scam indicators that are actually present in the supplied URL, page content, redirects, screenshot, QR destination, or threat-intelligence results. Never invent a scam scenario, attacker goal, credential request, payment request, urgency, manipulation tactic, or other evidence. A legitimate official domain is not made suspicious just because scammers sometimes impersonate that brand elsewhere. Only say the page asks for credentials, payment, personal information, or access when the supplied evidence actually shows that request. For benign content, tactics_detected, red_flags, and scam-specific educational fields must be empty. what_they_want must describe what THIS PAGE is actually requesting, not what scammers generally want. what_to_say is only for suspicious/scam situations. Only treat the ROOT of an official domain (e.g. amazon.com with NO path, google.com with NO path) as automatically safe when threat-intel is clean. If the URL has a specific path (e.g. youtube.com/watch?v=xxx, pinterest.com/pin/xxx), you MUST analyze the actual page content and destination — do NOT auto-dismiss it as safe just because the domain is well-known. Scammers use legitimate platforms to host scam content.\n\n';
     if (vtReport) {
       prompt += 'VIRUSTOTAL: ' + vtReport.malicious + ' malicious, ' + vtReport.suspicious + ' suspicious, ' + vtReport.harmless + ' harmless, reputation: ' + vtReport.reputation + '\n\n';
     }
@@ -405,7 +421,8 @@ Deno.serve(async (req) => {
       prompt += 'QR decoded to: ' + qrDecodedContent + '\n';
       if (qrFinalUrl !== qrDecodedContent) prompt += 'Final destination after redirects: ' + qrFinalUrl + '\n';
       if (qrPageTitle) prompt += 'Destination page title: "' + qrPageTitle + '"\n';
-      prompt += '\nAnalyze for: phishing, malware, scam risks.\n';
+      if (qrPageText) prompt += '\nDestination page content:\n' + qrPageText + '\n';
+      prompt += '\nAnalyze the ACTUAL destination content for phishing, malware, scam risks. Do NOT dismiss this as safe just because the domain is well-known — analyze what the page actually shows, asks for, or downloads. Scammers use legitimate platforms (YouTube, Pinterest, etc.) to host scam content.\n';
     } else if (scanType === 'screenshot') {
       prompt += 'Analyze the attached screenshot for scam indicators.\n';
     }
