@@ -8,7 +8,7 @@ export const EXTENSION_FILES = {
   'manifest.json': String.raw`{
   "manifest_version": 3,
   "name": "Vardin Scam Scanner",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "AI-powered scam detection and real-time protection for any webpage.",
   "permissions": ["activeTab", "scripting", "storage", "tabs"],
   "host_permissions": ["<all_urls>"],
@@ -48,7 +48,7 @@ export const EXTENSION_FILES = {
   }
 }
 `,
-  'background.js': String.raw`// Vardin Extension - Background Service Worker v2.0
+  'background.js': String.raw`// Vardin Extension - Background Service Worker v2.1
 // Handles: auth token storage, language sync, auto-scan, badge, message routing
 
 var APP_BASE = 'https://vardin.base44.app';
@@ -533,7 +533,7 @@ html[dir="rtl"] .flag-list li::before, html[dir="rtl"] .action-list li::before {
 `,
 };
 
-export const README_CONTENT = `Vardin Scam Scanner - Chrome Extension v2.0
+export const README_CONTENT = `Vardin Scam Scanner - Chrome Extension v2.1
 ==============================================
 
 FEATURES
