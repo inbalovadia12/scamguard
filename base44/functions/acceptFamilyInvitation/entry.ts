@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
-import { normalizePlan, planDisplayName } from '../../shared/familyPricing.ts';
+import { normalizePlan, planDisplayName, resolveFamilyLimitBackend } from '../../shared/familyPricing.ts';
 
 const PLAN_RANK: Record<string, number> = { starter: 0, plus: 1, premium: 2 };
 
@@ -30,9 +30,12 @@ export default async function(req: Request): Promise<Response> {
       if (seen.has(m.id)) continue;
       seen.add(m.id);
       if (m.senior_user_id && m.senior_user_id !== user.id) continue;
-      // Reject self-created records: a user cannot invite themselves. Only
-      // records created by the guardian (through addFamilyMember, where
-      // created_by_id === guardian_id) are valid invitations.
+      // A user cannot be their own guardian — reject self-acceptance.
+      if (m.guardian_id === user.id) continue;
+      // Only records created by the guardian (through addFamilyMember, where
+      // created_by_id === guardian_id) are valid invitations. This prevents
+      // user A from creating a record with guardian_id = user B and then
+      // accepting it to inherit user B's paid plan.
       if (m.created_by_id !== m.guardian_id) continue;
       if (!m.consent_given) pending.push(m);
     }
@@ -45,7 +48,47 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ error: 'Invitation not found' }, { status: 404 });
     }
 
+    // Enforce the guardian's family-member limit before accepting. Count
+    // already-accepted members per guardian and reject records that would
+    // exceed the limit. This prevents a paid user from creating unlimited
+    // ProtectedSenior records directly via the entity API and having each
+    // accepted by a different user to grant them paid-plan benefits.
+    const guardianAcceptedCount = new Map<string, number>();
+    const guardianLimit = new Map<string, number>();
+    const accepted: any[] = [];
+    const rejected: any[] = [];
     for (const m of toAccept) {
+      if (!m.guardian_id) { rejected.push(m); continue; }
+      let limit = guardianLimit.get(m.guardian_id);
+      if (limit === undefined) {
+        try {
+          const guardian = await base44.asServiceRole.entities.User.get(m.guardian_id);
+          const gp = normalizePlan(guardian?.subscription_plan);
+          limit = resolveFamilyLimitBackend(gp, guardian);
+        } catch { limit = 1; }
+        guardianLimit.set(m.guardian_id, limit);
+      }
+      let count = guardianAcceptedCount.get(m.guardian_id);
+      if (count === undefined) {
+        const existing = await base44.asServiceRole.entities.ProtectedSenior.filter(
+          { guardian_id: m.guardian_id, consent_given: true }
+        );
+        count = Array.isArray(existing) ? existing.length : 0;
+      }
+      if (count >= limit) { rejected.push(m); continue; }
+      guardianAcceptedCount.set(m.guardian_id, count + 1);
+      accepted.push(m);
+    }
+
+    if (accepted.length === 0) {
+      return Response.json({
+        accepted: false,
+        message: 'Family member limit reached for this guardian',
+        rejected_count: rejected.length,
+      }, { status: 402 });
+    }
+
+    for (const m of accepted) {
       await base44.asServiceRole.entities.ProtectedSenior.update(m.id, {
         senior_user_id: user.id,
         consent_given: true,
@@ -54,7 +97,7 @@ export default async function(req: Request): Promise<Response> {
 
     const currentPlan = normalizePlan(user.subscription_plan);
     let bestPlan = currentPlan;
-    for (const m of toAccept) {
+    for (const m of accepted) {
       // Verify the guardian's actual plan server-side via the User record —
       // never trust the client-writable guardian_plan field on the
       // ProtectedSenior record, which any user can set to "premium".
@@ -75,7 +118,8 @@ export default async function(req: Request): Promise<Response> {
 
     return Response.json({
       accepted: true,
-      count: toAccept.length,
+      count: accepted.length,
+      rejected_count: rejected.length,
       upgraded_to: bestPlan !== currentPlan ? bestPlan : null,
       plan_name: planDisplayName(bestPlan),
     });

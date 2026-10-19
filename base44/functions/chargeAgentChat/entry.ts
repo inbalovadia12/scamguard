@@ -1,20 +1,20 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 
-// Charges credits for an agent-chat message. Reads and writes credit fields
-// via the service role so the client-writable updateMe channel cannot reset
-// or inflate the balance.
+// Charges credits for an agent-chat message. The per-message cost is a
+// server-authoritative constant — never read from the client request, so a
+// caller cannot undercharge themselves. Reads and writes credit fields via
+// the service role so the client-writable updateMe channel cannot reset or
+// inflate the balance.
+const AGENT_CHAT_COST = 2;
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Authentication required' }, { status: 401 });
 
-    const body = await req.json().catch(() => ({}));
-    const cost = Number(body?.cost) || 2;
-    if (!Number.isInteger(cost) || cost <= 0) {
-      return Response.json({ error: 'Invalid credit cost' }, { status: 400 });
-    }
+    const cost = AGENT_CHAT_COST;
 
     // Read authoritative credit values via the service role to prevent
     // client-side reset attacks (updateMe writing credits_used: 0).
