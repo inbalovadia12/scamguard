@@ -287,10 +287,10 @@ export default function AgentChat() {
               <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
                 <Bot className="w-7 h-7 text-primary" />
               </div>
-              <h2 className="font-semibold text-lg font-heading">Ask Vardin AI</h2>
+              <h2 className="font-semibold text-lg font-heading">How can I help?</h2>
               <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-                Paste a suspicious message, upload a screenshot, or ask a question about scams.
-                I'll analyze it and explain what to do.
+                Ask me anything — questions, ideas, or something that feels off.
+                Paste a suspicious message or screenshot and I'll tell you if it's a scam.
               </p>
             </div>
           )}
@@ -321,7 +321,7 @@ export default function AgentChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Paste a message or ask about a scam..."
+              placeholder="Ask me anything, or paste a message to check for scams..."
               className="border-0 resize-none min-h-[44px] max-h-32 focus-visible:ring-0 bg-transparent"
               rows={1}
             />
