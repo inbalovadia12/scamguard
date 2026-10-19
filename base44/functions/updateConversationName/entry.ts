@@ -20,11 +20,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Name cannot be empty' }, { status: 400 });
     }
 
-    // Upsert the conversation meta record (keyed by conversation_id)
-    const result = await base44.entities.ConversationMeta.upsert(
-      [{ conversation_id, name: trimmedName }],
-      { key: 'conversation_id' }
-    );
+    // Create or update the ConversationMeta record for this conversation.
+    // (Using filter + create/update instead of upsert for SDK compatibility.)
+    const existing = await base44.entities.ConversationMeta.filter({ conversation_id });
+    let result;
+    if (existing && existing.length > 0) {
+      result = await base44.entities.ConversationMeta.update(existing[0].id, { name: trimmedName });
+    } else {
+      result = await base44.entities.ConversationMeta.create({ conversation_id, name: trimmedName });
+    }
 
     return Response.json({ ok: true, name: trimmedName, result });
   } catch (error: any) {

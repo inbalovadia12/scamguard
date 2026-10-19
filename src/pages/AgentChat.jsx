@@ -29,8 +29,23 @@ export default function AgentChat() {
   const loadConversations = async () => {
     try {
       const list = await base44.agents.listConversations({ agent_name: "scam_analyzer" });
-      setConversations(list || []);
-      return list || [];
+      // Merge custom names from ConversationMeta (the SDK lacks updateConversation,
+      // so renames and AI titles are persisted there and merged at load time).
+      let nameMap = {};
+      try {
+        const metaRecords = await base44.entities.ConversationMeta.filter({});
+        for (const m of metaRecords) {
+          if (m.conversation_id) nameMap[m.conversation_id] = m.name;
+        }
+      } catch {}
+      const merged = (list || []).map((conv) => {
+        const customName = nameMap[conv.id];
+        return customName
+          ? { ...conv, metadata: { ...conv.metadata, name: customName } }
+          : conv;
+      });
+      setConversations(merged);
+      return merged;
     } finally {
       setLoadingConvs(false);
     }
