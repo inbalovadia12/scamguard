@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { secrets } from "base44:runtime";
 import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
@@ -57,7 +58,7 @@ async function validateUrlSafe(urlStr: string): Promise<{ ok: boolean; error?: s
 }
 
 async function getVirusTotalReport(url: string): Promise<any | null> {
-  const apiKey = Deno.env.get("VIRUSTOTAL_API_KEY");
+  const apiKey = secrets.get("VIRUSTOTAL_API_KEY") as string | undefined;
   if (!apiKey) return null;
   try {
     const urlBytes = new TextEncoder().encode(url);

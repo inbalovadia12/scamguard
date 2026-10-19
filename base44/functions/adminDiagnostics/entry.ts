@@ -17,16 +17,10 @@ const REQUIRED_SECRETS = [
 
 function readSecret(name: string): boolean {
   try {
-    const v = secrets?.get?.(name);
-    if (v) return true;
+    return !!secrets?.get?.(name);
   } catch {
-    /* fall through */
+    return false;
   }
-  // @ts-ignore Deno available in function runtime
-  if (typeof Deno !== "undefined" && Deno.env) {
-    return !!Deno.env.get(name);
-  }
-  return false;
 }
 
 Deno.serve(async (req) => {

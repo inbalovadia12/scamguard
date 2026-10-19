@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { secrets } from "base44:runtime";
 import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 import {
   buildAnalysisPrompt,
@@ -266,7 +267,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: "audio_input required" }, { status: 400 });
     }
 
-    const assemblyKey = Deno.env.get("ASSEMBLYAI_API_KEY");
+    const assemblyKey = secrets.get("ASSEMBLYAI_API_KEY") as string | undefined;
     if (!assemblyKey) {
       return Response.json({ error: "STT not configured" }, { status: 500 });
     }

@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { secrets } from "base44:runtime";
 import { getAvailableCredits } from '../../shared/credits.ts';
 
 // Issues a short-lived AssemblyAI Streaming v3 token so the browser can open
@@ -26,7 +27,7 @@ Deno.serve(async (req) => {
       }, { status: 402 });
     }
 
-    const assemblyKey = Deno.env.get('ASSEMBLYAI_API_KEY');
+    const assemblyKey = secrets.get('ASSEMBLYAI_API_KEY') as string | undefined;
     if (!assemblyKey) {
       return Response.json({ error: 'STT not configured' }, { status: 500 });
     }
