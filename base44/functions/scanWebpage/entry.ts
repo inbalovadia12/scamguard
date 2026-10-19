@@ -376,7 +376,18 @@ Deno.serve(async (req) => {
       prompt += 'URLHAUS: URL is NOT listed in malware database.\n\n';
     }
 
-    prompt += 'Page URL: ' + (page_url || 'unknown') + '\n\n';
+    if (isUrlScan && page_url) {
+      prompt += 'Full URL: ' + page_url + '\n';
+      try {
+        const parsedUrl = new URL(page_url);
+        if (parsedUrl.pathname && parsedUrl.pathname !== '/') prompt += 'URL Path: ' + parsedUrl.pathname + '\n';
+        if (parsedUrl.search) prompt += 'URL Query: ' + parsedUrl.search + '\n';
+        if (parsedUrl.hash) prompt += 'URL Fragment: ' + parsedUrl.hash + '\n';
+      } catch {}
+      prompt += 'Analyze the FULL URL including the path, query parameters, and fragments — not just the domain. Phishing URLs often use legitimate domains with suspicious paths (e.g., /login.php, /verify-account, /wallet-connect). A specific path can indicate a scam even when the domain looks legitimate.\n\n';
+    } else {
+      prompt += 'Page URL: ' + (page_url || 'unknown') + '\n\n';
+    }
 
     if (scanType === 'page') {
       if (scanMode === 'text' || scanMode === 'both') {
@@ -397,6 +408,10 @@ Deno.serve(async (req) => {
       prompt += '\nAnalyze for: phishing, malware, scam risks.\n';
     } else if (scanType === 'screenshot') {
       prompt += 'Analyze the attached screenshot for scam indicators.\n';
+    }
+
+    if (customFocus) {
+      prompt += '\nUSER CUSTOM FOCUS: The user specifically wants you to focus on: ' + customFocus + '\nTailor your analysis to address this specific question or concern. If it is a question, answer it directly. Weigh this focus heavily in your assessment.\n';
     }
 
     let responseSchema;

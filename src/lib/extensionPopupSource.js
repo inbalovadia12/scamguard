@@ -78,6 +78,11 @@ export const POPUP_HTML = String.raw`<!DOCTYPE html>
         </select>
       </div>
 
+      <div id="url-input-field" class="field hidden">
+        <label data-i18n="url_label">URL to Check</label>
+        <input type="text" id="url-input" data-i18n-placeholder="url_placeholder" placeholder="https://example.com/page">
+      </div>
+
       <div id="page-prompt-field" class="field hidden">
         <p class="page-prompt" data-i18n="page_summary_desc">Capture a screenshot of the page and Vardin will summarize what it is and check it for scams.</p>
       </div>
@@ -170,6 +175,7 @@ var I18N = {
     page_summary_label: 'What this page is', scam_evaluation: 'Scam Evaluation',
     page_summary_desc: 'Capture a screenshot of the page and Vardin will summarize what it is and check it for scams.',
     scan_mode: 'Scan Mode', mode_text: 'Page Text', mode_screenshot: 'Screenshot', mode_both: 'Text + Screenshot',
+    url_label: 'URL to Check', url_placeholder: 'Enter a URL or leave blank to scan current page', scanned_url_label: 'Scanned URL',
     content_label: 'Content',
     content_placeholder_email: 'Paste the email content here...',
     content_placeholder_chat: 'Paste the chat / SMS messages here...',
@@ -221,6 +227,7 @@ var I18N = {
     page_summary_label: 'מהו הדף', scam_evaluation: 'הערכת הונאה',
     page_summary_desc: 'צלם צילום מסך של הדף ו-Vardin יסכם מה הדף ויבדוק אותו להונאות.',
     scan_mode: 'מצב סריקה', mode_text: 'טקסט הדף', mode_screenshot: 'צילום מסך', mode_both: 'טקסט + צילום',
+    url_label: 'כתובת לבדיקה', url_placeholder: 'הזן כתובת או השאר ריק לסרוק את הדף הנוכחי', scanned_url_label: 'כתובת שנסרקה',
     content_label: 'תוכן',
     content_placeholder_email: 'הדבק את תוכן האימייל כאן...',
     content_placeholder_chat: 'הדבק את הודעות הצ\'אט / SMS כאן...',
@@ -272,6 +279,7 @@ var I18N = {
     page_summary_label: 'Qué es esta página', scam_evaluation: 'Evaluación de estafa',
     page_summary_desc: 'Captura una captura de la página y Vardin resumirá qué es y la comprobará en busca de estafas.',
     scan_mode: 'Modo de escaneo', mode_text: 'Texto de la página', mode_screenshot: 'Captura de pantalla', mode_both: 'Texto + Captura',
+    url_label: 'URL a verificar', url_placeholder: 'Ingresa una URL o deja en blanco para escanear la página actual', scanned_url_label: 'URL escaneada',
     content_label: 'Contenido',
     content_placeholder_email: 'Pega el contenido del correo aquí...',
     content_placeholder_chat: 'Pega los mensajes de chat / SMS aquí...',
@@ -453,6 +461,9 @@ function onScanTypeChange() {
   var scanType = document.getElementById('scan-type').value;
   var showText = scanType === 'email' || scanType === 'chat' || scanType === 'marketplace';
   document.getElementById('text-input-field').classList.toggle('hidden', !showText);
+  var showUrl = scanType === 'url';
+  var urlField = document.getElementById('url-input-field');
+  if (urlField) urlField.classList.toggle('hidden', !showUrl);
   if (showText) {
     document.getElementById('content-input').placeholder = t('content_placeholder_' + scanType);
   }
@@ -549,6 +560,12 @@ async function scanPage() {
     var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     var tab = tabs[0];
     var pageUrl = tab ? tab.url : '';
+    var customUrlEl = document.getElementById('url-input');
+    var customUrl = customUrlEl ? customUrlEl.value.trim() : '';
+    if (scanType === 'url' && customUrl) {
+      if (!/^https?:\/\//i.test(customUrl)) customUrl = 'https://' + customUrl;
+      pageUrl = customUrl;
+    }
 
     if (pageUrl && (pageUrl.indexOf('chrome://') === 0 || pageUrl.indexOf('chrome-extension://') === 0)) {
       if (scanType === 'page' || scanType === 'url' || scanType === 'screenshot') {
@@ -641,6 +658,7 @@ async function scanPage() {
     }
     lastAnalysis = data.analysis || {};
     lastScanInfo = { scan_type: data.scan_type, answer_type: data.answer_type, virustotal: data.virustotal, timestamp: data.timestamp, credits_used: data.credits_used };
+    data.scanned_url = pageUrl;
     displayResults(data, data.answer_type || answerType);
   } catch (error) {
     resultsDiv.innerHTML = '<div class="error-box"><p>' + escapeHtml('\u26A0\uFE0F ' + error.message) + '</p></div>';
@@ -656,6 +674,11 @@ function displayResults(data, answerType) {
   var a = data.analysis || {};
   var mode = data.answer_type || answerType;
   var html = '';
+
+  // Show the scanned URL for URL scans
+  if (data.scan_type === 'url' && data.scanned_url) {
+    html += '<div class="qr-dest-card"><p class="qr-label">' + t('scanned_url_label') + '</p><p class="qr-value">' + escapeHtml(data.scanned_url) + '</p></div>';
+  }
 
   // Page Summary card (shown at the top for page scans)
   if (a.page_summary) {

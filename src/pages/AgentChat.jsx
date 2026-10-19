@@ -23,6 +23,7 @@ export default function AgentChat() {
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [credits, setCredits] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingTitleGen, setPendingTitleGen] = useState(false);
   const messagesEndRef = useRef(null);
 
   const loadConversations = async () => {
@@ -94,6 +95,47 @@ export default function AgentChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // After the first AI response arrives, generate a descriptive title.
+  useEffect(() => {
+    if (!pendingTitleGen || !conversation?.id) return;
+    const aiMessages = messages.filter((m) => m.role === "assistant");
+    if (aiMessages.length === 0) return;
+    setPendingTitleGen(false);
+    (async () => {
+      try {
+        const response = await base44.functions.invoke("generateChatTitle", {
+          messages: messages.slice(0, 4).map((m) => ({ role: m.role, content: m.content })),
+        });
+        const title = response?.data?.title || response?.title;
+        if (title && title !== "New Chat") {
+          await base44.agents.updateConversation(conversation.id, { metadata: { name: title } });
+          setConversation((prev) => prev?.id === conversation.id
+            ? { ...prev, metadata: { ...prev.metadata, name: title } }
+            : prev);
+          setConversations((prev) => prev.map((c) => c.id === conversation.id
+            ? { ...c, metadata: { ...c.metadata, name: title } }
+            : c));
+        }
+      } catch {}
+    })();
+  }, [pendingTitleGen, messages, conversation?.id]);
+
+  const handleRename = async (convId, newName) => {
+    try {
+      await base44.agents.updateConversation(convId, { metadata: { name: newName } });
+      setConversations((prev) => prev.map((c) => c.id === convId
+        ? { ...c, metadata: { ...c.metadata, name: newName } }
+        : c));
+      if (conversation?.id === convId) {
+        setConversation((prev) => prev?.id === convId
+          ? { ...prev, metadata: { ...prev.metadata, name: newName } }
+          : prev);
+      }
+    } catch (e) {
+      toast({ title: "Could not rename", description: e.message, variant: "destructive" });
+    }
+  };
 
   const handleSelectConversation = async (convId) => {
     setSidebarOpen(false);
@@ -178,18 +220,20 @@ export default function AgentChat() {
         file_urls: fileUrls.length > 0 ? fileUrls : undefined,
       });
 
-      // Update conversation name if it's still "New Chat"
+      // Set a temporary title from the first message; the AI will generate a
+      // better one after the first response arrives (see pendingTitleGen effect).
       if (activeConversation?.metadata?.name === "New Chat" && messageContent) {
-        const title = messageContent.slice(0, 40) + (messageContent.length > 40 ? "…" : "");
+        const tempTitle = messageContent.slice(0, 40) + (messageContent.length > 40 ? "…" : "");
         try {
-          await base44.agents.updateConversation(activeConversation.id, { metadata: { name: title } });
+          await base44.agents.updateConversation(activeConversation.id, { metadata: { name: tempTitle } });
           setConversation((prev) => prev?.id === activeConversation.id
-            ? { ...prev, metadata: { ...prev.metadata, name: title } }
+            ? { ...prev, metadata: { ...prev.metadata, name: tempTitle } }
             : prev);
           setConversations((prev) => prev.map((c) => c.id === activeConversation.id
-            ? { ...c, metadata: { ...c.metadata, name: title } }
+            ? { ...c, metadata: { ...c.metadata, name: tempTitle } }
             : c));
         } catch {}
+        setPendingTitleGen(true);
       }
 
       try { await base44.functions.invoke("chargeAgentChat", { cost }); } catch {}
@@ -237,6 +281,7 @@ export default function AgentChat() {
           onSelect={handleSelectConversation}
           onNew={handleNewConversation}
           onDelete={handleDeleteConversation}
+          onRename={handleRename}
           loading={loadingConvs}
         />
       </div>
@@ -252,6 +297,7 @@ export default function AgentChat() {
               onSelect={handleSelectConversation}
               onNew={handleNewConversation}
               onDelete={handleDeleteConversation}
+              onRename={handleRename}
               loading={loadingConvs}
             />
           </div>
