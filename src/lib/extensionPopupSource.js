@@ -1,6 +1,8 @@
 // Extension popup source files (HTML + JS) exported as strings.
 // Imported by extensionFiles.js and packaged into the downloadable ZIP.
 
+import { POPUP_FEATURES_JS } from '@/lib/extensionPopupFeaturesSource';
+
 export const POPUP_HTML = String.raw`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,6 +20,9 @@ export const POPUP_HTML = String.raw`<!DOCTYPE html>
         <span>Vardin</span>
       </div>
       <div class="header-right">
+        <button id="history-btn" class="icon-btn hidden" data-i18n-title="history" aria-label="History">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>
         <select id="lang-select" class="lang-select" aria-label="Language">
           <option value="en">EN</option>
           <option value="he">עב</option>
@@ -64,6 +69,18 @@ export const POPUP_HTML = String.raw`<!DOCTYPE html>
     </div>
 
     <div id="scan-view" class="view hidden">
+      <div id="site-bar" class="site-bar hidden">
+        <span id="site-host" class="site-host"></span>
+        <div class="site-actions">
+          <button id="trust-btn" class="chip-btn" data-i18n="never_warn">Never warn here</button>
+          <button id="watch-btn" class="chip-btn" data-i18n="always_check">Always check</button>
+        </div>
+      </div>
+
+      <div id="cached-card" class="cached-card hidden"></div>
+      <div id="bg-card" class="cached-card hidden"></div>
+      <div id="phone-chips" class="phone-chips hidden"></div>
+
       <div class="field">
         <label data-i18n="scan_type">Scan Type</label>
         <select id="scan-type">
@@ -127,7 +144,15 @@ export const POPUP_HTML = String.raw`<!DOCTYPE html>
 
       <div id="results" class="results hidden"></div>
     </div>
+
+    <div id="history-view" class="view hidden">
+      <h2 data-i18n="history">History</h2>
+      <div id="history-list" class="history-list"></div>
+      <button id="clear-history-btn" class="btn-secondary" data-i18n="clear_history">Clear history</button>
+      <button id="back-to-scan-btn" class="btn-secondary" data-i18n="back_to_scan">Back</button>
+    </div>
   </div>
+  <script src="shared.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
@@ -402,13 +427,15 @@ function isSafeUrl(url) {
 }
 
 function showView(name) {
-  var views = ['loading', 'login', 'upgrade', 'scan'];
+  var views = ['loading', 'login', 'upgrade', 'scan', 'history'];
   for (var i = 0; i < views.length; i++) {
     var el = document.getElementById(views[i] + '-view');
     if (el) el.classList.toggle('hidden', views[i] !== name);
   }
   var logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) logoutBtn.classList.toggle('hidden', name !== 'scan');
+  if (logoutBtn) logoutBtn.classList.toggle('hidden', !(name === 'scan' || name === 'history'));
+  var historyBtn = document.getElementById('history-btn');
+  if (historyBtn) historyBtn.classList.toggle('hidden', name !== 'scan');
 }
 
 function getStoredAuth() {
@@ -657,9 +684,10 @@ async function scanPage() {
       updateCreditDisplay();
     }
     lastAnalysis = data.analysis || {};
-    lastScanInfo = { scan_type: data.scan_type, answer_type: data.answer_type, virustotal: data.virustotal, timestamp: data.timestamp, credits_used: data.credits_used };
+    lastScanInfo = { scan_type: data.scan_type, answer_type: data.answer_type, virustotal: data.virustotal, timestamp: data.timestamp, credits_used: data.credits_used, scanned_url: pageUrl };
     data.scanned_url = pageUrl;
     displayResults(data, data.answer_type || answerType);
+    afterScan(data, pageUrl, tab);
   } catch (error) {
     resultsDiv.innerHTML = '<div class="error-box"><p>' + escapeHtml('\u26A0\uFE0F ' + error.message) + '</p></div>';
   } finally {
@@ -802,6 +830,8 @@ function displayResults(data, answerType) {
   html += '<button class="btn-action" id="act-share">' + t('share_report') + '</button>';
   html += '<button class="btn-action" id="act-download">' + t('download_report') + '</button>';
   html += '<button class="btn-action" id="act-rescan">' + t('scan_again') + '</button>';
+  html += '<button class="btn-action primary" id="act-family">' + t('ask_family') + '</button>';
+  html += '<button class="btn-action" id="act-report">' + t('report_community') + '</button>';
   html += '</div>';
 
   if (data.timestamp) {
@@ -849,6 +879,10 @@ function displayResults(data, answerType) {
     resultsDiv2.classList.add('hidden');
     resultsDiv2.innerHTML = '';
   });
+  var familyBtn = document.getElementById('act-family');
+  if (familyBtn) familyBtn.addEventListener('click', askFamily);
+  var reportBtn = document.getElementById('act-report');
+  if (reportBtn) reportBtn.addEventListener('click', reportCommunity);
 }
 
 async function init() {
@@ -884,6 +918,11 @@ async function init() {
   if (badge) { badge.textContent = authResult.plan ? authResult.plan.toUpperCase() : 'PREMIUM'; badge.classList.remove('hidden'); }
   showView('scan');
   updateCreditDisplay();
+  loadSiteBar();
+  loadCachedCard();
+  loadPendingCard();
+  loadPhoneChips();
+  loadFamilyContext();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -893,6 +932,20 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('scan-btn').addEventListener('click', scanPage);
   document.getElementById('scan-type').addEventListener('change', onScanTypeChange);
   document.getElementById('lang-select').addEventListener('change', function(e) { setLang(e.target.value); });
+
+  var historyBtn = document.getElementById('history-btn');
+  if (historyBtn) historyBtn.addEventListener('click', showHistory);
+  var backBtn = document.getElementById('back-to-scan-btn');
+  if (backBtn) backBtn.addEventListener('click', function() { showView('scan'); });
+  var clearBtn = document.getElementById('clear-history-btn');
+  if (clearBtn) clearBtn.addEventListener('click', function() {
+    sendMessage({ type: 'CLEAR_HISTORY' }).then(renderHistory);
+  });
+  var trustBtn = document.getElementById('trust-btn');
+  if (trustBtn) trustBtn.addEventListener('click', function() { toggleSite('allow', 'trust-btn'); });
+  var watchBtn = document.getElementById('watch-btn');
+  if (watchBtn) watchBtn.addEventListener('click', function() { toggleSite('always', 'watch-btn'); });
+  window.addEventListener('pagehide', function() { if (guidanceTimer) clearInterval(guidanceTimer); });
 
   // Log out: clear extension auth and return to login view
   var logoutBtn = document.getElementById('logout-btn');
@@ -987,4 +1040,4 @@ chrome.storage.onChanged.addListener(function(changes, area) {
     }
   }
 });
-`;
+` + POPUP_FEATURES_JS;
