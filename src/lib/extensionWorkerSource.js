@@ -192,6 +192,9 @@ function entryFrom(url, data) {
     score: Number(analysis.risk_score) || 0,
     level: analysis.risk_level || 'low',
     is_scam: analysis.is_scam === true,
+    // A page that could not be loaded was never verified, so the popup shows it
+    // as "could not check" instead of green.
+    inconclusive: analysis.inconclusive === true,
     summary: String(summary).slice(0, 300),
     ts: Date.now()
   };

@@ -4,6 +4,7 @@ import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
 import { matchKnownLegitimateDomain, matchOwnAppDomain } from '../../shared/legitimateDomains.ts';
+import { findBrandLookalike, lookalikeAnalysis } from '../../shared/brandLookalikes.ts';
 
 const CREDIT_COST = 7;
 
@@ -266,6 +267,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    // === BRAND-LOOKALIKE SHORTCUT ===
+    // An address that imitates a brand IS the scam attempt, whether or not it
+    // currently serves a page. An unreachable lookalike used to be reported as
+    // SAFE because the fetch returned nothing to analyze.
+    const lookalike = findBrandLookalike(targetUrl);
+    if (lookalike) {
+      const creditsRemaining = await chargeCredits();
+      return Response.json({
+        ...lookalikeAnalysis(lookalike, 'detailed'),
+        marketplace_platform: marketplace || '',
+        virustotal: vtReport,
+        urlhaus: urlhausReport,
+        credits_used: CREDIT_COST,
+        credits_remaining: creditsRemaining,
+        credits_limit: getMonthlyCreditLimit(authUser),
+        timing_ms: Date.now() - startTime,
+      });
+    }
+
     // === Build LLM prompt (only if not obviously malicious) ===
     const marketplaceContext = marketplace
       ? `\n\nMARKETPLACE: ${marketplace}. Analyze: seller reputation, pricing vs market value, stock photos, payment methods (gift cards/crypto = red flag), return policy.`
@@ -358,6 +378,16 @@ Check: typosquatting, suspicious TLDs, phishing forms, brand impersonation, urge
       result.why_scammers_do_this = '';
       result.what_they_want = '';
       result.what_to_say = '';
+    }
+
+    // The page could not be fetched, so nothing was verified. A dead link or a
+    // DNS failure is not proof of safety.
+    if (fetchError && result && result.risk_level !== 'high') {
+      result.risk_level = 'medium';
+      result.risk_score = Math.max(Number(result.risk_score) || 0, 45);
+      result.is_scam = false;
+      (result as any).inconclusive = true;
+      result.explanation = 'Vardin could not load this page, so nothing on it was verified. This does not mean the address is safe: a link that does not open can still be dangerous. Check the address carefully and treat an unexpected link with caution.';
     }
 
     if (marketplace && !result.marketplace_platform) {

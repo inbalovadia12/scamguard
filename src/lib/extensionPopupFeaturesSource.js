@@ -13,6 +13,16 @@ var I18N_EXTRA = {
     never_warn: 'Never warn here', always_check: 'Always check',
     cached_title: 'You already checked this page', cached_recheck: 'Check it again',
     looks_safe: 'Looks safe', looks_risky: 'Looks risky', looks_dangerous: 'Dangerous page', risk_score_label: 'Risk score',
+    looks_fake: 'Fake {brand} address', could_not_check: 'Could not check this page',
+    why_not_safe: 'Why this is not safe',
+    reason_imitates: 'This is not the real {brand} website. The address was changed to look like it.',
+    reason_real_address: 'The real address is {official}.',
+    reason_inconclusive: 'The page did not load, so nothing on it could be checked.',
+    reason_no_proof: 'A page that does not open is not proof that it is safe.',
+    reason_ip: 'The link uses numbers instead of a normal website name.',
+    reason_hidden_chars: 'The website name uses hidden characters to imitate another site.',
+    reason_odd_name: 'The website name mixes odd numbers and dashes, which is common on fake sites.',
+    reason_never_enter: 'Never type your password or card details on this page.',
     bg_title: 'Result from a quick scan', bg_show: 'Show report', bg_dismiss: 'Dismiss',
     phone_found: 'Phone numbers on this page',
     ask_family: 'Ask family', report_community: 'Report',
@@ -29,6 +39,16 @@ var I18N_EXTRA = {
     never_warn: '\u05D0\u05DC \u05EA\u05D6\u05D4\u05D9\u05E8 \u05DB\u05D0\u05DF', always_check: '\u05D1\u05D3\u05D5\u05E7 \u05EA\u05DE\u05D9\u05D3',
     cached_title: '\u05DB\u05D1\u05E8 \u05D1\u05D3\u05E7\u05EA \u05D0\u05EA \u05D4\u05D3\u05E3 \u05D4\u05D6\u05D4', cached_recheck: '\u05D1\u05D3\u05D5\u05E7 \u05E9\u05D5\u05D1',
     looks_safe: '\u05E0\u05E8\u05D0\u05D4 \u05D1\u05D8\u05D5\u05D7', looks_risky: '\u05E0\u05E8\u05D0\u05D4 \u05DE\u05E1\u05D5\u05DB\u05DF', looks_dangerous: '\u05D3\u05E3 \u05DE\u05E1\u05D5\u05DB\u05DF', risk_score_label: '\u05E6\u05D9\u05D5\u05DF \u05E1\u05D9\u05DB\u05D5\u05DF',
+    looks_fake: '\u05DB\u05EA\u05D5\u05D1\u05EA \u05DE\u05EA\u05D7\u05D6\u05D4 \u05DC-{brand}', could_not_check: '\u05DC\u05D0 \u05E0\u05D9\u05EA\u05DF \u05D4\u05D9\u05D4 \u05DC\u05D1\u05D3\u05D5\u05E7 \u05D0\u05EA \u05D4\u05D3\u05E3',
+    why_not_safe: '\u05DC\u05DE\u05D4 \u05D6\u05D4 \u05DC\u05D0 \u05D1\u05D8\u05D5\u05D7',
+    reason_imitates: '\u05D6\u05D5 \u05DC\u05D0 \u05D4\u05DB\u05EA\u05D5\u05D1\u05EA \u05D4\u05D0\u05DE\u05D9\u05EA\u05D9\u05EA \u05E9\u05DC {brand}. \u05DE\u05D9\u05E9\u05D4\u05D5 \u05E9\u05D9\u05E0\u05D4 \u05D0\u05EA \u05D4\u05DB\u05EA\u05D5\u05D1\u05EA \u05DB\u05D3\u05D9 \u05E9\u05EA\u05D9\u05E8\u05D0\u05D4 \u05D3\u05D5\u05DE\u05D4.',
+    reason_real_address: '\u05D4\u05DB\u05EA\u05D5\u05D1\u05EA \u05D4\u05D0\u05DE\u05D9\u05EA\u05D9\u05EA \u05D4\u05D9\u05D0 {official}.',
+    reason_inconclusive: '\u05D4\u05D3\u05E3 \u05DC\u05D0 \u05E0\u05D8\u05E2\u05DF, \u05D5\u05DC\u05DB\u05DF \u05DC\u05D0 \u05E0\u05D9\u05EA\u05DF \u05D4\u05D9\u05D4 \u05DC\u05D1\u05D3\u05D5\u05E7 \u05D0\u05D5\u05EA\u05D5.',
+    reason_no_proof: '\u05D3\u05E3 \u05E9\u05DC\u05D0 \u05E0\u05E4\u05EA\u05D7 \u05D0\u05D9\u05E0\u05D5 \u05D4\u05D5\u05DB\u05D7\u05D4 \u05E9\u05D4\u05D5\u05D0 \u05D1\u05D8\u05D5\u05D7.',
+    reason_ip: '\u05D4\u05E7\u05D9\u05E9\u05D5\u05E8 \u05DE\u05E9\u05EA\u05DE\u05E9 \u05D1\u05DE\u05E1\u05E4\u05E8\u05D9\u05DD \u05D1\u05DE\u05E7\u05D5\u05DD \u05D1\u05E9\u05DD \u05D0\u05EA\u05E8 \u05E8\u05D2\u05D9\u05DC.',
+    reason_hidden_chars: '\u05E9\u05DD \u05D4\u05D0\u05EA\u05E8 \u05DE\u05E9\u05EA\u05DE\u05E9 \u05D1\u05EA\u05D5\u05D5\u05D9\u05DD \u05DE\u05D5\u05E1\u05EA\u05E8\u05D9\u05DD \u05DB\u05D3\u05D9 \u05DC\u05D7\u05E7\u05D5\u05EA \u05D0\u05EA\u05E8 \u05D0\u05D7\u05E8.',
+    reason_odd_name: '\u05E9\u05DD \u05D4\u05D0\u05EA\u05E8 \u05DE\u05DB\u05D9\u05DC \u05E9\u05D9\u05DC\u05D5\u05D1 \u05D7\u05E8\u05D9\u05D2 \u05E9\u05DC \u05DE\u05E1\u05E4\u05E8\u05D9\u05DD \u05D5\u05DE\u05E7\u05E4\u05D9\u05DD, \u05E0\u05E4\u05D5\u05E5 \u05D1\u05D0\u05EA\u05E8\u05D9\u05DD \u05DE\u05D6\u05D5\u05D9\u05E4\u05D9\u05DD.',
+    reason_never_enter: '\u05D0\u05DC \u05EA\u05D6\u05D9\u05DF \u05E1\u05D9\u05E1\u05DE\u05D4 \u05D0\u05D5 \u05E4\u05E8\u05D8\u05D9 \u05DB\u05E8\u05D8\u05D9\u05E1 \u05D1\u05D3\u05E3 \u05D4\u05D6\u05D4.',
     bg_title: '\u05EA\u05D5\u05E6\u05D0\u05D4 \u05DE\u05E1\u05E8\u05D9\u05E7\u05D4 \u05DE\u05D4\u05D9\u05E8\u05D4', bg_show: '\u05D4\u05E6\u05D2 \u05D3\u05D5\u05D7', bg_dismiss: '\u05E1\u05D2\u05D5\u05E8',
     phone_found: '\u05DE\u05E1\u05E4\u05E8\u05D9 \u05D8\u05DC\u05E4\u05D5\u05DF \u05D1\u05D3\u05E3 \u05D4\u05D6\u05D4',
     ask_family: '\u05D1\u05E7\u05E9 \u05DE\u05D4\u05DE\u05E9\u05E4\u05D7\u05D4', report_community: '\u05D3\u05D5\u05D5\u05D7',
@@ -45,6 +65,16 @@ var I18N_EXTRA = {
     never_warn: 'No avisar aqui', always_check: 'Comprobar siempre',
     cached_title: 'Ya revisaste esta pagina', cached_recheck: 'Comprobar de nuevo',
     looks_safe: 'Parece seguro', looks_risky: 'Parece arriesgado', looks_dangerous: 'Pagina peligrosa', risk_score_label: 'Puntuacion de riesgo',
+    looks_fake: 'Direccion falsa de {brand}', could_not_check: 'No se pudo comprobar esta pagina',
+    why_not_safe: 'Por que no es segura',
+    reason_imitates: 'Esta no es la web real de {brand}. Alguien cambio la direccion para que lo parezca.',
+    reason_real_address: 'La direccion real es {official}.',
+    reason_inconclusive: 'La pagina no cargo, asi que no se pudo comprobar nada.',
+    reason_no_proof: 'Una pagina que no abre no es prueba de que sea segura.',
+    reason_ip: 'El enlace usa numeros en lugar de un nombre de web normal.',
+    reason_hidden_chars: 'El nombre de la web usa caracteres ocultos para imitar otro sitio.',
+    reason_odd_name: 'El nombre de la web mezcla numeros y guiones de forma rara, algo comun en sitios falsos.',
+    reason_never_enter: 'Nunca escribas tu contrasena ni los datos de tu tarjeta aqui.',
     bg_title: 'Resultado de un escaneo rapido', bg_show: 'Ver informe', bg_dismiss: 'Descartar',
     phone_found: 'Numeros de telefono en esta pagina',
     ask_family: 'Pedir ayuda', report_community: 'Reportar',
@@ -97,18 +127,46 @@ function isWebTab(tab) {
   return !!(tab && tab.url && tab.url.indexOf('http') === 0);
 }
 
+// Brand names as people write them, for warnings that name the brand.
+var BRAND_TITLES = {
+  paypal: 'PayPal', coinbase: 'Coinbase', metamask: 'MetaMask', cashapp: 'Cash App',
+  bankofamerica: 'Bank of America', wellsfargo: 'Wells Fargo', citibank: 'Citibank',
+  hapoalim: 'Bank Hapoalim', tiktok: 'TikTok', linkedin: 'LinkedIn',
+  whatsapp: 'WhatsApp', icloud: 'iCloud', aliexpress: 'AliExpress',
+  docusign: 'DocuSign', gmail: 'Gmail', outlook: 'Outlook', fedex: 'FedEx',
+  schwab: 'Charles Schwab', adobe: 'Adobe'
+};
+
+function brandTitle(brand) {
+  if (!brand) return '';
+  return BRAND_TITLES[brand] || (brand.charAt(0).toUpperCase() + brand.slice(1));
+}
+
+// The address itself is evidence, and it is checked offline: an address that
+// imitates a brand is a scam attempt even when the page is empty or unreachable.
+function lookalikeOf(url) {
+  if (!G || !G.detectLookalike || !url) return null;
+  try { return G.detectLookalike(url); } catch (e) { return null; }
+}
+
 // Plain-language verdict, never a technical term.
-function verdictWord(entry) {
+function verdictWord(entry, url) {
+  var look = lookalikeOf(url);
+  if (look) return t('looks_fake', { brand: brandTitle(look.brand) });
   if (!entry) return '';
+  if (entry.inconclusive) return t('could_not_check');
   if (entry.tier === 'block') return t('looks_dangerous');
   if (entry.tier === 'warn') return t('looks_risky');
   if (entry.score >= 36) return t('risk_score_label') + ' ' + entry.score + '/100';
   return t('looks_safe');
 }
 
-// Colour of the verdict: red = dangerous, amber = be careful, green = safe.
-function verdictClass(entry) {
+// Colour of the verdict: red = dangerous, amber = be careful, green = safe,
+// grey = we could not check. An imitated brand is always red.
+function verdictClass(entry, url) {
+  if (lookalikeOf(url)) return 'danger';
   if (!entry) return 'unknown';
+  if (entry.inconclusive) return 'unknown';
   if (entry.tier === 'block') return 'danger';
   if (entry.tier === 'warn') return 'caution';
   if (entry.score >= 36) return 'caution';
@@ -167,8 +225,8 @@ async function loadCachedCard() {
   var entry = res && res.entry;
   if (!entry) { card.classList.add('hidden'); return; }
   var when = new Date(entry.ts || Date.now()).toLocaleString();
-  card.className = 'cached-card verdict-' + verdictClass(entry);
-  card.innerHTML = '<div class="verdict-row"><span class="verdict-dot"></span><span class="verdict-label">' + escapeHtml(verdictWord(entry)) + '</span></div>' +
+  card.className = 'cached-card verdict-' + verdictClass(entry, tab.url);
+  card.innerHTML = '<div class="verdict-row"><span class="verdict-dot"></span><span class="verdict-label">' + escapeHtml(verdictWord(entry, tab.url)) + '</span></div>' +
     '<p class="cached-head">' + t('cached_title') + '</p>' +
     '<p class="cached-when">' + escapeHtml(when) + (entry.summary ? ' \u00B7 ' + escapeHtml(entry.summary) : '') + '</p>' +
     '<div class="cached-actions"><button class="btn-action primary" id="cached-recheck">' + t('cached_recheck') + '</button></div>';
@@ -184,8 +242,9 @@ async function loadPendingCard() {
   var pending = res && res.pending;
   if (!pending || !pending.data) return;
   var entry = pending.entry || {};
-  card.className = 'cached-card verdict-' + verdictClass(entry);
-  card.innerHTML = '<div class="verdict-row"><span class="verdict-dot"></span><span class="verdict-label">' + escapeHtml(verdictWord(entry)) + '</span></div>' +
+  var pendingUrl = pending.url || entry.url || '';
+  card.className = 'cached-card verdict-' + verdictClass(entry, pendingUrl);
+  card.innerHTML = '<div class="verdict-row"><span class="verdict-dot"></span><span class="verdict-label">' + escapeHtml(verdictWord(entry, pendingUrl)) + '</span></div>' +
     '<p class="cached-head">' + t('bg_title') + '</p>' +
     '<p class="cached-when">' + escapeHtml(entry.url || '') + '</p>' +
     '<div class="cached-actions">' +
@@ -361,6 +420,69 @@ async function reportCommunity() {
   resultsDiv.insertBefore(el, resultsDiv.firstChild);
 }
 
+// ---------- Why this is not safe ----------
+// Short, plain reasons a worried person can read out loud: what is wrong, and
+// what to do about it. Shown only when the result is not safe.
+function panelClass(data, url) {
+  if (lookalikeOf(url)) return 'danger';
+  var a = (data && data.analysis) || {};
+  if (a.inconclusive) return 'unknown';
+  var tier = 'none';
+  try { if (G) tier = G.tierFromResponse(data); } catch (e) {}
+  if (tier === 'block') return 'danger';
+  if (tier === 'warn') return 'caution';
+  if ((Number(a.risk_score) || 0) >= 36) return 'caution';
+  return 'safe';
+}
+
+function buildReasons(data, url) {
+  var a = (data && data.analysis) || {};
+  var reasons = [];
+
+  var look = lookalikeOf(url);
+  if (look) {
+    reasons.push(t('reason_imitates', { brand: brandTitle(look.brand) }));
+    if (look.official) reasons.push(t('reason_real_address', { official: look.official }));
+    reasons.push(t('reason_never_enter'));
+    return reasons;
+  }
+
+  if (a.inconclusive) {
+    reasons.push(t('reason_inconclusive'));
+    reasons.push(t('reason_no_proof'));
+    return reasons;
+  }
+
+  var host = '';
+  try { host = new URL(url).hostname; } catch (e) { host = ''; }
+  if (host && /^\d{1,3}(\.\d{1,3}){3}$/.test(host)) reasons.push(t('reason_ip'));
+  if (host.indexOf('xn--') !== -1) reasons.push(t('reason_hidden_chars'));
+  if (host && (host.match(/[0-9]/g) || []).length >= 4) reasons.push(t('reason_odd_name'));
+
+  var flags = (a.red_flags || []).concat(a.tactics_detected || []);
+  for (var i = 0; i < flags.length && reasons.length < 5; i++) {
+    var line = String(flags[i]).trim();
+    if (line) reasons.push(line);
+  }
+  if (!reasons.length && a.explanation) reasons.push(String(a.explanation));
+  return reasons.slice(0, 6);
+}
+
+function showReasons(data, url) {
+  var cls = panelClass(data, url);
+  if (cls === 'safe') return;
+  var reasons = buildReasons(data, url);
+  if (!reasons.length) return;
+  var resultsDiv = document.getElementById('results');
+  if (!resultsDiv || resultsDiv.querySelector('.why-panel')) return;
+  var panel = document.createElement('div');
+  panel.className = 'why-panel verdict-' + cls;
+  var html = '<p class="why-title">' + escapeHtml(t('why_not_safe')) + '</p><ul class="why-list">';
+  for (var i = 0; i < reasons.length; i++) html += '<li>' + escapeHtml(reasons[i]) + '</li>';
+  panel.innerHTML = html + '</ul>';
+  resultsDiv.insertBefore(panel, resultsDiv.firstChild);
+}
+
 // ---------- Scan history ----------
 function showHistory() {
   showView('history');
@@ -379,9 +501,9 @@ async function renderHistory() {
   var html = '';
   for (var i = 0; i < history.length; i++) {
     var h = history[i];
-    html += '<div class="history-item verdict-' + verdictClass(h) + '">' +
+    html += '<div class="history-item verdict-' + verdictClass(h, h.url) + '">' +
       '<span class="history-url">' + escapeHtml(h.url || '') + '</span>' +
-      '<span class="history-verdict">' + escapeHtml(verdictWord(h)) + '</span>' +
+      '<span class="history-verdict">' + escapeHtml(verdictWord(h, h.url)) + '</span>' +
       '<span class="history-meta">' + escapeHtml(new Date(h.ts || Date.now()).toLocaleString()) + '</span></div>';
   }
   list.innerHTML = html;
@@ -404,6 +526,7 @@ async function afterScan(data, url, tab) {
     } catch (e) {}
   }
   await sendMessage({ type: 'RECORD_SCAN', url: url, data: data, tabId: tab ? tab.id : null });
+  showReasons(data, url);
   loadCachedCard();
 }
 `;

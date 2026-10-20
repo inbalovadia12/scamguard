@@ -44,6 +44,40 @@ export const SHARED_JS = String.raw`// Vardin - shared risk gate (background + c
     'instagram', 'facebook', 'tiktok', 'docusign', 'icloud', 'outlook', 'gmail'
   ];
 
+  // The real address for each brand, so a warning can tell the user where to go
+  // instead ("the real address is paypal.com"). Kept in sync with
+  // base44/shared/brandLookalikes.ts.
+  var BRAND_OFFICIAL = {
+    paypal: 'paypal.com', coinbase: 'coinbase.com', metamask: 'metamask.io',
+    binance: 'binance.com', cashapp: 'cash.app', venmo: 'venmo.com',
+    zelle: 'zellepay.com', revolut: 'revolut.com', stripe: 'stripe.com',
+    shopify: 'shopify.com', amazon: 'amazon.com', google: 'google.com',
+    microsoft: 'microsoft.com', apple: 'apple.com', netflix: 'netflix.com',
+    facebook: 'facebook.com', instagram: 'instagram.com', whatsapp: 'whatsapp.com',
+    telegram: 'telegram.org', linkedin: 'linkedin.com', dropbox: 'dropbox.com',
+    icloud: 'icloud.com', outlook: 'outlook.com', gmail: 'gmail.com',
+    yahoo: 'yahoo.com', spotify: 'spotify.com', snapchat: 'snapchat.com',
+    tiktok: 'tiktok.com', discord: 'discord.com', twitch: 'twitch.tv',
+    airbnb: 'airbnb.com', aliexpress: 'aliexpress.com', alibaba: 'alibaba.com',
+    docusign: 'docusign.com', adobe: 'adobe.com', zoom: 'zoom.us',
+    walmart: 'walmart.com', costco: 'costco.com', tesco: 'tesco.com',
+    fedex: 'fedex.com', santander: 'santander.com', hapoalim: 'bankhapoalim.co.il',
+    robinhood: 'robinhood.com', fidelity: 'fidelity.com', vanguard: 'vanguard.com',
+    schwab: 'schwab.com', wellsfargo: 'wellsfargo.com',
+    bankofamerica: 'bankofamerica.com', citibank: 'citibank.com',
+    barclays: 'barclays.co.uk'
+  };
+
+  function officialFor(brand) {
+    return BRAND_OFFICIAL[brand] || brand + '.com';
+  }
+
+  // A brand joined to one of these words (paypalverify, amazonsupport) is an
+  // imitation. A brand inside an ordinary word (applebees) is not.
+  var AFFIX_WORDS = ['secure', 'security', 'login', 'signin', 'verify', 'verification',
+    'account', 'support', 'service', 'update', 'alert', 'billing', 'payment', 'help',
+    'auth', 'confirm', 'official', 'center', 'centre', 'team', 'online', 'safe', 'protection'];
+
   var TWO_LEVEL_TLDS = [
     'co.uk', 'org.uk', 'gov.uk', 'ac.uk', 'co.il', 'org.il', 'ac.il', 'com.au',
     'net.au', 'org.au', 'co.nz', 'co.za', 'com.br', 'com.mx', 'com.ar',
@@ -163,22 +197,45 @@ export const SHARED_JS = String.raw`// Vardin - shared risk gate (background + c
     // The brand's own domain is never an imitation.
     if (BRANDS.indexOf(label) !== -1) return null;
 
+    // A brand's real address buried inside a longer host:
+    // paypal.com.login-user.xyz
+    for (var n = 0; n < BRANDS.length; n++) {
+      var official = officialFor(BRANDS[n]);
+      if (host.indexOf(official + '.') !== -1) {
+        return { brand: BRANDS[n], official: official, reason: 'imitation' };
+      }
+    }
+
     var normalized = normalizeLabel(label);
     if (normalized !== label && BRANDS.indexOf(normalized) !== -1) {
-      return { brand: normalized, reason: 'lookalike' };
+      return { brand: normalized, official: officialFor(normalized), reason: 'lookalike' };
     }
 
     for (var i = 0; i < BRANDS.length; i++) {
       var brand = BRANDS[i];
       if (brand.length < 5) continue;
+
+      // A brand next to a security-sounding word: paypalverify, secure-paypal.
+      // "applebees" is left alone because "bees" is not one of those words.
+      if (label.indexOf(brand) === 0) {
+        if (AFFIX_WORDS.indexOf(label.slice(brand.length)) !== -1) {
+          return { brand: brand, official: officialFor(brand), reason: 'imitation' };
+        }
+      } else {
+        var trailing = label.length - brand.length;
+        if (trailing > 0 && label.slice(trailing) === brand && AFFIX_WORDS.indexOf(label.slice(0, trailing)) !== -1) {
+          return { brand: brand, official: officialFor(brand), reason: 'imitation' };
+        }
+      }
+
       if (brand.charAt(0) !== label.charAt(0)) continue;
       if (editDistance(label, brand) === 1) {
-        return { brand: brand, reason: 'lookalike' };
+        return { brand: brand, official: officialFor(brand), reason: 'lookalike' };
       }
     }
 
     var tokenBrand = hasBrandToken(label);
-    if (tokenBrand) return { brand: tokenBrand, reason: 'imitation' };
+    if (tokenBrand) return { brand: tokenBrand, official: officialFor(tokenBrand), reason: 'imitation' };
 
     return null;
   }

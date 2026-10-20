@@ -112,6 +112,13 @@ body {
   .history-item.verdict-safe .history-verdict { color: #4ade80 !important; }
   .history-item.verdict-caution .history-verdict { color: #fbbf24 !important; }
   .history-item.verdict-danger .history-verdict { color: #f87171 !important; }
+  .why-panel { background: #2a1d08 !important; border-color: #d97706 !important; }
+  .why-panel .why-title { color: #fcd34d !important; }
+  .why-panel .why-list li { color: #fde68a !important; }
+  .why-panel.verdict-danger { background: #2c1010 !important; border-color: #dc2626 !important; }
+  .why-panel.verdict-danger .why-title, .why-panel.verdict-danger .why-list li { color: #fca5a5 !important; }
+  .why-panel.verdict-unknown { background: #1e293b !important; border-color: #475569 !important; }
+  .why-panel.verdict-unknown .why-title, .why-panel.verdict-unknown .why-list li { color: #cbd5e1 !important; }
   .family-note { background: #052e16 !important; border-color: #14532d !important; color: #cbd5e1 !important; }
 }
 
@@ -283,6 +290,21 @@ html[dir="rtl"] .flag-list li::before, html[dir="rtl"] .action-list li::before {
 .cached-card.verdict-danger .verdict-label { color: #b91c1c; }
 .cached-card.verdict-unknown { background: #f1f5f9; border-color: #cbd5e1; }
 .cached-card.verdict-unknown .verdict-dot { background: #94a3b8; }
+
+/* === v3: "why this is not safe" - short plain reasons, easy to read === */
+.why-panel { border-radius: 12px; padding: 12px 14px; border: 2px solid #d97706; background: #fff8e6; margin-bottom: 8px; }
+.why-panel .why-title { font-size: 16px; font-weight: 800; color: #92400e; margin: 0 0 8px; }
+.why-panel .why-list { list-style: none; display: flex; flex-direction: column; gap: 7px; margin: 0; }
+.why-panel .why-list li { font-size: 14px; line-height: 1.5; color: #7c2d12; padding-left: 22px; position: relative; }
+.why-panel .why-list li::before { content: '\26A0'; position: absolute; left: 0; top: 0; }
+.why-panel.verdict-danger { border-color: #dc2626; background: #fef2f2; }
+.why-panel.verdict-danger .why-title { color: #b91c1c; }
+.why-panel.verdict-danger .why-list li { color: #7f1d1d; }
+.why-panel.verdict-unknown { border-color: #94a3b8; background: #f1f5f9; }
+.why-panel.verdict-unknown .why-title { color: #475569; }
+.why-panel.verdict-unknown .why-list li { color: #475569; }
+html[dir="rtl"] .why-panel .why-list li { padding-left: 0; padding-right: 22px; }
+html[dir="rtl"] .why-panel .why-list li::before { left: auto; right: 0; }
 
 .phone-chips { display: flex; flex-direction: column; gap: 6px; }
 .phone-chips-label { font-size: 11px; font-weight: 600; color: #64748b; }

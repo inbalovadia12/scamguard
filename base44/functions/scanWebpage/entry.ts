@@ -4,6 +4,7 @@ import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
 import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 import { matchKnownLegitimateDomain, matchOwnAppDomain } from '../../shared/legitimateDomains.ts';
+import { findBrandLookalike, lookalikeAnalysis } from '../../shared/brandLookalikes.ts';
 const ANSWER_TYPE_COSTS: Record<string, number> = {
   // Logical + monetizable: quick is the cheap gateway, detailed is the flagship
   // upsell (4x quick). More value always costs more credits.
@@ -384,10 +385,51 @@ Deno.serve(async (req) => {
       });
     }
 
+    // === BRAND-LOOKALIKE SHORTCUT ===
+    // An address that imitates a brand IS the scam attempt, whether or not it
+    // currently serves a page. Without this, an unreachable lookalike
+    // (paypal1.com, a parked domain, a DNS error page) reached the model as "no
+    // content", and "nothing malicious on the page" was reported as SAFE. The
+    // address check is deterministic, so it never depends on the AI.
+    const lookalike = findBrandLookalike(legitUrlCandidate || page_url || '');
+    if (lookalike) {
+      const creditsRemaining = await chargeCredits();
+      return Response.json({
+        analysis: lookalikeAnalysis(lookalike, answerType),
+        scan_type: scanType,
+        scan_mode: scanMode,
+        answer_type: answerType,
+        virustotal: vtReport,
+        urlhaus: urlhausReport,
+        decoded_content: qrDecodedContent,
+        final_destination_url: qrFinalUrl,
+        destination_title: qrPageTitle,
+        timestamp: new Date().toISOString(),
+        credits_used: creditCost,
+        credits_remaining: creditsRemaining,
+        credits_limit: getMonthlyCreditLimit(authUser),
+        timing_ms: Date.now() - startTime,
+      });
+    }
+
+    // A screenshot-only or URL-only scan sent no page text, so check whether the
+    // address actually resolves. "The page did not load" must never be confused
+    // with "the page is safe".
+    let destinationUnreachable = false;
+    if (!(page_text && page_text.trim()) && page_url && /^https?:\/\//i.test(page_url)) {
+      const probe = await safeFetchText(page_url, { timeoutMs: 4000, maxBytes: 64 * 1024, maxRedirects: 2 });
+      destinationUnreachable = !probe.ok;
+    }
+
     // === Build LLM prompt (only call if not obviously safe/dangerous) ===
     let prompt = 'You are Vardin, an expert scam and fraud detection AI.\n\n';
     prompt += 'IMPORTANT: Respond entirely in ' + languageName + '. All text must be in ' + languageName + '.\n\n';
     prompt += 'CRITICAL EVIDENCE RULES: Only report scam indicators that are actually present in the supplied URL, page content, redirects, screenshot, QR destination, or threat-intelligence results. Never invent a scam scenario, attacker goal, credential request, payment request, urgency, manipulation tactic, or other evidence. A legitimate official domain is not made suspicious just because scammers sometimes impersonate that brand elsewhere. Only say the page asks for credentials, payment, personal information, or access when the supplied evidence actually shows that request. For benign content, tactics_detected, red_flags, and scam-specific educational fields must be empty. what_they_want must describe what THIS PAGE is actually requesting, not what scammers generally want. what_to_say is only for suspicious/scam situations. Only treat the ROOT of an official domain (e.g. amazon.com with NO path, google.com with NO path) as automatically safe when threat-intel is clean. If the URL has a specific path (e.g. youtube.com/watch?v=xxx, pinterest.com/pin/xxx), you MUST analyze the actual page content and destination — do NOT auto-dismiss it as safe just because the domain is well-known. Scammers use legitimate platforms to host scam content.\n\n';
+    prompt += 'ADDRESS RULES: If the website address imitates a well-known brand (extra letters or numbers, swapped characters, a brand name inside a different domain), that alone makes it a scam attempt, even when the page is empty or does not load. An official brand name appearing inside somebody elses domain is not the brand itself.\n\n';
+    prompt += 'UNREACHABLE PAGES: A page that does not load, shows a browser or DNS error, or is otherwise unreachable has NOT been verified. That is never evidence of safety: a link you cannot see tells you nothing. For such a page never use a low risk level, use medium or high, and say clearly that the page could not be checked.\n\n';
+    if (destinationUnreachable) {
+      prompt += 'VARDIN ADDRESS CHECK: our own server could not reach this address (it does not resolve or does not respond), so the page itself could not be inspected.\n\n';
+    }
     if (vtReport) {
       prompt += 'VIRUSTOTAL: ' + vtReport.malicious + ' malicious, ' + vtReport.suspicious + ' suspicious, ' + vtReport.harmless + ' harmless, reputation: ' + vtReport.reputation + '\n\n';
     }
@@ -552,6 +594,20 @@ Deno.serve(async (req) => {
       result.why_scammers_do_this = '';
       result.what_they_want = '';
       result.what_to_say = '';
+    }
+
+    // The destination could not be reached, so nothing was actually verified.
+    // Never let an empty error page read as "safe".
+    if (destinationUnreachable && result && result.risk_level !== 'high') {
+      const notVerified = 'Vardin could not load this page, so nothing on it was verified. This does not mean the page is safe: a link that does not open can still be dangerous. Check the address carefully and treat an unexpected link with caution.';
+      result.risk_level = 'medium';
+      result.risk_score = Math.max(Number(result.risk_score) || 0, 45);
+      result.is_scam = false;
+      (result as any).inconclusive = true;
+      result.page_summary = 'This page could not be loaded, so it could not be checked.';
+      result.explanation = notVerified;
+      if (typeof (result as any).verdict === 'string') (result as any).verdict = notVerified;
+      if (typeof (result as any).summary === 'string') (result as any).summary = notVerified;
     }
 
     // === Override QR decoded content with verified value ===
