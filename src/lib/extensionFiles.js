@@ -94,11 +94,24 @@ body {
   .site-host { color: #cbd5e1 !important; }
   .chip-btn { background: #0f172a !important; border-color: #334155 !important; color: #94a3b8 !important; }
   .chip-btn.active { background: #134e4a !important; border-color: #0f766e !important; color: #5eead4 !important; }
-  .cached-card { background: #1e293b !important; border-color: #334155 !important; }
-  .cached-head { color: #cbd5e1 !important; }
-  .cached-body, .history-url { color: #94a3b8 !important; }
+  .cached-card.verdict-safe { background: #052e16 !important; border-color: #16a34a !important; }
+  .cached-card.verdict-caution { background: #3b2408 !important; border-color: #d97706 !important; }
+  .cached-card.verdict-danger { background: #3f1212 !important; border-color: #dc2626 !important; }
+  .cached-card.verdict-unknown { background: #1e293b !important; border-color: #334155 !important; }
+  .cached-head, .cached-when { color: #cbd5e1 !important; }
+  .cached-card.verdict-safe .verdict-label { color: #4ade80 !important; }
+  .cached-card.verdict-caution .verdict-label { color: #fbbf24 !important; }
+  .cached-card.verdict-danger .verdict-label { color: #f87171 !important; }
   .phone-chip { background: #0f172a !important; border-color: #334155 !important; color: #5eead4 !important; }
   .history-item { background: #1e293b !important; border-color: #334155 !important; }
+  .history-item.verdict-safe { background: #0b2416 !important; border-left-color: #16a34a !important; }
+  .history-item.verdict-caution { background: #241a06 !important; border-left-color: #d97706 !important; }
+  .history-item.verdict-danger { background: #2c1010 !important; border-left-color: #dc2626 !important; }
+  .history-url { color: #e2e8f0 !important; }
+  .history-meta { color: #94a3b8 !important; }
+  .history-item.verdict-safe .history-verdict { color: #4ade80 !important; }
+  .history-item.verdict-caution .history-verdict { color: #fbbf24 !important; }
+  .history-item.verdict-danger .history-verdict { color: #f87171 !important; }
   .family-note { background: #052e16 !important; border-color: #14532d !important; color: #cbd5e1 !important; }
 }
 
@@ -248,11 +261,28 @@ html[dir="rtl"] .flag-list li::before, html[dir="rtl"] .action-list li::before {
 .chip-btn { font-size: 10px; font-weight: 600; padding: 4px 8px; border: 1px solid #e2e8f0; background: white; color: #64748b; border-radius: 999px; cursor: pointer; font-family: inherit; }
 .chip-btn.active { background: #ccfbf1; border-color: #0f766e; color: #0f766e; }
 
-/* === v3: cached verdict + background scan + phone chips === */
-.cached-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
-.cached-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748b; }
-.cached-body { font-size: 12px; color: #475569; line-height: 1.4; }
+/* === v3: verdict cards - colour-coded, big and easy to read at a glance ===
+   Red = dangerous, amber = be careful, green = safe. Colours match the
+   result cards used elsewhere in the popup. */
+.cached-card { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.verdict-row { display: flex; align-items: center; gap: 10px; }
+.verdict-dot { width: 16px; height: 16px; border-radius: 50%; flex: none; background: #94a3b8; }
+.verdict-label { font-size: 17px; font-weight: 800; letter-spacing: 0.2px; color: #334155; }
+.cached-head { font-size: 13px; font-weight: 700; color: #334155; }
+.cached-when { font-size: 13px; color: #475569; line-height: 1.45; }
 .cached-actions { display: flex; gap: 6px; }
+
+.cached-card.verdict-safe { background: #ecfdf3; border-color: #16a34a; }
+.cached-card.verdict-safe .verdict-dot { background: #16a34a; }
+.cached-card.verdict-safe .verdict-label { color: #15803d; }
+.cached-card.verdict-caution { background: #fff8e6; border-color: #d97706; }
+.cached-card.verdict-caution .verdict-dot { background: #d97706; }
+.cached-card.verdict-caution .verdict-label { color: #b45309; }
+.cached-card.verdict-danger { background: #fef2f2; border-color: #dc2626; }
+.cached-card.verdict-danger .verdict-dot { background: #dc2626; }
+.cached-card.verdict-danger .verdict-label { color: #b91c1c; }
+.cached-card.verdict-unknown { background: #f1f5f9; border-color: #cbd5e1; }
+.cached-card.verdict-unknown .verdict-dot { background: #94a3b8; }
 
 .phone-chips { display: flex; flex-direction: column; gap: 6px; }
 .phone-chips-label { font-size: 11px; font-weight: 600; color: #64748b; }
@@ -260,12 +290,19 @@ html[dir="rtl"] .flag-list li::before, html[dir="rtl"] .action-list li::before {
 .phone-chip { font-size: 11px; font-weight: 600; padding: 4px 8px; border: 1px solid #e2e8f0; background: white; color: #0f766e; border-radius: 999px; cursor: pointer; font-family: inherit; }
 .phone-chip:hover { background: #f0fdfa; }
 
-/* === v3: history === */
+/* === v3: history - each entry keeps its verdict colour === */
 .history-list { display: flex; flex-direction: column; gap: 6px; }
-.history-item { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
-.history-url { font-size: 11px; font-weight: 600; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.history-meta { font-size: 10px; color: #94a3b8; }
-.history-empty { font-size: 12px; color: #94a3b8; text-align: center; padding: 16px 0; }
+.history-item { background: white; border: 1px solid #e2e8f0; border-left: 6px solid #cbd5e1; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.history-item.verdict-safe { border-left-color: #16a34a; background: #f7fefb; }
+.history-item.verdict-caution { border-left-color: #d97706; background: #fffaf0; }
+.history-item.verdict-danger { border-left-color: #dc2626; background: #fef5f5; }
+.history-url { font-size: 13px; font-weight: 700; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-verdict { font-size: 13px; font-weight: 800; }
+.history-item.verdict-safe .history-verdict { color: #15803d; }
+.history-item.verdict-caution .history-verdict { color: #b45309; }
+.history-item.verdict-danger .history-verdict { color: #b91c1c; }
+.history-meta { font-size: 12px; color: #64748b; }
+.history-empty { font-size: 13px; color: #64748b; text-align: center; padding: 16px 0; }
 
 .family-note { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #0f766e; line-height: 1.45; }
 .family-note strong { display: block; margin-bottom: 2px; }
@@ -300,7 +337,7 @@ WHAT'S NEW IN v3.0
   guidance back in the popup.
 - Report to Community: share a confirmed scam with the Vardin community feed.
 - Phone Check: phone numbers found on a page open in Vardin's phone lookup.
-- Instant Cached Verdicts: a site you already checked shows its verdict immediately
+- Instant Verdicts: a page you checked before shows its verdict right away in colour,
   and does not spend credits again.
 - Site Trust Lists: "Never warn here" and "Always check this site" per site.
 - Scan History: your last 20 scans with risk scores.

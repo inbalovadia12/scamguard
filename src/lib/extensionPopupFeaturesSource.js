@@ -3,7 +3,7 @@
 // still one file while each concern stays reviewable here.
 
 export const POPUP_FEATURES_JS = String.raw`// ==================== v3 features ====================
-// Site trust, instant cached verdicts, background-scan results, page phone
+// Site trust, instant repeat verdicts, background-scan results, page phone
 // numbers, Ask Family + guardian guidance, community reporting and history.
 // All of it is additive: if any piece fails the scanning flow still works.
 
@@ -11,7 +11,8 @@ var I18N_EXTRA = {
   en: {
     history: 'History', clear_history: 'Clear history', back_to_scan: 'Back',
     never_warn: 'Never warn here', always_check: 'Always check',
-    cached_title: 'Instant verdict (cached)', cached_recheck: 'Re-check',
+    cached_title: 'You already checked this page', cached_recheck: 'Check it again',
+    looks_safe: 'Looks safe', looks_risky: 'Looks risky', looks_dangerous: 'Dangerous page', risk_score_label: 'Risk score',
     bg_title: 'Result from a quick scan', bg_show: 'Show report', bg_dismiss: 'Dismiss',
     phone_found: 'Phone numbers on this page',
     ask_family: 'Ask family', report_community: 'Report',
@@ -26,7 +27,8 @@ var I18N_EXTRA = {
   he: {
     history: '\u05D4\u05D9\u05E1\u05D8\u05D5\u05E8\u05D9\u05D4', clear_history: '\u05E0\u05E7\u05D4 \u05D4\u05D9\u05E1\u05D8\u05D5\u05E8\u05D9\u05D4', back_to_scan: '\u05D7\u05D6\u05E8\u05D4',
     never_warn: '\u05D0\u05DC \u05EA\u05D6\u05D4\u05D9\u05E8 \u05DB\u05D0\u05DF', always_check: '\u05D1\u05D3\u05D5\u05E7 \u05EA\u05DE\u05D9\u05D3',
-    cached_title: '\u05E4\u05E1\u05E7 \u05D3\u05D9\u05DF \u05DE\u05D9\u05D9\u05D3\u05D9 (\u05DE\u05D8\u05DE\u05D5\u05DF)', cached_recheck: '\u05D1\u05D3\u05D5\u05E7 \u05DE\u05D7\u05D3\u05E9',
+    cached_title: '\u05DB\u05D1\u05E8 \u05D1\u05D3\u05E7\u05EA \u05D0\u05EA \u05D4\u05D3\u05E3 \u05D4\u05D6\u05D4', cached_recheck: '\u05D1\u05D3\u05D5\u05E7 \u05E9\u05D5\u05D1',
+    looks_safe: '\u05E0\u05E8\u05D0\u05D4 \u05D1\u05D8\u05D5\u05D7', looks_risky: '\u05E0\u05E8\u05D0\u05D4 \u05DE\u05E1\u05D5\u05DB\u05DF', looks_dangerous: '\u05D3\u05E3 \u05DE\u05E1\u05D5\u05DB\u05DF', risk_score_label: '\u05E6\u05D9\u05D5\u05DF \u05E1\u05D9\u05DB\u05D5\u05DF',
     bg_title: '\u05EA\u05D5\u05E6\u05D0\u05D4 \u05DE\u05E1\u05E8\u05D9\u05E7\u05D4 \u05DE\u05D4\u05D9\u05E8\u05D4', bg_show: '\u05D4\u05E6\u05D2 \u05D3\u05D5\u05D7', bg_dismiss: '\u05E1\u05D2\u05D5\u05E8',
     phone_found: '\u05DE\u05E1\u05E4\u05E8\u05D9 \u05D8\u05DC\u05E4\u05D5\u05DF \u05D1\u05D3\u05E3 \u05D4\u05D6\u05D4',
     ask_family: '\u05D1\u05E7\u05E9 \u05DE\u05D4\u05DE\u05E9\u05E4\u05D7\u05D4', report_community: '\u05D3\u05D5\u05D5\u05D7',
@@ -41,7 +43,8 @@ var I18N_EXTRA = {
   es: {
     history: 'Historial', clear_history: 'Borrar historial', back_to_scan: 'Volver',
     never_warn: 'No avisar aqui', always_check: 'Comprobar siempre',
-    cached_title: 'Veredicto inmediato (en cache)', cached_recheck: 'Volver a comprobar',
+    cached_title: 'Ya revisaste esta pagina', cached_recheck: 'Comprobar de nuevo',
+    looks_safe: 'Parece seguro', looks_risky: 'Parece arriesgado', looks_dangerous: 'Pagina peligrosa', risk_score_label: 'Puntuacion de riesgo',
     bg_title: 'Resultado de un escaneo rapido', bg_show: 'Ver informe', bg_dismiss: 'Descartar',
     phone_found: 'Numeros de telefono en esta pagina',
     ask_family: 'Pedir ayuda', report_community: 'Reportar',
@@ -94,12 +97,22 @@ function isWebTab(tab) {
   return !!(tab && tab.url && tab.url.indexOf('http') === 0);
 }
 
+// Plain-language verdict, never a technical term.
 function verdictWord(entry) {
   if (!entry) return '';
-  if (entry.tier === 'block') return t('blocked_note');
-  if (entry.tier === 'warn') return t('warn_note');
-  if (entry.score >= 36) return entry.score + '/100';
-  return t('safe');
+  if (entry.tier === 'block') return t('looks_dangerous');
+  if (entry.tier === 'warn') return t('looks_risky');
+  if (entry.score >= 36) return t('risk_score_label') + ' ' + entry.score + '/100';
+  return t('looks_safe');
+}
+
+// Colour of the verdict: red = dangerous, amber = be careful, green = safe.
+function verdictClass(entry) {
+  if (!entry) return 'unknown';
+  if (entry.tier === 'block') return 'danger';
+  if (entry.tier === 'warn') return 'caution';
+  if (entry.score >= 36) return 'caution';
+  return 'safe';
 }
 
 // ---------- Site trust: "never warn here" / "always check" ----------
@@ -144,7 +157,7 @@ async function toggleSite(kind, chipId) {
   }
 }
 
-// ---------- Instant cached verdict for this page ----------
+// ---------- Instant verdict for a page you checked before ----------
 async function loadCachedCard() {
   var card = document.getElementById('cached-card');
   if (!card) return;
@@ -154,11 +167,11 @@ async function loadCachedCard() {
   var entry = res && res.entry;
   if (!entry) { card.classList.add('hidden'); return; }
   var when = new Date(entry.ts || Date.now()).toLocaleString();
-  card.innerHTML = '<p class="cached-head">' + t('cached_title') + '</p>' +
-    '<p class="cached-body"><strong>' + escapeHtml(verdictWord(entry)) + '</strong> \u00B7 ' + escapeHtml(when) +
-    (entry.summary ? ' \u00B7 ' + escapeHtml(entry.summary) : '') + '</p>' +
+  card.className = 'cached-card verdict-' + verdictClass(entry);
+  card.innerHTML = '<div class="verdict-row"><span class="verdict-dot"></span><span class="verdict-label">' + escapeHtml(verdictWord(entry)) + '</span></div>' +
+    '<p class="cached-head">' + t('cached_title') + '</p>' +
+    '<p class="cached-when">' + escapeHtml(when) + (entry.summary ? ' \u00B7 ' + escapeHtml(entry.summary) : '') + '</p>' +
     '<div class="cached-actions"><button class="btn-action primary" id="cached-recheck">' + t('cached_recheck') + '</button></div>';
-  card.classList.remove('hidden');
   var btn = document.getElementById('cached-recheck');
   if (btn) btn.addEventListener('click', scanPage);
 }
@@ -171,13 +184,14 @@ async function loadPendingCard() {
   var pending = res && res.pending;
   if (!pending || !pending.data) return;
   var entry = pending.entry || {};
-  card.innerHTML = '<p class="cached-head">' + t('bg_title') + '</p>' +
-    '<p class="cached-body"><strong>' + escapeHtml(verdictWord(entry)) + '</strong> \u00B7 ' + escapeHtml(entry.url || '') + '</p>' +
+  card.className = 'cached-card verdict-' + verdictClass(entry);
+  card.innerHTML = '<div class="verdict-row"><span class="verdict-dot"></span><span class="verdict-label">' + escapeHtml(verdictWord(entry)) + '</span></div>' +
+    '<p class="cached-head">' + t('bg_title') + '</p>' +
+    '<p class="cached-when">' + escapeHtml(entry.url || '') + '</p>' +
     '<div class="cached-actions">' +
     '<button class="btn-action primary" id="bg-show">' + t('bg_show') + '</button>' +
     '<button class="btn-action" id="bg-dismiss">' + t('bg_dismiss') + '</button>' +
     '</div>';
-  card.classList.remove('hidden');
   var show = document.getElementById('bg-show');
   if (show) show.addEventListener('click', function() {
     displayResults(pending.data, pending.data.answer_type || 'detailed');
@@ -365,8 +379,10 @@ async function renderHistory() {
   var html = '';
   for (var i = 0; i < history.length; i++) {
     var h = history[i];
-    html += '<div class="history-item"><span class="history-url">' + escapeHtml(h.url || '') + '</span>' +
-      '<span class="history-meta">' + escapeHtml(verdictWord(h)) + ' \u00B7 ' + escapeHtml(new Date(h.ts || Date.now()).toLocaleString()) + '</span></div>';
+    html += '<div class="history-item verdict-' + verdictClass(h) + '">' +
+      '<span class="history-url">' + escapeHtml(h.url || '') + '</span>' +
+      '<span class="history-verdict">' + escapeHtml(verdictWord(h)) + '</span>' +
+      '<span class="history-meta">' + escapeHtml(new Date(h.ts || Date.now()).toLocaleString()) + '</span></div>';
   }
   list.innerHTML = html;
 }
