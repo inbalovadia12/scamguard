@@ -757,7 +757,13 @@ function displayResults(data, answerType) {
     html += '<div class="result-card ' + dCls + '">';
     html += '<div class="result-header"><div class="score-display small"><span class="score-number">' + escapeHtml(dScore) + '</span><span class="score-max">/100</span></div><span class="risk-level ' + dCls + '">' + escapeHtml(dLevel.toUpperCase()) + ' ' + t('risk_level') + '</span></div>';
     if (a.confidence != null) html += '<p class="confidence">' + t('confidence') + ': ' + escapeHtml(a.confidence) + '%</p>';
-    if (a.is_scam != null) html += '<div class="verdict-badge ' + (a.is_scam ? 'danger' : 'safe') + '">' + (a.is_scam ? ('\u26A0\uFE0F ' + t('scam')) : ('\u2705 ' + t('safe'))) + '</div>';
+    // Only show a green SAFE badge when the risk level itself is low — a
+    // medium/high score with is_scam=false used to render "MEDIUM RISK ✅ SAFE".
+    if (a.is_scam === true || dLevel === 'high') {
+      html += '<div class="verdict-badge danger">\u26A0\uFE0F ' + t('scam') + '</div>';
+    } else if (dLevel === 'low') {
+      html += '<div class="verdict-badge safe">\u2705 ' + t('safe') + '</div>';
+    }
     if (a.scam_category) html += '<div class="section"><p class="section-label">' + t('scam_category') + '</p><p class="section-text">' + escapeHtml(a.scam_category) + '</p></div>';
     if (a.explanation) html += '<div class="section"><p class="section-label">' + t('explanation') + '</p><p class="section-text">' + escapeHtml(a.explanation) + '</p></div>';
     if (a.what_they_want) html += '<div class="section"><p class="section-label">' + t('what_they_want') + '</p><p class="section-text">' + escapeHtml(a.what_they_want) + '</p></div>';

@@ -3,7 +3,7 @@ import { secrets } from "base44:runtime";
 import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
-import { matchKnownLegitimateDomain } from '../../shared/legitimateDomains.ts';
+import { matchKnownLegitimateDomain, matchOwnAppDomain } from '../../shared/legitimateDomains.ts';
 
 const CREDIT_COST = 7;
 
@@ -239,14 +239,18 @@ Deno.serve(async (req) => {
     // scam articles, which biases it toward a generic scam narrative even for the
     // real official domain. When the target is a well-known official domain and
     // both threat-intel feeds are clean, return a safe verdict directly.
-    const legitApex = matchKnownLegitimateDomain(targetUrl);
-    if (legitApex && !urlhausReport?.listed && (!vtReport || vtReport.malicious === 0)) {
-      const brand = legitApex.split('.')[0] || legitApex;
+    // Our own site is safe on every path — never let web-search noise about
+    // "recently registered domains" flag the Vardin dashboard.
+    const ownHost = matchOwnAppDomain(targetUrl);
+    const legitApex = ownHost ? null : matchKnownLegitimateDomain(targetUrl);
+    if ((ownHost || legitApex) && !urlhausReport?.listed && (!vtReport || vtReport.malicious === 0)) {
+      const brand = ownHost ? 'Vardin' : (legitApex!.split('.')[0] || legitApex);
+      const officialLabel = ownHost ? `Vardin's own website (${ownHost})` : `the official ${brand} website (${legitApex})`;
       const creditsRemaining = await chargeCredits();
       return Response.json({
         risk_level: 'low',
         risk_score: 4,
-        explanation: `This is the official ${brand} website (${legitApex}). VirusTotal and URLhaus report no malware or phishing activity. Safe to visit.`,
+        explanation: `This is ${officialLabel}. VirusTotal and URLhaus report no malware or phishing activity. Safe to visit.`,
         tactics_detected: [],
         next_steps: [],
         why_scammers_do_this: '',

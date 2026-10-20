@@ -160,10 +160,11 @@ function DetailedResult({ a, scanType }) {
     <div className="rounded-2xl border border-border/50 p-6 space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <RiskBadge level={level} size="lg" />
-        {a.is_scam != null && (
-          <span className={`text-sm font-bold ${a.is_scam ? "text-destructive" : "text-success"}`}>
-            {a.is_scam ? "⚠️ Likely Scam" : "ℹ️ No Scam Indicators Detected"}
-          </span>
+        {(a.is_scam === true || level === "high") && (
+          <span className="text-sm font-bold text-destructive">⚠️ Likely Scam</span>
+        )}
+        {level === "low" && a.is_scam !== true && (
+          <span className="text-sm font-bold text-success">ℹ️ No Scam Indicators Detected</span>
         )}
       </div>
       <div className="flex items-baseline gap-2">

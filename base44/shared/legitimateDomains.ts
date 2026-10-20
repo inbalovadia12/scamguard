@@ -31,6 +31,38 @@ const LEGITIMATE_APEX_DOMAINS = new Set([
   'stackoverflow.com', 'mozilla.org', 'w3.org', 'githubusercontent.com',
 ]);
 
+// Vardin's own hosts (see shared/appUrl.ts CANONICAL_APP_URL). Keep in sync
+// with any custom domain connected to the app.
+const OWN_APP_HOSTS = new Set<string>([
+  'vardin.base44.app',
+  'vardin.com',
+  'app.vardin.com',
+  'www.vardin.com',
+]);
+
+/**
+ * Returns the host when the URL points at Vardin itself, otherwise null.
+ * Unlike matchKnownLegitimateDomain this IGNORES the path: our own app is safe
+ * on every route. Without this, scanning our own dashboard returned a phantom
+ * "medium risk" because web search surfaces "newly registered domain" articles
+ * about base44.app.
+ */
+export function matchOwnAppDomain(url: string): string | null {
+  try {
+    const withProto = url && url.startsWith('http') ? url : 'https://' + url;
+    const parsed = new URL(withProto);
+    const hostname = (parsed.hostname || '').toLowerCase();
+    if (!hostname) return null;
+    if (OWN_APP_HOSTS.has(hostname)) return hostname;
+    for (const h of OWN_APP_HOSTS) {
+      if (hostname.endsWith('.' + h)) return hostname;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Returns the matched apex domain (e.g. "amazon.com") if the URL is an
  * official/known-legitimate domain or an official subdomain of one, otherwise

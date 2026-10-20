@@ -3,7 +3,7 @@ import { secrets } from "base44:runtime";
 import { getUrlhausReport } from '../../shared/urlhaus.ts';
 import { safeFetchText } from '../../shared/ssrf.ts';
 import { getAvailableCredits, atomicCreditCharge, refundCreditCharge, getMonthlyCreditLimit } from '../../shared/credits.ts';
-import { matchKnownLegitimateDomain } from '../../shared/legitimateDomains.ts';
+import { matchKnownLegitimateDomain, matchOwnAppDomain } from '../../shared/legitimateDomains.ts';
 const ANSWER_TYPE_COSTS: Record<string, number> = {
   // Logical + monetizable: quick is the cheap gateway, detailed is the flagship
   // upsell (4x quick). More value always costs more credits.
@@ -335,24 +335,28 @@ Deno.serve(async (req) => {
     // real official domain. When the target is a well-known official domain and
     // both threat-intel feeds are clean, return a safe verdict directly.
     const legitUrlCandidate = isUrlScan ? page_url : (scanType === 'qr' ? (qrFinalUrl || qrDecodedContent) : null);
-    const legitApex = legitUrlCandidate ? matchKnownLegitimateDomain(legitUrlCandidate) : null;
-    if (legitApex && !urlhausReport?.listed && (!vtReport || vtReport.malicious === 0)) {
-      const brand = legitApex.split('.')[0] || legitApex;
+    // Our own site is safe on every path — never let web-search noise about
+    // "recently registered domains" flag the Vardin dashboard.
+    const ownHost = legitUrlCandidate ? matchOwnAppDomain(legitUrlCandidate) : null;
+    const legitApex = (ownHost || !legitUrlCandidate) ? null : matchKnownLegitimateDomain(legitUrlCandidate);
+    if ((ownHost || legitApex) && !urlhausReport?.listed && (!vtReport || vtReport.malicious === 0)) {
+      const brand = ownHost ? 'Vardin' : (legitApex!.split('.')[0] || legitApex);
+      const officialLabel = ownHost ? `Vardin's own website (${ownHost})` : `the official ${brand} website (${legitApex})`;
       let safeAnalysis: any;
       if (answerType === 'quick') {
-        safeAnalysis = { is_scam: false, verdict: `This is the official ${brand} website — safe.` };
+        safeAnalysis = { is_scam: false, verdict: `This is ${officialLabel} — safe.` };
       } else if (answerType === 'risk_score') {
-        safeAnalysis = { risk_score: 4, risk_level: 'low', summary: `Official ${brand} website. No threats detected by VirusTotal or URLhaus.` };
+        safeAnalysis = { risk_score: 4, risk_level: 'low', summary: `This is ${officialLabel}. No threats detected by VirusTotal or URLhaus.` };
       } else {
         safeAnalysis = {
-          page_summary: `This is the official ${brand} website (${legitApex}).`,
+          page_summary: `This is ${officialLabel}.`,
           risk_level: 'low',
           risk_score: 4,
           confidence: 95,
           is_scam: false,
           scam_category: '',
           overall_risk: 'low',
-          explanation: `This is the official ${brand} website. VirusTotal and URLhaus report no malware or phishing. Safe to visit.`,
+          explanation: `This is ${officialLabel}. VirusTotal and URLhaus report no malware or phishing. Safe to visit.`,
           tactics_detected: [],
           red_flags: [],
           evidence_found: [],
