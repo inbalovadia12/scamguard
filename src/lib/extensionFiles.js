@@ -1,16 +1,20 @@
-// Extension file contents for the Vardin Chrome Extension v2.0
-// Packaged by the downloadExtension backend function into a ZIP.
-// Popup source imported from extensionPopupSource.js
+// Extension packaging: assembles the downloadable ZIP contents.
+// Sources live in focused sibling modules so each generated file stays
+// reviewable: extensionSharedSource (shared.js), extensionWorkerSource
+// (background.js), extensionContentSource (content.js, protection.js),
+// extensionPopupSource (popup.html, popup.js).
 
+import { SHARED_JS } from '@/lib/extensionSharedSource';
+import { BACKGROUND_JS } from '@/lib/extensionWorkerSource';
+import { CONTENT_JS, PROTECTION_JS } from '@/lib/extensionContentSource';
 import { POPUP_HTML, POPUP_JS } from '@/lib/extensionPopupSource';
 
-export const EXTENSION_FILES = {
-  'manifest.json': String.raw`{
+const MANIFEST_JSON = String.raw`{
   "manifest_version": 3,
   "name": "Vardin Scam Scanner",
-  "version": "2.1.0",
+  "version": "3.0.0",
   "description": "AI-powered scam detection and real-time protection for any webpage.",
-  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "permissions": ["activeTab", "scripting", "storage", "tabs", "notifications", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
@@ -23,10 +27,19 @@ export const EXTENSION_FILES = {
     },
     {
       "matches": ["<all_urls>"],
-      "js": ["protection.js"],
+      "js": ["shared.js", "protection.js"],
       "run_at": "document_idle"
     }
   ],
+  "commands": {
+    "scan-current-page": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "Scan the current page with Vardin"
+    }
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "Vardin Scam Scanner",
@@ -47,324 +60,9 @@ export const EXTENSION_FILES = {
     "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://vardin.base44.app;"
   }
 }
-`,
-  'background.js': String.raw`// Vardin Extension - Background Service Worker v2.1
-// Handles: auth token storage, language sync, auto-scan, badge, message routing
+`;
 
-var APP_BASE = 'https://vardin.base44.app';
-var currentLang = 'en';
-
-function isValidSender(sender) {
-  return sender.id === chrome.runtime.id;
-}
-
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-  if (!isValidSender(sender)) {
-    sendResponse({ error: 'Unauthorized sender' });
-    return false;
-  }
-
-  if (message.type === 'AUTH_TOKEN') {
-    chrome.storage.local.set({
-      authToken: message.token || null,
-      appId: message.appId || null,
-      authTimestamp: Date.now()
-    }, function() {
-      sendResponse({ success: true });
-    });
-    return true;
-  }
-
-  if (message.type === 'AUTH_LOGOUT') {
-    chrome.storage.local.remove(['authToken', 'appId', 'authTimestamp'], function() {
-      sendResponse({ success: true });
-    });
-    return true;
-  }
-
-  if (message.type === 'LANGUAGE_SYNC') {
-    chrome.storage.local.set({ lang: message.lang });
-    currentLang = message.lang;
-    sendResponse({ success: true });
-    return false;
-  }
-
-  if (message.type === 'GET_AUTH') {
-    chrome.storage.local.get(['authToken', 'appId'], function(result) {
-      sendResponse(result);
-    });
-    return true;
-  }
-
-  if (message.type === 'CHECK_PAGE_RISK') {
-    var key = 'risk_' + sender.tab.id;
-    chrome.storage.local.get([key], function(result) {
-      sendResponse(result[key] || { risky: false });
-    });
-    return true;
-  }
-
-  return false;
-});
-
-// === Auto-scan on page navigation ===
-var scanTimeouts = {};
-
-chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-  if (changeInfo.status !== 'complete') return;
-  if (!tab.url || tab.url.indexOf('chrome://') === 0 || tab.url.indexOf('chrome-extension://') === 0) return;
-
-  chrome.storage.local.get(['autoScan', 'authToken', 'appId', 'lang'], function(result) {
-    if (!result.autoScan || !result.authToken || !result.appId) return;
-    if (result.lang) currentLang = result.lang;
-
-    // Clear previous badge
-    chrome.action.setBadgeText({ text: '', tabId: tabId });
-
-    if (scanTimeouts[tabId]) clearTimeout(scanTimeouts[tabId]);
-    scanTimeouts[tabId] = setTimeout(function() {
-      autoScanUrl(tabId, tab.url, result.authToken, result.appId);
-    }, 3000);
-  });
-});
-
-async function autoScanUrl(tabId, url, token, appId) {
-  try {
-    var response = await fetch(APP_BASE + '/api/apps/' + appId + '/functions/scanWebpage', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token,
-        'X-App-Id': appId
-      },
-      body: JSON.stringify({
-        page_text: '',
-        screenshot_data_url: '',
-        page_url: url,
-        options: {
-          scan_type: 'url',
-          answer_type: 'risk_score',
-          language: currentLang
-        }
-      })
-    });
-
-    if (!response.ok) return;
-    var data = await response.json();
-    var analysis = data.analysis || {};
-    var score = analysis.risk_score || 0;
-    var level = analysis.risk_level || 'low';
-
-    // Set badge
-    if (score >= 71) {
-      chrome.action.setBadgeText({ text: '!', tabId: tabId });
-      chrome.action.setBadgeBackgroundColor({ color: '#ef4444', tabId: tabId });
-    } else if (score >= 36) {
-      chrome.action.setBadgeText({ text: '?', tabId: tabId });
-      chrome.action.setBadgeBackgroundColor({ color: '#f59e0b', tabId: tabId });
-    } else {
-      chrome.action.setBadgeText({ text: '', tabId: tabId });
-    }
-
-    // Store risk status for content script
-    var riskKey = 'risk_' + tabId;
-    chrome.storage.local.set({
-      [riskKey]: { score: score, level: level, url: url, risky: score >= 36 }
-    });
-  } catch (_e) {
-    // Silent fail for auto-scan
-  }
-}
-
-// Clean up risk data when tab is closed
-chrome.tabs.onRemoved.addListener(function(tabId) {
-  var key = 'risk_' + tabId;
-  chrome.storage.local.remove(key);
-  if (scanTimeouts[tabId]) { clearTimeout(scanTimeouts[tabId]); delete scanTimeouts[tabId]; }
-});
-
-chrome.runtime.onInstalled.addListener(function() {
-  console.log('Vardin Scam Scanner v2.0 installed.');
-});
-`,
-  'content.js': String.raw`// Vardin Extension - Content Script (runs on vardin.base44.app only)
-// Extracts auth token and language preference, relays to background
-
-var TOKEN_KEY = 'base44_access_token';
-var APP_ID_KEY = 'base44_app_id';
-var LANG_KEY = 'vardin_language';
-
-function extractAuth() {
-  try {
-    return {
-      token: localStorage.getItem(TOKEN_KEY),
-      appId: localStorage.getItem(APP_ID_KEY)
-    };
-  } catch (e) {
-    return { token: null, appId: null };
-  }
-}
-
-function sendAuthToBackground() {
-  var auth = extractAuth();
-  if (auth.token) {
-    chrome.runtime.sendMessage({ type: 'AUTH_TOKEN', token: auth.token, appId: auth.appId });
-  } else {
-    chrome.runtime.sendMessage({ type: 'AUTH_LOGOUT' });
-  }
-}
-
-function syncLanguage() {
-  try {
-    var lang = localStorage.getItem(LANG_KEY);
-    if (lang) {
-      chrome.runtime.sendMessage({ type: 'LANGUAGE_SYNC', lang: lang });
-    }
-  } catch (e) {}
-}
-
-// Send initial state
-sendAuthToBackground();
-syncLanguage();
-
-// Poll for token changes (detect login/logout)
-var lastToken = localStorage.getItem(TOKEN_KEY);
-var lastLang = localStorage.getItem(LANG_KEY);
-setInterval(function() {
-  var currentToken = localStorage.getItem(TOKEN_KEY);
-  var currentLangVal = localStorage.getItem(LANG_KEY);
-  if (currentToken !== lastToken) {
-    lastToken = currentToken;
-    sendAuthToBackground();
-  }
-  if (currentLangVal !== lastLang) {
-    lastLang = currentLangVal;
-    syncLanguage();
-  }
-}, 3000);
-`,
-  'protection.js': String.raw`// Vardin Extension - Protection Content Script (runs on all URLs)
-// Features: form detection warnings, clipboard monitoring
-
-(function() {
-  // Don't run on Vardin's own domain or Chrome internal pages
-  if (window.location.hostname.indexOf('vardin') !== -1) return;
-  if (window.location.protocol === 'chrome:' || window.location.protocol === 'chrome-extension:') return;
-
-  // === Inject styles ===
-  var style = document.createElement('style');
-  style.textContent = [
-    '.vardin-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 2147483647; padding: 10px 16px; background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }',
-    '.vardin-banner .vardin-close { margin-left: auto; cursor: pointer; opacity: 0.8; background: none; border: none; color: white; font-size: 18px; }',
-    '.vardin-banner .vardin-close:hover { opacity: 1; }',
-    '.vardin-paste-warning { position: fixed; bottom: 16px; right: 16px; z-index: 2147483647; padding: 12px 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; color: #991b1b; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 300px; }'
-  ].join('\n');
-  document.head.appendChild(style);
-
-  // === Suspicious URL patterns ===
-  function isSuspiciousUrl(url) {
-    if (!url) return false;
-    var lower = url.toLowerCase();
-    // IP address instead of domain
-    if (/https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(lower)) return 'suspicious';
-    // Known phishing keywords in domain
-    var phishingWords = ['login', 'signin', 'verify', 'account', 'secure', 'update', 'confirm', 'wallet', 'banking', 'password'];
-    var hasPhishWord = phishingWords.some(function(w) { return lower.indexOf(w) !== -1; });
-    // Suspicious TLDs
-    var suspiciousTlds = ['.tk', '.ml', '.ga', '.cf', '.gq', '.top', '.xyz', '.click', '.country', '.stream'];
-    var hasSuspiciousTld = suspiciousTlds.some(function(t) { return lower.indexOf(t) !== -1; });
-    // Excessive subdomains
-    var subdomainCount = (lower.match(/\./g) || []).length;
-    if (subdomainCount > 4) return 'suspicious';
-    if (hasPhishWord && hasSuspiciousTld) return 'danger';
-    if (hasSuspiciousTld) return 'suspicious';
-    return null;
-  }
-
-  // === Form detection: warn on risky pages with password/card inputs ===
-  function checkForms() {
-    var passwordInputs = document.querySelectorAll('input[type="password"]');
-    var cardInputs = document.querySelectorAll('input[autocomplete*="cc"], input[name*="card"], input[name*="credit"], input[id*="card"], input[id*="credit"], input[inputmode="numeric"][name*="number"]');
-    if (passwordInputs.length === 0 && cardInputs.length === 0) return;
-
-    chrome.runtime.sendMessage({ type: 'CHECK_PAGE_RISK' }, function(response) {
-      if (chrome.runtime.lastError) return;
-      if (response && response.risky) {
-        showWarningBanner(response.score || 0, response.level || 'high');
-      }
-    });
-  }
-
-  function showWarningBanner(score, level) {
-    if (document.getElementById('vardin-warning-banner')) return;
-    var banner = document.createElement('div');
-    banner.id = 'vardin-warning-banner';
-    banner.className = 'vardin-banner';
-    banner.innerHTML = '<span>\u26A0\uFE0F <strong>Vardin Warning:</strong> This website has multiple scam indicators (risk score: ' + score + '/100). Are you sure you want to enter personal information?</span><button class="vardin-close">&times;</button>';
-    document.body.insertBefore(banner, document.body.firstChild);
-    banner.querySelector('.vardin-close').addEventListener('click', function() { banner.remove(); });
-    // Adjust body padding
-    document.body.style.paddingTop = (document.body.style.paddingTop ? parseInt(document.body.style.paddingTop) : 0) + 50 + 'px';
-  }
-
-  // Check forms after a short delay (let page settle)
-  setTimeout(checkForms, 2000);
-
-  // Also check on DOM mutations (dynamic forms) — debounced so heavy
-  // sites with frequent DOM changes don't thrash querySelectorAll.
-  var formDebounce = null;
-  var formObserver = new MutationObserver(function() {
-    if (formDebounce) clearTimeout(formDebounce);
-    formDebounce = setTimeout(checkForms, 500);
-  });
-  formObserver.observe(document.body, { childList: true, subtree: true });
-
-  // === Clipboard / paste monitoring ===
-  function isCryptoAddress(text) {
-    if (!text) return false;
-    // Bitcoin
-    if (/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(text.trim())) return true;
-    // Bitcoin Bech32
-    if (/^bc1[a-z0-9]{20,40}$/i.test(text.trim())) return true;
-    // Ethereum
-    if (/^0x[a-fA-F0-9]{40}$/.test(text.trim())) return true;
-    return false;
-  }
-
-  document.addEventListener('paste', function(e) {
-    var text = '';
-    if (e.clipboardData) {
-      text = e.clipboardData.getData('text') || '';
-    }
-    if (!text) return;
-
-    var warning = null;
-    if (isCryptoAddress(text)) {
-      warning = '\u26A0\uFE0F Vardin: You pasted a crypto wallet address. Verify you trust the source \u2014 crypto transactions cannot be reversed.';
-    } else if (isSuspiciousUrl(text)) {
-      warning = '\u26A0\uFE0F Vardin: You pasted a suspicious URL. Do not enter personal information on that site.';
-    }
-
-    if (warning) {
-      showPasteWarning(warning);
-    }
-  });
-
-  function showPasteWarning(text) {
-    var existing = document.getElementById('vardin-paste-warning');
-    if (existing) existing.remove();
-    var el = document.createElement('div');
-    el.id = 'vardin-paste-warning';
-    el.className = 'vardin-paste-warning';
-    el.textContent = text;
-    document.body.appendChild(el);
-    setTimeout(function() { if (el.parentNode) el.remove(); }, 6000);
-  }
-})();
-`,
-  'popup.html': POPUP_HTML,
-  'popup.js': POPUP_JS,
-  'styles.css': String.raw`* { margin: 0; padding: 0; box-sizing: border-box; }
+const STYLES_CSS = String.raw`* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
   width: 380px;
@@ -392,6 +90,16 @@ body {
   .qr-value a { color: #2dd4bf !important; }
   .section-text, .verdict-text, .flag-list li, .action-list li { color: #cbd5e1 !important; }
   .section-label { color: #94a3b8 !important; }
+  .site-bar { background: #1e293b !important; border-color: #334155 !important; }
+  .site-host { color: #cbd5e1 !important; }
+  .chip-btn { background: #0f172a !important; border-color: #334155 !important; color: #94a3b8 !important; }
+  .chip-btn.active { background: #134e4a !important; border-color: #0f766e !important; color: #5eead4 !important; }
+  .cached-card { background: #1e293b !important; border-color: #334155 !important; }
+  .cached-head { color: #cbd5e1 !important; }
+  .cached-body, .history-url { color: #94a3b8 !important; }
+  .phone-chip { background: #0f172a !important; border-color: #334155 !important; color: #5eead4 !important; }
+  .history-item { background: #1e293b !important; border-color: #334155 !important; }
+  .family-note { background: #052e16 !important; border-color: #14532d !important; color: #cbd5e1 !important; }
 }
 
 .container { padding: 16px; max-height: 600px; overflow-y: auto; }
@@ -479,6 +187,7 @@ html[dir="rtl"] .flag-list li::before, html[dir="rtl"] .action-list li::before {
 .result-header { display: flex; align-items: center; justify-content: space-between; }
 .verdict-badge { text-align: center; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 14px; }
 .verdict-badge.danger { background: #fee2e2; color: #991b1b; }
+.verdict-badge.warning { background: #fef3c7; color: #92400e; }
 .verdict-badge.safe { background: #dcfce7; color: #166534; }
 .verdict-text { font-size: 13px; color: #334155; line-height: 1.5; }
 .confidence { font-size: 11px; color: #64748b; text-align: center; }
@@ -528,13 +237,81 @@ html[dir="rtl"] .flag-list li::before, html[dir="rtl"] .action-list li::before {
 .actions-bar { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
 .btn-action { flex: 1; min-width: 60px; padding: 6px 8px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: 600; color: #475569; cursor: pointer; transition: background 0.2s; }
 .btn-action:hover { background: #e2e8f0; }
+.btn-action.primary { background: #f0fdfa; border-color: #99f6e4; color: #0f766e; }
 
 .timestamp { font-size: 10px; color: #94a3b8; text-align: center; margin-top: 4px; }
-`,
+
+/* === v3: site trust bar === */
+.site-bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; }
+.site-host { flex: 1; font-size: 11px; font-weight: 600; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.site-actions { display: flex; gap: 4px; }
+.chip-btn { font-size: 10px; font-weight: 600; padding: 4px 8px; border: 1px solid #e2e8f0; background: white; color: #64748b; border-radius: 999px; cursor: pointer; font-family: inherit; }
+.chip-btn.active { background: #ccfbf1; border-color: #0f766e; color: #0f766e; }
+
+/* === v3: cached verdict + background scan + phone chips === */
+.cached-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.cached-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #64748b; }
+.cached-body { font-size: 12px; color: #475569; line-height: 1.4; }
+.cached-actions { display: flex; gap: 6px; }
+
+.phone-chips { display: flex; flex-direction: column; gap: 6px; }
+.phone-chips-label { font-size: 11px; font-weight: 600; color: #64748b; }
+.phone-chip-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.phone-chip { font-size: 11px; font-weight: 600; padding: 4px 8px; border: 1px solid #e2e8f0; background: white; color: #0f766e; border-radius: 999px; cursor: pointer; font-family: inherit; }
+.phone-chip:hover { background: #f0fdfa; }
+
+/* === v3: history === */
+.history-list { display: flex; flex-direction: column; gap: 6px; }
+.history-item { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.history-url { font-size: 11px; font-weight: 600; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-meta { font-size: 10px; color: #94a3b8; }
+.history-empty { font-size: 12px; color: #94a3b8; text-align: center; padding: 16px 0; }
+
+.family-note { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #0f766e; line-height: 1.45; }
+.family-note strong { display: block; margin-bottom: 2px; }
+`;
+
+export const EXTENSION_FILES = {
+  'manifest.json': MANIFEST_JSON,
+  'shared.js': SHARED_JS,
+  'background.js': BACKGROUND_JS,
+  'content.js': CONTENT_JS,
+  'protection.js': PROTECTION_JS,
+  'popup.html': POPUP_HTML,
+  'popup.js': POPUP_JS,
+  'styles.css': STYLES_CSS,
 };
 
-export const README_CONTENT = `Vardin Scam Scanner - Chrome Extension v2.1
+export const README_CONTENT = `Vardin Scam Scanner - Chrome Extension v3.0
 ==============================================
+
+WHAT'S NEW IN v3.0
+- Danger Page Block: a page confirmed as a scam or malware site is replaced with a
+  warning before you can interact with it, with "Leave" and "Continue anyway".
+- Lookalike Domain Check: instantly spots addresses imitating PayPal, your bank or
+  another brand (paypa1.com, arnazon.com) - offline, no scan needed.
+- Submit Guard: before sending a password or card form on a risky page, Vardin asks
+  for confirmation first.
+- Right-Click Scanning: scan a page, a link, selected text, an image, or check a
+  phone number, straight from the right-click menu.
+- Keyboard Shortcut: Ctrl+Shift+Y (Cmd+Shift+Y on Mac) scans the current page.
+- Desktop Alerts: a native notification when a page you visited turns out dangerous.
+- Ask Family: send a worrying result straight to your guardian, and see their
+  guidance back in the popup.
+- Report to Community: share a confirmed scam with the Vardin community feed.
+- Phone Check: phone numbers found on a page open in Vardin's phone lookup.
+- Instant Cached Verdicts: a site you already checked shows its verdict immediately
+  and does not spend credits again.
+- Site Trust Lists: "Never warn here" and "Always check this site" per site.
+- Scan History: your last 20 scans with risk scores.
+
+FALSE POSITIVES
+Vardin is deliberately hard to trigger. A page is only ever blocked on hard
+threat-intelligence evidence (VirusTotal / URLhaus) or on a top-tier, explicit,
+high-confidence AI verdict. A medium score never interrupts you, an inconclusive
+analysis never blocks anything, and a lookalike warning only fires when a domain is
+a one-character edit of a real brand. Every warning is dismissible, and
+"Never warn here" is one click away.
 
 FEATURES
 - Page Analysis: Scan page text, screenshot, or both
@@ -546,8 +323,6 @@ FEATURES
 - Marketplace Analysis: Detect fake sellers, unrealistic prices, payment scams
 - File Analysis: Analyze PDF, DOC, XLS, PPT, TXT, CSV, ZIP, images
 - Auto-Scan: Automatically scan pages on navigation (opt-in)
-- Before-Action Warnings: Alerts on risky pages with password/card inputs
-- Clipboard Protection: Warns when pasting crypto addresses or suspicious URLs
 - Full i18n: English, Hebrew (RTL), Spanish
 
 INSTALLATION
@@ -555,19 +330,21 @@ INSTALLATION
 2. Open Google Chrome and go to: chrome://extensions
 3. Enable "Developer mode" (toggle in the top-right corner)
 4. Click "Load unpacked" and select your extracted folder
-5. The Vardin icon will appear in your toolbar — pin it for easy access
+5. The Vardin icon will appear in your toolbar - pin it for easy access
+6. Upgrading from an older version? Remove the old extension first, then load this
+   folder, so Chrome does not keep the previous files.
 
 USAGE
 1. Navigate to any webpage you want to check
 2. Click the Vardin extension icon
 3. If not logged in, click "Open Vardin Login" and log in at vardin.base44.app
-4. The extension auto-detects your login — no copy-paste needed
-5. Choose your scan type and result type
-6. Click "Scan" to get an instant AI-powered scam analysis
-7. Enable Auto-Scan to automatically check pages you visit
+4. The extension auto-detects your login - no copy-paste needed
+5. Choose your scan type and result type, then click "Scan"
+6. Turn on Auto-Scan to check pages as you browse, and use the right-click menu or
+   Ctrl+Shift+Y for a one-click check of the page you are on
 
 SCAN TYPES
-- Page Analysis: Extracts text and/or screenshot from the current page
+- Page Analysis: Extracts screenshot content from the current page and summarizes it
 - URL Reputation: Checks the URL with VirusTotal + AI analysis
 - Screenshot: Capture or upload a screenshot for visual analysis
 - QR Code: Upload a QR image for decoding and URL risk assessment
@@ -577,12 +354,15 @@ SCAN TYPES
 - File: Upload documents for phishing language and embedded URL analysis
 
 PROTECTION FEATURES (automatic)
-- Form Warning: If you're on a risky page with password/card inputs, a warning banner appears
-- Clipboard: If you paste a crypto wallet address or suspicious URL, you get a warning
-- Auto-Scan Badge: When enabled, the extension badge shows risk level (green/yellow/red)
+- Danger Page Block: confirmed dangerous pages are replaced with a warning screen
+- Lookalike Banner: a brand-imitation warning bar on imitating domains
+- Submit Guard: confirmation before sending passwords or card details on risky pages
+- Clipboard: a warning when you paste a crypto address or a lookalike/IP link
+- Desktop Alert: a notification when a background scan turns up a threat
+- Auto-Scan Badge: the toolbar badge shows the risk level (red/yellow/none)
 
 REQUIREMENTS
-- A Vardin Premium or Plus subscription
+- A Vardin Premium subscription
 - Google Chrome (or any Chromium-based browser)
 
 SECURITY
@@ -593,6 +373,7 @@ SECURITY
 - Strict Content Security Policy (CSP)
 - All displayed content is XSS-escaped
 - VirusTotal API key kept on backend only
+- Scans a page only when you ask, when Auto-Scan is on, or from the context menu
 
 SUPPORT
 Visit https://vardin.base44.app for help and resources.

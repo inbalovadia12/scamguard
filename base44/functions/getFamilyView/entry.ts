@@ -57,7 +57,28 @@ export default async function(req: Request): Promise<Response> {
       };
     });
 
-    return Response.json({ memberships: result });
+    // Recent Ask-Family alerts raised by this user, so the browser extension can
+    // show the guardian's guidance right next to the scan that prompted it.
+    let alerts: any[] = [];
+    try {
+      const mine = await base44.asServiceRole.entities.FamilyAlert.filter(
+        { created_by_id: user.id },
+        { sort: '-created_date', limit: 10 }
+      );
+      alerts = (mine || []).map((a: any) => ({
+        id: a.id,
+        risk_level: a.risk_level,
+        status: a.status,
+        threat_excerpt: a.threat_excerpt || '',
+        guardian_action: a.guardian_action || null,
+        guardian_note: a.guardian_note || null,
+        created_date: a.created_date,
+      }));
+    } catch {
+      alerts = [];
+    }
+
+    return Response.json({ memberships: result, alerts });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

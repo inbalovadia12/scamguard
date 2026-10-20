@@ -14,7 +14,16 @@ const LOADING_STEPS = [
 ];
 
 export default function PhoneLookupTab() {
-  const [phoneInput, setPhoneInput] = useState("");
+  // The browser extension opens this tab as /phone-guard?number=... so a number
+  // found on a page arrives pre-filled. It only pre-fills: the lookup itself
+  // still needs the explicit click, so a crafted link can never spend credits.
+  const [phoneInput, setPhoneInput] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get("number") || "";
+    } catch {
+      return "";
+    }
+  });
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [result, setResult] = useState(null);
