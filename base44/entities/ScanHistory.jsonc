@@ -1,0 +1,85 @@
+{
+  "name": "ScanHistory",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User who ran the fine print scan"
+    },
+    "title": {
+      "type": "string",
+      "description": "Document name or short label shown in My Scans"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "lease",
+        "subscription",
+        "gym_service",
+        "loan_credit",
+        "medical_bill",
+        "terms_of_service",
+        "other"
+      ],
+      "default": "auto",
+      "description": "Type of document that was scanned"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "text",
+        "file"
+      ],
+      "default": "text",
+      "description": "Whether the document came from pasted text or an uploaded file"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Original file name when a file was uploaded"
+    },
+    "risk_score": {
+      "type": "number",
+      "description": "0-100 risk score for the document"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "very_high"
+      ],
+      "default": "low",
+      "description": "Low / Medium / High / Very High"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Plain-language summary of what the user is agreeing to"
+    },
+    "results_json": {
+      "type": "string",
+      "description": "Full AI report: red flags, key terms, missing info, questions to ask"
+    }
+  },
+  "required": [
+    "user_id",
+    "document_type",
+    "risk_level"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
