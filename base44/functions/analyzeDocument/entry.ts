@@ -149,19 +149,37 @@ function buildPrompt({ text, requestedType, language, truncated }) {
   prompt += 'PRODUCE:\n';
   prompt += '1. summary: 3 to 4 sentences explaining, in plain language, what the person is agreeing to and what it costs them.\n';
   prompt += '2. risk_score: a number from 0 to 100 (higher = more unfair or more risky for the person signing) and risk_level: Low (0-20), Medium (21-45), High (46-70) or Very High (71-100).\n';
-  prompt += '3. red_flags: every genuinely concerning term you find. For each one give: title (short), severity (low, medium or high), exact_quote (a short clause copied word for word from the document, at most about 25 words), plain_explanation (why it matters to the person, in everyday words), suggested_action (what the person could ask for or do about it). Put the most serious first. Return an empty list if nothing is concerning.\n';
-  prompt += '4. key_terms: the important facts, as label and detail pairs. Cover any that appear: price and total cost, extra fees or charges, contract length, renewal and auto-renewal, notice period, how to cancel, penalties, deposit, and interest or late fees.\n';
+  prompt += '3. red_flags: EVERY clause that is risky, one-sided or costly for the person signing. Be exhaustive and prefer completeness over brevity: a typical problematic contract should produce 8 or more flags. Do not stop at the worst few, and do not merge several separate problems into one flag. After your first pass, reread the document once and add every risky clause you missed, including late-payment fees, interest on overdue amounts, a deposit the company may keep, and anything the company refuses to guarantee. For each flag give: title (short), severity (low, medium or high), exact_quote (the clause itself, copied word for word from the document, at most about 30 words), plain_explanation (why it matters, in everyday words), suggested_action (what the person could ask for or do). Put the most serious first. Return an empty list only if nothing is concerning.\n';
+  prompt += '4. key_terms: the important facts, as label and detail pairs. List every charge and amount that appears anywhere in the document, including late fees, interest, deposits and the price charged on renewal. Cover any that appear: price and total cost, extra fees or charges, contract length, renewal and auto-renewal, notice period, how to cancel, penalties, deposit, and interest or late fees.\n';
   prompt += '5. missing_info: important things a fair document of this type normally includes but this one does not (for example no cancellation terms, no fee schedule, no notice period for price changes, no refund policy).\n';
   prompt += '6. questions_to_ask: 3 to 5 smart questions to ask the other side before signing.\n\n';
 
-  prompt += 'LOOK ESPECIALLY FOR: automatic renewal, hidden or variable fees, terms that make cancelling difficult, one-sided liability, waiver of the right to sue or forced arbitration, permission to share the person\'s data, early termination penalties, vague wording, the right to raise the price later, and unusual or short deadlines.\n\n';
+  prompt += 'ALWAYS CHECK FOR THESE, and raise a red flag for each one that is present:\n';
+  prompt += '- automatic renewal, especially renewal at a price the document never fixes;\n';
+  prompt += '- hidden or recurring fees that are not part of the headline price (maintenance, processing, administration, restocking, service or "miscellaneous" charges);\n';
+  prompt += '- early termination or cancellation penalties;\n';
+  prompt += '- the right to change the terms, the fees or the service unilaterally, with little or no notice;\n';
+  prompt += '- broad data sharing, or permission to sell the person\'s personal data;\n';
+  prompt += '- liability waivers that also cover the company\'s own negligence or misconduct;\n';
+  prompt += '- forced arbitration;\n';
+  prompt += '- a waiver of the right to join a class action or to sue in court, as its own separate flag;\n';
+  prompt += '- vague or catch-all fee wording, such as "additional charges may apply" with no amounts;\n';
+  prompt += '- no guarantee of service, uptime or results, or a right to suspend the service without a refund;\n';
+  prompt += '- anything else one-sided, unusual or costly: one-sided indemnities, no-refund rules, a deposit the company may keep, waived notice rights, unusual or short deadlines, or terms that make cancelling or complaining practically impossible.\n\n';
 
-  prompt += 'RULES:\n';
+  prompt += 'QUOTE AND COMPLETENESS RULES:\n';
+  prompt += '- Each red flag must quote the exact clause that is the problem. For arbitration, quote the arbitration clause itself, and give the class action waiver its own separate flag rather than folding it in.\n';
+  prompt += '- Any key term that is financially harmful to the person signing (a penalty, a hidden or recurring fee, renewal pricing, interest or late charges, a deposit that can be kept) must ALSO appear as a red flag with its exact quote.\n';
+  prompt += '- Do NOT flag standard, fair boilerplate that is normal for this kind of document. Only flag a common clause when this wording is actually unusual, vague, or one-sided against the person signing.\n\n';
+
+  prompt += 'EVIDENCE RULES:\n';
   prompt += '- Only report what is actually in the document text above. Never invent a clause, a fee, an amount, a date or a quote.\n';
   prompt += '- exact_quote must be copied word for word from the document. If you cannot quote it exactly, leave exact_quote empty.\n';
   prompt += '- Explain legal wording in plain words. Do not use jargon without explaining it.\n';
   prompt += '- If the text is not a contract or agreement, or is too fragmentary to judge, say so plainly in the summary, keep the risk score low (30 or less), and leave red_flags empty.\n';
   prompt += '- Do not give legal advice and do not tell the person whether to sign. Explain what the terms mean so they can decide.';
+
+  prompt += '\n\nFINAL CHECK before you answer. Go through the document once more and confirm that each of these is either raised as its own red flag, with its exact quote, or is genuinely not in the document: automatic renewal; renewal pricing; hidden or recurring fees that are not in the headline price; catch-all fee wording; early termination or cancellation penalties; a cancellation process that is hard to follow; the right to change the terms, the prices or the service unilaterally; broad data sharing or the sale of personal data; a liability waiver that covers the company\'s own negligence; forced arbitration; a class action or right-to-sue waiver; no guarantee of service; late-payment fees and interest; and a deposit the company may keep. A one-sided document like this normally deserves 8 or more red flags, so only return fewer when the document really is fair.';
 
   if (truncated) {
     prompt += '\n\nNOTE: this document was very long and only the beginning was received, so the ending is missing. Analyze what you received, and mention in missing_info that the rest of the document could not be checked.';
@@ -253,9 +271,9 @@ export default async function (req) {
       summary: typeof raw.summary === 'string' ? raw.summary.trim() : '',
       risk_score: riskScore,
       risk_level: normalizeRiskLevel(raw.risk_level, riskScore),
-      red_flags: Array.isArray(raw.red_flags) ? raw.red_flags.slice(0, 12) : [],
-      key_terms: Array.isArray(raw.key_terms) ? raw.key_terms.slice(0, 20) : [],
-      missing_info: Array.isArray(raw.missing_info) ? raw.missing_info.slice(0, 12) : [],
+      red_flags: Array.isArray(raw.red_flags) ? raw.red_flags.slice(0, 40) : [],
+      key_terms: Array.isArray(raw.key_terms) ? raw.key_terms.slice(0, 30) : [],
+      missing_info: Array.isArray(raw.missing_info) ? raw.missing_info.slice(0, 20) : [],
       questions_to_ask: Array.isArray(raw.questions_to_ask) ? raw.questions_to_ask.slice(0, 6) : [],
     };
 
