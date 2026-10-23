@@ -77,9 +77,9 @@ function normalizeRiskLevel(level, score) {
   const raw = String(level || '').toLowerCase().replace(/[\s-]+/g, '_');
   if (['low', 'medium', 'high', 'very_high'].includes(raw)) return raw;
   const value = Number(score) || 0;
-  if (value >= 71) return 'very_high';
-  if (value >= 46) return 'high';
-  if (value >= 21) return 'medium';
+  if (value >= 81) return 'very_high';
+  if (value >= 61) return 'high';
+  if (value >= 36) return 'medium';
   return 'low';
 }
 
@@ -148,16 +148,17 @@ function buildPrompt({ text, requestedType, language, truncated }) {
 
   prompt += 'PRODUCE:\n';
   prompt += '1. summary: 3 to 4 sentences explaining, in plain language, what the person is agreeing to and what it costs them.\n';
-  prompt += '2. risk_score: a number from 0 to 100 (higher = more unfair or more risky for the person signing) and risk_level: Low (0-20), Medium (21-45), High (46-70) or Very High (71-100).\n';
-  prompt += '3. red_flags: EVERY clause that is risky, one-sided or costly for the person signing. Be exhaustive and prefer completeness over brevity: a typical problematic contract should produce 8 or more flags. Do not stop at the worst few, and do not merge several separate problems into one flag. After your first pass, reread the document once and add every risky clause you missed, including late-payment fees, interest on overdue amounts, a deposit the company may keep, and anything the company refuses to guarantee. For each flag give: title (short), severity (low, medium or high), exact_quote (the clause itself, copied word for word from the document, at most about 30 words), plain_explanation (why it matters, in everyday words), suggested_action (what the person could ask for or do). Put the most serious first. Return an empty list only if nothing is concerning.\n';
+  prompt += '2. risk_score: a number from 0 to 100 (higher = more unfair or more risky for the person signing) and risk_level: Low (0-35), Medium (36-60), High (61-80) or Very High (81-100).\n';
+  prompt += '   The score reflects how unfair the deal is overall, not how many clauses you listed. Standard terms that a fair document of this kind normally contains, and any risky term the document balances with a real protection for the person signing, must not push the score up. A document with only standard terms, or with one or two mildly one-sided clauses, belongs at 0-35 (Low).\n';
+  prompt += '3. red_flags: EVERY clause that is risky, one-sided or costly for the person signing, judged with the context rules further down: a clause is only risky when the document gives the person no real way to protect themselves from it. Be thorough about genuinely unfair clauses and do not merge several separate problems into one flag, but do not pad the list with standard terms that the document balances elsewhere; a fair document may need no flags at all. After your first pass, reread the document once and add every risky clause you missed, including late-payment fees, interest on overdue amounts, a deposit the company may keep, and anything the company refuses to guarantee. For each flag give: title (short), severity (low, medium or high), exact_quote (the clause itself, copied word for word from the document, at most about 30 words), plain_explanation (why it matters, in everyday words), suggested_action (what the person could ask for or do). Put the most serious first. Return an empty list only if nothing is concerning.\n';
   prompt += '4. key_terms: the important facts, as label and detail pairs. List every charge and amount that appears anywhere in the document, including late fees, interest, deposits and the price charged on renewal. Cover any that appear: price and total cost, extra fees or charges, contract length, renewal and auto-renewal, notice period, how to cancel, penalties, deposit, and interest or late fees.\n';
   prompt += '5. missing_info: important things a fair document of this type normally includes but this one does not (for example no cancellation terms, no fee schedule, no notice period for price changes, no refund policy).\n';
   prompt += '6. questions_to_ask: 3 to 5 smart questions to ask the other side before signing.\n\n';
 
   prompt += 'ALWAYS CHECK FOR THESE, and raise a red flag for each one that is present:\n';
-  prompt += '- automatic renewal, especially renewal at a price the document never fixes;\n';
+  prompt += '- automatic renewal, especially renewal at a price the document never fixes, and only when cancelling is genuinely hard, as set out in the context rules below;\n';
   prompt += '- hidden or recurring fees that are not part of the headline price (maintenance, processing, administration, restocking, service or "miscellaneous" charges);\n';
-  prompt += '- early termination or cancellation penalties;\n';
+  prompt += '- early termination or cancellation penalties, judged against the context rules below before you give them a severity;\n';
   prompt += '- the right to change the terms, the fees or the service unilaterally, with little or no notice;\n';
   prompt += '- broad data sharing, or permission to sell the person\'s personal data;\n';
   prompt += '- liability waivers that also cover the company\'s own negligence or misconduct;\n';
@@ -166,6 +167,22 @@ function buildPrompt({ text, requestedType, language, truncated }) {
   prompt += '- vague or catch-all fee wording, such as "additional charges may apply" with no amounts;\n';
   prompt += '- no guarantee of service, uptime or results, or a right to suspend the service without a refund;\n';
   prompt += '- anything else one-sided, unusual or costly: one-sided indemnities, no-refund rules, a deposit the company may keep, waived notice rights, unusual or short deadlines, or terms that make cancelling or complaining practically impossible.\n\n';
+
+  prompt += 'CONTEXT RULES - READ THE WHOLE DOCUMENT BEFORE JUDGING ANY CLAUSE:\n';
+  prompt += '- A clause is only risky when the person signing has no effective way to protect themselves from it. When the same document gives them a real, workable protection, that clause is fair and must not be flagged, or at most may be described as low.\n';
+  prompt += '- Price, fee, or agreement changes: if the company may raise the price, change its fees, or change the agreement, but the document also gives the member a clear right to cancel or leave without penalty when that happens (or the change only applies from the next renewal, which they can refuse by cancelling), do NOT flag the change as risky. Flag it only when the change can take effect with no way out, or when the notice is too short for the person to act (for example 7 days or less with no cancellation right).\n';
+  prompt += '- Auto-renewal: flag it only when cancelling is deliberately difficult. If the person can cancel easily and accessibly - by email, by phone, in person, or from an online account - with 30 days notice or less, auto-renewal is ordinary practice and must be low at most, never medium or high. Keep it medium or high only when cancellation is genuinely hard: registered or certified mail only, an unreasonably narrow cancellation window, cancellation by phone during limited hours only, in-person cancellation at a single location only, or several hoops that must all be cleared in sequence. When cancellation is genuinely hard in that way, auto-renewal must appear as its own red flag at medium or high severity with the renewal clause quoted, and the summary must say how far ahead of the renewal the deadline falls (for example, that the member has to act 120 days in advance).\n';
+  prompt += '- Cancelling counts as easy when the document allows at least one simple, commonly available route (email, an online account, a phone call, or in person) and gives at least 30 days notice, or a window of that length, before the deadline.\n';
+  prompt += '- Early termination penalties: on a yearly or multi-year contract, or any contract where the person agreed to pay for the full term upfront, being responsible for the remaining term is standard practice, not a trap, and on a prepaid plan not getting the unused months back when cancelling early is standard too. Rate both low at most, and only call a penalty unusually harsh when it is charged on top of the remaining fees, when the amount clearly exceeds what is still owed, or when it has nothing to do with the cost of the remaining term (for example a penalty of around 150% of the remaining fees, or a fee charged on a term that was already paid in full).\n';
+  prompt += '- Standard wording such as "you must pay through the end of the term if you cancel early", and a prepaid term that is simply not refunded when cancelled early, are standard, not traps. Trap wording is different: paying 100% of the remaining fees PLUS an additional penalty fee, an extra penalty charged on top of a term that was already paid in full, or a penalty that exceeds what is still owed (around 150% of the remaining fees).\n';
+  prompt += '- Compare the clause with what a reasonable person would expect from a fair contract of this exact type. If it matches normal, fair practice, do not flag it.\n\n';
+
+  prompt += 'SEVERITY RULES:\n';
+  prompt += '- Rate a clause high only when all four of these are true: it is hard to notice or easy to miss, it is financially severe, it is one-sided compared with what a fair contract would say, and it is actually enforced rather than theoretical.\n';
+  prompt += '- Hard to notice means the person would probably not realise it applies to them: buried in a defined term, in a schedule or annex, behind a cross-reference to another document, or written so that it does not state the real cost.\n';
+  prompt += '- If any one of those four is missing, rate the clause medium or low instead. A clause the document balances, or one the person can fully escape by cancelling, is low.\n';
+  prompt += '- Medium is for a clause that is genuinely one-sided but clearly worded, plainly disclosed and limited in size. Low is for a clause that is normal for this type of document, or slightly one-sided but easy to escape.\n';
+  prompt += '- Fair context - a cancellation right, advance notice, no extra penalty, a complete price with no hidden charges - must visibly lower the overall score. Never let one standard clause, or a handful of minor ones, carry a document into medium or high on their own.\n\n';
 
   prompt += 'QUOTE AND COMPLETENESS RULES:\n';
   prompt += '- Each red flag must quote the exact clause that is the problem. For arbitration, quote the arbitration clause itself, and give the class action waiver its own separate flag rather than folding it in.\n';
@@ -179,7 +196,7 @@ function buildPrompt({ text, requestedType, language, truncated }) {
   prompt += '- If the text is not a contract or agreement, or is too fragmentary to judge, say so plainly in the summary, keep the risk score low (30 or less), and leave red_flags empty.\n';
   prompt += '- Do not give legal advice and do not tell the person whether to sign. Explain what the terms mean so they can decide.';
 
-  prompt += '\n\nFINAL CHECK before you answer. Go through the document once more and confirm that each of these is either raised as its own red flag, with its exact quote, or is genuinely not in the document: automatic renewal; renewal pricing; hidden or recurring fees that are not in the headline price; catch-all fee wording; early termination or cancellation penalties; a cancellation process that is hard to follow; the right to change the terms, the prices or the service unilaterally; broad data sharing or the sale of personal data; a liability waiver that covers the company\'s own negligence; forced arbitration; a class action or right-to-sue waiver; no guarantee of service; late-payment fees and interest; and a deposit the company may keep. A one-sided document like this normally deserves 8 or more red flags, so only return fewer when the document really is fair.';
+  prompt += '\n\nFINAL CHECK before you answer. Go through the document once more, applying the context and severity rules above to each item below. Raise a red flag only where the document leaves the person without a real way to protect themselves: automatic renewal only when cancelling is genuinely hard; renewal pricing; hidden or recurring fees that are not in the headline price; catch-all fee wording; early termination or cancellation penalties; a cancellation process that is hard to follow; the right to change the terms, the prices or the service unilaterally; broad data sharing or the sale of personal data; a liability waiver that covers the company\'s own negligence; forced arbitration; a class action or right-to-sue waiver; no guarantee of service; late-payment fees and interest; and a deposit the company may keep. When the document balances a clause with a clear cancellation right, advance notice, or no extra penalty, say so instead of flagging it. A genuinely one-sided document normally deserves several red flags; a fair document, or one whose one-sided clauses are balanced by a real protection, deserves few or none.';
 
   if (truncated) {
     prompt += '\n\nNOTE: this document was very long and only the beginning was received, so the ending is missing. Analyze what you received, and mention in missing_info that the rest of the document could not be checked.';

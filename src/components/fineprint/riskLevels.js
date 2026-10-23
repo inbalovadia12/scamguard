@@ -70,9 +70,9 @@ export function normalizeLevel(level, score) {
   const raw = String(level || "").toLowerCase().replace(/[\s-]+/g, "_");
   if (RISK_LEVELS[raw]) return RISK_LEVELS[raw];
   const value = Number(score) || 0;
-  if (value >= 71) return RISK_LEVELS.very_high;
-  if (value >= 46) return RISK_LEVELS.high;
-  if (value >= 21) return RISK_LEVELS.medium;
+  if (value >= 81) return RISK_LEVELS.very_high;
+  if (value >= 61) return RISK_LEVELS.high;
+  if (value >= 36) return RISK_LEVELS.medium;
   return RISK_LEVELS.low;
 }
 
