@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import DocumentInput from "@/components/fineprint/DocumentInput";
 import FinePrintResults from "@/components/fineprint/FinePrintResults";
 import { documentTypeLabel, normalizeLevel } from "@/components/fineprint/riskLevels";
+import ScanHistoryList from "@/components/fineprint/ScanHistoryList";
 
 const FREE_MONTHLY_SCANS = 3;
 
@@ -78,6 +79,7 @@ export default function FinePrintScanner() {
   const [limited, setLimited] = useState(false);
   const [usage, setUsage] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [historyToken, setHistoryToken] = useState(0);
 
   const loadUsage = async () => {
     try {
@@ -162,6 +164,7 @@ export default function FinePrintScanner() {
         // Show the friendly upgrade note as soon as the last free scan is used up.
         if ((data.scans_used || 0) >= data.scan_limit) setLimited(true);
       }
+      setHistoryToken((token) => token + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       setError(e?.message || "Something went wrong while reading the document. Please try again.");
@@ -194,11 +197,7 @@ export default function FinePrintScanner() {
         </p>
       </div>
 
-      <div className="flex items-center justify-between gap-3 text-xs sm:text-sm">
-        <Link to="/my-scans" className="inline-flex items-center gap-1.5 text-primary hover:underline">
-          <History className="w-4 h-4" />
-          My Scans
-        </Link>
+      <div className="flex items-center justify-end gap-3 text-xs sm:text-sm">
         {usage?.limit && usage.used != null && (
           <span className="text-muted-foreground">
             {Math.max(0, usage.limit - usage.used)} of {usage.limit} free scans left this month
@@ -213,7 +212,7 @@ export default function FinePrintScanner() {
             <h2 className="font-semibold font-heading">You have used your 3 free scans this month</h2>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Your reports are safe in My Scans. Upgrade to Plus or Premium for unlimited document scans, or come back next month for 3 more free ones.
+            Your past reports stay on this page under My Scans. Upgrade to Plus or Premium for unlimited document scans, or come back next month for 3 more free ones.
           </p>
           <Button asChild className="w-full sm:w-auto h-11 rounded-xl bg-gradient-to-r from-primary to-primary/80">
             <Link to="/pricing">See plans</Link>
@@ -277,6 +276,14 @@ export default function FinePrintScanner() {
           />
         </div>
       )}
+
+      <section className="space-y-3 pt-2">
+        <h2 className="flex items-center gap-2 text-lg font-semibold font-heading">
+          <History className="w-5 h-5 text-primary" />
+          My Scans
+        </h2>
+        <ScanHistoryList refreshToken={historyToken} />
+      </section>
     </div>
   );
 }

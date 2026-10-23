@@ -63,7 +63,6 @@ const CryptoScanner = lazy(() => import('@/pages/CryptoScanner'));
 const MobileApp = lazy(() => import('@/pages/MobileApp'));
 const LocalScamFinder = lazy(() => import('@/pages/LocalScamFinder'));
 const FinePrintScanner = lazy(() => import('@/pages/FinePrintScanner'));
-const MyScans = lazy(() => import('@/pages/MyScans'));
 const ScanDetail = lazy(() => import('@/pages/ScanDetail'));
 
 // Layout
@@ -178,7 +177,7 @@ const AuthenticatedApp = () => {
           <Route path="/mobile-app" element={<MobileApp />} />
           <Route path="/local-scam-finder" element={<LocalScamFinder />} />
           <Route path="/fine-print" element={<FinePrintScanner />} />
-          <Route path="/my-scans" element={<MyScans />} />
+          <Route path="/my-scans" element={<Navigate to="/fine-print" replace />} />
           <Route path="/my-scans/:id" element={<ScanDetail />} />
           <Route path="/image-scanner" element={<ImageScanner />} />
           <Route path="/scam-exposer" element={<AINegotiator />} />

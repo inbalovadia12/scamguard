@@ -34,7 +34,6 @@ const NAV_SECTIONS = [
       { path: "/crypto-scanner", label: "Crypto Scanner", icon: Bitcoin },
       { path: "/local-scam-finder", label: "Local Scam Finder", icon: MapPin },
       { path: "/fine-print", label: "Fine Print Scanner", icon: ScrollText },
-      { path: "/my-scans", label: "My Scans", icon: History },
     ],
   },
   {

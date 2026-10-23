@@ -48,7 +48,7 @@ export default function ScanDetail() {
         <ScrollText className="w-8 h-8 mx-auto text-muted-foreground" />
         <p className="font-medium">That scan could not be found.</p>
         <Button asChild variant="outline" className="rounded-xl">
-          <Link to="/my-scans">Back to My Scans</Link>
+          <Link to="/fine-print">Back to My Scans</Link>
         </Button>
       </div>
     );
@@ -57,7 +57,7 @@ export default function ScanDetail() {
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <Link to="/my-scans" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
+        <Link to="/fine-print" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
           <ArrowLeft className="w-4 h-4" />
           My Scans
         </Link>
