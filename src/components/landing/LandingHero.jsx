@@ -2,7 +2,6 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, ArrowRight, Users, Zap, Bot, ScanLine, ArrowRightLeft } from "lucide-react";
 
-];
 
 export default function LandingHero({ preview = false }) {
   const ctaHref = preview ? "/dashboard" : "/register";
