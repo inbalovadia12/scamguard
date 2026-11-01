@@ -2,22 +2,22 @@ import { Search, Users, Bell, Bot, Globe, Phone, Mail, ShoppingCart, Share2, Shi
 
 const demos = [
   { icon: MessageSquare, title: "SMS Scam Detection", desc: "Paste a suspicious text message and get an instant risk score with tactic breakdown.", color: "bg-primary/10 text-primary" },
-  { icon: ShoppingCart, title: "Marketplace Verification", desc: "Check if a listing on Facebook, eBay, or Craigslist is a scam before you buy.", color: "bg-chart-2/10 text-chart-2" },
-  { icon: Mail, title: "Email Analysis", desc: "Forward suspicious emails to detect phishing, fake invoices, and impersonation attempts.", color: "bg-chart-3/10 text-chart-3" },
+  { icon: ShoppingCart, title: "Marketplace Verification", desc: "Check a listing on Facebook, eBay, or Craigslist for scam warning signs before you buy.", color: "bg-chart-2/10 text-chart-2" },
+  { icon: Mail, title: "Email Analysis", desc: "Forward suspicious emails to assess the risk of phishing, fake invoices, and impersonation attempts.", color: "bg-chart-3/10 text-chart-3" },
   { icon: Phone, title: "Phone Number Reputation", desc: "Look up any phone number to see if it's been reported as a scam or spam caller.", color: "bg-chart-4/10 text-chart-4" },
-  { icon: Globe, title: "Website Reputation", desc: "Check if a website is legitimate before entering your personal or payment information.", color: "bg-chart-5/10 text-chart-5" },
-  { icon: Eye, title: "Social Profile Verification", desc: "Verify if a social media account is real or a catfish/impersonation profile.", color: "bg-primary/10 text-primary" },
+  { icon: Globe, title: "Website Reputation", desc: "Check a website's risk signals before entering your personal or payment information.", color: "bg-chart-5/10 text-chart-5" },
+  { icon: Eye, title: "Social Profile Verification", desc: "Check a social media account for signs of a fake or impersonation profile.", color: "bg-primary/10 text-primary" },
 ];
 
 const features = [
   { icon: Search, title: "AI Scam Analysis", desc: "Advanced AI models analyze messages, links, and content for manipulation tactics." },
   { icon: Link2, title: "Link Verification", desc: "Check any URL for phishing, malware, and reputation before you click." },
-  { icon: Mail, title: "Email Protection", desc: "Detect phishing emails, fake invoices, and impersonation attempts instantly." },
-  { icon: MessageSquare, title: "SMS Detection", desc: "Identify scam texts including package delivery, bank fraud, and OTP theft attempts." },
+  { icon: Mail, title: "Email Protection", desc: "Get instant risk assessments of phishing emails, fake invoices, and impersonation attempts." },
+  { icon: MessageSquare, title: "SMS Detection", desc: "Assess suspicious texts including package delivery, bank fraud, and OTP theft attempts." },
   { icon: Phone, title: "Phone Number Reputation", desc: "Look up caller reputation and check if a number is associated with scams." },
-  { icon: ShoppingCart, title: "Marketplace Safety Checks", desc: "Verify marketplace listings and sellers before making a purchase." },
+  { icon: ShoppingCart, title: "Marketplace Safety Checks", desc: "Check marketplace listings and sellers for warning signs before making a purchase." },
   { icon: Users, title: "Family Safety Network", desc: "Invite family members, share alerts, and protect your loved ones collectively." },
-  { icon: Bell, title: "Shared Scam Alerts", desc: "Get notified the moment a family member encounters a suspicious message." },
+  { icon: Bell, title: "Shared Scam Alerts", desc: "Get an alert when a family member checks something that looks risky." },
   { icon: Share2, title: "Community Reports", desc: "Crowdsourced scam reports keep everyone informed about the latest threats." },
   { icon: ShieldCheck, title: "Real-Time Risk Scores", desc: "Every analysis includes a 0-100 risk score with a plain-English explanation." },
 ];
@@ -36,8 +36,8 @@ export default function LandingSections() {
       <section className="py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight font-heading">One Tool. Total Protection.</h2>
-            <p className="mt-4 text-lg text-muted-foreground">Vardin analyzes every type of scam across every channel.</p>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight font-heading">One Tool. Know Before You Trust.</h2>
+            <p className="mt-4 text-lg text-muted-foreground">Vardin helps you assess suspicious messages, links, listings, calls, and profiles in one place.</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {demos.map((demo, i) => (
