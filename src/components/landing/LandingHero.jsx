@@ -43,7 +43,7 @@ export default function LandingHero({ preview = false }) {
             Works both ways: protect yourself, or set it up for a parent or loved one
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            Free to start • Cancel anytime
+            Free starter plan
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5"><ScanLine className="w-4 h-4 text-primary" /> SMS & Email</span>
