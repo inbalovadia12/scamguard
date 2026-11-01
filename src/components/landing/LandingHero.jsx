@@ -2,11 +2,6 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, ArrowRight, Users, Zap, Bot, ScanLine, ArrowRightLeft } from "lucide-react";
 
-const stats = [
-  { value: "48K+", label: "Analyses performed" },
-  { value: "12", label: "Scam categories" },
-  { value: "4.9/5", label: "User satisfaction" },
-  { value: "100%", label: "Privacy committed" },
 ];
 
 export default function LandingHero({ preview = false }) {
@@ -48,7 +43,7 @@ export default function LandingHero({ preview = false }) {
             Works both ways: protect yourself, or set it up for a parent or loved one
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            No credit card required • Cancel anytime
+            Free to start • Cancel anytime
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5"><ScanLine className="w-4 h-4 text-primary" /> SMS & Email</span>
@@ -59,18 +54,6 @@ export default function LandingHero({ preview = false }) {
         </div>
       </section>
 
-      <section className="border-y border-border/50 bg-card/50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {stats.map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-2xl sm:text-3xl font-bold text-primary font-heading">{stat.value}</div>
-                <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
     </>
   );
 }
