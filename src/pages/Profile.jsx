@@ -122,7 +122,11 @@ export default function Profile() {
       await checkUserAuth();
       toast({ title: "Plan cancelled", description: "Your benefits continue until your next renewal date, then your plan changes to Starter." });
     } catch (e) {
-      toast({ title: "Couldn't cancel", description: e.message || "Please try again.", variant: "destructive" });
+      toast({
+        title: "Couldn't cancel",
+        description: e?.response?.data?.error || e.message || "Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setCancelling(false);
     }

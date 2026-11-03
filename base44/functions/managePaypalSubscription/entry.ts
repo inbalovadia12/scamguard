@@ -59,6 +59,17 @@ Deno.serve(async (req) => {
       nextBilling = details.billing_info?.next_billing_time || null;
     }
 
+    // Cancel: a 2xx (or an idempotent 422/404) on the cancel call is NOT proof.
+    // Only PayPal reporting CANCELLED counts as success; anything else leaves the
+    // local cancel flag untouched so the user retries instead of believing a plan
+    // that still bills them has ended.
+    if (action === "cancel" && paypalStatus !== "CANCELLED") {
+      return Response.json(
+        { error: "PayPal hasn't confirmed the cancellation. Try again in a moment, or cancel the automatic payment in your PayPal account." },
+        { status: 409 },
+      );
+    }
+
     // For reactivate, require PayPal to confirm ACTIVE before clearing the
     // local cancel flag.
     if (action === "reactivate" && paypalStatus && paypalStatus !== "ACTIVE") {
