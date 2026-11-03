@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import {
   ShieldCheck, Crown, Mail, Loader2, Bell, Lock, LogOut, ChevronRight, Accessibility, Type, Eye, Zap, Users, AlertTriangle, Trash2,
-  CalendarClock, RotateCcw,
+  CalendarClock,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getCreditStatus, PLAN_NAMES } from "@/lib/credits";
@@ -106,30 +106,23 @@ export default function Profile() {
       const res = await base44.functions.invoke("managePaypalSubscription", { action: "cancel" });
       const data = res.data || {};
       if (data.error) throw new Error(data.error);
+      // Only report success when PayPal itself reports the subscription as
+      // cancelled. Otherwise leave the confirmation open so the user can retry.
+      if (data.paypal_status !== "CANCELLED") {
+        toast({
+          title: "Cancellation not confirmed",
+          description: "PayPal hasn't confirmed the cancellation yet. Try again in a moment, or cancel the automatic payment in your PayPal account.",
+          variant: "destructive",
+        });
+        return;
+      }
       setCanceling(true);
       setRenewalDate(data.next_billing || renewalDate);
       setShowCancelConfirm(false);
       await checkUserAuth();
-      toast({ title: "Plan set to cancel", description: "Your benefits continue until your next renewal." });
+      toast({ title: "Plan cancelled", description: "Your benefits continue until your next renewal date, then your plan changes to Starter." });
     } catch (e) {
       toast({ title: "Couldn't cancel", description: e.message || "Please try again.", variant: "destructive" });
-    } finally {
-      setCancelling(false);
-    }
-  };
-
-  const handleReactivatePlan = async () => {
-    setCancelling(true);
-    try {
-      const res = await base44.functions.invoke("managePaypalSubscription", { action: "reactivate" });
-      const data = res.data || {};
-      if (data.error) throw new Error(data.error);
-      setCanceling(false);
-      setRenewalDate(null);
-      await checkUserAuth();
-      toast({ title: "Plan reactivated", description: "Your subscription will continue as normal." });
-    } catch (e) {
-      toast({ title: "Couldn't reactivate", description: e.message || "Please try again.", variant: "destructive" });
     } finally {
       setCancelling(false);
     }
@@ -243,14 +236,16 @@ export default function Profile() {
                   <div>
                     <p className="font-medium">Canceling {PLAN_NAMES[plan] || "your plan"}</p>
                     <p className="text-xs text-muted-foreground">
-                      Your benefits continue until{renewalDate ? ` ${new Date(renewalDate).toLocaleDateString()}` : " your next renewal"}, then your plan changes to Starter.
+                      Your benefits continue until{renewalDate ? ` ${new Date(renewalDate).toLocaleDateString()}` : " your next renewal"}, then your plan changes to Starter. A cancelled subscription can't be switched back on, so keeping {PLAN_NAMES[plan] || "this plan"} after that date means subscribing again.
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleReactivatePlan} disabled={cancelling} className="gap-2">
-                  {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                  Keep My Plan
-                </Button>
+                <Link to="/pricing">
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <ChevronRight className="w-4 h-4" />
+                    Resubscribe from Pricing
+                  </Button>
+                </Link>
               </div>
             ) : !showCancelConfirm ? (
               <Button
@@ -265,7 +260,7 @@ export default function Profile() {
               <div className="space-y-3 rounded-xl border border-border/50 p-4 bg-muted/20">
                 <p className="text-sm font-medium">Cancel {PLAN_NAMES[plan]}?</p>
                 <p className="text-xs text-muted-foreground">
-                  Your plan stays active until your next renewal date, then downgrades to Starter. You can reactivate any time before then.
+                  Your plan stays active until your next renewal date, then it changes to Starter. Cancelling now can't be undone, so you would need to subscribe again to keep it after that date.
                 </p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setShowCancelConfirm(false)} disabled={cancelling}>

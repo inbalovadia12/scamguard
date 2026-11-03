@@ -59,7 +59,6 @@ export default function FamilyMemberSelector({ plan, members, onChange }) {
         <span className="text-xs font-semibold">Total</span>
         <div className="text-right leading-tight">
           <span className="block text-sm font-bold text-primary tabular-nums">${t.totalAnnual}/yr</span>
-          <span className="block text-[10px] text-muted-foreground tabular-nums">${t.totalMonthly.toFixed(2)}/mo · billed annually</span>
         </div>
       </div>
 
